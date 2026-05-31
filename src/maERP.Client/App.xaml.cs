@@ -22,6 +22,9 @@ using maERP.Client.Features.TenantOAuthSettings;
 using maERP.Client.Features.Shell.Views;
 using maERP.Client.Features.Shell.Models;
 using maERP.Domain.Dtos.Auth;
+#if __WASM__
+using System.Runtime.InteropServices.JavaScript;
+#endif
 
 namespace maERP.Client;
 
@@ -212,6 +215,16 @@ public partial class App : Application
             (initialNavigate: async (services, navigator) =>
             {
                 var auth = services.GetRequiredService<IAuthenticationService>();
+
+                // Honour "remember me": if the user did not opt in, drop any persisted tokens
+                // (incl. the Uno token cache) before attempting silent re-auth, so a reload or
+                // relaunch does not auto-login an un-remembered session.
+                var tokenStorage = services.GetRequiredService<ITokenStorageService>();
+                if (!await tokenStorage.GetRememberMeAsync())
+                {
+                    await tokenStorage.ClearTokenAsync();
+                }
+
                 var authenticated = await auth.RefreshAsync();
 
                 if (authenticated)
@@ -231,7 +244,17 @@ public partial class App : Application
                         await navigator.NavigateViewModelAsync<DashboardModel>(this, qualifier: Qualifiers.Nested);
                     }
                 }
-                // When not authenticated, Shell constructor already shows LoginOverlay
+                else
+                {
+                    // Not authenticated: clear any deep-link URL (e.g. /Dashboard from a
+                    // bookmark or reload) so the LoginOverlay is shown at "/". On WASM we
+                    // rewrite the browser URL directly because Uno's INavigator does not
+                    // expose the Shell ("") route from initialNavigate.
+#if __WASM__
+                    ReplaceWasmUrlWithRoot();
+#endif
+                    await Task.CompletedTask;
+                }
             });
 
         // Hook into Window.Activated for app lifecycle (suspend/resume)
@@ -266,6 +289,27 @@ public partial class App : Application
             Console.WriteLine($"[App] OnWindowActivated error: {ex.Message}");
         }
     }
+
+#if __WASM__
+    [JSImport("globalThis.history.replaceState")]
+    private static partial void HistoryReplaceState(string? state, string title, string url);
+
+    private static void ReplaceWasmUrlWithRoot()
+    {
+        try
+        {
+            var location = JSHost.GlobalThis.GetPropertyAsJSObject("location");
+            var pathname = location?.GetPropertyAsString("pathname");
+            if (string.Equals(pathname, "/", StringComparison.Ordinal)) return;
+
+            HistoryReplaceState(null, string.Empty, "/");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[App] ReplaceWasmUrlWithRoot error: {ex.Message}");
+        }
+    }
+#endif
 
     /// <summary>
     /// Registers all services from feature modules.

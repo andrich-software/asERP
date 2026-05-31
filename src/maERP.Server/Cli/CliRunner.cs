@@ -97,6 +97,7 @@ internal static class CliRunner
         return args[0] switch
         {
             "create" => await CreateAsync(users, roles),
+            "update" => await UpdateAsync(users, args[1..]),
             "delete" => await DeleteAsync(users, args[1..]),
             _ => Fail($"unknown superadmin subcommand '{args[0]}'.")
         };
@@ -164,6 +165,94 @@ internal static class CliRunner
         return 0;
     }
 
+    private static async Task<int> UpdateAsync(UserManager<ApplicationUser> users, string[] args)
+    {
+        if (args.Length == 0)
+        {
+            return Fail("'superadmin update' requires <email>.");
+        }
+
+        var email = args[0];
+        var user = await users.FindByEmailAsync(email);
+        if (user is null)
+        {
+            return Fail($"user '{email}' not found.");
+        }
+
+        var existingRoles = await users.GetRolesAsync(user);
+        if (!existingRoles.Contains(SuperadminRole))
+        {
+            return Fail($"user '{email}' is not a Superadmin — refusing to update a regular user via this command.");
+        }
+
+        var newEmail = Environment.GetEnvironmentVariable("MAERP_CLI_NEW_EMAIL");
+        var firstname = Environment.GetEnvironmentVariable("MAERP_CLI_FIRSTNAME");
+        var lastname = Environment.GetEnvironmentVariable("MAERP_CLI_LASTNAME");
+        var password = Environment.GetEnvironmentVariable("MAERP_CLI_PASSWORD");
+
+        var changed = false;
+
+        if (!string.IsNullOrWhiteSpace(newEmail) && !string.Equals(newEmail, user.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            if (await users.FindByEmailAsync(newEmail) is not null)
+            {
+                return Fail($"a user with email '{newEmail}' already exists.");
+            }
+
+            var setEmail = await users.SetEmailAsync(user, newEmail);
+            if (!setEmail.Succeeded)
+            {
+                return Fail($"could not update email: {Describe(setEmail)}");
+            }
+            var setUserName = await users.SetUserNameAsync(user, newEmail);
+            if (!setUserName.Succeeded)
+            {
+                return Fail($"could not update username: {Describe(setUserName)}");
+            }
+            changed = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(firstname) && firstname != user.Firstname)
+        {
+            user.Firstname = firstname!;
+            changed = true;
+        }
+        if (!string.IsNullOrWhiteSpace(lastname) && lastname != user.Lastname)
+        {
+            user.Lastname = lastname!;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            var update = await users.UpdateAsync(user);
+            if (!update.Succeeded)
+            {
+                return Fail($"could not update user: {Describe(update)}");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(password))
+        {
+            var token = await users.GeneratePasswordResetTokenAsync(user);
+            var reset = await users.ResetPasswordAsync(user, token, password);
+            if (!reset.Succeeded)
+            {
+                return Fail($"could not update password: {Describe(reset)}");
+            }
+            changed = true;
+        }
+
+        if (!changed)
+        {
+            Console.WriteLine($"Superadmin '{email}' — nothing to update.");
+            return 0;
+        }
+
+        Console.WriteLine($"Superadmin '{user.Email}' updated.");
+        return 0;
+    }
+
     private static async Task<int> DeleteAsync(UserManager<ApplicationUser> users, string[] args)
     {
         if (args.Length == 0)
@@ -208,6 +297,9 @@ internal static class CliRunner
         Console.Error.WriteLine("usage: dotnet maERP.Server.dll cli <command> [...]");
         Console.Error.WriteLine("  superadmin create           inputs via env: MAERP_CLI_EMAIL, MAERP_CLI_PASSWORD,");
         Console.Error.WriteLine("                              optional MAERP_CLI_FIRSTNAME, MAERP_CLI_LASTNAME");
+        Console.Error.WriteLine("  superadmin update <email>   update a Superadmin user; optional env:");
+        Console.Error.WriteLine("                              MAERP_CLI_NEW_EMAIL, MAERP_CLI_FIRSTNAME,");
+        Console.Error.WriteLine("                              MAERP_CLI_LASTNAME, MAERP_CLI_PASSWORD");
         Console.Error.WriteLine("  superadmin delete <email>   delete a Superadmin user by email");
     }
 }

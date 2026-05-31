@@ -120,8 +120,8 @@ namespace maERP.Persistence.Repositories
                 new Setting { Key = "Email.ReplyToName", Value = "" },
 
                 // Grafana / Loki Settings
-                new Setting { Key = "Grafana.Endpoint", Value = "https://grafana.martin-andrich.de" },
-                new Setting { Key = "Grafana.LokiEndpoint", Value = "https://grafana.martin-andrich.de/loki" },
+                new Setting { Key = "Grafana.Endpoint", Value = "https://www.andrich-software.de/grafana" },
+                new Setting { Key = "Grafana.LokiEndpoint", Value = "https://www.andrich-software.de/loki" },
                 new Setting { Key = "Grafana.MetricsEnabled", Value = "False" },
                 new Setting { Key = "Grafana.LogsEnabled", Value = "False" },
 

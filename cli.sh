@@ -19,6 +19,9 @@
 #   ./cli.sh db     purge            Wipe the database (drop & recreate the schema).
 #                                    Asks for confirmation; ALL data is lost.
 #   ./cli.sh superadmin create       Interactively create a Superadmin user
+#   ./cli.sh superadmin update <email>
+#                                    Interactively update a Superadmin user
+#                                    (email, first/last name, password — blank to skip)
 #   ./cli.sh superadmin delete <email>
 #                                    Delete the Superadmin user with the given email
 #
@@ -50,7 +53,7 @@ fi
 COMPOSE=("${COMPOSE_BIN[@]}")
 
 usage() {
-    sed -n '3,30p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '3,33p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # Print an error message followed by the full usage block, then exit 1.
@@ -516,12 +519,13 @@ cmd_superadmin() {
     local sub="${1:-}"
     case "$sub" in
         create) shift; superadmin_create "$@" ;;
+        update) shift; superadmin_update "$@" ;;
         delete) shift; superadmin_delete "$@" ;;
         "")
-            die_usage "'superadmin' requires a subcommand (create|delete)."
+            die_usage "'superadmin' requires a subcommand (create|update|delete)."
             ;;
         *)
-            die_usage "unknown superadmin subcommand '$sub' (expected: create|delete)."
+            die_usage "unknown superadmin subcommand '$sub' (expected: create|update|delete)."
             ;;
     esac
 }
@@ -557,6 +561,37 @@ superadmin_create() {
         -e MAERP_CLI_LASTNAME="$lastname" \
         -e MAERP_CLI_PASSWORD="$password" \
         server dotnet maERP.Server.dll cli superadmin create
+}
+
+superadmin_update() {
+    local email="${1:-}"
+    if [[ -z "$email" ]]; then
+        die_usage "'superadmin update' requires <email>."
+    fi
+    require_server_running
+
+    echo "Updating Superadmin '${email}'. Leave any field blank to keep it unchanged."
+    local new_email firstname lastname password password_confirm
+    read -rp "New email: " new_email
+    read -rp "New first name: " firstname
+    read -rp "New last name: " lastname
+    read -rsp "New password: " password
+    echo
+    if [[ -n "$password" ]]; then
+        read -rsp "Confirm new password: " password_confirm
+        echo
+        if [[ "$password" != "$password_confirm" ]]; then
+            echo "error: passwords do not match." >&2
+            exit 1
+        fi
+    fi
+
+    "${COMPOSE[@]}" --profile server exec -T \
+        -e MAERP_CLI_NEW_EMAIL="$new_email" \
+        -e MAERP_CLI_FIRSTNAME="$firstname" \
+        -e MAERP_CLI_LASTNAME="$lastname" \
+        -e MAERP_CLI_PASSWORD="$password" \
+        server dotnet maERP.Server.dll cli superadmin update "$email"
 }
 
 superadmin_delete() {

@@ -36,6 +36,6 @@ public static class DashboardModule
     /// </summary>
     public static IEnumerable<RouteMap> GetRoutes(IViewRegistry views)
     {
-        yield return new RouteMap(Routes.Dashboard, View: views.FindByViewModel<DashboardModel>(), IsDefault: true);
+        yield return new RouteMap(Routes.Dashboard, View: views.FindByViewModel<DashboardModel>());
     }
 }

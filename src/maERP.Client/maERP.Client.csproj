@@ -26,6 +26,9 @@
     <!-- Android minSdkVersion - required by AndroidX.Lifecycle 2.10.x -->
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23</SupportedOSPlatformVersion>
 
+    <!-- Required by [JSImport] source generator (used in App.xaml.cs for WASM URL rewrite). -->
+    <AllowUnsafeBlocks Condition="'$(TargetFramework)' == 'net10.0-browserwasm'">true</AllowUnsafeBlocks>
+
     <!--
       UnoFeatures are used to quickly add and manage features enabled for your app.
       https://aka.platform.uno/singleproject-features

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Uno.Extensions.Authentication;
 using Windows.Storage;
 
 namespace maERP.Client.Features.Auth.Services;
@@ -15,11 +16,13 @@ public class TokenStorageService : ITokenStorageService
     private const string RoleClaimType = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
 
     private readonly ISecureCredentialStore _secureStore;
+    private readonly ITokenCache _tokenCache;
     private readonly ILogger<TokenStorageService> _logger;
 
-    public TokenStorageService(ISecureCredentialStore secureStore, ILogger<TokenStorageService> logger)
+    public TokenStorageService(ISecureCredentialStore secureStore, ITokenCache tokenCache, ILogger<TokenStorageService> logger)
     {
         _secureStore = secureStore;
+        _tokenCache = tokenCache;
         _logger = logger;
     }
 
@@ -84,6 +87,19 @@ public class TokenStorageService : ITokenStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error clearing refresh token from secure store");
+        }
+
+        // Clear the Uno authentication token cache too. It — not this service's own keys — is
+        // what IAuthenticationService.RefreshAsync inspects to decide whether the user is
+        // authenticated (auto-login). Leaving it populated would let a "don't remember me"
+        // session silently re-authenticate after a reload.
+        try
+        {
+            await _tokenCache.ClearAsync(System.Threading.CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error clearing Uno authentication token cache");
         }
     }
 

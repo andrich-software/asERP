@@ -1,4 +1,8 @@
 using maERP.Client.Features.Auth.Services;
+#if __WASM__
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Uno.Extensions.Authentication;
+#endif
 
 namespace maERP.Client.Features.Auth;
 
@@ -18,6 +22,16 @@ public static class AuthModule
         // in a platform-specific impl (e.g. Windows.Security.Credentials.PasswordVault on
         // Windows, Keychain on macOS/iOS, Keystore on Android) behind #if directives.
         services.AddSingleton<ISecureCredentialStore, LocalSettingsCredentialStore>();
+
+#if __WASM__
+        // Uno's default ITokenCache does not survive a WASM page reload (its values written via
+        // ApplicationDataKeyValueStorage are gone after reload), which leaves RefreshAsync seeing
+        // an empty cache and breaks silent auto-login. Replace it on WASM with a cache that writes
+        // straight to LocalSettings, which does persist. See WasmLocalSettingsTokenCache.
+        // This runs after UseAuthentication() in App.OnLaunched, so it overrides Uno's registration.
+        services.RemoveAll<ITokenCache>();
+        services.AddSingleton<ITokenCache, WasmLocalSettingsTokenCache>();
+#endif
 
         // Authentication services (singleton for state management)
         services.AddSingleton<ITokenStorageService, TokenStorageService>();
