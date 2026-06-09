@@ -192,6 +192,44 @@ public class SalesChannelsController(
         return Ok(runs);
     }
 
+    /// <summary>
+    /// Synchronization log lines for the channel (last 24h). Optional <paramref name="minLevel"/>
+    /// filters by minimum severity (e.g. "Warning"). Newest first. Tenant-isolated via query filter.
+    /// </summary>
+    [HttpGet("{id:guid}/sync-logs")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult> GetSyncLogs(Guid id, int take = 200, int offset = 0, string? minLevel = null, CancellationToken cancellationToken = default)
+    {
+        var cutoff = DateTime.UtcNow.AddHours(-24);
+
+        var query = dbContext.ChannelSyncLog
+            .Where(l => l.SalesChannelId == id && l.Timestamp >= cutoff);
+
+        if (!string.IsNullOrWhiteSpace(minLevel) && Enum.TryParse<ChannelSyncLogLevel>(minLevel, ignoreCase: true, out var level))
+        {
+            query = query.Where(l => l.Level >= level);
+        }
+
+        var logs = await query
+            .OrderByDescending(l => l.Timestamp)
+            .Skip(offset)
+            .Take(Math.Clamp(take, 1, 500))
+            .Select(l => new ChannelSyncLogDto
+            {
+                Id = l.Id,
+                SalesChannelId = l.SalesChannelId,
+                CorrelationId = l.CorrelationId,
+                Operation = l.Operation,
+                Level = l.Level,
+                Message = l.Message,
+                Exception = l.Exception,
+                Timestamp = l.Timestamp,
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(logs);
+    }
+
     /// <summary>Outbox rows currently in DeadLetter for the channel.</summary>
     [HttpGet("{id:guid}/outbox/dead-letter")]
     [ProducesResponseType(StatusCodes.Status200OK)]

@@ -266,22 +266,35 @@
                 <!-- Connection Fields -->
                 <StackPanel Padding="16,0,16,16"
                             Spacing="16">
-                  <!-- URL (hidden for eBay and PointOfSale) -->
-                  <TextBox x:Uid="SalesChannelEditPage.Field.Url"
+                  <!-- URL (hidden for eBay and PointOfSale). Header/placeholder are type-specific:
+                       WooCommerce expects the shop base URL, others an API endpoint. -->
+                  <TextBox Header="{Binding UrlLabel}"
+                           PlaceholderText="{Binding UrlPlaceholder}"
                            Text="{Binding Url, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            InputScope="Url"
                            IsEnabled="{Binding IsNotLoading}"
                            Visibility="{Binding ShowUrlField, Converter={StaticResource BoolToVisibilityConverter}}" />
 
-                  <!-- Username -->
-                  <TextBox x:Uid="SalesChannelEditPage.Field.Username"
+                  <!-- Username — labelled "Consumer Key" for WooCommerce. -->
+                  <TextBox Header="{Binding UsernameLabel}"
+                           PlaceholderText="{Binding UsernamePlaceholder}"
                            Text="{Binding Username, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            IsEnabled="{Binding IsNotLoading}" />
 
-                  <!-- Password -->
-                  <PasswordBox x:Uid="SalesChannelEditPage.Field.Password"
-                               Password="{Binding Password, Mode=TwoWay}"
-                               IsEnabled="{Binding IsNotLoading}" />
+                  <!-- Password — labelled "Consumer Secret" for WooCommerce.
+                       The secret is write-only (never returned), so on edit it stays empty and an
+                       empty value keeps the stored secret unchanged. -->
+                  <StackPanel Spacing="4">
+                    <PasswordBox Header="{Binding PasswordLabel}"
+                                 PlaceholderText="{Binding PasswordPlaceholder}"
+                                 Password="{Binding Password, Mode=TwoWay}"
+                                 IsEnabled="{Binding IsNotLoading}" />
+                    <TextBlock Text="{Binding PasswordKeepHint}"
+                               Style="{StaticResource LabelSmall}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding ShowPasswordKeepHint, Converter={StaticResource BoolToVisibilityConverter}}" />
+                  </StackPanel>
                 </StackPanel>
               </StackPanel>
             </Border>
@@ -575,6 +588,7 @@
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
                 <Grid Grid.Column="0">
@@ -611,6 +625,26 @@
                              Margin="0,0,8,0" />
                   <ToggleSwitch Grid.Column="1"
                                 IsOn="{Binding InitialProductExportCompleted, Mode=TwoWay}"
+                                IsEnabled="{Binding IsNotLoading}"
+                                MinWidth="0"
+                                OnContent=""
+                                OffContent="" />
+                </Grid>
+
+                <Grid Grid.Column="2">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Grid.Column="0"
+                             x:Uid="SalesChannelEditPage.Field.InitialCustomerImportCompleted"
+                             Style="{StaticResource BodyMedium}"
+                             Foreground="{ThemeResource OnSurfaceBrush}"
+                             TextWrapping="Wrap"
+                             VerticalAlignment="Center"
+                             Margin="0,0,8,0" />
+                  <ToggleSwitch Grid.Column="1"
+                                IsOn="{Binding InitialCustomerImportCompleted, Mode=TwoWay}"
                                 IsEnabled="{Binding IsNotLoading}"
                                 MinWidth="0"
                                 OnContent=""
@@ -751,7 +785,7 @@
             </Border>
           </StackPanel>
 
-          <!-- Hint Card — only shown for credential-style channels (Shopware5/6, WooCommerce);
+          <!-- Hint Card — only shown for credential-style channels (Shopware6, WooCommerce);
                hidden for OAuth channels (eBay/Amazon) and PointOfSale because they don't use URL/credentials. -->
           <Border Background="{ThemeResource SecondaryContainerBrush}"
                   CornerRadius="12"
@@ -769,7 +803,7 @@
                         Margin="0,0,12,0"
                         VerticalAlignment="Top" />
               <TextBlock Grid.Column="1"
-                         x:Uid="SalesChannelEditPage.Hint"
+                         Text="{Binding ConnectionHintText}"
                          Style="{StaticResource BodyMedium}"
                          Foreground="{ThemeResource OnSecondaryContainerBrush}"
                          TextWrapping="Wrap" />

@@ -65,6 +65,7 @@ namespace maERP.Client.Core.Json;
 [JsonSerializable(typeof(maERP.Domain.Dtos.TenantOAuthAppSettings.TenantOAuthAppSettingsInputDto))]
 [JsonSerializable(typeof(SalesChannelSyncResultDto))]
 [JsonSerializable(typeof(List<ChannelSyncRunDto>))]
+[JsonSerializable(typeof(List<ChannelSyncLogDto>))]
 [JsonSerializable(typeof(List<ChannelExportOutboxDto>))]
 [JsonSerializable(typeof(ApiResponse<LoginResponseDto>))]
 [JsonSerializable(typeof(ApiResponse<CurrentUserProfileDto>))]

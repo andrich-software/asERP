@@ -150,7 +150,7 @@ public class SalesChannelUpdateCommandTests : TenantIsolatedTestBase
         return new SalesChannelInputDto
         {
             Id = id,
-            SalesChannelType = SalesChannelType.Shopware5,
+            SalesChannelType = SalesChannelType.Shopware6,
             Name = "Updated Sales Channel Name",
             Url = "https://updated.example.com",
             Username = "updateduser",
@@ -204,8 +204,54 @@ public class SalesChannelUpdateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertEqual(updateDto.Name, salesChannelDetail.Data.Name);
         TestAssertions.AssertEqual(updateDto.Url, salesChannelDetail.Data.Url);
         TestAssertions.AssertEqual(updateDto.Username, salesChannelDetail.Data.Username);
-        TestAssertions.AssertEqual(updateDto.Password, salesChannelDetail.Data.Password);
-        TestAssertions.AssertEqual(SalesChannelType.Shopware5, salesChannelDetail.Data.SalesChannelType);
+        // The secret is write-only and never returned; verify the new value was persisted via the DbContext.
+        TestAssertions.AssertEqual(string.Empty, salesChannelDetail.Data.Password);
+        TestAssertions.AssertEqual(SalesChannelType.Shopware6, salesChannelDetail.Data.SalesChannelType);
+
+        DbContext.ChangeTracker.Clear();
+        var persisted = await DbContext.SalesChannel.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == TestSalesChannel1Id);
+        TestAssertions.AssertNotNull(persisted);
+        TestAssertions.AssertEqual(updateDto.Password, persisted!.Password);
+    }
+
+    [Fact]
+    public async Task UpdateSalesChannel_WithEmptyPassword_ShouldKeepStoredSecret()
+    {
+        await SeedTestDataAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var original = await DbContext.SalesChannel.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == TestSalesChannel1Id);
+        TestAssertions.AssertNotNull(original);
+        var originalPassword = original!.Password;
+        TestAssertions.AssertNotEmpty(originalPassword);
+
+        // Edit the channel without re-entering the secret (the write-only field stays empty).
+        var updateDto = new SalesChannelInputDto
+        {
+            Id = TestSalesChannel1Id,
+            SalesChannelType = SalesChannelType.WooCommerce,
+            Name = "WooCommerce Store T1 - Edited",
+            Url = "https://store1.example.com",
+            Username = "user1",
+            Password = string.Empty,
+            WarehouseIds = new List<Guid>()
+        };
+
+        var response = await PutAsJsonAsync($"/api/v1/SalesChannels/{TestSalesChannel1Id}", updateDto);
+
+        TestAssertions.AssertEqual(HttpStatusCode.OK, response.StatusCode);
+        var result = await ReadResponseAsync<Result<Guid>>(response);
+        TestAssertions.AssertTrue(result.Succeeded);
+
+        // The stored secret must be untouched, while the editable fields were updated.
+        DbContext.ChangeTracker.Clear();
+        var persisted = await DbContext.SalesChannel.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == TestSalesChannel1Id);
+        TestAssertions.AssertNotNull(persisted);
+        TestAssertions.AssertEqual(originalPassword, persisted!.Password);
+        TestAssertions.AssertEqual("WooCommerce Store T1 - Edited", persisted.Name);
     }
 
     [Fact]

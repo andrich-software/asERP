@@ -128,6 +128,20 @@ public class SalesChannelService : ISalesChannelService
         return response ?? new List<ChannelSyncRunDto>();
     }
 
+    public async Task<List<ChannelSyncLogDto>> GetSyncLogsAsync(Guid id, int take = 200, int offset = 0, string? minLevel = null, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.SalesChannels.SyncLogs(id)}?take={take}&offset={offset}";
+        if (!string.IsNullOrWhiteSpace(minLevel))
+        {
+            url += $"&minLevel={Uri.EscapeDataString(minLevel)}";
+        }
+
+        var response = await _httpClient.GetFromJsonAsync(
+            url, AppJsonSerializerContext.Default.ListChannelSyncLogDto, ct);
+        return response ?? new List<ChannelSyncLogDto>();
+    }
+
     public async Task<List<ChannelExportOutboxDto>> GetDeadLetterAsync(Guid id, CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();

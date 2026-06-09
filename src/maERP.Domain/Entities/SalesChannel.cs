@@ -39,6 +39,7 @@ public class SalesChannel : BaseEntity, IBaseEntity
     public bool ExportSaless { get; set; }
     public bool InitialProductImportCompleted { get; set; }
     public bool InitialProductExportCompleted { get; set; }
+    public bool InitialCustomerImportCompleted { get; set; }
 
     /// <summary>Polling interval used by the orchestrator. Defaults to 60s.</summary>
     public int SyncIntervalSeconds { get; set; } = 60;

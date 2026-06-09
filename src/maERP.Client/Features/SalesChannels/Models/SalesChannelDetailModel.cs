@@ -53,6 +53,28 @@ public partial record SalesChannelDetailModel
         return rows.ToImmutableList();
     });
 
+    /// <summary>Minimum severity for the log explorer ("Information" | "Warning" | "Error").</summary>
+    public IState<string> LogLevelFilter => State<string>.Value(this, () => "Information");
+
+    /// <summary>Bump to force the log feed to re-query (manual refresh button).</summary>
+    public IState<int> LogRefreshToken => State<int>.Value(this, () => 0);
+
+    /// <summary>Synchronization log lines (last 24h). Re-queries when the level filter or refresh token changes.</summary>
+    public IListFeed<ChannelSyncLogDto> SyncLogs => Feed
+        .Combine(LogLevelFilter, LogRefreshToken)
+        .SelectAsync(async (combined, ct) =>
+        {
+            var (minLevel, _) = combined;
+            var logs = await _salesChannelService.GetSyncLogsAsync(_salesChannelId, take: 200, offset: 0, minLevel: minLevel, ct);
+            return logs.ToImmutableList();
+        })
+        .AsListFeed();
+
+    public async Task ShowAllLogs() => await LogLevelFilter.SetAsync("Information");
+    public async Task ShowWarningLogs() => await LogLevelFilter.SetAsync("Warning");
+    public async Task ShowErrorLogs() => await LogLevelFilter.SetAsync("Error");
+    public async Task RefreshLogs() => await LogRefreshToken.UpdateAsync(v => v + 1);
+
     /// <summary>User-facing status line for the most recent orchestration action.</summary>
     public IState<string> StatusMessage => State<string>.Value(this, () => string.Empty);
 

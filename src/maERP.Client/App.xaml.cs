@@ -208,8 +208,10 @@ public partial class App : Application
 #endif
         MainWindow.SetWindowIcon();
 
-        // Set initial window size for desktop
-        SetInitialWindowSize(MainWindow, 1500, 900);
+#if __DESKTOP__
+        // Restore the window's saved position/size (or default), and keep persisting changes.
+        maERP.Client.Core.Window.DesktopWindowState.RestoreAndTrack(MainWindow, 1500, 900);
+#endif
 
         Host = await builder.NavigateAsync<Shell>
             (initialNavigate: async (services, navigator) =>
@@ -410,36 +412,5 @@ public partial class App : Application
 
         // Register the root route with all nested routes
         routes.Register(ShellModule.GetRootRoute(views, nestedRoutes));
-    }
-
-    // Keep timer reference to prevent GC collection
-    private static System.Threading.Timer? _windowSizeTimer;
-
-    /// <summary>
-    /// Sets the initial window size for desktop platforms.
-    /// Uses a timer to ensure the window is fully initialized before resizing.
-    /// </summary>
-    private static void SetInitialWindowSize(Window window, int width, int height)
-    {
-        _windowSizeTimer = new System.Threading.Timer(_ =>
-        {
-            window.DispatcherQueue.TryEnqueue(() =>
-            {
-                var scaledWidth = width;
-                var scaledHeight = height;
-
-                // On macOS Retina displays, AppWindow.Resize uses physical pixels
-                // so we need to multiply by the scale factor (2x on Retina)
-                if (OperatingSystem.IsMacOS())
-                {
-                    scaledWidth = width * 2;
-                    scaledHeight = height * 2;
-                }
-
-                window.AppWindow?.Resize(new Windows.Graphics.SizeInt32 { Width = scaledWidth, Height = scaledHeight });
-            });
-            _windowSizeTimer?.Dispose();
-            _windowSizeTimer = null;
-        }, null, 2000, System.Threading.Timeout.Infinite);
     }
 }

@@ -23,6 +23,7 @@ public class SalesChannelInputDto : ISalesChannelInputModel
     public bool ExportSaless { get; set; }
     public bool InitialProductImportCompleted { get; set; }
     public bool InitialProductExportCompleted { get; set; }
+    public bool InitialCustomerImportCompleted { get; set; }
 
     public List<Guid> WarehouseIds { get; set; } = new();
 }

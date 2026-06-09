@@ -17,8 +17,12 @@ public sealed class SalesChannelOrchestrator : BackgroundService
 {
     private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(10);
 
+    // Purge expired sync logs roughly once a minute (every 6th 10s tick) — the flush itself runs each tick.
+    private const int PurgeEveryTicks = 6;
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SalesChannelOrchestrator> _logger;
+    private int _tick;
 
     public SalesChannelOrchestrator(IServiceScopeFactory scopeFactory, ILogger<SalesChannelOrchestrator> logger)
     {
@@ -30,12 +34,20 @@ public sealed class SalesChannelOrchestrator : BackgroundService
     {
         _logger.LogInformation("SalesChannelOrchestrator starting");
 
+        await CleanupOrphanedRunsAsync(stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 await DrainOutboxAsync(stoppingToken);
                 await PollImportsAsync(stoppingToken);
+                await DrainSyncLogsAsync(stoppingToken);
+
+                if (++_tick % PurgeEveryTicks == 0)
+                {
+                    await PurgeSyncLogsAsync(stoppingToken);
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -56,6 +68,40 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         _logger.LogInformation("SalesChannelOrchestrator stopping");
     }
 
+    /// <summary>
+    /// On startup, mark any run still flagged <see cref="ChannelSyncRunStatus.Running"/> as failed. A run
+    /// only stays "Running" if the process died mid-sync (crash, force-kill, or shutdown timeout), so any
+    /// such row found at boot is by definition orphaned — nothing is actively writing to it. Runs across
+    /// all tenants are swept (this is host-level housekeeping), hence <c>IgnoreQueryFilters</c>.
+    /// </summary>
+    private async Task CleanupOrphanedRunsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            var cleaned = await context.ChannelSyncRun
+                .IgnoreQueryFilters()
+                .Where(r => r.Status == ChannelSyncRunStatus.Running)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(r => r.Status, ChannelSyncRunStatus.Failed)
+                    .SetProperty(r => r.FinishedAt, DateTime.UtcNow)
+                    .SetProperty(r => r.ErrorSummary, "Orphaned run: server restarted while the sync was in progress; marked failed on startup.")
+                    .SetProperty(r => r.DateModified, DateTime.UtcNow),
+                    cancellationToken);
+
+            if (cleaned > 0)
+            {
+                _logger.LogWarning("Marked {Count} orphaned sync run(s) as failed on startup", cleaned);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clean up orphaned sync runs on startup");
+        }
+    }
+
     private async Task DrainOutboxAsync(CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
@@ -64,6 +110,28 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         if (processed > 0)
         {
             _logger.LogDebug("Drainer processed {Count} outbox rows", processed);
+        }
+    }
+
+    private async Task DrainSyncLogsAsync(CancellationToken cancellationToken)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var drainer = scope.ServiceProvider.GetRequiredService<SyncLogDrainer>();
+        var persisted = await drainer.DrainOnceAsync(cancellationToken);
+        if (persisted > 0)
+        {
+            _logger.LogDebug("Persisted {Count} sync log entries", persisted);
+        }
+    }
+
+    private async Task PurgeSyncLogsAsync(CancellationToken cancellationToken)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var drainer = scope.ServiceProvider.GetRequiredService<SyncLogDrainer>();
+        var purged = await drainer.PurgeExpiredAsync(cancellationToken);
+        if (purged > 0)
+        {
+            _logger.LogDebug("Purged {Count} expired sync log entries", purged);
         }
     }
 
@@ -101,17 +169,36 @@ public sealed class SalesChannelOrchestrator : BackgroundService
 
             try
             {
-                if (channel.ImportProducts)
+                // The product import is a full, non-incremental catalogue pull. Run it on a schedule
+                // only until it has completed once; otherwise it would re-import the entire catalogue
+                // every interval and hammer the remote shop (observed: back-to-back full imports +
+                // timeouts). Manual "Sync products" still works any time and bypasses this gate;
+                // clearing InitialProductImportCompleted re-enables a scheduled full import.
+                if (channel.ImportProducts && !channel.InitialProductImportCompleted)
                 {
-                    await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportProducts, ChannelSyncTriggerSource.Scheduler, cancellationToken);
+                    var run = await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportProducts, ChannelSyncTriggerSource.Scheduler, cancellationToken);
+                    if (run.Status is ChannelSyncRunStatus.Success or ChannelSyncRunStatus.PartialFailure)
+                    {
+                        channel.InitialProductImportCompleted = true;
+                        await context.SaveChangesAsync(cancellationToken);
+                    }
                 }
                 if (channel.ImportSaless)
                 {
                     await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportSaless, ChannelSyncTriggerSource.Scheduler, cancellationToken);
                 }
-                if (channel.ImportCustomers)
+                // Like the product import, the customer import is a full, non-incremental pull. Gate the
+                // scheduled run to once-until-complete so it does not re-pull the entire customer base every
+                // interval and hammer the remote shop. Manual "Sync customers" bypasses this gate; clearing
+                // InitialCustomerImportCompleted re-enables a scheduled full import.
+                if (channel.ImportCustomers && !channel.InitialCustomerImportCompleted)
                 {
-                    await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportCustomers, ChannelSyncTriggerSource.Scheduler, cancellationToken);
+                    var run = await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportCustomers, ChannelSyncTriggerSource.Scheduler, cancellationToken);
+                    if (run.Status is ChannelSyncRunStatus.Success or ChannelSyncRunStatus.PartialFailure)
+                    {
+                        channel.InitialCustomerImportCompleted = true;
+                        await context.SaveChangesAsync(cancellationToken);
+                    }
                 }
             }
             catch (Exception ex)

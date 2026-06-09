@@ -55,6 +55,7 @@
       <converters:SalesStatusToBackgroundConverter x:Key="SalesStatusToBackgroundConverter" />
       <converters:SalesStatusToForegroundConverter x:Key="SalesStatusToForegroundConverter" />
       <converters:SalesChannelTypeToTextConverter x:Key="SalesChannelTypeToTextConverter" />
+      <converters:SyncLogLevelToForegroundConverter x:Key="SyncLogLevelToForegroundConverter" />
 
     </ResourceDictionary>
   </Application.Resources>

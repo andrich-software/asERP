@@ -8,7 +8,9 @@ public class SalesChannelUpdateValidator : SalesChannelBaseValidator<SalesChanne
 {
     private readonly ISalesChannelRepository _salesChannelRepository;
 
+    // requirePassword: false — on update an empty password keeps the stored secret unchanged.
     public SalesChannelUpdateValidator(ISalesChannelRepository salesChannelRepository)
+        : base(requirePassword: false)
     {
         _salesChannelRepository = salesChannelRepository;
 

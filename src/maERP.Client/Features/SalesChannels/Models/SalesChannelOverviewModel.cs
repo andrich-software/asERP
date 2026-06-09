@@ -45,9 +45,6 @@ public partial record SalesChannelOverviewModel
             case SalesChannelType.PointOfSale:
                 await _navigator.NavigateViewModelAsync<PosDashboardModel>(this, data: data);
                 break;
-            case SalesChannelType.Shopware5:
-                await _navigator.NavigateViewModelAsync<Shopware5DashboardModel>(this, data: data);
-                break;
             default:
                 await _navigator.NavigateDataAsync(this, new SalesChannelDetailData(item.Id));
                 break;
@@ -144,7 +141,6 @@ public partial record SalesChannelOverviewModel
     internal static string FormatType(SalesChannelType type) => type switch
     {
         SalesChannelType.PointOfSale => "POS",
-        SalesChannelType.Shopware5 => "Shopware 5",
         SalesChannelType.Shopware6 => "Shopware 6",
         SalesChannelType.WooCommerce => "WooCommerce",
         SalesChannelType.eBay => "eBay",
@@ -220,7 +216,6 @@ public partial record SalesChannelOverviewItem(
     public SolidColorBrush TypeAccentBrush => Type switch
     {
         SalesChannelType.PointOfSale => new SolidColorBrush(Color.FromArgb(0xFF, 0x63, 0x66, 0xF1)),
-        SalesChannelType.Shopware5 => new SolidColorBrush(Color.FromArgb(0xFF, 0x0E, 0xA5, 0xE9)),
         SalesChannelType.Shopware6 => new SolidColorBrush(Color.FromArgb(0xFF, 0x02, 0x84, 0xC7)),
         SalesChannelType.WooCommerce => new SolidColorBrush(Color.FromArgb(0xFF, 0x7C, 0x3A, 0xED)),
         SalesChannelType.eBay => new SolidColorBrush(Color.FromArgb(0xFF, 0xEA, 0xB3, 0x08)),

@@ -1,3 +1,4 @@
+using maERP.Application.Contracts.Services;
 using maERP.Domain.Entities;
 using maERP.Domain.Enums;
 using maERP.Persistence.DatabaseContext;
@@ -18,18 +19,59 @@ public sealed class SyncDispatcher
     private readonly ApplicationDbContext _context;
     private readonly ISalesChannelConnectorRegistry _registry;
     private readonly SalesChannelContextFactory _contextFactory;
+    private readonly ITenantContext _tenantContext;
     private readonly ILogger<SyncDispatcher> _logger;
 
     public SyncDispatcher(
         ApplicationDbContext context,
         ISalesChannelConnectorRegistry registry,
         SalesChannelContextFactory contextFactory,
+        ITenantContext tenantContext,
         ILogger<SyncDispatcher> logger)
     {
         _context = context;
         _registry = registry;
         _contextFactory = contextFactory;
+        _tenantContext = tenantContext;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Aligns the scoped <see cref="ITenantContext"/> with the channel being synced. The orchestrator
+    /// runs in a background scope with no HTTP request, so nothing else populates the tenant — without
+    /// this, tenant-scoped reads (e.g. the tax-class lookup during product import) and writes silently
+    /// fall back to the null tenant, dropping every imported row. Manual syncs already carry the tenant
+    /// from the request; re-asserting the channel's own tenant here is consistent and harmless.
+    /// </summary>
+    private void AlignTenantContext(SalesChannel salesChannel)
+    {
+        if (salesChannel.TenantId.HasValue)
+        {
+            _tenantContext.SetAssignedTenantIds(new[] { salesChannel.TenantId.Value });
+            _tenantContext.SetCurrentTenantId(salesChannel.TenantId.Value);
+        }
+    }
+
+    /// <summary>
+    /// Opens an <see cref="ILogger"/> scope carrying the channel/run/operation identifiers. Serilog
+    /// surfaces these scope key/values as log-event properties, which the sync-log sink reads to
+    /// attribute and persist each line. Pure MEL — no Serilog dependency in this layer.
+    /// </summary>
+    private IDisposable? BeginSyncLogScope(SalesChannel salesChannel, ChannelSyncOperation operation, ChannelSyncRun run)
+    {
+        var scope = new Dictionary<string, object>
+        {
+            ["SalesChannelId"] = salesChannel.Id,
+            ["SyncRunCorrelationId"] = run.CorrelationId,
+            ["SyncOperation"] = operation,
+        };
+
+        if (salesChannel.TenantId.HasValue)
+        {
+            scope["SyncTenantId"] = salesChannel.TenantId.Value;
+        }
+
+        return _logger.BeginScope(scope);
     }
 
     public async Task<ChannelSyncRun> RunImportAsync(
@@ -38,6 +80,8 @@ public sealed class SyncDispatcher
         ChannelSyncTriggerSource trigger,
         CancellationToken cancellationToken)
     {
+        AlignTenantContext(salesChannel);
+
         var connector = _registry.Resolve(salesChannel.Type);
         var run = await OpenRunAsync(salesChannel, operation, trigger, cancellationToken);
 
@@ -46,6 +90,10 @@ public sealed class SyncDispatcher
             await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, $"No capable connector for {salesChannel.Type}/{operation}", cancellationToken);
             return run;
         }
+
+        // Tag every log line emitted while the connector runs so the sync-log sink can attribute and
+        // persist it. The scope flows via AsyncLocal into the awaited connector/repository code.
+        using var logScope = BeginSyncLogScope(salesChannel, operation, run);
 
         try
         {
@@ -68,6 +116,13 @@ public sealed class SyncDispatcher
 
             await CloseRunAsync(run, status, result.ItemsProcessed, result.ItemsFailed, result.ErrorSummary, cancellationToken);
         }
+        catch (OperationCanceledException)
+        {
+            // Expected on server shutdown — the connector observed the token between pages. Close the run
+            // cleanly (not an error) so it does not linger as an orphaned "Running" row.
+            _logger.LogInformation("Sync canceled for channel {Channel} op {Op} (server shutdown)", salesChannel.Id, operation);
+            await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, "Sync canceled (server shutdown).", cancellationToken);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Sync dispatch failed for channel {Channel} op {Op}", salesChannel.Id, operation);
@@ -82,6 +137,8 @@ public sealed class SyncDispatcher
         ChannelExportOutbox outboxRow,
         CancellationToken cancellationToken)
     {
+        AlignTenantContext(salesChannel);
+
         var connector = _registry.Resolve(salesChannel.Type);
         if (connector is null)
         {
@@ -89,6 +146,9 @@ public sealed class SyncDispatcher
         }
 
         var run = await OpenRunAsync(salesChannel, outboxRow.Operation, ChannelSyncTriggerSource.Event, cancellationToken);
+
+        using var logScope = BeginSyncLogScope(salesChannel, outboxRow.Operation, run);
+
         try
         {
             var context = _contextFactory.Create(salesChannel, run, cancellationToken);
@@ -148,7 +208,11 @@ public sealed class SyncDispatcher
         run.ItemsFailed = itemsFailed;
         run.ErrorSummary = Truncate(errorSummary, 2000);
 
-        await _context.SaveChangesAsync(cancellationToken);
+        // Persist the terminal status with a non-cancellable token: this write runs in the catch path of
+        // a canceled/shutting-down sync, and passing the already-canceled token would abort the close and
+        // leave the run stuck at "Running" (orphaned). The startup cleanup is the backstop, not this.
+        _ = cancellationToken;
+        await _context.SaveChangesAsync(CancellationToken.None);
     }
 
     private static bool ConnectorSupports(ISalesChannelConnector connector, ChannelSyncOperation operation) => operation switch

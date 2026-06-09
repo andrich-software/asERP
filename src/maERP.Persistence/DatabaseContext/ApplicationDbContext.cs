@@ -31,6 +31,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(modelBuilder);
 
+        // ASP.NET Core Identity 10 adds passkey (WebAuthn) support: the IdentityUserPasskey entity
+        // and its IdentityPasskeyData complex type. maERP does not use passkeys, and the SQLite
+        // provider does not map the complex type — it surfaces as a keyless entity and fails model
+        // validation ("IdentityPasskeyData requires a primary key"), which blocks SQLite migrations.
+        // Excluding the entity keeps the model identical across all providers (none map passkeys).
+        // The data complex type must be ignored explicitly too: on SQLite it is otherwise discovered
+        // as a standalone keyless entity ("requires a primary key") even when the owning entity is ignored.
+        modelBuilder.Ignore<IdentityPasskeyData>();
+        modelBuilder.Ignore<IdentityUserPasskey<string>>();
+
         // Map ASP.NET Identity tables to custom names
         modelBuilder.Entity<ApplicationUser>().ToTable("user");
         modelBuilder.Entity<IdentityRole>().ToTable("role");
@@ -68,6 +78,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<UserTenant>().ToTable("user_tenant");
         modelBuilder.Entity<Warehouse>().ToTable("warehouse");
         modelBuilder.Entity<ChannelSyncRun>().ToTable("channel_sync_run");
+        modelBuilder.Entity<ChannelSyncLog>().ToTable("channel_sync_log");
         modelBuilder.Entity<ChannelExportOutbox>().ToTable("channel_export_outbox");
         modelBuilder.Entity<TenantOAuthAppSettings>().ToTable("tenant_oauth_app_settings");
         modelBuilder.Entity<OAuthState>().ToTable("oauth_state");
@@ -105,6 +116,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new ShippingProviderRateConfiguration());
         modelBuilder.ApplyConfiguration(new TenantEmailSettingsConfiguration());
         modelBuilder.ApplyConfiguration(new ChannelSyncRunConfiguration());
+        modelBuilder.ApplyConfiguration(new ChannelSyncLogConfiguration());
         modelBuilder.ApplyConfiguration(new ChannelExportOutboxConfiguration());
         modelBuilder.ApplyConfiguration(new TenantOAuthAppSettingsConfiguration());
         modelBuilder.ApplyConfiguration(new OAuthStateConfiguration());
@@ -173,6 +185,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<TenantEmailSettings> TenantEmailSettings { get; set; } = null!;
     public DbSet<UserTenant> UserTenant { get; set; } = null!;
     public DbSet<ChannelSyncRun> ChannelSyncRun { get; set; } = null!;
+    public DbSet<ChannelSyncLog> ChannelSyncLog { get; set; } = null!;
     public DbSet<ChannelExportOutbox> ChannelExportOutbox { get; set; } = null!;
     public DbSet<TenantOAuthAppSettings> TenantOAuthAppSettings { get; set; } = null!;
     public DbSet<OAuthState> OAuthState { get; set; } = null!;

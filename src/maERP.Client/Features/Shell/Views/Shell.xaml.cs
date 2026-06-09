@@ -116,45 +116,72 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         }
     }
 
-    private async void OnAuthenticationStateChanged(object? sender, bool isAuthenticated)
+    /// <summary>
+    /// Runs UI-touching work on the dispatcher thread. ShellModel state events can be raised from
+    /// background threads (Task continuations); accessing XAML elements off the UI thread throws
+    /// "The dependency property system should not be accessed from non UI thread."
+    /// </summary>
+    private void RunOnUiThread(Func<Task> work)
+    {
+        if (DispatcherQueue.HasThreadAccess)
+        {
+            _ = work();
+        }
+        else
+        {
+            DispatcherQueue.TryEnqueue(() => _ = work());
+        }
+    }
+
+    private void OnAuthenticationStateChanged(object? sender, bool isAuthenticated)
     {
         Console.WriteLine($"[Shell] OnAuthenticationStateChanged received: {isAuthenticated}");
 
-        if (isAuthenticated)
+        RunOnUiThread(async () =>
         {
-            SetAuthenticatedVisibility();
-            await UpdateSuperadminMenuVisibilityAsync();
-            UpdateTenantDisplay();
-            await RefreshSalesChannelSidebar();
-        }
-        else
-        {
-            SetUnauthenticatedVisibility();
-            GroupSuperadminPanel.Visibility = Visibility.Collapsed;
-        }
+            if (isAuthenticated)
+            {
+                SetAuthenticatedVisibility();
+                await UpdateSuperadminMenuVisibilityAsync();
+                UpdateTenantDisplay();
+                await RefreshSalesChannelSidebar();
+            }
+            else
+            {
+                SetUnauthenticatedVisibility();
+                GroupSuperadminPanel.Visibility = Visibility.Collapsed;
+            }
+        });
     }
 
-    private async void OnTenantStateChanged(object? sender, TenantListDto? tenant)
+    private void OnTenantStateChanged(object? sender, TenantListDto? tenant)
     {
         Console.WriteLine($"[Shell] OnTenantStateChanged received: {tenant?.Name ?? "null"}");
-        UpdateTenantDisplay();
-        await RefreshSalesChannelSidebar();
+
+        RunOnUiThread(async () =>
+        {
+            UpdateTenantDisplay();
+            await RefreshSalesChannelSidebar();
+        });
     }
 
-    private async void OnNoTenantsStateChanged(object? sender, bool hasNoTenants)
+    private void OnNoTenantsStateChanged(object? sender, bool hasNoTenants)
     {
         Console.WriteLine($"[Shell] OnNoTenantsStateChanged received: {hasNoTenants}");
 
-        if (hasNoTenants)
+        RunOnUiThread(async () =>
         {
-            SetNoTenantsVisibility();
-        }
-        else
-        {
-            SetAuthenticatedVisibility();
-            await UpdateSuperadminMenuVisibilityAsync();
-            UpdateTenantDisplay();
-        }
+            if (hasNoTenants)
+            {
+                SetNoTenantsVisibility();
+            }
+            else
+            {
+                SetAuthenticatedVisibility();
+                await UpdateSuperadminMenuVisibilityAsync();
+                UpdateTenantDisplay();
+            }
+        });
     }
 
     private void UpdateTenantDisplay()
@@ -511,11 +538,8 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                                 case SalesChannelType.PointOfSale:
                                     await navigator.NavigateViewModelAsync<PosDashboardModel>(this, data: data);
                                     break;
-                                case SalesChannelType.Shopware5:
-                                    await navigator.NavigateViewModelAsync<Shopware5DashboardModel>(this, data: data);
-                                    break;
                                 default:
-                                    await navigator.NavigateDataAsync(this, new SalesChannelDetailData(scId));
+                                    await navigator.NavigateViewModelAsync<SalesChannelDashboardModel>(this, data: data);
                                     break;
                             }
                         }
@@ -656,9 +680,9 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
     #region Dynamic SalesChannel Sidebar
 
-    private async void OnSalesChannelsChanged(object? sender, EventArgs e)
+    private void OnSalesChannelsChanged(object? sender, EventArgs e)
     {
-        await RefreshSalesChannelSidebar();
+        RunOnUiThread(RefreshSalesChannelSidebar);
     }
 
     private async Task RefreshSalesChannelSidebar()
@@ -690,7 +714,6 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                 var glyph = sc.SalesChannelType switch
                 {
                     SalesChannelType.PointOfSale => "\uE7BF",
-                    SalesChannelType.Shopware5 => "\uE774",
                     SalesChannelType.Shopware6 => "\uE774",
                     SalesChannelType.WooCommerce => "\uE774",
                     SalesChannelType.eBay => "\uE774",

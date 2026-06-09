@@ -45,7 +45,6 @@ public sealed class SalesChannelContextFactory
 
     public static string HttpClientNameFor(SalesChannelType type) => type switch
     {
-        SalesChannelType.Shopware5 => "shopware5",
         SalesChannelType.Shopware6 => "shopware6",
         SalesChannelType.WooCommerce => "woocommerce",
         SalesChannelType.eBay => "ebay",

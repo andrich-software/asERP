@@ -52,6 +52,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
     // Initial Status
     private bool _initialProductImportCompleted;
     private bool _initialProductExportCompleted;
+    private bool _initialCustomerImportCompleted;
 
     // Warehouses
     private ObservableCollection<SelectableWarehouse> _warehouses = new();
@@ -125,7 +126,6 @@ public class SalesChannelEditModel : AsyncInitializableModel
     public IReadOnlyList<SalesChannelTypeOption> SalesChannelTypeOptions { get; } = new List<SalesChannelTypeOption>
     {
         new(SalesChannelType.PointOfSale, "SalesChannelType.PointOfSale"),
-        new(SalesChannelType.Shopware5, "SalesChannelType.Shopware5"),
         new(SalesChannelType.Shopware6, "SalesChannelType.Shopware6"),
         new(SalesChannelType.WooCommerce, "SalesChannelType.WooCommerce"),
         new(SalesChannelType.eBay, "SalesChannelType.eBay"),
@@ -157,6 +157,16 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 OnPropertyChanged(nameof(ShowUrlField));
                 OnPropertyChanged(nameof(ShowImportExportSettings));
                 OnPropertyChanged(nameof(CanSave));
+
+                // Connection field labels/placeholders are type-specific (e.g. WooCommerce
+                // uses Consumer Key / Consumer Secret instead of Username / Password).
+                OnPropertyChanged(nameof(UrlPlaceholder));
+                OnPropertyChanged(nameof(UsernameLabel));
+                OnPropertyChanged(nameof(UsernamePlaceholder));
+                OnPropertyChanged(nameof(PasswordLabel));
+                OnPropertyChanged(nameof(PasswordPlaceholder));
+                OnPropertyChanged(nameof(ShowPasswordKeepHint));
+                OnPropertyChanged(nameof(ConnectionHintText));
             }
         }
     }
@@ -172,7 +182,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
     public bool IsOAuthChannel => SalesChannelType is SalesChannelType.eBay or SalesChannelType.Amazon;
 
     /// <summary>
-    /// Shows the Username/Password connection block for credential-style channels (Shopware5/6,
+    /// Shows the Username/Password connection block for credential-style channels (Shopware6,
     /// WooCommerce). PointOfSale skips it entirely; OAuth channels use <see cref="ShowOAuthSection"/>.
     /// </summary>
     public bool ShowConnectionInfo =>
@@ -221,11 +231,10 @@ public class SalesChannelEditModel : AsyncInitializableModel
     }
 
     /// <summary>
-    /// Shows URL field only for Shopware5, Shopware6, and WooCommerce.
+    /// Shows URL field only for Shopware6 and WooCommerce.
     /// eBay, Amazon and PointOfSale do not require URL.
     /// </summary>
     public bool ShowUrlField => SalesChannelType is
-        SalesChannelType.Shopware5 or
         SalesChannelType.Shopware6 or
         SalesChannelType.WooCommerce;
 
@@ -236,10 +245,72 @@ public class SalesChannelEditModel : AsyncInitializableModel
 
     /// <summary>
     /// Shows the bottom-of-page hint that explains URL/credentials configuration.
-    /// Only meaningful for credential-style channels (Shopware5/6, WooCommerce). Hidden for
+    /// Only meaningful for credential-style channels (Shopware6, WooCommerce). Hidden for
     /// PointOfSale (no remote endpoint) and OAuth channels (eBay/Amazon — no URL/credentials).
     /// </summary>
     public bool ShowConnectionHint => IsNotLoading && ShowConnectionInfo;
+
+    #endregion
+
+    #region Type-Specific Connection Labels
+
+    /// <summary>True for WooCommerce, which labels its credentials Consumer Key / Consumer Secret.</summary>
+    private bool IsWooCommerce => SalesChannelType == SalesChannelType.WooCommerce;
+
+    // NOTE: these resolve via IStringLocalizer. Resource keys must be SINGLE-DOT (2-segment),
+    // PascalCase — e.g. "SalesChannelEditPage.ConnUrlLabel" — matching the proven pattern used
+    // elsewhere (AddressDialog.CityPlaceholder, Common.Save). Multi-dot keys (X.Y.Z) get mangled
+    // by the .resw → resource indexing (only the first dot becomes the section separator), so the
+    // lookup path no longer matches and the raw key is shown. Reserved x:Uid property suffixes
+    // (.Header/.Text/.PlaceholderText) must also be avoided here.
+
+    public string UrlLabel => _localizer["SalesChannelEditPage.ConnUrlLabel"];
+
+    /// <summary>Placeholder for the URL field — WooCommerce expects the shop base URL, not an API path.</summary>
+    public string UrlPlaceholder => IsWooCommerce
+        ? _localizer["SalesChannelEditPage.ConnUrlPlaceholderWoo"]
+        : _localizer["SalesChannelEditPage.ConnUrlPlaceholder"];
+
+    /// <summary>Username field header — "Consumer Key" for WooCommerce, "Username" otherwise.</summary>
+    public string UsernameLabel => IsWooCommerce
+        ? _localizer["SalesChannelEditPage.ConnConsumerKeyLabel"]
+        : _localizer["SalesChannelEditPage.ConnUsernameLabel"];
+
+    public string UsernamePlaceholder => IsWooCommerce
+        ? _localizer["SalesChannelEditPage.ConnConsumerKeyPlaceholder"]
+        : _localizer["SalesChannelEditPage.ConnUsernamePlaceholder"];
+
+    /// <summary>Password field header — "Consumer Secret" for WooCommerce, "Password / API Key" otherwise.</summary>
+    public string PasswordLabel => IsWooCommerce
+        ? _localizer["SalesChannelEditPage.ConnConsumerSecretLabel"]
+        : _localizer["SalesChannelEditPage.ConnPasswordLabel"];
+
+    public string PasswordPlaceholder
+    {
+        get
+        {
+            // On edit the stored secret is kept unless replaced — make that obvious in the field.
+            if (IsEditMode)
+            {
+                return _localizer["SalesChannelEditPage.ConnSecretKeepPlaceholder"];
+            }
+
+            return IsWooCommerce
+                ? _localizer["SalesChannelEditPage.ConnConsumerSecretPlaceholder"]
+                : _localizer["SalesChannelEditPage.ConnPasswordPlaceholder"];
+        }
+    }
+
+    /// <summary>Shows the "leave blank to keep the stored secret" caption — only when editing a credential channel.</summary>
+    public bool ShowPasswordKeepHint => IsEditMode && ShowConnectionInfo;
+
+    /// <summary>Caption under the secret field explaining that an empty value keeps the stored secret.</summary>
+    public string PasswordKeepHint => _localizer["SalesChannelEditPage.ConnSecretKeepHint"];
+
+    /// <summary>Bottom-of-page connection hint — WooCommerce gets a tailored explanation.</summary>
+    public string ConnectionHintText => IsWooCommerce
+        ? _localizer["SalesChannelEditPage.ConnHintWoo"]
+        : _localizer["SalesChannelEditPage.ConnHintDefault"];
 
     #endregion
 
@@ -323,6 +394,12 @@ public class SalesChannelEditModel : AsyncInitializableModel
         set => SetProperty(ref _initialProductExportCompleted, value);
     }
 
+    public bool InitialCustomerImportCompleted
+    {
+        get => _initialCustomerImportCompleted;
+        set => SetProperty(ref _initialCustomerImportCompleted, value);
+    }
+
     #endregion
 
     #region Warehouses
@@ -394,10 +471,12 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 // Developer-App credentials live in TenantOAuthAppSettings or system Settings.
                 SalesChannelType.eBay or SalesChannelType.Amazon => true,
 
-                // Shopware5, Shopware6, WooCommerce: Name, URL, Username, Password required
+                // Shopware6, WooCommerce: Name, URL, Username required.
+                // Password is only required when creating — on edit the stored secret is kept
+                // unless the user types a new one (it is never returned to the client to prefill).
                 _ => !string.IsNullOrWhiteSpace(Url) &&
                      !string.IsNullOrWhiteSpace(Username) &&
-                     !string.IsNullOrWhiteSpace(Password)
+                     (IsEditMode || !string.IsNullOrWhiteSpace(Password))
             };
         }
     }
@@ -550,6 +629,14 @@ public class SalesChannelEditModel : AsyncInitializableModel
         IsSaving = true;
         ErrorMessage = string.Empty;
 
+        // WooCommerce talks to the REST API under /wp-json/wc/v3 — normalize whatever the user
+        // typed (bare host or shop base URL) into the full endpoint before persisting, and reflect
+        // it back into the field so the stored value is visible.
+        if (IsWooCommerce)
+        {
+            Url = NormalizeWooCommerceUrl(Url);
+        }
+
         try
         {
             var input = new SalesChannelInputDto
@@ -567,6 +654,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 ExportSaless = ExportSaless,
                 InitialProductImportCompleted = InitialProductImportCompleted,
                 InitialProductExportCompleted = InitialProductExportCompleted,
+                InitialCustomerImportCompleted = InitialCustomerImportCompleted,
                 WarehouseIds = Warehouses.Where(w => w.IsSelected).Select(w => w.Id).ToList()
             };
 
@@ -603,6 +691,43 @@ public class SalesChannelEditModel : AsyncInitializableModel
     public async Task CancelAsync()
     {
         await _navigator.NavigateBackAsync(this);
+    }
+
+    /// <summary>
+    /// WooCommerce REST API path appended to the shop's base URL.
+    /// </summary>
+    private const string WooCommerceApiPath = "/wp-json/wc/v3";
+
+    /// <summary>
+    /// Normalizes a user-entered WooCommerce URL into the full REST endpoint:
+    /// prepends <c>https://</c> when no scheme is given and appends <see cref="WooCommerceApiPath"/>
+    /// unless it is already present. Idempotent — calling it on an already-normalized URL is a no-op.
+    /// </summary>
+    internal static string NormalizeWooCommerceUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return url;
+        }
+
+        var normalized = url.Trim();
+
+        // Add a default scheme so the result is an absolute URI (the Server validates this).
+        if (!normalized.Contains("://", StringComparison.Ordinal))
+        {
+            normalized = "https://" + normalized;
+        }
+
+        normalized = normalized.TrimEnd('/');
+
+        // Already points at the REST API (regardless of casing)? Leave the path as-is.
+        if (normalized.EndsWith(WooCommerceApiPath, StringComparison.OrdinalIgnoreCase) ||
+            normalized.Contains(WooCommerceApiPath + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            return normalized;
+        }
+
+        return normalized + WooCommerceApiPath;
     }
 
     /// <inheritdoc />

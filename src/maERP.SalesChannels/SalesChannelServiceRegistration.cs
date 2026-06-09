@@ -3,10 +3,10 @@ using maERP.SalesChannels.Abstractions;
 using maERP.SalesChannels.Connectors.Amazon;
 using maERP.SalesChannels.Connectors.Ebay;
 using maERP.SalesChannels.Connectors.Pos;
-using maERP.SalesChannels.Connectors.Shopware5;
 using maERP.SalesChannels.Connectors.Shopware6;
 using maERP.SalesChannels.Connectors.WooCommerce;
 using maERP.SalesChannels.Contracts;
+using maERP.SalesChannels.Logging;
 using maERP.SalesChannels.Models.Amazon;
 using maERP.SalesChannels.Models.eBay;
 using maERP.SalesChannels.Models.Shopware6;
@@ -35,7 +35,6 @@ public static class SalesChannelServiceRegistration
 
         // Per-channel typed HttpClients with Polly resilience. Connectors get the matching
         // client by name from IHttpClientFactory via the SalesChannelContext.
-        services.AddHttpClient("shopware5").AddPollyHandlers();
         services.AddHttpClient("shopware6").AddPollyHandlers();
         services.AddHttpClient("woocommerce").AddPollyHandlers();
         services.AddHttpClient("ebay").AddPollyHandlers();
@@ -47,7 +46,6 @@ public static class SalesChannelServiceRegistration
         // Connectors (one per SalesChannelType). Resolved through the registry, never via
         // direct DI — keeps the channel-specific switch in one place.
         services.AddScoped<ISalesChannelConnector, PosConnector>();
-        services.AddScoped<ISalesChannelConnector, Shopware5Connector>();
         services.AddScoped<ISalesChannelConnector, Shopware6Connector>();
         services.AddScoped<ISalesChannelConnector, WooCommerceConnector>();
         services.AddScoped<ISalesChannelConnector, EbayConnector>();
@@ -60,6 +58,11 @@ public static class SalesChannelServiceRegistration
         services.AddScoped<SalesChannelContextFactory>();
         services.AddScoped<SyncDispatcher>();
         services.AddScoped<OutboxDrainer>();
+
+        // Sync-log capture: the buffer is a process-wide singleton shared by the Serilog sink
+        // (producer) and the drainer (consumer). The drainer is scoped like OutboxDrainer.
+        services.AddSingleton<ISalesChannelSyncLogBuffer, SalesChannelSyncLogBuffer>();
+        services.AddScoped<SyncLogDrainer>();
         if (includeBackgroundServices)
         {
             services.AddHostedService<SalesChannelOrchestrator>();
@@ -67,7 +70,7 @@ public static class SalesChannelServiceRegistration
 
         services.RegisterHandlersFromAssembly(typeof(SalesChannelServiceRegistration).Assembly);
 
-        // Legacy per-channel hosted-service tasks (Tasks/Shopware5*, /WooCommerce*, /Ebay*) are
+        // Legacy per-channel hosted-service tasks (Tasks/WooCommerce*, /Ebay*) are
         // superseded by SalesChannelOrchestrator dispatching through the connectors. The .cs files
         // remain in the repo as historical reference until the PR 16 cleanup deletes them.
 

@@ -24,7 +24,7 @@
         <AppBarButton x:Uid="SalesChannelOverviewPage.AppBarButton.ManageList"
                       Click="ManageList_Click">
           <AppBarButton.Icon>
-            <FontIcon Glyph="&#xE71D;" />
+            <FontIcon Glyph="&#xE713;" />
           </AppBarButton.Icon>
         </AppBarButton>
         <AppBarButton x:Uid="SalesChannelOverviewPage.AppBarButton.Refresh"

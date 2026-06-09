@@ -94,6 +94,14 @@ catch (ApiException ex) { ErrorMessage = ex.CombinedMessage; }
 
 Inject `IStringLocalizer<T>` into models; for code-behind use a `ResourceLoader` instance.
 
+### `IStringLocalizer` keys must be single-dot (2-segment)
+
+Strings resolved at runtime via `_localizer["..."]` (model properties, code-behind) **must use a single-dot, 2-segment, PascalCase key** — e.g. `SalesChannelEditPage.ConnUrlLabel`, mirroring the proven pattern (`AddressDialog.CityPlaceholder`, `Common.Save`, `*.TitleNew`).
+
+- ❌ **Multi-dot keys (`Page.Section.Key`) silently break.** The `.resw` → resource indexing turns only the *first* dot into the `/` section separator and keeps the rest literal (`Page.Section.Key` → stored as `Page/Section.Key`), while the lookup converts *all* dots to `/` (`Page/Section/Key`). The mismatch makes the localizer return the **raw key**, which renders in the UI with slashes. (Some 3-segment `*.Error.SaveFailed` keys exist in the codebase — they are silently broken too; don't copy them. Verified by inspecting the built DLL with `strings`.)
+- ❌ **Never end a localizer key with `.Header` / `.Text` / `.PlaceholderText`** — those are reserved x:Uid property suffixes, consumed by the x:Uid mechanism and not flat-lookupable.
+- ✅ **Prefer `x:Uid` for static XAML labels.** It uses the working resw resolution (`Name.Header`, `Name.PlaceholderText`). Only switch a control's `Header`/`PlaceholderText`/`Text` to a model-bound `_localizer[...]` property when the value must change at runtime (e.g. WooCommerce showing *Consumer Key* / *Consumer Secret* instead of *Username* / *Password*) — and then use single-dot keys.
+
 ## Styling
 
 Styles live in `Styles/`:

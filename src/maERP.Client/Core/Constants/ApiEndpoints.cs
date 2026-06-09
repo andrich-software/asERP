@@ -89,6 +89,7 @@ public static class ApiEndpoints
         public static string Sync(Guid id, string operation) => $"{Base}/{id}/sync/{operation}";
         public static string TestConnection(Guid id) => $"{Base}/{id}/test-connection";
         public static string SyncRuns(Guid id) => $"{Base}/{id}/sync-runs";
+        public static string SyncLogs(Guid id) => $"{Base}/{id}/sync-logs";
         public static string DeadLetter(Guid id) => $"{Base}/{id}/outbox/dead-letter";
         public static string RetryDeadLetter(Guid id, Guid outboxId) => $"{Base}/{id}/outbox/{outboxId}/retry";
         public static string OAuthStart(Guid id, string provider) => $"{Base}/{id}/oauth/{provider}/start";

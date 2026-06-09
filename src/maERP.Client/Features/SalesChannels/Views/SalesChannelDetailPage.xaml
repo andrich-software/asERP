@@ -675,6 +675,88 @@
                     </ItemsRepeater>
                   </StackPanel>
                 </Border>
+
+                <!-- Sync log explorer: per-channel synchronization log lines (last 24h), filterable by level. -->
+                <Border Background="{ThemeResource SurfaceBrush}"
+                        CornerRadius="12"
+                        Translation="0,0,8">
+                  <Border.Shadow>
+                    <ThemeShadow />
+                  </Border.Shadow>
+                  <StackPanel Spacing="12" Padding="16">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE9D9;"
+                                  FontSize="20"
+                                  Foreground="{ThemeResource PrimaryBrush}" />
+                        <TextBlock Text="Sync log (last 24h)"
+                                   Style="{StaticResource TitleMedium}"
+                                   Foreground="{ThemeResource OnSurfaceBrush}" />
+                      </StackPanel>
+                      <Button Grid.Column="1"
+                              Content="Refresh"
+                              Command="{Binding RefreshLogs}" />
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Button Content="All"
+                              Command="{Binding ShowAllLogs}" />
+                      <Button Content="Warnings+"
+                              Command="{Binding ShowWarningLogs}" />
+                      <Button Content="Errors"
+                              Command="{Binding ShowErrorLogs}" />
+                    </StackPanel>
+
+                    <ItemsRepeater ItemsSource="{Binding SyncLogs}">
+                      <ItemsRepeater.Layout>
+                        <StackLayout Orientation="Vertical" Spacing="4" />
+                      </ItemsRepeater.Layout>
+                      <ItemsRepeater.ItemTemplate>
+                        <DataTemplate>
+                          <StackPanel Padding="0,4"
+                                      Spacing="2"
+                                      BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                      BorderThickness="0,0,0,1">
+                            <Grid>
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                              </Grid.ColumnDefinitions>
+                              <TextBlock Grid.Column="0"
+                                         Text="{Binding Timestamp}"
+                                         Style="{StaticResource BodySmall}"
+                                         Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding Level}"
+                                         Style="{StaticResource BodySmall}"
+                                         Foreground="{Binding Level, Converter={StaticResource SyncLogLevelToForegroundConverter}}" />
+                              <TextBlock Grid.Column="2"
+                                         Text="{Binding Operation}"
+                                         Style="{StaticResource BodySmall}"
+                                         Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                              <TextBlock Grid.Column="3"
+                                         Text="{Binding Message}"
+                                         Style="{StaticResource BodySmall}"
+                                         Foreground="{ThemeResource OnSurfaceBrush}"
+                                         TextWrapping="Wrap" />
+                            </Grid>
+                            <TextBlock Text="{Binding Exception}"
+                                       Style="{StaticResource BodySmall}"
+                                       Foreground="{ThemeResource ErrorBrush}"
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding Exception, Converter={StaticResource StringToVisibilityConverter}}" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                  </StackPanel>
+                </Border>
               </StackPanel>
             </Grid>
           </ScrollViewer>

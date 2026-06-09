@@ -272,7 +272,8 @@ public class SalesChannelDetailQueryTests : TenantIsolatedTestBase
         TestAssertions.AssertEqual("WooCommerce Store T1", channel.Name);
         TestAssertions.AssertEqual("https://store1.example.com", channel.Url);
         TestAssertions.AssertEqual("user1", channel.Username);
-        TestAssertions.AssertEqual("pass1", channel.Password);
+        // The secret is write-only: it is never returned to the client (see SalesChannelDetailHandler).
+        TestAssertions.AssertEqual(string.Empty, channel.Password);
         TestAssertions.AssertTrue(channel.ImportProducts);
         TestAssertions.AssertTrue(channel.ExportProducts);
         TestAssertions.AssertFalse(channel.ImportCustomers);
@@ -330,7 +331,7 @@ public class SalesChannelDetailQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSalesChannelDetail_VerifyPasswordIncluded_ShouldContainSensitiveData()
+    public async Task GetSalesChannelDetail_VerifyPasswordExcluded_ShouldNotReturnSecret()
     {
         await SeedTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -341,8 +342,8 @@ public class SalesChannelDetailQueryTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<SalesChannelDetailDto>>(response);
         TestAssertions.AssertNotNull(result?.Data);
 
-        // DetailDto should include password (unlike ListDto)
-        TestAssertions.AssertEqual("pass1", result.Data!.Password);
+        // The secret is write-only and must never be round-tripped to the client.
+        TestAssertions.AssertEqual(string.Empty, result.Data!.Password);
     }
 
     [Fact]

@@ -39,6 +39,9 @@ public interface ISalesChannelService
     /// <summary>Recent sync-run audit log for the channel.</summary>
     Task<List<ChannelSyncRunDto>> GetSyncRunsAsync(Guid id, int take = 50, int offset = 0, CancellationToken ct = default);
 
+    /// <summary>Synchronization log lines (last 24h) for the channel, optionally filtered by minimum level (e.g. "Warning").</summary>
+    Task<List<ChannelSyncLogDto>> GetSyncLogsAsync(Guid id, int take = 200, int offset = 0, string? minLevel = null, CancellationToken ct = default);
+
     /// <summary>Outbox rows currently in DeadLetter for the channel.</summary>
     Task<List<ChannelExportOutboxDto>> GetDeadLetterAsync(Guid id, CancellationToken ct = default);
 

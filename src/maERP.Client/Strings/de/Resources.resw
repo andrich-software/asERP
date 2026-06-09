@@ -1890,6 +1890,46 @@
   <data name="SalesChannelEditPage.Field.Password.PlaceholderText" xml:space="preserve">
     <value>Passwort oder API-Schlüssel eingeben</value>
   </data>
+  <!-- Connection fields resolved via IStringLocalizer (flat keys, no x:Uid property suffix). -->
+  <data name="SalesChannelEditPage.ConnUrlLabel" xml:space="preserve">
+    <value>URL</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnUrlPlaceholder" xml:space="preserve">
+    <value>https://beispiel.de/api</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnUrlPlaceholderWoo" xml:space="preserve">
+    <value>https://ihr-shop.de</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnUsernameLabel" xml:space="preserve">
+    <value>Benutzername</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnUsernamePlaceholder" xml:space="preserve">
+    <value>API-Benutzername eingeben</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnPasswordLabel" xml:space="preserve">
+    <value>Passwort / API-Schlüssel</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnPasswordPlaceholder" xml:space="preserve">
+    <value>Passwort oder API-Schlüssel eingeben</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnConsumerKeyLabel" xml:space="preserve">
+    <value>Consumer Key</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnConsumerKeyPlaceholder" xml:space="preserve">
+    <value>ck_…</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnConsumerSecretLabel" xml:space="preserve">
+    <value>Consumer Secret</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnConsumerSecretPlaceholder" xml:space="preserve">
+    <value>cs_…</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnSecretKeepPlaceholder" xml:space="preserve">
+    <value>•••••••• – leer lassen, um beizubehalten</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnSecretKeepHint" xml:space="preserve">
+    <value>Aus Sicherheitsgründen wird das gespeicherte Secret nicht angezeigt. Leer lassen, um es unverändert zu übernehmen, oder neu eingeben, um es zu ersetzen.</value>
+  </data>
   <data name="SalesChannelEditPage.Field.ImportProducts.Text" xml:space="preserve">
     <value>Produkte importieren</value>
   </data>
@@ -1914,6 +1954,9 @@
   <data name="SalesChannelEditPage.Field.InitialProductExportCompleted.Text" xml:space="preserve">
     <value>Initialer Produktexport abgeschlossen</value>
   </data>
+  <data name="SalesChannelEditPage.Field.InitialCustomerImportCompleted.Text" xml:space="preserve">
+    <value>Initialer Kundenimport abgeschlossen</value>
+  </data>
   <data name="SalesChannelEditPage.RequiredFieldsNote.Text" xml:space="preserve">
     <value>* Pflichtfelder</value>
   </data>
@@ -1929,6 +1972,12 @@
   <data name="SalesChannelEditPage.Hint.Text" xml:space="preserve">
     <value>Konfigurieren Sie die Verbindungseinstellungen, um die Synchronisation mit externen Plattformen zu aktivieren. Stellen Sie sicher, dass URL und Anmeldedaten korrekt sind, bevor Sie speichern.</value>
   </data>
+  <data name="SalesChannelEditPage.ConnHintDefault" xml:space="preserve">
+    <value>Konfigurieren Sie die Verbindungseinstellungen, um die Synchronisation mit externen Plattformen zu aktivieren. Stellen Sie sicher, dass URL und Anmeldedaten korrekt sind, bevor Sie speichern.</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnHintWoo" xml:space="preserve">
+    <value>WooCommerce: Tragen Sie unter URL die Basis-Adresse Ihres Shops ein (z. B. https://ihr-shop.de) – ohne /wp-json oder /api. Erstellen Sie in WooCommerce unter WooCommerce → Einstellungen → Erweitert → REST-API einen API-Schlüssel mit Lese-/Schreibrechten. Den erhaltenen Consumer Key (ck_…) tragen Sie als Consumer Key ein, das Consumer Secret (cs_…) als Consumer Secret. Beim späteren Bearbeiten können Sie das Consumer-Secret-Feld leer lassen, um das gespeicherte Secret beizubehalten.</value>
+  </data>
   <data name="SalesChannelEditPage.Error.SaveFailed" xml:space="preserve">
     <value>Vertriebskanal konnte nicht gespeichert werden: {0}</value>
   </data>
@@ -1936,9 +1985,6 @@
   <!-- Sales Channel Type Names -->
   <data name="SalesChannelType.PointOfSale" xml:space="preserve">
     <value>Kasse (POS)</value>
-  </data>
-  <data name="SalesChannelType.Shopware5" xml:space="preserve">
-    <value>Shopware 5</value>
   </data>
   <data name="SalesChannelType.Shopware6" xml:space="preserve">
     <value>Shopware 6</value>
@@ -3722,20 +3768,17 @@
     <value>Noch keine Artikel</value>
   </data>
 
-  <!-- Shopware5Dashboard -->
-  <data name="Shopware5Dashboard.Tab.Dashboard.Header" xml:space="preserve">
-    <value>Dashboard</value>
-  </data>
-  <data name="Shopware5Dashboard.Tab.SyncStatus.Header" xml:space="preserve">
-    <value>Sync-Status</value>
-  </data>
-  <data name="Shopware5Dashboard.Tab.Settings.Header" xml:space="preserve">
+  <!-- SalesChannelDashboard (generic) -->
+  <data name="SalesChannelDashboard.SettingsButtonLabel.Text" xml:space="preserve">
     <value>Einstellungen</value>
   </data>
-  <data name="Shopware5Dashboard.Placeholder.SyncStatus.Text" xml:space="preserve">
-    <value>In zukünftigem Update verfügbar</value>
+  <data name="SalesChannelDashboard.Tab.Dashboard.Header" xml:space="preserve">
+    <value>Dashboard</value>
   </data>
-  <data name="Shopware5Dashboard.Placeholder.Settings.Text" xml:space="preserve">
+  <data name="SalesChannelDashboard.Tab.SyncStatus.Header" xml:space="preserve">
+    <value>Sync-Status</value>
+  </data>
+  <data name="SalesChannelDashboard.Placeholder.SyncStatus.Text" xml:space="preserve">
     <value>In zukünftigem Update verfügbar</value>
   </data>
   <!-- Shell Navigation Groups -->

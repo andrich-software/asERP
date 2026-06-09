@@ -349,7 +349,6 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         var salesChannelTypes = new[]
         {
             SalesChannelType.WooCommerce,
-            SalesChannelType.Shopware5,
             SalesChannelType.Shopware6,
             SalesChannelType.eBay,
             SalesChannelType.PointOfSale

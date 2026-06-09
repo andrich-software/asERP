@@ -18,7 +18,7 @@ public static class SalesChannelDashboardsModule
     {
         services.AddTransient<ISalesChannelStatisticsService, SalesChannelStatisticsService>();
         services.AddTransient<PosDashboardModel>();
-        services.AddTransient<Shopware5DashboardModel>();
+        services.AddTransient<SalesChannelDashboardModel>();
 
         return services;
     }
@@ -30,7 +30,7 @@ public static class SalesChannelDashboardsModule
     {
         views.Register(
             new ViewMap<PosDashboardPage, PosDashboardModel>(Data: new DataMap<SalesChannelDashboardData>()),
-            new ViewMap<Shopware5DashboardPage, Shopware5DashboardModel>(Data: new DataMap<SalesChannelDashboardData>())
+            new ViewMap<SalesChannelDashboardPage, SalesChannelDashboardModel>(Data: new DataMap<SalesChannelDashboardData>())
         );
     }
 
@@ -40,6 +40,6 @@ public static class SalesChannelDashboardsModule
     public static IEnumerable<RouteMap> GetRoutes(IViewRegistry views)
     {
         yield return new RouteMap(Routes.PosDashboard, View: views.FindByViewModel<PosDashboardModel>());
-        yield return new RouteMap(Routes.Shopware5Dashboard, View: views.FindByViewModel<Shopware5DashboardModel>());
+        yield return new RouteMap(Routes.SalesChannelDashboard, View: views.FindByViewModel<SalesChannelDashboardModel>());
     }
 }

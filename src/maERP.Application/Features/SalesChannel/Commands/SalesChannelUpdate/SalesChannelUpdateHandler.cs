@@ -66,7 +66,13 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
             existingSalesChannel.Name = request.Name;
             existingSalesChannel.Url = request.Url;
             existingSalesChannel.Username = request.Username;
-            existingSalesChannel.Password = request.Password;
+            // The password/secret is write-only: it is never returned to the client, so the edit
+            // form submits it empty unless the user deliberately enters a new value. Treat an empty
+            // password as "keep the stored secret" instead of wiping it.
+            if (!string.IsNullOrWhiteSpace(request.Password))
+            {
+                existingSalesChannel.Password = request.Password;
+            }
             existingSalesChannel.ImportProducts = request.ImportProducts;
             existingSalesChannel.ImportCustomers = request.ImportCustomers;
             existingSalesChannel.ImportSaless = request.ImportSaless;

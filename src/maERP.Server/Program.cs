@@ -18,6 +18,9 @@ using maERP.Persistence.Repositories;
 using maERP.Persistence.Services;
 using maERP.Server.Services;
 using maERP.SalesChannels;
+using maERP.SalesChannels.Logging;
+using maERP.Server.Infrastructure.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using maERP.Server;
 using maERP.Server.ServiceRegistrations;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -111,6 +114,7 @@ if (grafanaSettings.LogsEnabled && Uri.TryCreate(grafanaSettings.LokiEndpoint, U
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
+        .WriteTo.Sink(new SalesChannelSyncLogSink(services.GetRequiredService<ISalesChannelSyncLogBuffer>()))
         .WriteTo.GrafanaLoki(
             grafanaSettings.LokiEndpoint,
             labels: new[]
@@ -121,8 +125,9 @@ if (grafanaSettings.LogsEnabled && Uri.TryCreate(grafanaSettings.LokiEndpoint, U
 }
 else
 {
-    builder.Host.UseSerilog(
-        (context, configuration) => configuration.ReadFrom.Configuration(context.Configuration)
+    builder.Host.UseSerilog((context, services, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .WriteTo.Sink(new SalesChannelSyncLogSink(services.GetRequiredService<ISalesChannelSyncLogBuffer>()))
     );
 }
 
