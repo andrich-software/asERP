@@ -75,6 +75,37 @@ public class SalesService : ISalesService
         }
     }
 
+    public async Task<PaginatedResponse<SalesListDto>> GetSalessByCustomerAsync(
+        int customerId,
+        QueryParameters parameters,
+        CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.Saless.ByCustomer(customerId)}?{parameters.ToQueryString()}";
+
+        _logger.LogInformation("Fetching saless for customer {CustomerId} from URL: {Url}", customerId, url);
+
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync(
+                url, AppJsonSerializerContext.Default.PaginatedResponseSalesListDto, ct);
+
+            if (response?.Succeeded != true)
+            {
+                _logger.LogWarning("API returned unsuccessful response: {Messages}",
+                    string.Join(", ", response?.Messages ?? new List<string>()));
+                return new PaginatedResponse<SalesListDto>();
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching saless for customer {CustomerId} from {Url}", customerId, url);
+            throw;
+        }
+    }
+
     public async Task<SalesDetailDto?> GetSalesAsync(Guid id, CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();

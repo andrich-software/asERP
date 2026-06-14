@@ -200,7 +200,168 @@
         </ScrollViewer>
       </PivotItem>
 
-      <!-- Tab 2: Sync Status (Placeholder) -->
+      <!-- Tab 2: Recent Sales -->
+      <PivotItem x:Uid="SalesChannelDashboard.Tab.RecentSales">
+        <Border Background="{ThemeResource SurfaceBrush}" CornerRadius="12"
+                Padding="0" Margin="0,16,0,0" MinHeight="300"
+                VerticalAlignment="Stretch"
+                Translation="0,0,8">
+          <Border.Shadow><ThemeShadow /></Border.Shadow>
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Padding="16,16,16,8">
+              <FontIcon Glyph="&#xE7BF;" FontSize="20"
+                        Foreground="{ThemeResource PrimaryBrush}" Margin="0,0,12,0" />
+              <TextBlock x:Uid="SalesChannelDashboard.RecentSales.SalesNumber"
+                         Style="{StaticResource TitleMedium}"
+                         Foreground="{ThemeResource OnSurfaceBrush}" />
+            </StackPanel>
+
+            <!-- Saless List (scrollable) -->
+            <ScrollViewer Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          VerticalScrollMode="Auto">
+              <mvux:FeedView Source="{Binding RecentSaless}"
+                             Padding="0,0,0,8">
+                <mvux:FeedView.ValueTemplate>
+                  <DataTemplate>
+                    <ItemsRepeater ItemsSource="{Binding Data}">
+                      <ItemsRepeater.ItemTemplate>
+                        <DataTemplate>
+                          <Button Click="SalesRow_Click"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  Padding="0">
+                            <Grid Padding="16,10" Background="Transparent">
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                              </Grid.ColumnDefinitions>
+                              <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                              </Grid.RowDefinitions>
+
+                              <FontIcon Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                                        Glyph="{Binding StatusIcon}" FontSize="16"
+                                        Foreground="{ThemeResource PrimaryBrush}"
+                                        VerticalAlignment="Center" Margin="0,0,12,0" />
+
+                              <TextBlock Grid.Row="0" Grid.Column="1"
+                                         Text="{Binding CustomerName}"
+                                         Style="{StaticResource BodyLarge}"
+                                         FontWeight="SemiBold"
+                                         Foreground="{ThemeResource OnSurfaceBrush}" />
+                              <TextBlock Grid.Row="1" Grid.Column="1"
+                                         Style="{StaticResource BodySmall}"
+                                         Foreground="{ThemeResource OnSurfaceVariantBrush}">
+                                <Run Text="#" /><Run Text="{Binding SalesNumber}" />
+                              </TextBlock>
+
+                              <TextBlock Grid.Row="0" Grid.Column="2"
+                                         Text="{Binding AmountFormatted}"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceBrush}"
+                                         HorizontalAlignment="Right" />
+                              <TextBlock Grid.Row="1" Grid.Column="2"
+                                         Text="{Binding DateFormatted}"
+                                         Style="{StaticResource BodySmall}"
+                                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                         HorizontalAlignment="Right" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                  </DataTemplate>
+                </mvux:FeedView.ValueTemplate>
+                <mvux:FeedView.ProgressTemplate>
+                  <DataTemplate>
+                    <ProgressRing IsActive="True" Width="32" Height="32"
+                                  Margin="16" HorizontalAlignment="Center" />
+                  </DataTemplate>
+                </mvux:FeedView.ProgressTemplate>
+                <mvux:FeedView.NoneTemplate>
+                  <DataTemplate>
+                    <TextBlock x:Uid="SalesChannelDashboard.RecentSales.Empty"
+                               Style="{StaticResource BodyMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="16" />
+                  </DataTemplate>
+                </mvux:FeedView.NoneTemplate>
+              </mvux:FeedView>
+            </ScrollViewer>
+
+            <!-- Pagination Controls -->
+            <Border Grid.Row="2"
+                    BorderBrush="{ThemeResource OutlineVariantBrush}"
+                    BorderThickness="0,1,0,0"
+                    Padding="16,8">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Count Info (Left) -->
+                <mvux:FeedView Grid.Column="0" Source="{Binding Pagination}">
+                  <mvux:FeedView.ValueTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Data.CountInfo}"
+                                 Style="{StaticResource BodySmall}"
+                                 Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                 VerticalAlignment="Center" />
+                    </DataTemplate>
+                  </mvux:FeedView.ValueTemplate>
+                </mvux:FeedView>
+
+                <!-- Page Navigation (Center) -->
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Spacing="8">
+                  <Button Style="{StaticResource IconButtonStyle}"
+                          x:Uid="SalesChannelDashboard.RecentSales.PreviousPage"
+                          Click="PreviousPage_Click">
+                    <FontIcon Glyph="&#xE76B;" FontSize="16" />
+                  </Button>
+
+                  <mvux:FeedView Source="{Binding Pagination}">
+                    <mvux:FeedView.ValueTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding Data.PageInfo}"
+                                   Style="{StaticResource BodyMedium}"
+                                   VerticalAlignment="Center"
+                                   MinWidth="100"
+                                   TextAlignment="Center" />
+                      </DataTemplate>
+                    </mvux:FeedView.ValueTemplate>
+                  </mvux:FeedView>
+
+                  <Button Style="{StaticResource IconButtonStyle}"
+                          x:Uid="SalesChannelDashboard.RecentSales.NextPage"
+                          Click="NextPage_Click">
+                    <FontIcon Glyph="&#xE76C;" FontSize="16" />
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </Grid>
+        </Border>
+      </PivotItem>
+
+      <!-- Tab 3: Sync Status (Placeholder) -->
       <PivotItem x:Uid="SalesChannelDashboard.Tab.SyncStatus">
         <StackPanel HorizontalAlignment="Center"
                     VerticalAlignment="Center"

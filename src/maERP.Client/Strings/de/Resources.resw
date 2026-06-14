@@ -101,6 +101,83 @@
   <data name="Shell.Login.RegisterLink.Text" xml:space="preserve">
     <value>Konto erstellen</value>
   </data>
+  <data name="Shell.Login.ServerSelector.Header" xml:space="preserve">
+    <value>Server</value>
+  </data>
+
+  <!-- Server management dialog -->
+  <data name="ServerDialog.Title" xml:space="preserve">
+    <value>Server verwalten</value>
+  </data>
+  <data name="ServerDialog.Close" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
+  <data name="ServerDialog.Add" xml:space="preserve">
+    <value>Server hinzufügen</value>
+  </data>
+  <data name="ServerDialog.AddTitle" xml:space="preserve">
+    <value>Server hinzufügen</value>
+  </data>
+  <data name="ServerDialog.EditTitle" xml:space="preserve">
+    <value>Server bearbeiten</value>
+  </data>
+  <data name="ServerDialog.NameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ServerDialog.NamePlaceholder" xml:space="preserve">
+    <value>z. B. Mein Server</value>
+  </data>
+  <data name="ServerDialog.UrlLabel" xml:space="preserve">
+    <value>Server-URL</value>
+  </data>
+  <data name="ServerDialog.UrlPlaceholder" xml:space="preserve">
+    <value>https://...</value>
+  </data>
+  <data name="ServerDialog.TestConnection" xml:space="preserve">
+    <value>Verbindung testen</value>
+  </data>
+  <data name="ServerDialog.Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="ServerDialog.Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="ServerDialog.Delete" xml:space="preserve">
+    <value>Löschen</value>
+  </data>
+  <data name="ServerDialog.Edit" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="ServerDialog.BuiltInHint" xml:space="preserve">
+    <value>Standardserver (fest hinterlegt)</value>
+  </data>
+  <data name="ServerDialog.DeleteConfirm" xml:space="preserve">
+    <value>Entfernen?</value>
+  </data>
+  <data name="ServerDialog.StatusChecking" xml:space="preserve">
+    <value>prüfe …</value>
+  </data>
+  <data name="ServerDialog.StatusOffline" xml:space="preserve">
+    <value>offline</value>
+  </data>
+  <data name="ServerDialog.StatusConnectedFormat" xml:space="preserve">
+    <value>maERP v{0} · verbunden</value>
+  </data>
+  <data name="ServerDialog.TestChecking" xml:space="preserve">
+    <value>Verbinde …</value>
+  </data>
+  <data name="ServerDialog.TestSuccessFormat" xml:space="preserve">
+    <value>Verbindung erfolgreich · maERP v{0}</value>
+  </data>
+  <data name="ServerDialog.TestFailed" xml:space="preserve">
+    <value>Server nicht erreichbar</value>
+  </data>
+  <data name="ServerDialog.ValidationName" xml:space="preserve">
+    <value>Bitte einen Namen eingeben.</value>
+  </data>
+  <data name="ServerDialog.ValidationUrl" xml:space="preserve">
+    <value>Bitte eine gültige URL eingeben.</value>
+  </data>
 
   <!-- Shell Registration Overlay -->
   <data name="Shell.Register.Title.Text" xml:space="preserve">
@@ -276,6 +353,9 @@
   <data name="Shell.NavItem.TaxClasses.Content" xml:space="preserve">
     <value>Steuerklassen</value>
   </data>
+  <data name="Shell.NavItem.ProductAttributes.Content" xml:space="preserve">
+    <value>Produkt-Attribute</value>
+  </data>
   <data name="Shell.NavItem.SalesChannels.Content" xml:space="preserve">
     <value>Vertriebskanäle</value>
   </data>
@@ -308,6 +388,9 @@
   </data>
   <data name="Shell.NavItem.TaxClasses.Text" xml:space="preserve">
     <value>Steuerklassen</value>
+  </data>
+  <data name="Shell.NavItem.ProductAttributes.Text" xml:space="preserve">
+    <value>Produkt-Attribute</value>
   </data>
   <data name="Shell.NavItem.SalesChannels.Text" xml:space="preserve">
     <value>Vertriebskanäle</value>
@@ -483,6 +566,12 @@
   <data name="Pagination.TaxClassesPlural" xml:space="preserve">
     <value>{0} Steuerklassen</value>
   </data>
+  <data name="Pagination.ProductAttributesSingular" xml:space="preserve">
+    <value>1 Produkt-Attribut</value>
+  </data>
+  <data name="Pagination.ProductAttributesPlural" xml:space="preserve">
+    <value>{0} Produkt-Attribute</value>
+  </data>
   <data name="Pagination.SalesChannelsSingular" xml:space="preserve">
     <value>1 Vertriebskanal</value>
   </data>
@@ -558,6 +647,9 @@
   </data>
   <data name="ProductListPage.SearchBox.PlaceholderText" xml:space="preserve">
     <value>Produkte suchen...</value>
+  </data>
+  <data name="ProductListPage.IncludeVariants.Header" xml:space="preserve">
+    <value>Varianten anzeigen</value>
   </data>
   <data name="ProductListPage.Header.Sku.Text" xml:space="preserve">
     <value>SKU</value>
@@ -896,6 +988,27 @@
   </data>
   <data name="CustomerDetailPage.Section.Notes.Text" xml:space="preserve">
     <value>Notizen</value>
+  </data>
+  <data name="CustomerDetailPage.Section.Saless.Text" xml:space="preserve">
+    <value>Bestellungen</value>
+  </data>
+  <data name="CustomerDetailPage.SalesHeader.SalesId.Text" xml:space="preserve">
+    <value>Bestell-Nr.</value>
+  </data>
+  <data name="CustomerDetailPage.SalesHeader.Total.Text" xml:space="preserve">
+    <value>Summe</value>
+  </data>
+  <data name="CustomerDetailPage.SalesHeader.Status.Text" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="CustomerDetailPage.SalesHeader.DateSalesed.Text" xml:space="preserve">
+    <value>Bestelldatum</value>
+  </data>
+  <data name="CustomerDetailPage.NoSaless.Text" xml:space="preserve">
+    <value>Keine Bestellungen vorhanden</value>
+  </data>
+  <data name="CustomerDetailPage.SalessLoadError.Text" xml:space="preserve">
+    <value>Bestellungen konnten nicht geladen werden</value>
   </data>
 
   <!-- Customer Detail Page - Field Labels -->
@@ -1578,6 +1691,153 @@
     <value>Steuerklasse konnte nicht gespeichert werden: {0}</value>
   </data>
 
+  <!-- Product Attribute List Page -->
+  <data name="ProductAttributeListPage.NavigationBar.Content" xml:space="preserve">
+    <value>Produkt-Attribute</value>
+  </data>
+  <data name="ProductAttributeListPage.AppBarButton.Refresh.Label" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
+  <data name="ProductAttributeListPage.AppBarButton.Refresh.ToolTip" xml:space="preserve">
+    <value>Produkt-Attributliste aktualisieren</value>
+  </data>
+  <data name="ProductAttributeListPage.AppBarButton.New.Label" xml:space="preserve">
+    <value>Neu</value>
+  </data>
+  <data name="ProductAttributeListPage.AppBarButton.New.ToolTip" xml:space="preserve">
+    <value>Neues Produkt-Attribut anlegen</value>
+  </data>
+  <data name="ProductAttributeListPage.SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Produkt-Attribute suchen...</value>
+  </data>
+  <data name="ProductAttributeListPage.Header.Name.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ProductAttributeListPage.Header.SortOrder.Text" xml:space="preserve">
+    <value>Sortierung</value>
+  </data>
+  <data name="ProductAttributeListPage.Header.ValueCount.Text" xml:space="preserve">
+    <value>Werte</value>
+  </data>
+  <data name="ProductAttributeListPage.NoProductAttributes.Text" xml:space="preserve">
+    <value>Keine Produkt-Attribute gefunden</value>
+  </data>
+  <data name="ProductAttributeListPage.LoadError.Text" xml:space="preserve">
+    <value>Produkt-Attribute konnten nicht geladen werden</value>
+  </data>
+  <data name="ProductAttributeListPage.PreviousPage.ToolTip" xml:space="preserve">
+    <value>Vorherige Seite</value>
+  </data>
+  <data name="ProductAttributeListPage.NextPage.ToolTip" xml:space="preserve">
+    <value>Nächste Seite</value>
+  </data>
+  <data name="ProductAttributeListPage.ItemsPerPage.Text" xml:space="preserve">
+    <value>Einträge pro Seite:</value>
+  </data>
+
+  <!-- Product Attribute Detail Page -->
+  <data name="ProductAttributeDetailPage.NavigationBar.Content" xml:space="preserve">
+    <value>Produkt-Attributdetails</value>
+  </data>
+  <data name="ProductAttributeDetailPage.AppBarButton.Back.Label" xml:space="preserve">
+    <value>Zurück</value>
+  </data>
+  <data name="ProductAttributeDetailPage.AppBarButton.Edit.Label" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="ProductAttributeDetailPage.Field.Attribute.Text" xml:space="preserve">
+    <value>Attribut</value>
+  </data>
+  <data name="ProductAttributeDetailPage.Section.Information.Text" xml:space="preserve">
+    <value>Informationen</value>
+  </data>
+  <data name="ProductAttributeDetailPage.Field.Name.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ProductAttributeDetailPage.Field.SortOrder.Text" xml:space="preserve">
+    <value>Sortierung</value>
+  </data>
+  <data name="ProductAttributeDetailPage.Section.Values.Text" xml:space="preserve">
+    <value>Werte</value>
+  </data>
+  <data name="ProductAttributeDetailPage.UsageHint.Text" xml:space="preserve">
+    <value>Dieses Attribut kann Produktvarianten zugewiesen werden, um Eigenschaften wie Größe oder Farbe abzubilden.</value>
+  </data>
+  <data name="ProductAttributeDetailPage.LoadError.Text" xml:space="preserve">
+    <value>Produkt-Attribut konnte nicht geladen werden</value>
+  </data>
+
+  <!-- Product Attribute Edit Page -->
+  <data name="ProductAttributeEditPage.TitleNew" xml:space="preserve">
+    <value>Neues Produkt-Attribut</value>
+  </data>
+  <data name="ProductAttributeEditPage.TitleEdit" xml:space="preserve">
+    <value>Produkt-Attribut bearbeiten</value>
+  </data>
+  <data name="ProductAttributeEditPage.AppBarButton.Cancel.Label" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="ProductAttributeEditPage.AppBarButton.Save.Label" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="ProductAttributeEditPage.Section.AttributeDetails.Text" xml:space="preserve">
+    <value>Attribut-Details</value>
+  </data>
+  <data name="ProductAttributeEditPage.Section.AttributeDetails.Subtitle.Text" xml:space="preserve">
+    <value>Konfigurieren Sie Name und Sortierung für dieses Attribut</value>
+  </data>
+  <data name="ProductAttributeEditPage.Field.Name.Label.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ProductAttributeEditPage.Field.Name.Header" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ProductAttributeEditPage.Field.Name.PlaceholderText" xml:space="preserve">
+    <value>Attributname eingeben</value>
+  </data>
+  <data name="ProductAttributeEditPage.Field.SortOrder.Label.Text" xml:space="preserve">
+    <value>Sortierung</value>
+  </data>
+  <data name="ProductAttributeEditPage.Field.SortOrder.Header" xml:space="preserve">
+    <value>Sortierung</value>
+  </data>
+  <data name="ProductAttributeEditPage.Field.SortOrder.PlaceholderText" xml:space="preserve">
+    <value>Sortierung eingeben</value>
+  </data>
+  <data name="ProductAttributeEditPage.Field.SortOrder.HelperText.Text" xml:space="preserve">
+    <value>Bestimmt die Reihenfolge, in der Attribute angezeigt werden</value>
+  </data>
+  <data name="ProductAttributeEditPage.Section.Values.Text" xml:space="preserve">
+    <value>Werte</value>
+  </data>
+  <data name="ProductAttributeEditPage.Section.Values.Subtitle.Text" xml:space="preserve">
+    <value>Verwalten Sie die möglichen Werte dieses Attributs</value>
+  </data>
+  <data name="ProductAttributeEditPage.Field.Value.PlaceholderText" xml:space="preserve">
+    <value>Wert eingeben</value>
+  </data>
+  <data name="ProductAttributeEditPage.Field.ValueSortOrder.PlaceholderText" xml:space="preserve">
+    <value>Sortierung</value>
+  </data>
+  <data name="ProductAttributeEditPage.Button.RemoveValue.ToolTip" xml:space="preserve">
+    <value>Wert entfernen</value>
+  </data>
+  <data name="ProductAttributeEditPage.Button.AddValue.Content" xml:space="preserve">
+    <value>Wert hinzufügen</value>
+  </data>
+  <data name="ProductAttributeEditPage.Button.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="ProductAttributeEditPage.Button.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="ProductAttributeEditPage.Info.UsageHint.Text" xml:space="preserve">
+    <value>Produkt-Attribute werden Produktvarianten zugewiesen, um Eigenschaften wie Größe oder Farbe abzubilden. Werte, die von Varianten verwendet werden, können nicht gelöscht werden.</value>
+  </data>
+  <data name="ProductAttributeEditPage.SaveFailed" xml:space="preserve">
+    <value>Produkt-Attribut konnte nicht gespeichert werden: {0}</value>
+  </data>
+
   <!-- Sales Channel Overview Dashboard -->
   <data name="SalesChannelOverviewPage.NavigationBar.Content" xml:space="preserve">
     <value>Vertriebskanäle</value>
@@ -1999,6 +2259,17 @@
     <value>Amazon</value>
   </data>
 
+  <!-- Product Type -->
+  <data name="ProductType.Standard" xml:space="preserve">
+    <value>Standardartikel</value>
+  </data>
+  <data name="ProductType.VariantParent" xml:space="preserve">
+    <value>Variantenartikel</value>
+  </data>
+  <data name="ProductType.Variant" xml:space="preserve">
+    <value>Variante</value>
+  </data>
+
   <!-- Sync Status -->
   <data name="SyncStatus.Enabled" xml:space="preserve">
     <value>Aktiviert</value>
@@ -2162,6 +2433,24 @@
   <data name="ProductDetailPage.Section.Manufacturer.Text" xml:space="preserve">
     <value>Hersteller</value>
   </data>
+  <data name="ProductDetailPage.Section.Variants.Text" xml:space="preserve">
+    <value>Varianten</value>
+  </data>
+  <data name="ProductDetailPage.Section.VariantOptions.Text" xml:space="preserve">
+    <value>Variantenmerkmale</value>
+  </data>
+  <data name="ProductDetailPage.VariantColOptions.Text" xml:space="preserve">
+    <value>Werte</value>
+  </data>
+  <data name="ProductDetailPage.VariantColSku.Text" xml:space="preserve">
+    <value>SKU</value>
+  </data>
+  <data name="ProductDetailPage.VariantColName.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ProductDetailPage.VariantColPrice.Text" xml:space="preserve">
+    <value>Preis</value>
+  </data>
 
   <!-- Product Detail Page - Field Labels -->
   <data name="ProductDetailPage.Field.Sku.Text" xml:space="preserve">
@@ -2214,6 +2503,54 @@
   </data>
   <data name="ProductEditPage.TitleEdit" xml:space="preserve">
     <value>Produkt bearbeiten</value>
+  </data>
+  <data name="ProductEditPage.SaveFailed" xml:space="preserve">
+    <value>Speichern fehlgeschlagen: {0}</value>
+  </data>
+  <data name="ProductEditPage.Field.ProductType.Label.Text" xml:space="preserve">
+    <value>Produktart</value>
+  </data>
+  <data name="ProductEditPage.ProductTypeStandard.Content" xml:space="preserve">
+    <value>Standardartikel</value>
+  </data>
+  <data name="ProductEditPage.ProductTypeVariantParent.Content" xml:space="preserve">
+    <value>Variantenartikel</value>
+  </data>
+  <data name="ProductEditPage.VariantOfLabel.Text" xml:space="preserve">
+    <value>Variante von</value>
+  </data>
+  <data name="ProductEditPage.Section.Variants.Text" xml:space="preserve">
+    <value>Varianten</value>
+  </data>
+  <data name="ProductEditPage.SaveFirstHint.Text" xml:space="preserve">
+    <value>Erst speichern, dann Varianten generieren</value>
+  </data>
+  <data name="ProductEditPage.Subsection.Axes.Text" xml:space="preserve">
+    <value>Variationsachsen</value>
+  </data>
+  <data name="ProductEditPage.Subsection.Variants.Text" xml:space="preserve">
+    <value>Vorhandene Varianten</value>
+  </data>
+  <data name="ProductEditPage.AddAxisButton.Content" xml:space="preserve">
+    <value>Achse hinzufügen</value>
+  </data>
+  <data name="ProductEditPage.GenerateVariantsButton.Content" xml:space="preserve">
+    <value>Varianten generieren</value>
+  </data>
+  <data name="ProductEditPage.RemoveAxisButton.ToolTip" xml:space="preserve">
+    <value>Achse entfernen</value>
+  </data>
+  <data name="ProductEditPage.VariantColOptions.Text" xml:space="preserve">
+    <value>Werte</value>
+  </data>
+  <data name="ProductEditPage.VariantColSku.Text" xml:space="preserve">
+    <value>SKU</value>
+  </data>
+  <data name="ProductEditPage.VariantColEan.Text" xml:space="preserve">
+    <value>EAN</value>
+  </data>
+  <data name="ProductEditPage.VariantColPrice.Text" xml:space="preserve">
+    <value>Preis</value>
   </data>
   <data name="ProductEditPage.AppBarButton.Cancel.Label" xml:space="preserve">
     <value>Abbrechen</value>
@@ -3777,6 +4114,21 @@
   </data>
   <data name="SalesChannelDashboard.Tab.SyncStatus.Header" xml:space="preserve">
     <value>Sync-Status</value>
+  </data>
+  <data name="SalesChannelDashboard.Tab.RecentSales.Header" xml:space="preserve">
+    <value>Letzte Bestellungen</value>
+  </data>
+  <data name="SalesChannelDashboard.RecentSales.SalesNumber.Text" xml:space="preserve">
+    <value>Letzte Bestellungen</value>
+  </data>
+  <data name="SalesChannelDashboard.RecentSales.Empty.Text" xml:space="preserve">
+    <value>Keine Bestellungen vorhanden</value>
+  </data>
+  <data name="SalesChannelDashboard.RecentSales.PreviousPage.ToolTip" xml:space="preserve">
+    <value>Vorherige Seite</value>
+  </data>
+  <data name="SalesChannelDashboard.RecentSales.NextPage.ToolTip" xml:space="preserve">
+    <value>Nächste Seite</value>
   </data>
   <data name="SalesChannelDashboard.Placeholder.SyncStatus.Text" xml:space="preserve">
     <value>In zukünftigem Update verfügbar</value>

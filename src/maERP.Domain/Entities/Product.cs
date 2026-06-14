@@ -1,4 +1,5 @@
 ﻿using maERP.Domain.Entities.Common;
+using maERP.Domain.Enums;
 
 namespace maERP.Domain.Entities;
 
@@ -27,6 +28,15 @@ public class Product : BaseEntity, IBaseEntity
     public Guid? ManufacturerId { get; set; }
     public Manufacturer? Manufacturer { get; set; }
     public TaxClass? TaxClass { get; set; }
+
+    public ProductType ProductType { get; set; } = ProductType.Standard;
+    public Guid? ParentProductId { get; set; }
+    public Product? ParentProduct { get; set; }
+    public int VariantSortOrder { get; set; }
+
+    public ICollection<Product> Variants { get; set; } = [];
+    public ICollection<ProductVariantAxis> VariantAxes { get; set; } = [];
+    public ICollection<ProductVariantOption> VariantOptions { get; set; } = [];
 
     public ICollection<ProductSalesChannel>? ProductSalesChannels { get; set; } = [];
 

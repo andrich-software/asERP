@@ -11,6 +11,9 @@ public class SalesDetailDto
     public string RemoteSalesId { get; set; } = string.Empty;
     public int CustomerId { get; set; }
 
+    /// <summary>Entity id (Guid) of the customer — used by the client to link to the customer detail page.</summary>
+    public Guid CustomerGuid { get; set; }
+
     public SalesStatus Status { get; set; }
     public List<SalesItem> SalesItems { get; set; } = new List<SalesItem>();
     public List<SalesHistoryDto> SalesHistory { get; set; } = new List<SalesHistoryDto>();

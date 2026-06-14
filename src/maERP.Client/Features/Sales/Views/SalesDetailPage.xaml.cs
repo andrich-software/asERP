@@ -25,4 +25,13 @@ public sealed partial class SalesDetailPage : Page
             await model.EditSales();
         }
     }
+
+    private async void CustomerLink_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { CommandParameter: Guid customerId } &&
+            DataContext is SalesDetailModel model)
+        {
+            await model.NavigateToCustomer(customerId);
+        }
+    }
 }

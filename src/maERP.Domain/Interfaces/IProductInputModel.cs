@@ -1,3 +1,5 @@
+using maERP.Domain.Enums;
+
 namespace maERP.Domain.Interfaces;
 
 public interface IProductInputModel
@@ -18,4 +20,6 @@ public interface IProductInputModel
     decimal Depth { get; }
     Guid TaxClassId { get; }
     Guid? ManufacturerId { get; }
+    ProductType ProductType { get; }
+    Guid? ParentProductId { get; }
 }

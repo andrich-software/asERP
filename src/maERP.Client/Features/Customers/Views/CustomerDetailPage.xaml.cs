@@ -1,4 +1,5 @@
 using maERP.Client.Features.Customers.Models;
+using maERP.Domain.Dtos.Sales;
 using Microsoft.UI.Xaml.Controls;
 using Windows.ApplicationModel.Resources;
 
@@ -36,6 +37,15 @@ public sealed partial class CustomerDetailPage : Page
             {
                 await model.DeleteCustomer(CancellationToken.None);
             }
+        }
+    }
+
+    private async void SalesRow_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is CustomerDetailModel model &&
+            sender is FrameworkElement { DataContext: SalesListDto sales })
+        {
+            await model.ViewSales(sales);
         }
     }
 

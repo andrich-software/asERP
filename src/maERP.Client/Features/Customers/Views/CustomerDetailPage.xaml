@@ -17,7 +17,7 @@
     <SolidColorBrush x:Key="StatusNoDoiBackgroundBrush" Color="#FEF3C7" />
   </Page.Resources>
 
-  <Grid utu:SafeArea.Insets="VisibleBounds">
+  <Grid x:Name="RootGrid" utu:SafeArea.Insets="VisibleBounds">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
@@ -543,6 +543,180 @@
                                  HorizontalAlignment="Center" />
                     </StackPanel>
                   </Border>
+                </StackPanel>
+
+                <!-- Saless Section -->
+                <StackPanel Spacing="12">
+                  <StackPanel Orientation="Horizontal"
+                              Spacing="12">
+                    <FontIcon Glyph="&#xE7BF;"
+                              FontSize="20"
+                              Foreground="{ThemeResource SecondaryBrush}" />
+                    <TextBlock x:Uid="CustomerDetailPage.Section.Saless"
+                               Style="{StaticResource TitleMedium}"
+                               Foreground="{ThemeResource OnSurfaceBrush}" />
+                  </StackPanel>
+
+                  <mvux:FeedView Source="{Binding DataContext.Saless, ElementName=RootGrid}">
+                    <mvux:FeedView.ValueTemplate>
+                      <DataTemplate>
+                        <Border CornerRadius="12"
+                                BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                BorderThickness="1"
+                                Background="{ThemeResource SurfaceBrush}">
+                          <Grid>
+                            <Grid.RowDefinitions>
+                              <RowDefinition Height="Auto" />
+                              <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Table Header -->
+                            <Border Grid.Row="0"
+                                    Background="{ThemeResource SurfaceVariantBrush}"
+                                    CornerRadius="12,12,0,0"
+                                    BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                    BorderThickness="0,0,0,1">
+                              <Grid Padding="16,12">
+                                <Grid.ColumnDefinitions>
+                                  <ColumnDefinition Width="100" />
+                                  <ColumnDefinition Width="120" />
+                                  <ColumnDefinition Width="120" />
+                                  <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0"
+                                           x:Uid="CustomerDetailPage.SalesHeader.SalesId"
+                                           Style="{StaticResource LabelLarge}"
+                                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                                <TextBlock Grid.Column="1"
+                                           x:Uid="CustomerDetailPage.SalesHeader.Total"
+                                           Style="{StaticResource LabelLarge}"
+                                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                                <TextBlock Grid.Column="2"
+                                           x:Uid="CustomerDetailPage.SalesHeader.Status"
+                                           Style="{StaticResource LabelLarge}"
+                                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                                <TextBlock Grid.Column="3"
+                                           x:Uid="CustomerDetailPage.SalesHeader.DateSalesed"
+                                           Style="{StaticResource LabelLarge}"
+                                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                              </Grid>
+                            </Border>
+
+                            <!-- Table Body -->
+                            <ItemsRepeater Grid.Row="1"
+                                           ItemsSource="{Binding Data}">
+                              <ItemsRepeater.Layout>
+                                <StackLayout Orientation="Vertical" Spacing="0" />
+                              </ItemsRepeater.Layout>
+                              <ItemsRepeater.ItemTemplate>
+                                <DataTemplate>
+                                  <Button Style="{StaticResource TextButtonStyle}"
+                                          HorizontalAlignment="Stretch"
+                                          HorizontalContentAlignment="Stretch"
+                                          Padding="0"
+                                          CornerRadius="0"
+                                          Click="SalesRow_Click">
+                                    <Grid Background="Transparent"
+                                          Padding="16,0"
+                                          BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                          BorderThickness="0,0,0,1">
+                                      <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="100" />
+                                        <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="*" />
+                                      </Grid.ColumnDefinitions>
+
+                                      <TextBlock Grid.Column="0"
+                                                 Text="{Binding SalesId}"
+                                                 Style="{StaticResource BodyMedium}"
+                                                 Foreground="{ThemeResource OnSurfaceBrush}"
+                                                 VerticalAlignment="Center"
+                                                 Padding="0,14" />
+
+                                      <TextBlock Grid.Column="1"
+                                                 Text="{Binding Total, Converter={StaticResource CurrencyConverter}}"
+                                                 Style="{StaticResource BodyMedium}"
+                                                 Foreground="{ThemeResource OnSurfaceBrush}"
+                                                 VerticalAlignment="Center"
+                                                 Padding="0,14" />
+
+                                      <Border Grid.Column="2"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"
+                                              Margin="0,8"
+                                              Padding="8,4"
+                                              CornerRadius="4"
+                                              Background="{Binding Status, Converter={StaticResource SalesStatusToBackgroundConverter}}">
+                                        <TextBlock Text="{Binding Status, Converter={StaticResource SalesStatusToTextConverter}}"
+                                                   Style="{StaticResource LabelMedium}"
+                                                   Foreground="{Binding Status, Converter={StaticResource SalesStatusToForegroundConverter}}" />
+                                      </Border>
+
+                                      <TextBlock Grid.Column="3"
+                                                 Text="{Binding DateSalesed, Converter={StaticResource DateOnlyConverter}}"
+                                                 Style="{StaticResource BodyMedium}"
+                                                 Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                                 VerticalAlignment="Center"
+                                                 Padding="0,14" />
+                                    </Grid>
+                                  </Button>
+                                </DataTemplate>
+                              </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </mvux:FeedView.ValueTemplate>
+
+                    <mvux:FeedView.ProgressTemplate>
+                      <DataTemplate>
+                        <Border CornerRadius="12"
+                                BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                BorderThickness="1"
+                                Background="{ThemeResource SurfaceBrush}">
+                          <ProgressRing IsActive="True"
+                                        Width="32"
+                                        Height="32"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Margin="32" />
+                        </Border>
+                      </DataTemplate>
+                    </mvux:FeedView.ProgressTemplate>
+
+                    <mvux:FeedView.NoneTemplate>
+                      <DataTemplate>
+                        <Border Background="{ThemeResource SurfaceVariantBrush}"
+                                CornerRadius="12"
+                                Padding="24">
+                          <StackPanel HorizontalAlignment="Center"
+                                      Spacing="8">
+                            <FontIcon Glyph="&#xE7BF;"
+                                      FontSize="32"
+                                      Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                            <TextBlock x:Uid="CustomerDetailPage.NoSaless"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                       HorizontalAlignment="Center" />
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </mvux:FeedView.NoneTemplate>
+
+                    <mvux:FeedView.ErrorTemplate>
+                      <DataTemplate>
+                        <Border Background="{ThemeResource SurfaceVariantBrush}"
+                                CornerRadius="12"
+                                Padding="24">
+                          <TextBlock x:Uid="CustomerDetailPage.SalessLoadError"
+                                     Style="{StaticResource BodyMedium}"
+                                     Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                     HorizontalAlignment="Center" />
+                        </Border>
+                      </DataTemplate>
+                    </mvux:FeedView.ErrorTemplate>
+                  </mvux:FeedView>
                 </StackPanel>
 
                 <!-- Notes Section -->

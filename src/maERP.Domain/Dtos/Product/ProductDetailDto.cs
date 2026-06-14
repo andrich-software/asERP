@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using maERP.Domain.Dtos.Manufacturer;
+using maERP.Domain.Enums;
 
 namespace maERP.Domain.Dtos.Product;
 
@@ -48,6 +49,21 @@ public class ProductDetailDto
     public Guid TaxClassId { get; set; } = new();
 
     public ManufacturerDetailDto? Manufacturer { get; set; }
+
+    public ProductType ProductType { get; set; }
+
+    public Guid? ParentProductId { get; set; }
+
+    public int VariantSortOrder { get; set; }
+
+    /// <summary>Axes the product varies by; only filled for variant parents.</summary>
+    public List<ProductVariantAxisDto> VariantAxes { get; set; } = new();
+
+    /// <summary>Child variants; only filled for variant parents.</summary>
+    public List<ProductVariantListDto> Variants { get; set; } = new();
+
+    /// <summary>Own attribute values; only filled when the product itself is a variant.</summary>
+    public List<ProductVariantOptionDto> Options { get; set; } = new();
 
     public List<Guid> ProductSalesChannel { get; set; } = new();
 

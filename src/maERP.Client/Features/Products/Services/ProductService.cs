@@ -104,4 +104,18 @@ public class ProductService : IProductService
         var response = await _httpClient.PutAsJsonAsync(url, input, AppJsonSerializerContext.Default.ProductInputDto, ct);
         await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
     }
+
+    public async Task<List<Guid>> GenerateVariantsAsync(Guid parentProductId, ProductVariantGenerateDto request, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.Products.GenerateVariants(parentProductId)}";
+
+        _logger.LogInformation("Generating variants for product {Id} at URL: {Url}", parentProductId, url);
+
+        var response = await _httpClient.PostAsJsonAsync(url, request, AppJsonSerializerContext.Default.ProductVariantGenerateDto, ct);
+        await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
+
+        var result = await response.Content.ReadFromJsonAsync(AppJsonSerializerContext.Default.ApiResponseListGuid, ct);
+        return result?.Data ?? new List<Guid>();
+    }
 }

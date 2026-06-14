@@ -21,13 +21,32 @@ public sealed class Sw6SearchResult<T>
 public sealed class Sw6Product
 {
     [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+    [JsonPropertyName("parentId")] public string? ParentId { get; set; }
+    [JsonPropertyName("childCount")] public int? ChildCount { get; set; }
     [JsonPropertyName("productNumber")] public string? ProductNumber { get; set; }
     [JsonPropertyName("name")] public string? Name { get; set; }
     [JsonPropertyName("description")] public string? Description { get; set; }
     [JsonPropertyName("ean")] public string? Ean { get; set; }
     [JsonPropertyName("manufacturerNumber")] public string? ManufacturerNumber { get; set; }
     [JsonPropertyName("stock")] public int? Stock { get; set; }
-    [JsonPropertyName("price")] public List<Sw6Price> Price { get; set; } = new();
+    // Null on variants that inherit the parent price (Shopware field inheritance)
+    [JsonPropertyName("price")] public List<Sw6Price>? Price { get; set; }
+    [JsonPropertyName("translated")] public Sw6Translated? Translated { get; set; }
+    [JsonPropertyName("options")] public List<Sw6PropertyGroupOption>? Options { get; set; }
+}
+
+public sealed class Sw6PropertyGroupOption
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("translated")] public Sw6Translated? Translated { get; set; }
+    [JsonPropertyName("group")] public Sw6PropertyGroup? Group { get; set; }
+}
+
+public sealed class Sw6PropertyGroup
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+    [JsonPropertyName("name")] public string? Name { get; set; }
     [JsonPropertyName("translated")] public Sw6Translated? Translated { get; set; }
 }
 

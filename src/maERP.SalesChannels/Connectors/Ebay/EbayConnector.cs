@@ -93,6 +93,11 @@ public sealed class EbayConnector : ConnectorBase
         var offset = 0;
         var total = 0;
 
+        // Variation listings: remember per-SKU data and the group keys seen during the walk,
+        // then import each inventory item group as a variant parent afterwards (best effort).
+        var groupKeys = new HashSet<string>();
+        var itemsBySku = new Dictionary<string, (EbayInventoryItem Item, decimal Price)>();
+
         try
         {
             var accessToken = await _authHelper.GetAccessTokenAsync(salesChannel);
@@ -140,6 +145,7 @@ public sealed class EbayConnector : ConnectorBase
 
                         var importProduct = new SalesChannelImportProduct
                         {
+                            RemoteProductId = item.Sku,
                             Name = item.Product.Title,
                             Sku = item.Sku,
                             Ean = item.Product.Ean is { Length: > 0 } ? item.Product.Ean[0] : string.Empty,
@@ -150,6 +156,15 @@ public sealed class EbayConnector : ConnectorBase
 
                         await _productImportRepository.ImportOrUpdateFromSalesChannel(salesChannel.Id, importProduct);
                         processed++;
+
+                        if (item.GroupIds is { Length: > 0 })
+                        {
+                            itemsBySku[item.Sku] = (item, offer.PricingSummary.Price.Value);
+                            foreach (var groupKey in item.GroupIds)
+                            {
+                                groupKeys.Add(groupKey);
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -161,6 +176,87 @@ public sealed class EbayConnector : ConnectorBase
                 offset += InventoryPageSize;
             }
             while (total > 0 && offset < total);
+
+            // Best-effort variation grouping: import each seen inventory item group as a
+            // variant parent. The member SKUs were already imported flat above; the import
+            // repository converts them to variants via its SKU matching.
+            foreach (var groupKey in groupKeys)
+            {
+                try
+                {
+                    var groupUrl = $"{salesChannel.Url}/sell/inventory/v1/inventory_item_group/{Uri.EscapeDataString(groupKey)}";
+                    var groupResponse = await context.HttpClient.GetAsync(groupUrl, context.CancellationToken);
+                    if (!groupResponse.IsSuccessStatusCode)
+                    {
+                        failed++;
+                        _logger.LogWarning("eBay inventory item group {GroupKey} fetch failed with HTTP {Status}",
+                            groupKey, (int)groupResponse.StatusCode);
+                        continue;
+                    }
+
+                    var groupRaw = await groupResponse.Content.ReadAsStringAsync(context.CancellationToken);
+                    var group = JsonSerializer.Deserialize<EbayInventoryItemGroup>(groupRaw);
+                    if (group?.VariantSkus is null || group.VariantSkus.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    var axisNames = group.VariesBy?.Specifications?
+                        .Select(s => s.Name)
+                        .Where(n => !string.IsNullOrEmpty(n))
+                        .ToList() ?? [];
+
+                    var groupDescription = group.Description ?? string.Empty;
+                    if (groupDescription.Length > 4000) groupDescription = groupDescription.Substring(0, 4000);
+
+                    var parentImport = new SalesChannelImportProduct
+                    {
+                        RemoteProductId = group.InventoryItemGroupKey,
+                        Name = group.Title ?? group.InventoryItemGroupKey,
+                        Sku = group.InventoryItemGroupKey,
+                        TaxRate = 19,
+                        Description = groupDescription,
+                        IsVariantParent = true,
+                        VariantAxes = axisNames,
+                        Variants = group.VariantSkus
+                            .Where(sku => itemsBySku.ContainsKey(sku))
+                            .Select((sku, index) =>
+                            {
+                                var (item, price) = itemsBySku[sku];
+                                return new SalesChannelImportVariant
+                                {
+                                    RemoteVariantId = sku,
+                                    Sku = sku,
+                                    Ean = item.Product?.Ean is { Length: > 0 } ? item.Product.Ean[0] : null,
+                                    Price = price,
+                                    Stock = item.Availability?.ShipToLocationAvailability?.Quantity ?? 0,
+                                    SortOrder = index,
+                                    // The varying aspects per SKU come from the item's product aspects
+                                    Options = axisNames
+                                        .Select(axis => new SalesChannelImportVariantOption
+                                        {
+                                            AttributeName = axis,
+                                            Value = item.Product?.Aspects != null
+                                                    && item.Product.Aspects.TryGetValue(axis, out var values)
+                                                    && values is { Length: > 0 }
+                                                ? values[0]
+                                                : string.Empty,
+                                        })
+                                        .Where(o => !string.IsNullOrEmpty(o.Value))
+                                        .ToList(),
+                                };
+                            }).ToList(),
+                    };
+
+                    await _productImportRepository.ImportOrUpdateFromSalesChannel(salesChannel.Id, parentImport);
+                    processed++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    _logger.LogError(ex, "eBay variation group import failed for {GroupKey}", groupKey);
+                }
+            }
         }
         catch (Exception ex)
         {

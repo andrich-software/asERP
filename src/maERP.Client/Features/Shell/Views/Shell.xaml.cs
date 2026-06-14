@@ -3,6 +3,9 @@ using Windows.ApplicationModel.Resources;
 using maERP.Client.Features.Account.Models;
 using maERP.Client.Features.Shell.Models;
 using maERP.Client.Features.Auth.Services;
+using maERP.Client.Features.Auth.Models;
+using maERP.Client.Features.Auth.Views;
+using Microsoft.UI.Xaml.Controls;
 using maERP.Client.Features.Tenants.Services;
 using maERP.Domain.Dtos.Auth;
 using maERP.Domain.Dtos.Tenant;
@@ -17,6 +20,7 @@ using maERP.Client.Features.SalesChannels.Services;
 using maERP.Client.Features.SalesChannelDashboards.Models;
 using maERP.Client.Features.Superadmin.Models;
 using maERP.Domain.Enums;
+using maERP.Client.Features.ProductAttributes.Models;
 using maERP.Client.Features.TaxClasses.Models;
 using maERP.Client.Features.Tenants.Models;
 using maERP.Client.Features.Warehouses.Models;
@@ -79,6 +83,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             { "SalesChannelOverview", NavItemSalesChannels },
             { "SalesChannels", NavItemSalesChannelList },
             { "TaxClasses", NavItemTaxClasses },
+            { "ProductAttributes", NavItemProductAttributes },
             { "Warehouses", NavItemWarehouses },
             { "AiModels", NavItemAiModels },
             { "AiPrompts", NavItemAiPrompts },
@@ -295,6 +300,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         NavItemInvoices.Visibility = Visibility.Visible;
         NavItemSalesChannels.Visibility = Visibility.Visible;
         NavItemTaxClasses.Visibility = Visibility.Visible;
+        NavItemProductAttributes.Visibility = Visibility.Visible;
         NavItemWarehouses.Visibility = Visibility.Visible;
         NavItemAiModels.Visibility = Visibility.Visible;
         NavItemAiPrompts.Visibility = Visibility.Visible;
@@ -418,7 +424,14 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         {
             if (sender is ShellModel model)
             {
-                UpdateNavigationVisibility(model);
+                // PropertyChanged can be raised from a background thread (e.g. the
+                // LoggedOut async continuation), so marshal the XAML updates to the
+                // UI thread to avoid "dependency property accessed from non UI thread".
+                RunOnUiThread(() =>
+                {
+                    UpdateNavigationVisibility(model);
+                    return Task.CompletedTask;
+                });
             }
         }
     }
@@ -491,6 +504,9 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                     break;
                 case "TaxClasses":
                     await navigator.NavigateViewModelAsync<TaxClassListModel>(this);
+                    break;
+                case "ProductAttributes":
+                    await navigator.NavigateViewModelAsync<ProductAttributeListModel>(this);
                     break;
                 case "AiModels":
                     await navigator.NavigateViewModelAsync<AiModelListModel>(this);
@@ -784,7 +800,6 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
     private void InitializeLoginOverlay()
     {
-        LoginServerUrl.Text = "https://";
         LoginEmail.Text = string.Empty;
         LoginPassword.Password = string.Empty;
         LoginErrorBanner.Visibility = Visibility.Collapsed;
@@ -792,27 +807,18 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         LoginProgress.Visibility = Visibility.Collapsed;
         LoginProgress.IsActive = false;
         LoginButton.IsEnabled = true;
-        LoginServerUrl.Visibility = Visibility.Visible;
+        LoginServerPanel.Visibility = Visibility.Visible;
+        LoginServerStatus.Visibility = Visibility.Collapsed;
         RegisterLink.Visibility = Visibility.Collapsed;
 
-        // Runtime config (WASM: /config.json from nginx env var) may pin the
-        // server URL — hide the input and use the configured value.
-        if (maERP.Client.Core.Configuration.RuntimeConfig.IsServerUrlRestricted)
-        {
-            LoginServerUrl.Text = maERP.Client.Core.Configuration.RuntimeConfig.RestrictServerUrl!;
-            LoginServerUrl.Visibility = Visibility.Collapsed;
-        }
-
+        // Dev convenience credentials (per-server last-used email overrides the email below
+        // via the selector's SelectionChanged once a server has been used).
         try
         {
             var app = Application.Current as App;
             var hostEnvironment = app?.Host?.Services?.GetService<IHostEnvironment>();
             if (hostEnvironment?.IsDevelopment() == true)
             {
-                if (!maERP.Client.Core.Configuration.RuntimeConfig.IsServerUrlRestricted)
-                {
-                    LoginServerUrl.Text = "https://localhost:8443";
-                }
                 LoginEmail.Text = "admin@localhost.com";
                 LoginPassword.Password = "P@ssword1";
             }
@@ -822,29 +828,119 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             Console.WriteLine($"[Shell] InitializeLoginOverlay error: {ex.Message}");
         }
 
-        // Fetch /api/v1/server-info for the current URL (pinned, dev default,
-        // or empty https:// placeholder) to decide whether the registration
-        // link should appear. In the free-form case the link is also refreshed
-        // on LostFocus and right before login.
-        _ = RefreshRegistrationLinkAsync(LoginServerUrl.Text);
-    }
-
-    private void LoginServerUrl_LostFocus(object sender, RoutedEventArgs e)
-    {
-        var serverUrl = LoginServerUrl.Text?.Trim();
-        if (string.IsNullOrWhiteSpace(serverUrl))
+        // Runtime config (WASM: /config.json from nginx env var) may pin the server URL —
+        // hide the whole server selector and use the configured value.
+        if (maERP.Client.Core.Configuration.RuntimeConfig.IsServerUrlRestricted)
         {
-            RegisterLink.Visibility = Visibility.Collapsed;
+            LoginServerPanel.Visibility = Visibility.Collapsed;
+            _ = RefreshRegistrationLinkAsync(maERP.Client.Core.Configuration.RuntimeConfig.RestrictServerUrl!);
             return;
         }
 
-        if (!serverUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-            !serverUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        _ = InitializeServerSelectorAsync();
+    }
+
+    private async Task InitializeServerSelectorAsync()
+    {
+        try
         {
-            serverUrl = "https://" + serverUrl;
+            var app = Application.Current as App;
+            var store = app?.Host?.Services?.GetService<IServerProfileStore>();
+            if (store == null) return;
+
+            var servers = await store.GetAllAsync();
+            var lastUsed = await store.GetLastUsedAsync();
+
+            LoginServerSelector.ItemsSource = servers;
+            // Setting SelectedItem raises SelectionChanged, which applies the email prefill,
+            // status badge and registration-link refresh for the chosen server.
+            LoginServerSelector.SelectedItem =
+                servers.FirstOrDefault(s => s.Id == lastUsed.Id) ?? servers.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Shell] InitializeServerSelectorAsync error: {ex.Message}");
+        }
+    }
+
+    private void LoginServerSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (LoginServerSelector.SelectedItem is not ServerProfile profile)
+        {
+            return;
         }
 
-        _ = RefreshRegistrationLinkAsync(serverUrl);
+        // Auto-fill the last email used for this server (don't clear an existing entry otherwise).
+        if (!string.IsNullOrWhiteSpace(profile.LastUsedEmail))
+        {
+            LoginEmail.Text = profile.LastUsedEmail;
+        }
+
+        _ = RefreshServerStatusAsync(profile.Url);
+        _ = RefreshRegistrationLinkAsync(profile.Url);
+    }
+
+    private async Task RefreshServerStatusAsync(string serverUrl)
+    {
+        try
+        {
+            LoginServerStatus.Visibility = Visibility.Visible;
+            LoginServerStatus.Text = Localize("ServerDialog.StatusChecking", "prüfe …");
+
+            var app = Application.Current as App;
+            var serverInfo = app?.Host?.Services?.GetService<IServerInfoService>();
+            if (serverInfo == null)
+            {
+                LoginServerStatus.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var info = await serverInfo.GetServerInfoAsync(serverUrl);
+            LoginServerStatus.Text = info != null
+                ? string.Format(Localize("ServerDialog.StatusConnectedFormat", "maERP v{0} · verbunden"), info.Version)
+                : Localize("ServerDialog.StatusOffline", "offline");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Shell] RefreshServerStatusAsync error: {ex.Message}");
+            LoginServerStatus.Text = Localize("ServerDialog.StatusOffline", "offline");
+        }
+    }
+
+    private async void ManageServers_Click(object sender, RoutedEventArgs e)
+    {
+        var app = Application.Current as App;
+        var store = app?.Host?.Services?.GetService<IServerProfileStore>();
+        var serverInfo = app?.Host?.Services?.GetService<IServerInfoService>();
+        if (store == null || serverInfo == null || this.XamlRoot == null)
+        {
+            return;
+        }
+
+        var currentId = (LoginServerSelector.SelectedItem as ServerProfile)?.Id;
+
+        var dialog = new ServerManagementDialog(store, serverInfo, this.XamlRoot);
+        await dialog.ShowAsync();
+
+        // Reload the selector after management; keep the current selection if it still exists.
+        var servers = await store.GetAllAsync();
+        LoginServerSelector.ItemsSource = servers;
+        LoginServerSelector.SelectedItem =
+            servers.FirstOrDefault(s => s.Id == currentId) ?? servers.FirstOrDefault();
+    }
+
+    private static string Localize(string key, string fallback)
+    {
+        try
+        {
+            var value = Windows.ApplicationModel.Resources.ResourceLoader
+                .GetForViewIndependentUse().GetString(key);
+            return string.IsNullOrEmpty(value) ? fallback : value;
+        }
+        catch
+        {
+            return fallback;
+        }
     }
 
     private async Task RefreshRegistrationLinkAsync(string serverUrl)
@@ -887,7 +983,10 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
     private async void LoginButton_Click(object sender, RoutedEventArgs e)
     {
-        var serverUrl = LoginServerUrl.Text?.Trim();
+        var selectedProfile = LoginServerSelector.SelectedItem as ServerProfile;
+        var serverUrl = maERP.Client.Core.Configuration.RuntimeConfig.IsServerUrlRestricted
+            ? maERP.Client.Core.Configuration.RuntimeConfig.RestrictServerUrl!
+            : selectedProfile?.Url;
         var email = LoginEmail.Text?.Trim();
         var password = LoginPassword.Password;
 
@@ -898,13 +997,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             return;
         }
 
-        if (!serverUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-            !serverUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-        {
-            serverUrl = "https://" + serverUrl;
-        }
-
-        serverUrl = serverUrl.TrimEnd('/');
+        serverUrl = ServerUrlUtil.Normalize(serverUrl);
 
         // If the user typed the URL and clicked Login without leaving the
         // field first, LostFocus may not have fired — refresh the registration
@@ -943,6 +1036,16 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
             if (success)
             {
+                // Remember the server used and its email so it becomes the default next time.
+                if (selectedProfile != null)
+                {
+                    var profileStore = app.Host.Services.GetService<IServerProfileStore>();
+                    if (profileStore != null)
+                    {
+                        await profileStore.SetLastUsedAsync(selectedProfile.Id, email);
+                    }
+                }
+
                 shellModel.UpdateAuthenticationState(true);
 
                 if (tenantContext.AvailableTenants.Count == 0)
@@ -1040,7 +1143,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
         var serverUrl = maERP.Client.Core.Configuration.RuntimeConfig.IsServerUrlRestricted
             ? maERP.Client.Core.Configuration.RuntimeConfig.RestrictServerUrl!
-            : LoginServerUrl.Text?.Trim();
+            : (LoginServerSelector.SelectedItem as ServerProfile)?.Url;
 
         if (string.IsNullOrWhiteSpace(serverUrl))
         {
@@ -1049,12 +1152,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             return;
         }
 
-        if (!serverUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-            !serverUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-        {
-            serverUrl = "https://" + serverUrl;
-        }
-        serverUrl = serverUrl.TrimEnd('/');
+        serverUrl = ServerUrlUtil.Normalize(serverUrl);
 
         RegisterSubmitButton.IsEnabled = false;
         RegisterCancelButton.IsEnabled = false;

@@ -29,5 +29,13 @@ public sealed class SalesChannelContext
 
     public Guid? TenantId { get; init; }
 
+    /// <summary>
+    /// Incremental-sync watermark: when set, the connector pulls only records modified at or after this
+    /// UTC instant (e.g. WooCommerce <c>modified_after</c>) instead of re-fetching the full set every run.
+    /// Null means a full import (first run, or operations without an incremental mode). Derived from the
+    /// previous successful sync run, so failed runs do not advance it and the next run safely re-pulls.
+    /// </summary>
+    public DateTime? IncrementalSince { get; init; }
+
     public CancellationToken CancellationToken { get; init; }
 }

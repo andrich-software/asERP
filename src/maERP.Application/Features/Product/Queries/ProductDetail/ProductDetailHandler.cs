@@ -93,13 +93,45 @@ public class ProductDetailHandler : IRequestHandler<ProductDetailQuery, Result<P
                     Website = product.Manufacturer.Website,
                     Logo = product.Manufacturer.Logo
                 } : null,
+                ProductType = product.ProductType,
+                ParentProductId = product.ParentProductId,
+                VariantSortOrder = product.VariantSortOrder,
+                VariantAxes = product.VariantAxes
+                    .OrderBy(a => a.SortOrder)
+                    .Select(a => new ProductVariantAxisDto
+                    {
+                        ProductAttributeId = a.ProductAttributeId,
+                        AttributeName = a.ProductAttribute?.Name ?? string.Empty,
+                        SortOrder = a.SortOrder,
+                        AvailableValues = (a.ProductAttribute?.Values ?? [])
+                            .OrderBy(v => v.SortOrder).ThenBy(v => v.Value)
+                            .Select(v => new Domain.Dtos.ProductAttribute.ProductAttributeValueDto
+                            {
+                                Id = v.Id,
+                                Value = v.Value,
+                                SortOrder = v.SortOrder
+                            }).ToList()
+                    }).ToList(),
+                Variants = product.Variants
+                    .OrderBy(v => v.VariantSortOrder).ThenBy(v => v.Sku)
+                    .Select(v => new ProductVariantListDto
+                    {
+                        Id = v.Id,
+                        Sku = v.Sku,
+                        Name = v.Name,
+                        Ean = v.Ean,
+                        Price = v.Price,
+                        VariantSortOrder = v.VariantSortOrder,
+                        Options = MapOptions(v.VariantOptions)
+                    }).ToList(),
+                Options = MapOptions(product.VariantOptions),
                 // Map related sales channels and stocks
                 ProductSalesChannel = product.ProductSalesChannels?.Select(psc => psc.Id).ToList() ?? new List<Guid>(),
                 ProductStocks = product.ProductStocks.Select(ps => ps.Id).ToList()
             };
 
             _logger.LogInformation("Product with ID {Id} retrieved successfully", request.Id);
-            
+
             return Result<ProductDetailDto>.Success(data);
         }
         catch (Exception ex)
@@ -110,5 +142,19 @@ public class ProductDetailHandler : IRequestHandler<ProductDetailQuery, Result<P
             return Result<ProductDetailDto>.Fail(ResultStatusCode.InternalServerError,
                 $"An error occurred while retrieving the product: {ex.Message}");
         }
+    }
+
+    private static List<ProductVariantOptionDto> MapOptions(IEnumerable<Domain.Entities.ProductVariantOption> options)
+    {
+        return options
+            .Select(o => new ProductVariantOptionDto
+            {
+                ProductAttributeId = o.ProductAttributeValue?.ProductAttributeId ?? Guid.Empty,
+                AttributeName = o.ProductAttributeValue?.ProductAttribute?.Name ?? string.Empty,
+                ProductAttributeValueId = o.ProductAttributeValueId,
+                Value = o.ProductAttributeValue?.Value ?? string.Empty
+            })
+            .OrderBy(o => o.AttributeName)
+            .ToList();
     }
 }

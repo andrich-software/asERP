@@ -279,9 +279,12 @@
 
                   <ItemsRepeater ItemsSource="{Binding Data.Channels}">
                     <ItemsRepeater.Layout>
+                      <!-- MinItemHeight must fit the full card (header, URL, revenue, today/week,
+                           sales count, share bar + 20px padding ≈ 270px) — UniformGridLayout pins every
+                           cell to this height, so a too-small value clips the lower rows. -->
                       <UniformGridLayout Orientation="Horizontal"
                                          MinItemWidth="320"
-                                         MinItemHeight="220"
+                                         MinItemHeight="300"
                                          MinColumnSpacing="12"
                                          MinRowSpacing="12"
                                          ItemsStretch="Fill" />
@@ -336,7 +339,7 @@
 
                               <!-- URL -->
                               <TextBlock Grid.Row="1"
-                                         Text="{Binding Url}"
+                                         Text="{Binding DisplayUrl}"
                                          Style="{StaticResource BodySmall}"
                                          Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                          TextTrimming="CharacterEllipsis"

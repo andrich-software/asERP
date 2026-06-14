@@ -42,8 +42,95 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
             .Include(ps => ps.ProductSalesChannels)
             .Include(ps => ps.ProductStocks)
             .Include(ps => ps.Manufacturer)
+            .Include(p => p.VariantAxes.OrderBy(a => a.SortOrder))
+                .ThenInclude(a => a.ProductAttribute)
+                    .ThenInclude(attr => attr!.Values)
+            .Include(p => p.Variants.OrderBy(v => v.VariantSortOrder).ThenBy(v => v.Sku))
+                .ThenInclude(v => v.VariantOptions)
+                    .ThenInclude(o => o.ProductAttributeValue)
+                        .ThenInclude(av => av!.ProductAttribute)
+            .Include(p => p.VariantOptions)
+                .ThenInclude(o => o.ProductAttributeValue)
+                    .ThenInclude(av => av!.ProductAttribute)
             .AsSplitQuery()
             .FirstOrDefaultAsync();
+    }
+
+    public async Task<List<Product>> GetVariantsAsync(Guid parentProductId)
+    {
+        var query = Context.Product.Where(p => p.ParentProductId == parentProductId);
+
+        // Apply manual tenant filtering
+        var currentTenantId = TenantContext.GetCurrentTenantId();
+        if (currentTenantId.HasValue)
+        {
+            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
+        }
+
+        return await query
+            .Include(p => p.VariantOptions)
+                .ThenInclude(o => o.ProductAttributeValue)
+                    .ThenInclude(av => av!.ProductAttribute)
+            .OrderBy(p => p.VariantSortOrder).ThenBy(p => p.Sku)
+            .ToListAsync();
+    }
+
+    public async Task DeleteWithDependentsAsync(Product product)
+    {
+        // Verify existence and tenant ownership like GenericRepository.DeleteAsync does
+        var existingProduct = await Context.Product.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == product.Id);
+
+        if (existingProduct == null)
+        {
+            throw new InvalidOperationException($"Entity with ID {product.Id} not found for deletion");
+        }
+
+        var currentTenantId = TenantContext.GetCurrentTenantId();
+        if (currentTenantId.HasValue && existingProduct.TenantId != null && existingProduct.TenantId != currentTenantId)
+        {
+            throw new UnauthorizedAccessException("Cannot delete entity from different tenant");
+        }
+
+        // For variant parents: delete all child variants first
+        var variantIds = await Context.Product
+            .Where(p => p.ParentProductId == existingProduct.Id)
+            .Select(p => p.Id)
+            .ToListAsync();
+
+        foreach (var variantId in variantIds)
+        {
+            await RemoveProductDependentsAsync(variantId);
+            Context.Product.RemoveRange(Context.Product.Where(p => p.Id == variantId));
+        }
+
+        await RemoveProductDependentsAsync(existingProduct.Id);
+        Context.Product.Remove(existingProduct);
+
+        await Context.SaveChangesAsync();
+    }
+
+    public void AddVariantAxis(ProductVariantAxis axis) => Context.ProductVariantAxis.Add(axis);
+
+    public void RemoveVariantAxis(ProductVariantAxis axis) => Context.ProductVariantAxis.Remove(axis);
+
+    public void AddVariantOption(ProductVariantOption option) => Context.ProductVariantOption.Add(option);
+
+    public void RemoveVariantOption(ProductVariantOption option) => Context.ProductVariantOption.Remove(option);
+
+    private async Task RemoveProductDependentsAsync(Guid productId)
+    {
+        Context.ProductVariantOption.RemoveRange(
+            await Context.ProductVariantOption.Where(o => o.ProductId == productId).ToListAsync());
+
+        Context.ProductVariantAxis.RemoveRange(
+            await Context.ProductVariantAxis.Where(a => a.ParentProductId == productId).ToListAsync());
+
+        Context.ProductSalesChannel.RemoveRange(
+            await Context.ProductSalesChannel.IgnoreQueryFilters().Where(psc => psc.ProductId == productId).ToListAsync());
+
+        Context.ProductStock.RemoveRange(
+            await Context.ProductStock.Where(ps => ps.ProductId == productId).ToListAsync());
     }
 
     public async Task<bool> UpdateStockAsync(Guid productId, Guid warehouseId, int newStock)

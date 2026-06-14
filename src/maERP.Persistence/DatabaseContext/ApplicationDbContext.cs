@@ -65,6 +65,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<SalesItem>().ToTable("sales_item");
         modelBuilder.Entity<SalesItemSerialNumber>().ToTable("sales_item_serialnumber");
         modelBuilder.Entity<Product>().ToTable("product");
+        modelBuilder.Entity<ProductAttribute>().ToTable("product_attribute");
+        modelBuilder.Entity<ProductAttributeValue>().ToTable("product_attribute_value");
+        modelBuilder.Entity<ProductVariantAxis>().ToTable("product_variant_axis");
+        modelBuilder.Entity<ProductVariantOption>().ToTable("product_variant_option");
         modelBuilder.Entity<ProductSalesChannel>().ToTable("product_saleschannel");
         modelBuilder.Entity<ProductStock>().ToTable("product_stock");
         modelBuilder.Entity<SalesChannel>().ToTable("saleschannel");
@@ -110,6 +114,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new InvoiceConfiguration());
         modelBuilder.ApplyConfiguration(new SalesConfiguration());
         modelBuilder.ApplyConfiguration(new ProductConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductAttributeConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductAttributeValueConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductVariantAxisConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductVariantOptionConfiguration());
         modelBuilder.ApplyConfiguration(new InvoiceItemConfiguration());
         modelBuilder.ApplyConfiguration(new SalesItemConfiguration());
         modelBuilder.ApplyConfiguration(new ProductSalesChannelConfiguration());
@@ -170,6 +178,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SalesItem> SalesItem { get; set; } = null!;
     public DbSet<SalesItemSerialNumber> SalesItemSerialNumber { get; set; } = null!;
     public DbSet<Product> Product { get; set; } = null!;
+    public DbSet<ProductAttribute> ProductAttribute { get; set; } = null!;
+    public DbSet<ProductAttributeValue> ProductAttributeValue { get; set; } = null!;
+    public DbSet<ProductVariantAxis> ProductVariantAxis { get; set; } = null!;
+    public DbSet<ProductVariantOption> ProductVariantOption { get; set; } = null!;
     public DbSet<ProductSalesChannel> ProductSalesChannel { get; set; } = null!;
     public DbSet<ProductStock> ProductStock { get; set; } = null!;
     public DbSet<SalesChannel> SalesChannel { get; set; } = null!;

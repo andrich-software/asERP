@@ -35,20 +35,34 @@
       </utu:NavigationBar.PrimaryCommands>
     </utu:NavigationBar>
 
-    <!-- Search Box -->
+    <!-- Search Box + Filters -->
     <Grid Grid.Row="1"
           Margin="16,12,16,8">
-      <TextBox x:Name="SearchBox"
-               x:Uid="ProductListPage.SearchBox"
-               TextChanged="SearchBox_TextChanged"
-               Padding="40,0,12,0" />
-      <FontIcon Glyph="&#xE721;"
-                FontSize="16"
-                Foreground="{ThemeResource OnSurfaceVariantBrush}"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                Margin="12,0,0,0"
-                IsHitTestVisible="False" />
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+
+      <Grid Grid.Column="0">
+        <TextBox x:Name="SearchBox"
+                 x:Uid="ProductListPage.SearchBox"
+                 TextChanged="SearchBox_TextChanged"
+                 Padding="40,0,12,0" />
+        <FontIcon Glyph="&#xE721;"
+                  FontSize="16"
+                  Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Center"
+                  Margin="12,0,0,0"
+                  IsHitTestVisible="False" />
+      </Grid>
+
+      <ToggleSwitch x:Name="IncludeVariantsToggle"
+                    Grid.Column="1"
+                    x:Uid="ProductListPage.IncludeVariants"
+                    Margin="16,0,0,0"
+                    VerticalAlignment="Center"
+                    Toggled="IncludeVariantsToggle_Toggled" />
     </Grid>
 
     <!-- Product Table -->
@@ -228,14 +242,46 @@
                                      Padding="16,14"
                                      TextTrimming="CharacterEllipsis" />
 
-                          <!-- Name -->
-                          <TextBlock Grid.Column="1"
-                                     Text="{Binding Name}"
-                                     Style="{StaticResource BodyMedium}"
-                                     Foreground="{ThemeResource OnSurfaceBrush}"
-                                     VerticalAlignment="Center"
-                                     Padding="16,14"
-                                     TextTrimming="CharacterEllipsis" />
+                          <!-- Name + Type Badge -->
+                          <StackPanel Grid.Column="1"
+                                      Orientation="Horizontal"
+                                      Spacing="8"
+                                      VerticalAlignment="Center"
+                                      Padding="16,14">
+                            <TextBlock Text="{Binding Name}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+
+                            <!-- Variant Parent Badge -->
+                            <Border CornerRadius="10"
+                                    Padding="8,2"
+                                    VerticalAlignment="Center"
+                                    Background="{ThemeResource PrimaryContainerBrush}"
+                                    Visibility="{Binding ProductType, Converter={StaticResource ProductTypeToVisibilityConverter}, ConverterParameter=VariantParent}">
+                              <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Text="{Binding ProductType, Converter={StaticResource ProductTypeToTextConverter}}"
+                                           Style="{StaticResource LabelSmall}"
+                                           Foreground="{ThemeResource OnPrimaryContainerBrush}" />
+                                <TextBlock Style="{StaticResource LabelSmall}"
+                                           Foreground="{ThemeResource OnPrimaryContainerBrush}">
+                                  <Run Text="(" /><Run Text="{Binding VariantCount}" /><Run Text=")" />
+                                </TextBlock>
+                              </StackPanel>
+                            </Border>
+
+                            <!-- Variant Child Badge -->
+                            <Border CornerRadius="10"
+                                    Padding="8,2"
+                                    VerticalAlignment="Center"
+                                    Background="{ThemeResource TertiaryContainerBrush}"
+                                    Visibility="{Binding ProductType, Converter={StaticResource ProductTypeToVisibilityConverter}, ConverterParameter=Variant}">
+                              <TextBlock Text="{Binding ProductType, Converter={StaticResource ProductTypeToTextConverter}}"
+                                         Style="{StaticResource LabelSmall}"
+                                         Foreground="{ThemeResource OnTertiaryContainerBrush}" />
+                            </Border>
+                          </StackPanel>
 
                           <!-- Manufacturer -->
                           <TextBlock Grid.Column="2"

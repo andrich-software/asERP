@@ -46,6 +46,12 @@ public partial record ProductListModel
     public IState<string> SortSales => State<string>.Value(this, () => "Name Ascending");
 
     /// <summary>
+    /// When true, variant child products are included in the list.
+    /// Bound to the "Varianten anzeigen" toggle.
+    /// </summary>
+    public IState<bool> IncludeVariants => State<bool>.Value(this, () => false);
+
+    /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
     public IState<ProductPaginationInfo> Pagination => State<ProductPaginationInfo>.Value(this, () => new ProductPaginationInfo());
@@ -55,17 +61,18 @@ public partial record ProductListModel
     /// Automatically refreshes when SearchQuery, CurrentPage, or SortSales changes.
     /// </summary>
     public IListFeed<ProductListDto> Products => Feed
-        .Combine(SearchQuery, CurrentPage, PageSize, SortSales)
+        .Combine(SearchQuery, CurrentPage, PageSize, SortSales, IncludeVariants)
         .SelectAsync(async (combined, ct) =>
         {
-            var (query, page, size, salesBy) = combined;
+            var (query, page, size, salesBy, includeVariants) = combined;
 
             var parameters = new QueryParameters
             {
                 PageNumber = page,
                 PageSize = size,
                 SearchString = string.IsNullOrWhiteSpace(query) ? null : query,
-                SalesBy = salesBy
+                SalesBy = salesBy,
+                IncludeVariants = includeVariants
             };
 
             var response = await _productService.GetProductsAsync(parameters, ct);
@@ -143,6 +150,15 @@ public partial record ProductListModel
     {
         await SortSales.UpdateAsync(_ => salesBy, ct);
         await CurrentPage.UpdateAsync(_ => 0, ct); // Reset to first page when sorting changes
+    }
+
+    /// <summary>
+    /// Toggle whether variant child products are included in the list.
+    /// </summary>
+    public async ValueTask SetIncludeVariants(bool includeVariants, CancellationToken ct = default)
+    {
+        await IncludeVariants.UpdateAsync(_ => includeVariants, ct);
+        await CurrentPage.UpdateAsync(_ => 0, ct);
     }
 
     /// <summary>

@@ -10,4 +10,5 @@ public interface ISalesRepository : IGenericRepository<Sales>
     Task<List<SalesHistory>> GetSalesHistoryAsync(Guid salesId);
     Task<bool> CanCreateInvoice(Guid salesId);
     Task<int> GetNextSalesIdAsync();
+    Task<int> GetMaxSalesIdAsync();
 }

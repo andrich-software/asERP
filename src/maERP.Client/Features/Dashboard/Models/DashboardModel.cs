@@ -288,6 +288,8 @@ public record SalessKpiData
     public int SalessThisWeek { get; init; }
     public decimal SalessChange { get; init; }
 
+    public string SalessTodayFormatted => SalessToday.ToString("N0");
+    public string SalessPendingFormatted => SalessPending.ToString("N0");
     public string SalessChangeFormatted => $"{(SalessChange >= 0 ? "+" : "")}{SalessChange:F1}%";
     public bool SalessChangePositive => SalessChange >= 0;
 }
@@ -301,6 +303,8 @@ public record CustomersKpiData
     public int CustomersNewThisMonth { get; init; }
     public decimal CustomersChange { get; init; }
 
+    public string CustomersTotalFormatted => CustomersTotal.ToString("N0");
+    public string CustomersNewThisMonthFormatted => CustomersNewThisMonth.ToString("N0");
     public string CustomersChangeFormatted => $"{(CustomersChange >= 0 ? "+" : "")}{CustomersChange:F1}%";
     public bool CustomersChangePositive => CustomersChange >= 0;
 }
@@ -317,7 +321,8 @@ public record ProductsKpiData
 
     public string ProductsChangeFormatted => $"{(ProductsChange >= 0 ? "+" : "")}{ProductsChange:F1}%";
     public bool ProductsChangePositive => ProductsChange >= 0;
-    public string StockRatio => $"{ProductsInStock} / {ProductsTotal}";
+    public string ProductsLowStockFormatted => ProductsLowStock.ToString("N0");
+    public string StockRatio => $"{ProductsInStock:N0} / {ProductsTotal:N0}";
 }
 
 /// <summary>
@@ -362,6 +367,7 @@ public record TopProductItem
     public decimal Revenue { get; init; }
 
     public string RevenueFormatted => Revenue.ToString("C0");
+    public string QuantitySoldFormatted => QuantitySold.ToString("N0");
     public string RankFormatted => $"#{Rank}";
 }
 

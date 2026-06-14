@@ -1,4 +1,5 @@
 using FluentValidation;
+using maERP.Domain.Enums;
 using maERP.Domain.Interfaces;
 
 namespace maERP.Domain.Validators;
@@ -28,11 +29,26 @@ public class ProductBaseValidator<T> : AbstractValidator<T> where T : IProductIn
             .NotEmpty().WithMessage("{PropertyName} is required.")
             .MaximumLength(255).WithMessage("{PropertyName} must be less than {MaxLength} characters.");
 
+        // Variant parents act as non-sellable containers (e.g. imported WooCommerce
+        // variable products carry no own price), so price 0 is allowed for them.
         RuleFor(p => p.Price)
             .NotNull().WithMessage("{PropertyName} is required.")
-            .GreaterThan(0).WithMessage("{PropertyName} must be greater than {ComparisonValue}.");
+            .GreaterThan(0).WithMessage("{PropertyName} must be greater than {ComparisonValue}.")
+            .When(p => p.ProductType != ProductType.VariantParent);
+
+        RuleFor(p => p.Price)
+            .GreaterThanOrEqualTo(0).WithMessage("{PropertyName} must be greater or equal than {ComparisonValue}.")
+            .When(p => p.ProductType == ProductType.VariantParent);
 
         RuleFor(p => p.TaxClassId)
             .NotEmpty().WithMessage("{PropertyName} is required.");
+
+        RuleFor(p => p.ParentProductId)
+            .NotNull().WithMessage("A variant requires a parent product.")
+            .When(p => p.ProductType == ProductType.Variant);
+
+        RuleFor(p => p.ParentProductId)
+            .Null().WithMessage("Only variants may reference a parent product.")
+            .When(p => p.ProductType != ProductType.Variant);
     }
 }

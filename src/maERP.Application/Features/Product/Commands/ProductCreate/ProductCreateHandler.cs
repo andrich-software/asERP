@@ -1,6 +1,8 @@
 using maERP.Application.Contracts.Logging;
 using maERP.Application.Contracts.Persistence;
 using maERP.Application.Contracts.Services;
+using maERP.Application.Features.Product.Shared;
+using maERP.Domain.Enums;
 using maERP.Domain.Wrapper;
 using maERP.Application.Mediator;
 
@@ -34,6 +36,11 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
     private readonly IManufacturerRepository _manufacturerRepository;
 
     /// <summary>
+    /// Repository for product attribute data operations
+    /// </summary>
+    private readonly IProductAttributeRepository _productAttributeRepository;
+
+    /// <summary>
     /// Tenant context for handling multi-tenancy
     /// </summary>
     private readonly ITenantContext _tenantContext;
@@ -51,12 +58,14 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
         IProductRepository productRepository,
         ITaxClassRepository taxClassRepository,
         IManufacturerRepository manufacturerRepository,
+        IProductAttributeRepository productAttributeRepository,
         ITenantContext tenantContext)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _productRepository = productRepository ?? throw new ArgumentNullException(nameof(productRepository));
         _taxClassRepository = taxClassRepository ?? throw new ArgumentNullException(nameof(taxClassRepository));
         _manufacturerRepository = manufacturerRepository ?? throw new ArgumentNullException(nameof(manufacturerRepository));
+        _productAttributeRepository = productAttributeRepository ?? throw new ArgumentNullException(nameof(productAttributeRepository));
         _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
     }
 
@@ -96,6 +105,29 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
                     "Tenant context is not set. Cannot create product without tenant information.");
             }
 
+            // Cross-entity variant rules (parent reference, axis coverage, sibling uniqueness)
+            Domain.Entities.Product? parentProduct = null;
+            if (request.ProductType == ProductType.Variant)
+            {
+                var (variantError, parent) = await ProductVariantRules.ValidateVariantAsync(request, null, _productRepository);
+                if (variantError != null)
+                {
+                    _logger.LogWarning("Variant validation failed in create request: {Error}", variantError);
+                    return Result<Guid>.Fail(ResultStatusCode.BadRequest, variantError);
+                }
+
+                parentProduct = parent;
+            }
+            else if (request.ProductType == ProductType.VariantParent)
+            {
+                var axisError = await ProductVariantRules.ValidateParentAxesAsync(request, _productAttributeRepository);
+                if (axisError != null)
+                {
+                    _logger.LogWarning("Variant axis validation failed in create request: {Error}", axisError);
+                    return Result<Guid>.Fail(ResultStatusCode.BadRequest, axisError);
+                }
+            }
+
             // Manual mapping instead of using AutoMapper
             var productToCreate = new Domain.Entities.Product
             {
@@ -115,8 +147,31 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
                 Depth = request.Depth,
                 TaxClassId = request.TaxClassId,
                 ManufacturerId = request.ManufacturerId,
+                ProductType = request.ProductType,
+                ParentProductId = request.ProductType == ProductType.Variant ? parentProduct!.Id : null,
+                VariantSortOrder = request.VariantSortOrder,
                 TenantId = currentTenantId.Value // Explicitly set TenantId for data isolation
             };
+
+            if (request.ProductType == ProductType.VariantParent)
+            {
+                productToCreate.VariantAxes = request.VariantAxisAttributeIds
+                    .Select((attributeId, index) => new Domain.Entities.ProductVariantAxis
+                    {
+                        ProductAttributeId = attributeId,
+                        SortOrder = index,
+                        TenantId = currentTenantId.Value
+                    }).ToList();
+            }
+            else if (request.ProductType == ProductType.Variant)
+            {
+                productToCreate.VariantOptions = request.VariantOptionValueIds.Distinct()
+                    .Select(valueId => new Domain.Entities.ProductVariantOption
+                    {
+                        ProductAttributeValueId = valueId,
+                        TenantId = currentTenantId.Value
+                    }).ToList();
+            }
 
             // Add the new product to the database
             await _productRepository.CreateAsync(productToCreate);

@@ -75,6 +75,7 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
                 SalesChannelId = sales.SalesChannelId,
                 RemoteSalesId = sales.RemoteSalesId,
                 CustomerId = sales.Customer.CustomerId,
+                CustomerGuid = sales.Customer.Id,
                 Status = sales.Status,
                 SalesItems = sales.SalesItems.ToList(),
                 SalesHistory = MapSalesHistoryToDto(salesHistory),

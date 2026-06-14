@@ -28,6 +28,17 @@ public record QueryParameters
     public string? SalesBy { get; init; }
 
     /// <summary>
+    /// Optional SalesChannel filter. When set, only results for this channel are returned.
+    /// </summary>
+    public Guid? SalesChannelId { get; init; }
+
+    /// <summary>
+    /// When true, variant child products are included in product list results.
+    /// Only honored by the products endpoint; ignored elsewhere.
+    /// </summary>
+    public bool IncludeVariants { get; init; }
+
+    /// <summary>
     /// Builds the query string for API requests.
     /// </summary>
     public string ToQueryString()
@@ -46,6 +57,16 @@ public record QueryParameters
         if (!string.IsNullOrWhiteSpace(SalesBy))
         {
             parameters.Add($"salesBy={Uri.EscapeDataString(SalesBy)}");
+        }
+
+        if (SalesChannelId.HasValue)
+        {
+            parameters.Add($"salesChannelId={SalesChannelId.Value}");
+        }
+
+        if (IncludeVariants)
+        {
+            parameters.Add("includeVariants=true");
         }
 
         return string.Join("&", parameters);
