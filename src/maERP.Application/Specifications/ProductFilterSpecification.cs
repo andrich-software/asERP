@@ -8,7 +8,7 @@ namespace maERP.Application.Specifications
     /// </summary>
     public class ProductFilterSpecification : FilterSpecification<Product>
     {
-        public ProductFilterSpecification(string searchString)
+        public ProductFilterSpecification(string searchString, bool includeVariants = false)
         {
             Includes.Add(p => p.ProductStocks);
             // Includes.Add(p => p.ProductSalesChannels);
@@ -16,11 +16,12 @@ namespace maERP.Application.Specifications
             if (!string.IsNullOrEmpty(searchString))
             {
                 var lowerSearchString = searchString.ToLower();
-                Criteria = p => (p.Sku.ToLower().Contains(lowerSearchString) || p.Name.ToLower().Contains(lowerSearchString));
+                Criteria = p => (includeVariants || p.ProductType != Domain.Enums.ProductType.Variant)
+                    && (p.Sku.ToLower().Contains(lowerSearchString) || p.Name.ToLower().Contains(lowerSearchString));
             }
             else
             {
-                Criteria = p => true;
+                Criteria = p => includeVariants || p.ProductType != Domain.Enums.ProductType.Variant;
             }
         }
 

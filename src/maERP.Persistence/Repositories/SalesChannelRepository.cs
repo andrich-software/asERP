@@ -57,6 +57,12 @@ public class SalesChannelRepository : GenericRepository<SalesChannel>, ISalesCha
 
     public override async Task UpdateAsync(SalesChannel entity)
     {
+        // Snapshot the desired warehouse IDs up front. When the caller already loaded the entity
+        // tracked (e.g. via GetDetails), EF identity resolution makes the query below return the
+        // *same* instance, so clearing existing.Warehouses would also clear entity.Warehouses and
+        // we would lose the IDs we are about to re-apply. Copy them before any mutation.
+        var desiredWarehouseIds = entity.Warehouses?.Select(w => w.Id).ToList() ?? new List<Guid>();
+
         // Get the existing entity with its warehouses
         var existing = await Context.SalesChannel
             .Include(s => s.Warehouses)
@@ -72,16 +78,13 @@ public class SalesChannelRepository : GenericRepository<SalesChannel>, ISalesCha
 
         // Update warehouse relationships
         existing.Warehouses.Clear();
-        if (entity.Warehouses != null)
+        foreach (var warehouseId in desiredWarehouseIds)
         {
-            foreach (var warehouse in entity.Warehouses)
+            // Ensure warehouse is tracked
+            var trackedWarehouse = await Context.Warehouse.FindAsync(warehouseId);
+            if (trackedWarehouse != null)
             {
-                // Ensure warehouse is tracked
-                var trackedWarehouse = await Context.Warehouse.FindAsync(warehouse.Id);
-                if (trackedWarehouse != null)
-                {
-                    existing.Warehouses.Add(trackedWarehouse);
-                }
+                existing.Warehouses.Add(trackedWarehouse);
             }
         }
 

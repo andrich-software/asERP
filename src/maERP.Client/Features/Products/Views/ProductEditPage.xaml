@@ -196,6 +196,37 @@
                 <!-- Basic Fields -->
                 <StackPanel Padding="16,0,16,16"
                             Spacing="16">
+                  <!-- Product Type Selector (hidden for existing variant children) -->
+                  <StackPanel Spacing="4"
+                              Visibility="{Binding CanEditType, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock x:Uid="ProductEditPage.Field.ProductType.Label"
+                               Style="{StaticResource LabelMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                    <ComboBox x:Name="ProductTypeComboBox"
+                              HorizontalAlignment="Stretch"
+                              SelectedIndex="{Binding ProductTypeIndex, Mode=TwoWay}"
+                              IsEnabled="{Binding IsNotLoading}">
+                      <ComboBoxItem x:Uid="ProductEditPage.ProductTypeStandard" />
+                      <ComboBoxItem x:Uid="ProductEditPage.ProductTypeVariantParent" />
+                    </ComboBox>
+                  </StackPanel>
+
+                  <!-- Variant hint (shown when editing an existing variant child) -->
+                  <Border Background="{ThemeResource TertiaryContainerBrush}"
+                          CornerRadius="8"
+                          Padding="12"
+                          Visibility="{Binding IsVariant, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel Spacing="4">
+                      <TextBlock x:Uid="ProductEditPage.VariantOfLabel"
+                                 Style="{StaticResource LabelSmall}"
+                                 Foreground="{ThemeResource OnTertiaryContainerBrush}" />
+                      <TextBlock Text="{Binding ParentName}"
+                                 Style="{StaticResource BodyMedium}"
+                                 Foreground="{ThemeResource OnTertiaryContainerBrush}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+
                   <!-- SKU (Required) -->
                   <TextBox x:Uid="ProductEditPage.Field.Sku"
                            Text="{Binding Sku, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -469,6 +500,189 @@
               </StackPanel>
             </Border>
           </Grid>
+
+          <!-- Variants Card (only for variant parents) -->
+          <Border Background="{ThemeResource SurfaceBrush}"
+                  CornerRadius="12"
+                  Translation="0,0,8"
+                  Visibility="{Binding ProductType, Converter={StaticResource ProductTypeToVisibilityConverter}, ConverterParameter=VariantParent}">
+            <Border.Shadow>
+              <ThemeShadow />
+            </Border.Shadow>
+            <StackPanel Spacing="0">
+              <!-- Card Header -->
+              <Grid Padding="16,16,16,8">
+                <StackPanel Orientation="Horizontal">
+                  <FontIcon Glyph="&#xE8FD;"
+                            FontSize="20"
+                            Foreground="{ThemeResource PrimaryBrush}"
+                            Margin="0,0,12,0" />
+                  <TextBlock x:Uid="ProductEditPage.Section.Variants"
+                             Style="{StaticResource TitleMedium}"
+                             Foreground="{ThemeResource OnSurfaceBrush}" />
+                </StackPanel>
+              </Grid>
+
+              <StackPanel Padding="16,0,16,16"
+                          Spacing="16">
+
+                <!-- Save-first hint -->
+                <Border Background="{ThemeResource SecondaryContainerBrush}"
+                        CornerRadius="8"
+                        Padding="12"
+                        Visibility="{Binding ShowSaveFirstHint, Converter={StaticResource BoolToVisibilityConverter}}">
+                  <TextBlock x:Uid="ProductEditPage.SaveFirstHint"
+                             Style="{StaticResource BodyMedium}"
+                             Foreground="{ThemeResource OnSecondaryContainerBrush}"
+                             TextWrapping="Wrap" />
+                </Border>
+
+                <!-- Axis section title -->
+                <TextBlock x:Uid="ProductEditPage.Subsection.Axes"
+                           Style="{StaticResource LabelLarge}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+
+                <!-- Axis rows -->
+                <ItemsControl ItemsSource="{Binding Axes}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Background="{ThemeResource SurfaceVariantBrush}"
+                              CornerRadius="8"
+                              Padding="12"
+                              Margin="0,0,0,8">
+                        <StackPanel Spacing="8">
+                          <Grid>
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="*" />
+                              <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0"
+                                      HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding AvailableAttributes}"
+                                      SelectedValue="{Binding ProductAttributeId, Mode=TwoWay}"
+                                      SelectedValuePath="Id">
+                              <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                  <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                              </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource IconButtonStyle}"
+                                    Margin="8,0,0,0"
+                                    x:Uid="ProductEditPage.RemoveAxisButton"
+                                    Click="RemoveAxis_Click">
+                              <FontIcon Glyph="&#xE74D;" FontSize="16" />
+                            </Button>
+                          </Grid>
+
+                          <!-- Value checkboxes -->
+                          <ItemsControl ItemsSource="{Binding Values}">
+                            <ItemsControl.ItemsPanel>
+                              <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                              </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate>
+                                <CheckBox Content="{Binding Value}"
+                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                          Margin="0,0,12,0" />
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Axis / generate actions -->
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <Button x:Uid="ProductEditPage.AddAxisButton"
+                          Style="{StaticResource OutlinedButtonStyle}"
+                          Click="AddAxis_Click" />
+                  <Button x:Uid="ProductEditPage.GenerateVariantsButton"
+                          Style="{StaticResource FilledButtonStyle}"
+                          IsEnabled="{Binding CanGenerateVariants}"
+                          Click="GenerateVariants_Click" />
+                  <ProgressRing IsActive="{Binding IsGenerating}"
+                                Width="24"
+                                Height="24"
+                                VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Existing variants table -->
+                <TextBlock x:Uid="ProductEditPage.Subsection.Variants"
+                           Style="{StaticResource LabelLarge}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                           Margin="0,8,0,0" />
+
+                <Border CornerRadius="8"
+                        BorderBrush="{ThemeResource OutlineVariantBrush}"
+                        BorderThickness="1">
+                  <StackPanel>
+                    <!-- Header row -->
+                    <Grid Background="{ThemeResource SurfaceVariantBrush}"
+                          Padding="12,8">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="1.5*" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" x:Uid="ProductEditPage.VariantColOptions"
+                                 Style="{StaticResource LabelMedium}"
+                                 Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                      <TextBlock Grid.Column="1" x:Uid="ProductEditPage.VariantColSku"
+                                 Style="{StaticResource LabelMedium}"
+                                 Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                      <TextBlock Grid.Column="2" x:Uid="ProductEditPage.VariantColEan"
+                                 Style="{StaticResource LabelMedium}"
+                                 Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                      <TextBlock Grid.Column="3" x:Uid="ProductEditPage.VariantColPrice"
+                                 Style="{StaticResource LabelMedium}"
+                                 Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Variants}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Grid Padding="12,6"
+                                BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                BorderThickness="0,0,0,1">
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="2*" />
+                              <ColumnDefinition Width="2*" />
+                              <ColumnDefinition Width="2*" />
+                              <ColumnDefinition Width="1.5*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding OptionSummary}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding Sku, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="4,0" />
+                            <TextBox Grid.Column="2"
+                                     Text="{Binding Ean, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="4,0" />
+                            <NumberBox Grid.Column="3"
+                                       Value="{Binding Price, Mode=TwoWay}"
+                                       SpinButtonPlacementMode="Hidden"
+                                       Minimum="0"
+                                       Margin="4,0" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </StackPanel>
+          </Border>
 
           <!-- Description Section -->
           <StackPanel Spacing="12"

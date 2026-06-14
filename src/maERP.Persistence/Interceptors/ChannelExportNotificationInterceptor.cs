@@ -93,6 +93,15 @@ public sealed class ChannelExportNotificationInterceptor : SaveChangesIntercepto
     {
         var notifications = new List<INotification>();
 
+        // A product delete removes the product and its sales-channel links in one SaveChanges.
+        // Capture the soon-to-be-deleted links now (grouped by product) so the delist can still
+        // address the remote item after the rows are gone.
+        var deletedLinksByProduct = changeTracker.Entries<ProductSalesChannel>()
+            .Where(e => e.State == EntityState.Deleted)
+            .Select(e => e.Entity)
+            .GroupBy(psc => psc.ProductId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         foreach (var entry in changeTracker.Entries())
         {
             if (entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
@@ -103,8 +112,19 @@ public sealed class ChannelExportNotificationInterceptor : SaveChangesIntercepto
             switch (entry.Entity)
             {
                 case Product product:
+                    IReadOnlyList<ProductDelistSnapshot>? delistSnapshots = null;
+                    if (entry.State == EntityState.Deleted
+                        && deletedLinksByProduct.TryGetValue(product.Id, out var links))
+                    {
+                        delistSnapshots = links
+                            .Select(psc => new ProductDelistSnapshot(
+                                psc.SalesChannelId, psc.Id, product.Sku,
+                                psc.RemoteProductId, psc.ExternalListingId, psc.IsListed))
+                            .ToList();
+                    }
+
                     notifications.Add(new ProductChangedNotification(
-                        product.Id, product.TenantId, MapProductKind(entry.State)));
+                        product.Id, product.TenantId, MapProductKind(entry.State), delistSnapshots));
                     break;
 
                 case ProductSalesChannel psc:

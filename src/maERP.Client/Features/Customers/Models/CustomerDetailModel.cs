@@ -1,7 +1,11 @@
 using maERP.Client.Core.Constants;
 using maERP.Client.Core.Exceptions;
+using maERP.Client.Core.Models;
 using maERP.Client.Features.Customers.Services;
+using maERP.Client.Features.Saless;
+using maERP.Client.Features.Saless.Services;
 using maERP.Domain.Dtos.Customer;
+using maERP.Domain.Dtos.Sales;
 
 namespace maERP.Client.Features.Customers.Models;
 
@@ -12,15 +16,18 @@ namespace maERP.Client.Features.Customers.Models;
 public partial record CustomerDetailModel
 {
     private readonly ICustomerService _customerService;
+    private readonly ISalesService _salesService;
     private readonly INavigator _navigator;
     private readonly Guid _customerId;
 
     public CustomerDetailModel(
         ICustomerService customerService,
+        ISalesService salesService,
         INavigator navigator,
         CustomerDetailData data)
     {
         _customerService = customerService;
+        _salesService = salesService;
         _navigator = navigator;
         _customerId = data.customerId;
     }
@@ -38,6 +45,33 @@ public partial record CustomerDetailModel
         var customer = await _customerService.GetCustomerAsync(_customerId, ct);
         return customer ?? throw new InvalidOperationException($"Customer {_customerId} not found");
     });
+
+    /// <summary>
+    /// Feed that loads the saless placed by this customer.
+    /// Depends on the customer feed to resolve the numeric customer number.
+    /// </summary>
+    public IListFeed<SalesListDto> Saless => Customer
+        .SelectAsync(async (customer, ct) =>
+        {
+            var parameters = new QueryParameters
+            {
+                PageNumber = 0,
+                PageSize = 100,
+                SalesBy = "DateSalesed Descending"
+            };
+
+            var response = await _salesService.GetSalessByCustomerAsync(customer.CustomerId, parameters, ct);
+            return response.Data.ToImmutableList();
+        })
+        .AsListFeed();
+
+    /// <summary>
+    /// Navigate to the detail page of a sales placed by this customer.
+    /// </summary>
+    public async Task ViewSales(SalesListDto sales)
+    {
+        await _navigator.NavigateDataAsync(this, new SalesDetailData(sales.Id));
+    }
 
     /// <summary>
     /// Navigate to edit customer page.

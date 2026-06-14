@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using maERP.Domain.Enums;
 using maERP.Domain.Interfaces;
 
 namespace maERP.Domain.Dtos.Product;
@@ -42,6 +43,18 @@ public class ProductInputDto : IProductInputModel
     public Guid TaxClassId { get; set; } = new();
 
     public Guid? ManufacturerId { get; set; }
+
+    public ProductType ProductType { get; set; } = ProductType.Standard;
+
+    public Guid? ParentProductId { get; set; }
+
+    public int VariantSortOrder { get; set; }
+
+    /// <summary>For variant parents: attribute ids the product varies by.</summary>
+    public List<Guid> VariantAxisAttributeIds { get; set; } = new();
+
+    /// <summary>For variants: one attribute value id per parent axis.</summary>
+    public List<Guid> VariantOptionValueIds { get; set; } = new();
 
     public List<Guid> ProductSalesChannel { get; set; } = new();
 }

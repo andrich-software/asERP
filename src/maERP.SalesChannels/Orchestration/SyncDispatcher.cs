@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Text.Json;
 using maERP.Application.Contracts.Services;
 using maERP.Domain.Entities;
 using maERP.Domain.Enums;
@@ -16,6 +18,10 @@ namespace maERP.SalesChannels.Orchestration;
 /// </summary>
 public sealed class SyncDispatcher
 {
+    // Process-wide per-channel locks so concurrent dispatches (manual vs scheduled) for the same channel
+    // serialize. Static because SyncDispatcher is resolved per scope; the channel id is the natural key.
+    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> ChannelLocks = new();
+
     private readonly ApplicationDbContext _context;
     private readonly ISalesChannelConnectorRegistry _registry;
     private readonly SalesChannelContextFactory _contextFactory;
@@ -80,56 +86,87 @@ public sealed class SyncDispatcher
         ChannelSyncTriggerSource trigger,
         CancellationToken cancellationToken)
     {
-        AlignTenantContext(salesChannel);
-
-        var connector = _registry.Resolve(salesChannel.Type);
-        var run = await OpenRunAsync(salesChannel, operation, trigger, cancellationToken);
-
-        if (connector is null || !ConnectorSupports(connector, operation))
+        // Serialize import runs per channel. A manual sync and the scheduled poll (or two scheduled ops) can
+        // otherwise overlap, and because each run allocates SalesIds from its own MAX(SalesId)+1 counter, two
+        // concurrent runs hand out identical ids → duplicate-key violations that then poison the shared
+        // context for the rest of the run. try-acquire (don't block): a scheduled run that loses the race
+        // simply retries on its next tick rather than queueing behind a long manual sweep.
+        var gate = ChannelLocks.GetOrAdd(salesChannel.Id, _ => new SemaphoreSlim(1, 1));
+        if (!await gate.WaitAsync(0, cancellationToken))
         {
-            await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, $"No capable connector for {salesChannel.Type}/{operation}", cancellationToken);
-            return run;
+            _logger.LogInformation("Skipping {Op} for channel {Channel}: another sync run is already in progress", operation, salesChannel.Id);
+            return new ChannelSyncRun
+            {
+                Id = Guid.NewGuid(),
+                TenantId = salesChannel.TenantId,
+                SalesChannelId = salesChannel.Id,
+                Operation = operation,
+                TriggerSource = trigger,
+                Status = ChannelSyncRunStatus.Failed,
+                StartedAt = DateTime.UtcNow,
+                FinishedAt = DateTime.UtcNow,
+                ErrorSummary = "Skipped: another sync run for this channel is already in progress.",
+            };
         }
-
-        // Tag every log line emitted while the connector runs so the sync-log sink can attribute and
-        // persist it. The scope flows via AsyncLocal into the awaited connector/repository code.
-        using var logScope = BeginSyncLogScope(salesChannel, operation, run);
 
         try
         {
-            var context = _contextFactory.Create(salesChannel, run, cancellationToken);
-            var result = operation switch
+            AlignTenantContext(salesChannel);
+
+            var connector = _registry.Resolve(salesChannel.Type);
+            var run = await OpenRunAsync(salesChannel, operation, trigger, cancellationToken);
+
+            if (connector is null || !ConnectorSupports(connector, operation))
             {
-                ChannelSyncOperation.ImportProducts => await connector.ImportProductsAsync(context),
-                ChannelSyncOperation.ImportSaless => await connector.ImportSalessAsync(context),
-                ChannelSyncOperation.ImportCustomers => await connector.ImportCustomersAsync(context),
-                _ => SyncResult.Failed($"Operation {operation} is not an import"),
-            };
+                await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, $"No capable connector for {salesChannel.Type}/{operation}", cancellationToken);
+                return run;
+            }
 
-            var status = result switch
+            // Tag every log line emitted while the connector runs so the sync-log sink can attribute and
+            // persist it. The scope flows via AsyncLocal into the awaited connector/repository code.
+            using var logScope = BeginSyncLogScope(salesChannel, operation, run);
+
+            try
             {
-                { ErrorSummary: not null } when result.ItemsProcessed == 0 => ChannelSyncRunStatus.Failed,
-                { ItemsFailed: > 0 } when result.ItemsProcessed > 0 => ChannelSyncRunStatus.PartialFailure,
-                { ItemsFailed: > 0 } => ChannelSyncRunStatus.Failed,
-                _ => ChannelSyncRunStatus.Success,
-            };
+                var incrementalSince = await ComputeIncrementalSinceAsync(salesChannel, operation, trigger, run, cancellationToken);
+                var context = _contextFactory.Create(salesChannel, run, cancellationToken, incrementalSince);
+                var result = operation switch
+                {
+                    ChannelSyncOperation.ImportProducts => await connector.ImportProductsAsync(context),
+                    ChannelSyncOperation.ImportSaless => await connector.ImportSalessAsync(context),
+                    ChannelSyncOperation.ImportCustomers => await connector.ImportCustomersAsync(context),
+                    _ => SyncResult.Failed($"Operation {operation} is not an import"),
+                };
 
-            await CloseRunAsync(run, status, result.ItemsProcessed, result.ItemsFailed, result.ErrorSummary, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected on server shutdown — the connector observed the token between pages. Close the run
-            // cleanly (not an error) so it does not linger as an orphaned "Running" row.
-            _logger.LogInformation("Sync canceled for channel {Channel} op {Op} (server shutdown)", salesChannel.Id, operation);
-            await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, "Sync canceled (server shutdown).", cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Sync dispatch failed for channel {Channel} op {Op}", salesChannel.Id, operation);
-            await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, ex.Message, cancellationToken);
-        }
+                var status = result switch
+                {
+                    { ErrorSummary: not null } when result.ItemsProcessed == 0 => ChannelSyncRunStatus.Failed,
+                    { ItemsFailed: > 0 } when result.ItemsProcessed > 0 => ChannelSyncRunStatus.PartialFailure,
+                    { ItemsFailed: > 0 } => ChannelSyncRunStatus.Failed,
+                    _ => ChannelSyncRunStatus.Success,
+                };
 
-        return run;
+                await CloseRunAsync(run, status, result.ItemsProcessed, result.ItemsFailed, result.ErrorSummary, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected on server shutdown — the connector observed the token between pages. Close the run
+                // cleanly (not an error) so it does not linger as an orphaned "Running" row.
+                _logger.LogInformation("Sync canceled for channel {Channel} op {Op} (server shutdown)", salesChannel.Id, operation);
+                await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, "Sync canceled (server shutdown).", cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Sync dispatch failed for channel {Channel} op {Op}", salesChannel.Id, operation);
+                await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, ex.Message, cancellationToken);
+            }
+
+            return run;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     public async Task<ExportResult> RunExportAsync(
@@ -169,6 +206,48 @@ public sealed class SyncDispatcher
             await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 1, ex.Message, cancellationToken);
             return ExportResult.Fail(ex.Message);
         }
+    }
+
+    // Small safety overlap subtracted from the watermark so orders modified during the previous run (or
+    // under minor clock skew between this host and the shop) are not missed. Re-pulling a few already-seen
+    // orders is harmless because the import upsert is idempotent.
+    private static readonly TimeSpan IncrementalOverlap = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Computes the incremental watermark for the sales import: the start of the most recent run that
+    /// finished as Success or PartialFailure, minus a safety overlap. Returns null (→ full import) when no
+    /// such run exists yet (first import) or for operations that have no incremental mode. Failed runs are
+    /// excluded so a failure never advances the watermark — the next run safely re-pulls from the last good
+    /// point. The just-opened "Running" row is excluded by the status filter.
+    /// </summary>
+    private async Task<DateTime?> ComputeIncrementalSinceAsync(
+        SalesChannel salesChannel,
+        ChannelSyncOperation operation,
+        ChannelSyncTriggerSource trigger,
+        ChannelSyncRun currentRun,
+        CancellationToken cancellationToken)
+    {
+        if (operation != ChannelSyncOperation.ImportSaless)
+        {
+            return null;
+        }
+
+        // A manual "Sync saless" is the user's recovery lever: do a full sweep (no watermark) so it backfills
+        // any orders an earlier run missed. Only the scheduled poll stays incremental for efficiency.
+        if (trigger == ChannelSyncTriggerSource.Manual)
+        {
+            return null;
+        }
+
+        var lastSuccessfulStart = await _context.ChannelSyncRun
+            .IgnoreQueryFilters()
+            .Where(r => r.SalesChannelId == salesChannel.Id
+                        && r.Operation == ChannelSyncOperation.ImportSaless
+                        && r.Id != currentRun.Id
+                        && (r.Status == ChannelSyncRunStatus.Success || r.Status == ChannelSyncRunStatus.PartialFailure))
+            .MaxAsync(r => (DateTime?)r.StartedAt, cancellationToken);
+
+        return lastSuccessfulStart is null ? null : lastSuccessfulStart.Value - IncrementalOverlap;
     }
 
     private async Task<ChannelSyncRun> OpenRunAsync(
@@ -296,9 +375,10 @@ public sealed class SyncDispatcher
         }
 
         var stock = await ComputeChannelStockAsync(outbox.SalesChannelId, psc.ProductId, psc.StockBuffer, cancellationToken);
+        var parentRemoteProductId = await GetParentRemoteProductIdAsync(psc.Product, outbox.SalesChannelId, cancellationToken);
 
         return await connector.UpdateStockAsync(context, new StockUpdatePayload(
-            psc.ProductId, psc.Id, psc.Product.Sku, stock, psc.RemoteProductId));
+            psc.ProductId, psc.Id, psc.Product.Sku, stock, psc.RemoteProductId, parentRemoteProductId));
     }
 
     private async Task<ExportResult> UpdatePriceAsync(ISalesChannelConnector connector, SalesChannelContext context, ChannelExportOutbox outbox, CancellationToken cancellationToken)
@@ -313,8 +393,29 @@ public sealed class SyncDispatcher
             return ExportResult.Fail("ProductSalesChannel row not found at dispatch time");
         }
 
+        var parentRemoteProductId = await GetParentRemoteProductIdAsync(psc.Product, outbox.SalesChannelId, cancellationToken);
+
         return await connector.UpdatePriceAsync(context, new PriceUpdatePayload(
-            psc.ProductId, psc.Id, psc.Product.Sku, psc.Price, psc.Currency, psc.RemoteProductId, psc.ExternalListingId));
+            psc.ProductId, psc.Id, psc.Product.Sku, psc.Price, psc.Currency, psc.RemoteProductId, psc.ExternalListingId, parentRemoteProductId));
+    }
+
+    /// <summary>
+    /// For variant products some channels (WooCommerce) address the variation under its parent
+    /// (PUT products/{parent}/variations/{variation}), so the parent's RemoteProductId on the
+    /// same channel is hydrated into the payload. Null for non-variants or unlinked parents.
+    /// </summary>
+    private async Task<string?> GetParentRemoteProductIdAsync(Domain.Entities.Product product, Guid salesChannelId, CancellationToken cancellationToken)
+    {
+        if (product.ProductType != Domain.Enums.ProductType.Variant || product.ParentProductId is null)
+        {
+            return null;
+        }
+
+        return await _context.ProductSalesChannel
+            .IgnoreQueryFilters()
+            .Where(p => p.ProductId == product.ParentProductId && p.SalesChannelId == salesChannelId)
+            .Select(p => p.RemoteProductId)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private async Task<ExportResult> UpdateSalesAsync(ISalesChannelConnector connector, SalesChannelContext context, ChannelExportOutbox outbox, CancellationToken cancellationToken)
@@ -334,6 +435,18 @@ public sealed class SyncDispatcher
 
     private async Task<ExportResult> DelistProductAsync(ISalesChannelConnector connector, SalesChannelContext context, ChannelExportOutbox outbox, CancellationToken cancellationToken)
     {
+        // Delist is typically enqueued because the product (and its channel links) was deleted, so
+        // the live rows are gone. Prefer the payload snapshot captured before deletion; only fall
+        // back to DB hydration for a delist of a still-existing-but-unlisted product.
+        if (!string.IsNullOrEmpty(outbox.PayloadJson))
+        {
+            var snapshot = JsonSerializer.Deserialize<DelistPayload>(outbox.PayloadJson);
+            if (snapshot is not null)
+            {
+                return await connector.DelistProductAsync(context, snapshot);
+            }
+        }
+
         var psc = await _context.ProductSalesChannel
             .IgnoreQueryFilters()
             .Include(p => p.Product)

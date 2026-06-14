@@ -406,7 +406,7 @@
                     <TextBlock Grid.Row="1"
                                Grid.Column="0"
                                Grid.ColumnSpan="2"
-                               Text="{Binding Data.SalessToday}"
+                               Text="{Binding Data.SalessTodayFormatted}"
                                Style="{StaticResource HeadlineLarge}"
                                Foreground="{ThemeResource OnSurfaceBrush}"
                                Margin="0,8,0,0" />
@@ -433,7 +433,7 @@
                                Style="{StaticResource BodySmall}"
                                Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                Margin="0,4,0,0">
-                      <Run Text="{Binding Data.SalessPending}" />
+                      <Run Text="{Binding Data.SalessPendingFormatted}" />
                       <Run x:Uid="DashboardPage.KPI.Pending" />
                     </TextBlock>
                   </Grid>
@@ -534,7 +534,7 @@
                     <TextBlock Grid.Row="1"
                                Grid.Column="0"
                                Grid.ColumnSpan="2"
-                               Text="{Binding Data.CustomersTotal}"
+                               Text="{Binding Data.CustomersTotalFormatted}"
                                Style="{StaticResource HeadlineLarge}"
                                Foreground="{ThemeResource OnSurfaceBrush}"
                                Margin="0,8,0,0" />
@@ -561,7 +561,7 @@
                                Style="{StaticResource BodySmall}"
                                Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                Margin="0,4,0,0">
-                      <Run Text="{Binding Data.CustomersNewThisMonth}" />
+                      <Run Text="{Binding Data.CustomersNewThisMonthFormatted}" />
                       <Run x:Uid="DashboardPage.KPI.NewThisMonth" />
                     </TextBlock>
                   </Grid>
@@ -689,7 +689,7 @@
                                Style="{StaticResource BodySmall}"
                                Foreground="{StaticResource WarningAlertBrush}"
                                Margin="0,4,0,0">
-                      <Run Text="{Binding Data.ProductsLowStock}" />
+                      <Run Text="{Binding Data.ProductsLowStockFormatted}" />
                       <Run x:Uid="DashboardPage.KPI.LowStockItems" />
                     </TextBlock>
                   </Grid>
@@ -987,7 +987,7 @@
                                        Style="{StaticResource BodySmall}"
                                        Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                        HorizontalAlignment="Right">
-                              <Run Text="{Binding QuantitySold}" />
+                              <Run Text="{Binding QuantitySoldFormatted}" />
                               <Run x:Uid="DashboardPage.Label.Sold" />
                             </TextBlock>
                           </Grid>

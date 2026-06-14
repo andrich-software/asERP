@@ -47,8 +47,8 @@ public class ProductDeleteHandler : IRequestHandler<ProductDeleteCommand, Result
                 return Result<Guid>.Fail(ResultStatusCode.NotFound, "Product not found");
             }
 
-            // Delete from database
-            await _productRepository.DeleteAsync(productToDelete);
+            // Delete from database incl. dependents (variants, options, axes, channel links, stocks)
+            await _productRepository.DeleteWithDependentsAsync(productToDelete);
 
             _logger.LogInformation("Successfully deleted product with ID: {Id}", productToDelete.Id);
             

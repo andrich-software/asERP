@@ -683,9 +683,9 @@ public class DemoDataGeneratorModel : AsyncInitializableModel
                 throw new InvalidOperationException(_localizer["DemoDataGeneratorPage.Error.NoCustomers"]);
             }
 
-            // 2. Check for existing products
+            // 2. Check for existing products (variants are the sellable units for demo sales)
             var productsResponse = await _productService.GetProductsAsync(
-                new QueryParameters { PageNumber = 0, PageSize = 100 }, token);
+                new QueryParameters { PageNumber = 0, PageSize = 100, IncludeVariants = true }, token);
 
             if (productsResponse.Data == null || productsResponse.Data.Count == 0)
             {

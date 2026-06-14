@@ -387,6 +387,18 @@
               </StackPanel>
             </Button>
 
+            <Button x:Name="NavItemProductAttributes"
+                    Style="{StaticResource SidebarNavItemStyle}"
+                    Tag="ProductAttributes"
+                    Click="OnNavItemClick">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <FontIcon Glyph="&#xE8EC;" FontSize="16" />
+                <TextBlock x:Uid="Shell.NavItem.ProductAttributes"
+                           Style="{StaticResource BodyMedium}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
             <Button x:Name="NavItemWarehouses"
                     Style="{StaticResource SidebarNavItemStyle}"
                     Tag="Warehouses"
@@ -737,11 +749,38 @@
                            Foreground="{ThemeResource OnSurfaceBrush}"
                            Margin="0,0,0,2" />
 
-                <TextBox x:Name="LoginServerUrl"
-                         x:Uid="Shell.Login.ServerUrl"
-                         AutomationProperties.Name="Server URL"
-                         LostFocus="LoginServerUrl_LostFocus"
-                         KeyDown="LoginInput_KeyDown" />
+                <StackPanel x:Name="LoginServerPanel"
+                            Spacing="4">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox x:Name="LoginServerSelector"
+                              x:Uid="Shell.Login.ServerSelector"
+                              Grid.Column="0"
+                              HorizontalAlignment="Stretch"
+                              DisplayMemberPath="Name"
+                              AutomationProperties.Name="Server"
+                              SelectionChanged="LoginServerSelector_SelectionChanged" />
+                    <Button x:Name="ManageServersButton"
+                            Grid.Column="1"
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Bottom"
+                            Height="40"
+                            AutomationProperties.Name="Server verwalten"
+                            ToolTipService.ToolTip="Server verwalten"
+                            Click="ManageServers_Click">
+                      <FontIcon Glyph="&#xE713;"
+                                FontSize="16" />
+                    </Button>
+                  </Grid>
+                  <TextBlock x:Name="LoginServerStatus"
+                             Style="{StaticResource BodySmall}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                             Margin="2,0,0,0"
+                             Visibility="Collapsed" />
+                </StackPanel>
 
                 <TextBox x:Name="LoginEmail"
                          x:Uid="Shell.Login.Email"

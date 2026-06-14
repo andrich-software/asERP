@@ -2,6 +2,7 @@ using Asp.Versioning;
 using maERP.Application.Features.Product.Commands.ProductCreate;
 using maERP.Application.Features.Product.Commands.ProductDelete;
 using maERP.Application.Features.Product.Commands.ProductUpdate;
+using maERP.Application.Features.Product.Commands.ProductVariantGenerate;
 using maERP.Application.Features.Product.Queries.ProductDetail;
 using maERP.Application.Features.Product.Queries.ProductList;
 using maERP.Domain.Dtos.Product;
@@ -26,20 +27,21 @@ public class ProductsController(IMediator mediator) : ControllerBase
     /// <param name="pageSize">Number of items per page (max 100)</param>
     /// <param name="searchString">Search term to filter products by name or SKU</param>
     /// <param name="salesBy">Sort sales (e.g., "Name Ascending", "DateCreated Descending")</param>
+    /// <param name="includeVariants">Include variant child products in the list (default false)</param>
     /// <returns>Paginated list of products</returns>
     /// <response code="200">Returns the paginated list of products</response>
     /// <response code="400">Invalid pagination parameters or search criteria</response>
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedResult<ProductListDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Microsoft.AspNetCore.Mvc.ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
-    public async Task<ActionResult<PaginatedResult<ProductListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<ProductListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "", bool includeVariants = false)
     {
         if (string.IsNullOrEmpty(salesBy))
         {
             salesBy = "DateCreated Descending";
         }
 
-        var response = await mediator.Send(new ProductListQuery(pageNumber, pageSize, searchString, salesBy));
+        var response = await mediator.Send(new ProductListQuery(pageNumber, pageSize, searchString, salesBy, includeVariants));
         return response.ToActionResult();
     }
 
@@ -116,6 +118,38 @@ public class ProductsController(IMediator mediator) : ControllerBase
 
         productUpdateCommand.Id = id;
         var response = await mediator.Send(productUpdateCommand);
+        return response.ToActionResult();
+    }
+
+    /// <summary>
+    /// Generates variant products for a variant parent from the cartesian product
+    /// of the selected attribute values per axis. Existing combinations are skipped.
+    /// </summary>
+    /// <param name="id">The unique identifier of the variant parent product</param>
+    /// <param name="productVariantGenerateCommand">Selected values per axis</param>
+    /// <returns>The IDs of the newly created variants</returns>
+    /// <response code="201">Variants generated successfully</response>
+    /// <response code="400">Invalid selection or product is not a variant parent</response>
+    /// <response code="404">Parent product not found</response>
+    [HttpPost("{id:guid}/variants/generate")]
+    [ProducesResponseType(typeof(Result<List<Guid>>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(Microsoft.AspNetCore.Mvc.ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
+    [ProducesResponseType(typeof(Microsoft.AspNetCore.Mvc.ProblemDetails), StatusCodes.Status404NotFound, "application/problem+json")]
+    public async Task<ActionResult<Result<List<Guid>>>> GenerateVariants(Guid id, ProductVariantGenerateCommand productVariantGenerateCommand)
+    {
+        if (productVariantGenerateCommand.ParentProductId != Guid.Empty && productVariantGenerateCommand.ParentProductId != id)
+        {
+            var errorResponse = ProblemDetailsResult.BadRequest(
+                "Invalid Request",
+                $"ID in URL ({id}) must match parent product ID in request body ({productVariantGenerateCommand.ParentProductId})",
+                "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+                $"/api/v1/products/{id}/variants/generate"
+            );
+            return errorResponse.ToActionResult();
+        }
+
+        productVariantGenerateCommand.ParentProductId = id;
+        var response = await mediator.Send(productVariantGenerateCommand);
         return response.ToActionResult();
     }
 

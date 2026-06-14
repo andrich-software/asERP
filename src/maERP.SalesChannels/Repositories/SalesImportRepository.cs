@@ -1,6 +1,7 @@
 using maERP.Application.Contracts.Persistence;
 using maERP.Domain.Entities;
 using maERP.Domain.Enums;
+using maERP.Persistence.DatabaseContext;
 using maERP.SalesChannels.Contracts;
 using maERP.SalesChannels.Models;
 using Microsoft.Extensions.Logging;
@@ -14,23 +15,38 @@ public class SalesImportRepository : ISalesImportRepository
     private readonly ICustomerRepository _customerRepository;
     private readonly ICountryRepository _countryRepository;
     private readonly IProductRepository _productRepository;
+    private readonly ApplicationDbContext _dbContext;
+
+    // Per-run counter for the per-tenant SalesId. The repository is scoped, so one instance serves a whole
+    // import run: seed the max once, then increment in memory instead of a MAX scan over the growing sales
+    // table for every inserted order.
+    private int? _nextSalesId;
 
     public SalesImportRepository(
         ILogger<ProductImportRepository> logger,
         ISalesRepository salesRepository,
         ICustomerRepository customerRepository,
         ICountryRepository countryRepository,
-        IProductRepository productRepository)
+        IProductRepository productRepository,
+        ApplicationDbContext dbContext)
     {
         _logger = logger;
         _salesRepository = salesRepository;
         _customerRepository = customerRepository;
         _countryRepository = countryRepository;
         _productRepository = productRepository;
+        _dbContext = dbContext;
     }
 
     public async Task ImportOrUpdateFromSalesChannel(SalesChannel salesChannel, SalesChannelImportSales importSales)
     {
+        // Every repository in this run shares one scoped DbContext. If a previous order failed mid-save, its
+        // half-tracked entities stay in the change tracker and poison the next SaveChanges with
+        // "Unexpected entry.EntityState: Detached", turning one bad order into a cascade that fails the whole
+        // run. Each order is self-contained and prior orders are already persisted, so resetting the tracker
+        // here isolates failures to the single order that caused them.
+        _dbContext.ChangeTracker.Clear();
+
         var existingSales = await _salesRepository.GetByRemoteSalesIdAsync(salesChannel.Id, importSales.RemoteSalesId);
 
         if (existingSales == null)
@@ -78,6 +94,10 @@ public class SalesImportRepository : ISalesImportRepository
                 _logger.LogInformation("CustomerSalesChannel added for Customer {0} ", customer.Id);
             }
 
+            // A customer must never be "newer" than an order they placed. An existing customer may have been
+            // created earlier from a later order (or out of order), leaving DateEnrollment after this order.
+            await FloorCustomerEnrollmentAsync(customer, importSales.DateSalesed);
+
             Guid billingAddressId = Guid.Empty;
             Guid shippingAddressId = Guid.Empty;
             var customerAddresses = await _customerRepository.GetCustomerAddressByCustomerIdAsync(customer.Id);
@@ -85,16 +105,16 @@ public class SalesImportRepository : ISalesImportRepository
             Country? billingAddressCountry = await MapCountryFromStringAsync(importSales.BillingAddress.Country);
             Country? shippingAddressCountry = await MapCountryFromStringAsync(importSales.ShippingAddress.Country);
 
-            if (billingAddressCountry == null)
+            // An unresolved country must not drop the whole order. Keep the raw country string on the sales
+            // record (below) and skip only the structured CustomerAddress, which needs a Country FK.
+            if (billingAddressCountry == null && !string.IsNullOrWhiteSpace(importSales.BillingAddress.Country))
             {
-                _logger.LogError("Sales {0}: Cannot import, country {1} not found", importSales.RemoteSalesId, importSales.BillingAddress.Country);
-                return;
+                _logger.LogWarning("Sales {0}: billing country {1} not found, importing with raw country string", importSales.RemoteSalesId, importSales.BillingAddress.Country);
             }
 
-            if (shippingAddressCountry == null)
+            if (shippingAddressCountry == null && !string.IsNullOrWhiteSpace(importSales.ShippingAddress.Country))
             {
-                _logger.LogError("Sales {0}: Cannot import, country {1} not found", importSales.RemoteSalesId, importSales.ShippingAddress.Country);
-                return;
+                _logger.LogWarning("Sales {0}: shipping country {1} not found, importing with raw country string", importSales.RemoteSalesId, importSales.ShippingAddress.Country);
             }
 
             foreach (var address in customerAddresses)
@@ -125,7 +145,9 @@ public class SalesImportRepository : ISalesImportRepository
                 }
             }
 
-            if (billingAddressId == Guid.Empty)
+            // Add the billing address only when it is not already on file and its country resolved (the FK is
+            // required). A missing country is logged above and the order still imports with the raw string.
+            if (billingAddressId == Guid.Empty && billingAddressCountry != null)
             {
                 var newAddress = new CustomerAddress
                 {
@@ -144,7 +166,11 @@ public class SalesImportRepository : ISalesImportRepository
                 await _customerRepository.AddCustomerAddressAsync(newAddress);
             }
 
-            if (shippingAddressId != Guid.Empty && shippingAddressId != billingAddressId)
+            // Add the shipping address only when it is not already on file, differs from billing, and its
+            // country resolved. The previous condition was inverted (created only when already present).
+            if (shippingAddressId == Guid.Empty
+                && shippingAddressCountry != null
+                && !AddressesEqual(importSales.BillingAddress, importSales.ShippingAddress))
             {
                 var newAddress = new CustomerAddress
                 {
@@ -165,6 +191,7 @@ public class SalesImportRepository : ISalesImportRepository
 
             var newSales = new Sales
             {
+                SalesId = await NextSalesIdAsync(),
                 SalesChannelId = salesChannel.Id,
                 RemoteSalesId = importSales.RemoteSalesId,
                 CustomerId = customer.CustomerId,
@@ -186,7 +213,7 @@ public class SalesImportRepository : ISalesImportRepository
                 InvoiceAddressStreet = importSales.BillingAddress.Street,
                 InvoiceAddressCity = importSales.BillingAddress.City,
                 InvoiceAddressZip = importSales.BillingAddress.Zip,
-                InvoiceAddressCountry = billingAddressCountry.Name,
+                InvoiceAddressCountry = billingAddressCountry?.Name ?? importSales.BillingAddress.Country ?? string.Empty,
 
                 DeliveryAddressFirstName = importSales.ShippingAddress.Firstname,
                 DeliveryAddressLastName = importSales.ShippingAddress.Lastname,
@@ -194,7 +221,7 @@ public class SalesImportRepository : ISalesImportRepository
                 DeliveryAddressStreet = importSales.ShippingAddress.Street,
                 DeliveryAddressCity = importSales.ShippingAddress.City,
                 DeliveryAddressZip = importSales.ShippingAddress.Zip,
-                DeliveryAddressCountry = shippingAddressCountry.Name,
+                DeliveryAddressCountry = shippingAddressCountry?.Name ?? importSales.ShippingAddress.Country ?? string.Empty,
 
                 DateSalesed = importSales.DateSalesed.ToUniversalTime()
             };
@@ -203,14 +230,6 @@ public class SalesImportRepository : ISalesImportRepository
             {
                 foreach (var item in importSales.SalesItems)
                 {
-                    if (String.IsNullOrEmpty(item.Sku))
-                    {
-                        _logger.LogError("Sales {0}: Cannot import, product has empty SKU", importSales.RemoteSalesId);
-                        return;
-                    }
-
-                    var product = await _productRepository.GetBySkuAsync(item.Sku);
-
                     var newSalesItem = new SalesItem
                     {
                         Name = item.Name,
@@ -219,6 +238,12 @@ public class SalesImportRepository : ISalesImportRepository
                         TaxRate = item.TaxRate
                     };
 
+                    // A line with no SKU (e.g. a fee or a custom/legacy position) cannot match a product —
+                    // treat it like a not-found product rather than dropping the whole order.
+                    var product = string.IsNullOrEmpty(item.Sku)
+                        ? null
+                        : await _productRepository.GetBySkuAsync(item.Sku);
+
                     if (product != null)
                     {
                         newSalesItem.ProductId = product.Id;
@@ -226,10 +251,12 @@ public class SalesImportRepository : ISalesImportRepository
                     }
                     else
                     {
+                        // Keep the line with its SKU/EAN so the order total stays correct and the missing
+                        // product can be reconciled later (ProductId stays empty).
                         newSalesItem.MissingProductSku = item.Sku;
                         newSalesItem.MissingProductEan = item.Ean;
 
-                        _logger.LogInformation("Sales {0}: Cannot import, product with SKU {1} not found", importSales.RemoteSalesId, item.Sku);
+                        _logger.LogInformation("Sales {0}: product with SKU '{1}' not found, importing as missing-product line", importSales.RemoteSalesId, item.Sku);
                     }
 
                     newSales.SalesItems.Add(newSalesItem);
@@ -261,6 +288,12 @@ public class SalesImportRepository : ISalesImportRepository
 
                 foreach (var salesItem in newSales.SalesItems)
                 {
+                    // Missing-product lines have no ProductId — nothing to deduct stock from.
+                    if (salesItem.ProductId == Guid.Empty)
+                    {
+                        continue;
+                    }
+
                     Product product = await _productRepository.GetWithDetailsAsync(salesItem.ProductId) ?? throw new Exception("SalesImportRepository: Product not found");
 
                     // Use first warehouse of sales channel for stock update
@@ -291,16 +324,26 @@ public class SalesImportRepository : ISalesImportRepository
             _logger.LogInformation("Sales {0}: already exists, check for changes", existingSales.RemoteSalesId);
             bool somethingChanged = false;
 
+            // Heal the enrollment date even for orders already imported: a full re-sweep then corrects any
+            // customer whose DateEnrollment ended up after one of their (already-existing) orders.
+            var existingCustomer = await _customerRepository.GetByCustomerIdAsync(existingSales.CustomerId);
+            if (existingCustomer != null)
+            {
+                await FloorCustomerEnrollmentAsync(existingCustomer, importSales.DateSalesed);
+            }
+
             if (existingSales.Status != importSales.Status)
             {
-                somethingChanged = true;
                 _logger.LogInformation("Sales {0}: Status updated, new status is {1}", importSales.RemoteSalesId, importSales.Status);
+                existingSales.Status = importSales.Status;
+                somethingChanged = true;
             }
 
             if (existingSales.PaymentStatus != importSales.PaymentStatus)
             {
-                somethingChanged = true;
                 _logger.LogInformation("Sales {0}: PaymentStatus updated, new status is {1}", importSales.RemoteSalesId, importSales.PaymentStatus);
+                existingSales.PaymentStatus = importSales.PaymentStatus;
+                somethingChanged = true;
             }
 
             // TODO: implement check for changed shipping status
@@ -320,5 +363,44 @@ public class SalesImportRepository : ISalesImportRepository
     private async Task<Country?> MapCountryFromStringAsync(string countryString)
     {
         return await _countryRepository.GetCountryByString(countryString);
+    }
+
+    /// <summary>
+    /// Lowers the customer's enrollment date to <paramref name="orderDate"/> when the order predates it, so a
+    /// customer is never recorded as newer than an order they placed. Only ever moves the date earlier
+    /// (converges to the earliest known activity), so it is safe and idempotent across repeated imports.
+    /// </summary>
+    private async Task FloorCustomerEnrollmentAsync(Customer customer, DateTime orderDate)
+    {
+        if (orderDate == default)
+        {
+            return;
+        }
+
+        var floor = new DateTimeOffset(DateTime.SpecifyKind(orderDate, DateTimeKind.Utc));
+        if (floor < customer.DateEnrollment)
+        {
+            _logger.LogInformation("Customer {0}: lowering DateEnrollment from {1} to order date {2}", customer.Id, customer.DateEnrollment, floor);
+            customer.DateEnrollment = floor;
+            await _customerRepository.UpdateAsync(customer);
+        }
+    }
+
+    /// <summary>Next per-tenant SalesId, seeding the counter from the DB max on first use.</summary>
+    private async Task<int> NextSalesIdAsync()
+    {
+        _nextSalesId ??= await _salesRepository.GetMaxSalesIdAsync() + 1;
+        return _nextSalesId++.Value;
+    }
+
+    private static bool AddressesEqual(SalesChannelImportCustomerAddress a, SalesChannelImportCustomerAddress b)
+    {
+        return a.Firstname == b.Firstname &&
+               a.Lastname == b.Lastname &&
+               a.CompanyName == b.CompanyName &&
+               a.Street == b.Street &&
+               a.City == b.City &&
+               a.Zip == b.Zip &&
+               a.Country == b.Country;
     }
 }

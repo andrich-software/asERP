@@ -104,6 +104,73 @@ public sealed class ChannelExportOutboxEnqueuer
         }
     }
 
+    /// <summary>
+    /// Enqueue one outbox row per channel, each carrying a captured payload snapshot. Used when the
+    /// aggregate is gone by drain time (e.g. delist after a product delete), so the drainer cannot
+    /// hydrate from live DB state and must use the snapshot instead.
+    /// </summary>
+    public async Task EnqueueWithPayloadAsync(
+        ChannelSyncOperation operation,
+        ChannelOutboxAggregateType aggregateType,
+        Guid aggregateId,
+        Guid? tenantId,
+        IReadOnlyList<(Guid SalesChannelId, string PayloadJson)> perChannel,
+        CancellationToken cancellationToken = default)
+    {
+        if (perChannel.Count == 0)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+
+        foreach (var (salesChannelId, payloadJson) in perChannel)
+        {
+            var key = BuildIdempotencyKey(operation, aggregateType, aggregateId, salesChannelId);
+
+            var existing = await _context.ChannelExportOutbox
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(o => o.SalesChannelId == salesChannelId && o.IdempotencyKey == key, cancellationToken);
+
+            if (existing is null)
+            {
+                _context.ChannelExportOutbox.Add(new ChannelExportOutbox
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenantId,
+                    SalesChannelId = salesChannelId,
+                    Operation = operation,
+                    AggregateType = aggregateType,
+                    AggregateId = aggregateId,
+                    PayloadJson = payloadJson,
+                    IdempotencyKey = key,
+                    AttemptCount = 0,
+                    NextAttemptAt = now,
+                    Status = ChannelOutboxStatus.Pending,
+                });
+                continue;
+            }
+
+            existing.PayloadJson = payloadJson;
+            existing.Status = ChannelOutboxStatus.Pending;
+            existing.AttemptCount = 0;
+            existing.NextAttemptAt = now;
+            existing.LastError = null;
+            existing.CompletedAt = null;
+        }
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogDebug(ex,
+                "Outbox enqueue race for op={Op} agg={Type}:{Id} — existing row will carry the change.",
+                operation, aggregateType, aggregateId);
+        }
+    }
+
     public static string BuildIdempotencyKey(
         ChannelSyncOperation operation,
         ChannelOutboxAggregateType aggregateType,

@@ -23,6 +23,46 @@ public class EbayInventoryItem
 
     [JsonPropertyName("product")]
     public EbayProduct Product { get; set; }
+
+    /// <summary>Inventory item group keys this SKU belongs to (set for variation listings).</summary>
+    [JsonPropertyName("groupIds")]
+    public string[] GroupIds { get; set; }
+}
+
+public class EbayInventoryItemGroup
+{
+    [JsonPropertyName("inventoryItemGroupKey")]
+    public string InventoryItemGroupKey { get; set; }
+
+    [JsonPropertyName("title")]
+    public string Title { get; set; }
+
+    [JsonPropertyName("description")]
+    public string Description { get; set; }
+
+    [JsonPropertyName("variantSKUs")]
+    public string[] VariantSkus { get; set; }
+
+    [JsonPropertyName("variesBy")]
+    public EbayVariesBy VariesBy { get; set; }
+}
+
+public class EbayVariesBy
+{
+    [JsonPropertyName("specifications")]
+    public EbaySpecification[] Specifications { get; set; }
+
+    [JsonPropertyName("aspectsImageVariesBy")]
+    public string[] AspectsImageVariesBy { get; set; }
+}
+
+public class EbaySpecification
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; }
+
+    [JsonPropertyName("values")]
+    public string[] Values { get; set; }
 }
 
 public class EbayAvailability

@@ -548,6 +548,197 @@ public class ProductCreateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertEqual(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    // ---- Variant creation rules ----
+
+    private async Task<(Guid attributeId, List<Guid> valueIds)> CreateAttributeAsync(string name, params string[] values)
+    {
+        var dto = new maERP.Domain.Dtos.ProductAttribute.ProductAttributeInputDto
+        {
+            Name = name,
+            SortOrder = 0,
+            Values = values.Select((v, i) => new maERP.Domain.Dtos.ProductAttribute.ProductAttributeValueInputDto
+            {
+                Value = v,
+                SortOrder = i
+            }).ToList()
+        };
+        var response = await PostAsJsonAsync("/api/v1/ProductAttributes", dto);
+        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        var created = await ReadResponseAsync<Result<Guid>>(response);
+
+        var detailResponse = await Client.GetAsync($"/api/v1/ProductAttributes/{created.Data}");
+        TestAssertions.AssertHttpSuccess(detailResponse);
+        var attrDetail = await ReadResponseAsync<Result<maERP.Domain.Dtos.ProductAttribute.ProductAttributeDetailDto>>(detailResponse);
+        return (created.Data, attrDetail!.Data.Values.Select(v => v.Id).ToList());
+    }
+
+    private async Task<Guid> CreateVariantParentAsync(Guid attributeId, string sku)
+    {
+        var dto = new ProductInputDto
+        {
+            Sku = sku,
+            Name = "Parent " + sku,
+            Price = 0m,
+            TaxClassId = TaxClass1Id,
+            ProductType = Domain.Enums.ProductType.VariantParent,
+            VariantAxisAttributeIds = new List<Guid> { attributeId }
+        };
+        var response = await PostAsJsonAsync("/api/v1/Products", dto);
+        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        var result = await ReadResponseAsync<Result<Guid>>(response);
+        return result.Data;
+    }
+
+    [Fact]
+    public async Task CreateProduct_VariantParentWithZeroPrice_ShouldReturnCreated()
+    {
+        await SeedTestDataAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        var (attributeId, _) = await CreateAttributeAsync($"VP-Attr-{Guid.NewGuid():N}", "A", "B");
+
+        var dto = new ProductInputDto
+        {
+            Sku = $"VP-{Guid.NewGuid():N}",
+            Name = "Variant Parent Zero Price",
+            Price = 0m,
+            TaxClassId = TaxClass1Id,
+            ProductType = Domain.Enums.ProductType.VariantParent,
+            VariantAxisAttributeIds = new List<Guid> { attributeId }
+        };
+
+        var response = await PostAsJsonAsync("/api/v1/Products", dto);
+
+        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        var result = await ReadResponseAsync<Result<Guid>>(response);
+        TestAssertions.AssertTrue(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task CreateProduct_VariantWithStandardParent_ShouldReturnBadRequest()
+    {
+        await SeedTestDataAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        // A plain Standard product cannot serve as a parent
+        var standard = CreateValidProductDto();
+        standard.Sku = $"STDPARENT-{Guid.NewGuid():N}";
+        var standardResponse = await PostAsJsonAsync("/api/v1/Products", standard);
+        var standardResult = await ReadResponseAsync<Result<Guid>>(standardResponse);
+
+        var dto = new ProductInputDto
+        {
+            Sku = $"VAR-{Guid.NewGuid():N}",
+            Name = "Variant of Standard",
+            Price = 5m,
+            TaxClassId = TaxClass1Id,
+            ProductType = Domain.Enums.ProductType.Variant,
+            ParentProductId = standardResult.Data,
+            VariantOptionValueIds = new List<Guid>()
+        };
+
+        var response = await PostAsJsonAsync("/api/v1/Products", dto);
+
+        TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        var result = await ReadResponseAsync<Result<Guid>>(response);
+        TestAssertions.AssertFalse(result.Succeeded);
+        TestAssertions.AssertNotEmpty(result.Messages);
+    }
+
+    [Fact]
+    public async Task CreateProduct_VariantWithFullOptionCoverage_ShouldReturnCreated()
+    {
+        await SeedTestDataAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        var (attributeId, valueIds) = await CreateAttributeAsync($"VC-{Guid.NewGuid():N}", "Red", "Green");
+        var parentId = await CreateVariantParentAsync(attributeId, $"VCP-{Guid.NewGuid():N}");
+
+        var dto = new ProductInputDto
+        {
+            Sku = $"VARFULL-{Guid.NewGuid():N}",
+            Name = "Full Coverage Variant",
+            Price = 9m,
+            TaxClassId = TaxClass1Id,
+            ProductType = Domain.Enums.ProductType.Variant,
+            ParentProductId = parentId,
+            VariantOptionValueIds = new List<Guid> { valueIds[0] }
+        };
+
+        var response = await PostAsJsonAsync("/api/v1/Products", dto);
+
+        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        var result = await ReadResponseAsync<Result<Guid>>(response);
+        TestAssertions.AssertTrue(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task CreateProduct_VariantMissingAxisValue_ShouldReturnBadRequest()
+    {
+        await SeedTestDataAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        // Parent has one axis but the variant provides no option value -> missing coverage
+        var (attributeId, _) = await CreateAttributeAsync($"VM-{Guid.NewGuid():N}", "Red", "Green");
+        var parentId = await CreateVariantParentAsync(attributeId, $"VMP-{Guid.NewGuid():N}");
+
+        var dto = new ProductInputDto
+        {
+            Sku = $"VARMISS-{Guid.NewGuid():N}",
+            Name = "Missing Axis Variant",
+            Price = 9m,
+            TaxClassId = TaxClass1Id,
+            ProductType = Domain.Enums.ProductType.Variant,
+            ParentProductId = parentId,
+            VariantOptionValueIds = new List<Guid>()
+        };
+
+        var response = await PostAsJsonAsync("/api/v1/Products", dto);
+
+        TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        var result = await ReadResponseAsync<Result<Guid>>(response);
+        TestAssertions.AssertFalse(result.Succeeded);
+        TestAssertions.AssertNotEmpty(result.Messages);
+    }
+
+    [Fact]
+    public async Task CreateProduct_DuplicateSiblingCombination_ShouldReturnBadRequest()
+    {
+        await SeedTestDataAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        var (attributeId, valueIds) = await CreateAttributeAsync($"VD-{Guid.NewGuid():N}", "Red", "Green");
+        var parentId = await CreateVariantParentAsync(attributeId, $"VDP-{Guid.NewGuid():N}");
+
+        var first = new ProductInputDto
+        {
+            Sku = $"VARDUP1-{Guid.NewGuid():N}",
+            Name = "First Variant",
+            Price = 9m,
+            TaxClassId = TaxClass1Id,
+            ProductType = Domain.Enums.ProductType.Variant,
+            ParentProductId = parentId,
+            VariantOptionValueIds = new List<Guid> { valueIds[0] }
+        };
+        var firstResponse = await PostAsJsonAsync("/api/v1/Products", first);
+        TestAssertions.AssertEqual(HttpStatusCode.Created, firstResponse.StatusCode);
+
+        // Same option combination as the first sibling
+        var duplicate = new ProductInputDto
+        {
+            Sku = $"VARDUP2-{Guid.NewGuid():N}",
+            Name = "Duplicate Variant",
+            Price = 9m,
+            TaxClassId = TaxClass1Id,
+            ProductType = Domain.Enums.ProductType.Variant,
+            ParentProductId = parentId,
+            VariantOptionValueIds = new List<Guid> { valueIds[0] }
+        };
+
+        var response = await PostAsJsonAsync("/api/v1/Products", duplicate);
+
+        TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        var result = await ReadResponseAsync<Result<Guid>>(response);
+        TestAssertions.AssertFalse(result.Succeeded);
+        TestAssertions.AssertNotEmpty(result.Messages);
+    }
+
     [Fact]
     public async Task CreateProduct_CrossTenantResourceAccess_ShouldReturnBadRequest()
     {

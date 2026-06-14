@@ -126,6 +126,16 @@ public sealed partial class ProductListPage : Page
         }
     }
 
+    private async void IncludeVariantsToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        if (sender is ToggleSwitch toggle && DataContext is ProductListModel model)
+        {
+            await model.SetIncludeVariants(toggle.IsOn);
+        }
+    }
+
     private async void PreviousPage_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is ProductListModel model)

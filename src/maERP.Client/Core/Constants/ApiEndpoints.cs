@@ -51,6 +51,7 @@ public static class ApiEndpoints
     {
         public const string Base = $"{ApiBase}/saless";
         public static string ById(Guid id) => $"{Base}/{id}";
+        public static string ByCustomer(int customerId) => $"{Base}/customer/{customerId}";
     }
 
     // Products
@@ -58,6 +59,7 @@ public static class ApiEndpoints
     {
         public const string Base = $"{ApiBase}/products";
         public static string ById(Guid id) => $"{Base}/{id}";
+        public static string GenerateVariants(Guid id) => $"{Base}/{id}/variants/generate";
     }
 
     // Warehouses
@@ -119,6 +121,13 @@ public static class ApiEndpoints
     public static class TaxClasses
     {
         public const string Base = $"{ApiBase}/taxclasses";
+        public static string ById(Guid id) => $"{Base}/{id}";
+    }
+
+    // Product Attributes
+    public static class ProductAttributes
+    {
+        public const string Base = $"{ApiBase}/productattributes";
         public static string ById(Guid id) => $"{Base}/{id}";
     }
 

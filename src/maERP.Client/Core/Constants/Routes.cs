@@ -90,6 +90,12 @@ public static class Routes
     public const string TaxClassDetail = "TaxClassDetail";
     public const string TaxClassEdit = "TaxClassEdit";
 
+    // Product Attributes
+    public const string ProductAttributeList = "ProductAttributes";
+    public const string ProductAttributeDetail = "ProductAttributeDetail";
+    public const string ProductAttributeEdit = "ProductAttributeEdit";
+    public const string ProductAttributeCreate = "ProductAttributeCreate";
+
     // Admin
     public const string AdminUsers = "AdminUsers";
     public const string AdminTenants = "AdminTenants";

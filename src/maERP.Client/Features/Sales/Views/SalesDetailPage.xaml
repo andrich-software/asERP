@@ -215,13 +215,19 @@
                       <Run Text="{Binding Data.DateSalesed, Converter={StaticResource DateTimeOffsetToStringConverter}}" />
                     </TextBlock>
 
-                    <!-- Customer ID -->
-                    <TextBlock Style="{StaticResource BodyMedium}"
-                               HorizontalAlignment="Center"
-                               Foreground="{ThemeResource PrimaryBrush}">
-                      <Run x:Uid="SalesDetailPage.Label.CustomerId" />
-                      <Run Text="{Binding Data.CustomerId}" />
-                    </TextBlock>
+                    <!-- Customer ID (clickable → customer detail page) -->
+                    <Button Click="CustomerLink_Click"
+                            CommandParameter="{Binding Data.CustomerGuid}"
+                            Style="{StaticResource TextButtonStyle}"
+                            Padding="4,2"
+                            HorizontalAlignment="Center"
+                            Background="Transparent">
+                      <TextBlock Style="{StaticResource BodyMedium}"
+                                 Foreground="{ThemeResource PrimaryBrush}">
+                        <Run x:Uid="SalesDetailPage.Label.CustomerId" />
+                        <Run Text="{Binding Data.CustomerId}" />
+                      </TextBlock>
+                    </Button>
                   </StackPanel>
                 </Border>
 

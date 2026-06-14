@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using maERP.Client.Core.Models;
+using maERP.Client.Features.Auth.Models;
 using maERP.Domain.Dtos.Account;
 using maERP.Domain.Dtos.AiModel;
 using maERP.Domain.Dtos.AiPrompt;
@@ -10,6 +11,7 @@ using maERP.Domain.Dtos.Invoice;
 using maERP.Domain.Dtos.Manufacturer;
 using maERP.Domain.Dtos.Sales;
 using maERP.Domain.Dtos.Product;
+using maERP.Domain.Dtos.ProductAttribute;
 using maERP.Domain.Dtos.SalesChannel;
 using maERP.Domain.Dtos.ServerInfo;
 using maERP.Domain.Dtos.Statistic;
@@ -32,6 +34,7 @@ namespace maERP.Client.Core.Json;
 [JsonSerializable(typeof(PaginatedResponse<CustomerListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<CustomerListWithAddressDto>))]
 [JsonSerializable(typeof(PaginatedResponse<TaxClassListDto>))]
+[JsonSerializable(typeof(PaginatedResponse<ProductAttributeListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<InvoiceListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<SalesListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<ManufacturerListDto>))]
@@ -47,6 +50,7 @@ namespace maERP.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<WarehouseDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<CustomerDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<TaxClassDetailDto>))]
+[JsonSerializable(typeof(ApiResponse<ProductAttributeDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<SuperadminTenantDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<InvoiceDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<SalesTodayDto>))]
@@ -70,6 +74,7 @@ namespace maERP.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<LoginResponseDto>))]
 [JsonSerializable(typeof(ApiResponse<CurrentUserProfileDto>))]
 [JsonSerializable(typeof(ApiResponse<string>))]
+[JsonSerializable(typeof(ApiResponse<List<Guid>>))]
 
 // Direct response types
 [JsonSerializable(typeof(AiModelDetailDto))]
@@ -83,8 +88,10 @@ namespace maERP.Client.Core.Json;
 [JsonSerializable(typeof(TenantInputDto))]
 [JsonSerializable(typeof(WarehouseInputDto))]
 [JsonSerializable(typeof(TaxClassInputDto))]
+[JsonSerializable(typeof(ProductAttributeInputDto))]
 [JsonSerializable(typeof(SalesChannelInputDto))]
 [JsonSerializable(typeof(ProductInputDto))]
+[JsonSerializable(typeof(ProductVariantGenerateDto))]
 [JsonSerializable(typeof(SalesInputDto))]
 [JsonSerializable(typeof(ManufacturerInputDto))]
 [JsonSerializable(typeof(CustomerInputDto))]
@@ -92,6 +99,8 @@ namespace maERP.Client.Core.Json;
 [JsonSerializable(typeof(RefreshTokenRequestDto))]
 [JsonSerializable(typeof(RegisterRequestDto))]
 [JsonSerializable(typeof(ServerInfoResponseDto))]
+[JsonSerializable(typeof(ServerProfile))]
+[JsonSerializable(typeof(List<ServerProfile>))]
 [JsonSerializable(typeof(AddUserToTenantPayload))]
 [JsonSerializable(typeof(AssignUserToTenantPayload))]
 [JsonSerializable(typeof(UpdateCurrentUserPayload))]

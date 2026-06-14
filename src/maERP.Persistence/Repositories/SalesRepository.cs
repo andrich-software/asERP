@@ -1,4 +1,4 @@
-﻿using maERP.Application.Contracts.Persistence;
+using maERP.Application.Contracts.Persistence;
 using maERP.Application.Contracts.Services;
 using maERP.Domain.Entities;
 using maERP.Domain.Enums;
@@ -36,7 +36,7 @@ public class SalesRepository : GenericRepository<Sales>, ISalesRepository
     {
         var currentTenantId = TenantContext.GetCurrentTenantId();
         var query = Context.SalesHistory.AsQueryable();
-        
+
         if (currentTenantId.HasValue)
         {
             query = query.Where(oh => oh.TenantId == null || oh.TenantId == currentTenantId.Value);
@@ -45,7 +45,7 @@ public class SalesRepository : GenericRepository<Sales>, ISalesRepository
         {
             query = query.Where(oh => oh.TenantId == null);
         }
-        
+
         return await query
             .Where(oh => oh.SalesId == salesId)
             .OrderByDescending(oh => oh.DateCreated)
@@ -59,6 +59,33 @@ public class SalesRepository : GenericRepository<Sales>, ISalesRepository
             .MaxAsync() ?? 0;
 
         return maxSalesId + 1;
+    }
+
+    public async Task<int> GetMaxSalesIdAsync()
+    {
+        var currentTenantId = TenantContext.GetCurrentTenantId();
+
+        var query = Entities.AsQueryable();
+        if (currentTenantId.HasValue)
+        {
+            query = query.Where(o => o.TenantId == currentTenantId.Value);
+        }
+
+        return await query.MaxAsync(o => (int?)o.SalesId) ?? 0;
+    }
+
+    public new async Task<Guid> CreateAsync(Sales entity)
+    {
+        // Auto-generate the per-tenant SalesId only when the caller did not pre-assign one. Bulk
+        // importers seed an in-memory counter once (via GetMaxSalesIdAsync) and set SalesId
+        // themselves, which avoids a MAX scan over the growing sales table on every inserted row.
+        // Without this, an imported order keeps SalesId 0 and collides on the unique (SalesId, TenantId).
+        if (entity.SalesId == 0)
+        {
+            entity.SalesId = await GetMaxSalesIdAsync() + 1;
+        }
+
+        return await base.CreateAsync(entity);
     }
 
     public async Task<bool> CanCreateInvoice(Guid salesId)
@@ -81,7 +108,7 @@ public class SalesRepository : GenericRepository<Sales>, ISalesRepository
         // Check if an invoice already exists for this sales
         var currentTenantId = TenantContext.GetCurrentTenantId();
         var invoiceQuery = Context.Invoice.AsQueryable();
-        
+
         if (currentTenantId.HasValue)
         {
             invoiceQuery = invoiceQuery.Where(i => i.TenantId == null || i.TenantId == currentTenantId.Value);
@@ -90,7 +117,7 @@ public class SalesRepository : GenericRepository<Sales>, ISalesRepository
         {
             invoiceQuery = invoiceQuery.Where(i => i.TenantId == null);
         }
-        
+
         var invoiceExists = await invoiceQuery.AnyAsync(i => i.SalesId == salesId);
 
         // Return false if invoice already exists

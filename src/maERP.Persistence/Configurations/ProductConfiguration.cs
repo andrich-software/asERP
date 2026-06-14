@@ -13,6 +13,15 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.HasIndex(e => e.Gtin);
 
+        builder.HasIndex(e => e.ParentProductId);
+
+        builder.HasIndex(e => e.ProductType);
+
+        builder.HasOne(e => e.ParentProduct)
+            .WithMany(p => p.Variants)
+            .HasForeignKey(e => e.ParentProductId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Property(e => e.Price)
             .HasPrecision(18, 2);
 

@@ -94,10 +94,15 @@ public sealed class Shopware6Connector : ConnectorBase
 
             while (true)
             {
+                // Walk only top-level products (parentId == null); variants are fetched per parent below
                 var requestBody = new
                 {
                     page,
                     limit = PageSize,
+                    filter = new object[]
+                    {
+                        new { type = "equals", field = "parentId", value = (string?)null },
+                    },
                     sort = new[] { new { field = "createdAt", sales = "ASC" } },
                 };
                 var url = $"{baseUrl}/api/search/product";
@@ -126,15 +131,28 @@ public sealed class Shopware6Connector : ConnectorBase
                         var description = p.Translated?.Description ?? p.Description ?? string.Empty;
                         if (description.Length > 4000) description = description[..4000];
 
-                        await _productImportRepository.ImportOrUpdateFromSalesChannel(salesChannel.Id, new SalesChannelImportProduct
+                        var importProduct = new SalesChannelImportProduct
                         {
+                            RemoteProductId = p.Id,
                             Sku = p.ProductNumber!,
                             Name = p.Translated?.Name ?? p.Name ?? string.Empty,
                             Ean = p.Ean ?? string.Empty,
-                            Price = p.Price.FirstOrDefault()?.Net ?? 0m,
+                            Price = p.Price?.FirstOrDefault()?.Net ?? 0m,
                             TaxRate = 19,
                             Description = description,
-                        });
+                            IsVariantParent = (p.ChildCount ?? 0) > 0,
+                        };
+
+                        if (importProduct.IsVariantParent)
+                        {
+                            importProduct.Variants = await FetchVariantsAsync(context, baseUrl, p, importProduct);
+                            importProduct.VariantAxes = importProduct.Variants
+                                .SelectMany(v => v.Options.Select(o => o.AttributeName))
+                                .Distinct()
+                                .ToList();
+                        }
+
+                        await _productImportRepository.ImportOrUpdateFromSalesChannel(salesChannel.Id, importProduct);
                         processed++;
                     }
                     catch (Exception ex)
@@ -160,6 +178,84 @@ public sealed class Shopware6Connector : ConnectorBase
         }
 
         return new SyncResult(processed, failed);
+    }
+
+    /// <summary>
+    /// Fetches the child variants of a Shopware parent product, paged. Inherited fields
+    /// (price, name, ean) come back as null on children — they are resolved against the
+    /// parent here so the import repository stays channel-agnostic.
+    /// </summary>
+    private async Task<List<SalesChannelImportVariant>> FetchVariantsAsync(
+        SalesChannelContext context,
+        string baseUrl,
+        Sw6Product parent,
+        SalesChannelImportProduct importParent)
+    {
+        var variants = new List<SalesChannelImportVariant>();
+        var page = 1;
+
+        while (true)
+        {
+            var requestBody = new
+            {
+                page,
+                limit = PageSize,
+                filter = new object[]
+                {
+                    new { type = "equals", field = "parentId", value = parent.Id },
+                },
+                associations = new
+                {
+                    options = new { associations = new { group = new { } } },
+                },
+                sort = new[] { new { field = "productNumber", sales = "ASC" } },
+            };
+
+            var url = $"{baseUrl}/api/search/product";
+            var response = await context.HttpClient.PostAsJsonAsync(url, requestBody, context.CancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
+                throw new InvalidOperationException(
+                    $"Shopware6 variant search for parent {parent.ProductNumber} failed with HTTP {(int)response.StatusCode}: {Truncate(body, 300)}");
+            }
+
+            var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
+            var result = JsonSerializer.Deserialize<Sw6SearchResult<Sw6Product>>(raw);
+            if (result?.Data is null || result.Data.Count == 0) break;
+
+            foreach (var child in result.Data)
+            {
+                if (string.IsNullOrEmpty(child.ProductNumber))
+                {
+                    continue;
+                }
+
+                variants.Add(new SalesChannelImportVariant
+                {
+                    RemoteVariantId = child.Id,
+                    Sku = child.ProductNumber,
+                    // Inherited fields are null on the child — fall back to the parent's values
+                    Ean = child.Ean ?? importParent.Ean,
+                    Price = child.Price?.FirstOrDefault()?.Net,
+                    Stock = child.Stock ?? 0,
+                    SortOrder = variants.Count,
+                    Options = child.Options?
+                        .Select(o => new SalesChannelImportVariantOption
+                        {
+                            AttributeName = o.Group?.Translated?.Name ?? o.Group?.Name ?? string.Empty,
+                            Value = o.Translated?.Name ?? o.Name ?? string.Empty,
+                        })
+                        .Where(o => !string.IsNullOrEmpty(o.AttributeName) && !string.IsNullOrEmpty(o.Value))
+                        .ToList() ?? [],
+                });
+            }
+
+            if (result.Data.Count < PageSize) break;
+            page++;
+        }
+
+        return variants;
     }
 
     public override async Task<SyncResult> ImportSalessAsync(SalesChannelContext context)

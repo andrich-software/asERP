@@ -53,9 +53,14 @@ public partial record PosDashboardModel
         Title = data?.SalesChannelName ?? "POS";
     }
 
+    /// <summary>
+    /// Auto-refresh signal. Bumping this value re-evaluates the dashboard data feeds.
+    /// </summary>
+    public IState<int> RefreshTick => State<int>.Value(this, () => 0);
+
     // Tab 1: Dashboard KPIs
-    public IFeed<RevenueKpiData> RevenueData => Feed.Async(LoadRevenueDataAsync);
-    public IFeed<SalessKpiData> SalessData => Feed.Async(LoadSalessDataAsync);
+    public IFeed<RevenueKpiData> RevenueData => RefreshTick.SelectAsync((_, ct) => LoadRevenueDataAsync(ct));
+    public IFeed<SalessKpiData> SalessData => RefreshTick.SelectAsync((_, ct) => LoadSalessDataAsync(ct));
 
     // Tab 2: Quick Sale - Search
     public IState<string> CustomerSearchQuery => State<string>.Value(this, () => string.Empty);
@@ -85,7 +90,18 @@ public partial record PosDashboardModel
         .AsListFeed();
 
     // Tab 3: Recent Sales
-    public IListFeed<RecentSalesItem> RecentSaless => ListFeed.Async(LoadRecentSalessAsync);
+    public IListFeed<RecentSalesItem> RecentSaless => RefreshTick
+        .SelectAsync(async (_, ct) => await LoadRecentSalessAsync(ct))
+        .AsListFeed();
+
+    /// <summary>
+    /// Triggers a reload of the dashboard KPIs and recent sales.
+    /// Called periodically by the view's auto-refresh timer.
+    /// </summary>
+    public async ValueTask RefreshAsync(CancellationToken ct = default)
+    {
+        await RefreshTick.UpdateAsync(t => t + 1, ct);
+    }
 
     // Navigation
     public async ValueTask ViewSales(RecentSalesItem sales)
@@ -330,7 +346,8 @@ public partial record PosDashboardModel
     {
         try
         {
-            var parameters = new QueryParameters { SearchString = query, PageSize = 10 };
+            // POS sells individual units: variants are the sellable items, so include them.
+            var parameters = new QueryParameters { SearchString = query, PageSize = 10, IncludeVariants = true };
             var response = await _productService.GetProductsAsync(parameters, ct);
             return response.Data.ToImmutableList();
         }

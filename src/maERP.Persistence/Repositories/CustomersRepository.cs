@@ -113,20 +113,29 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
         return customerAddress;
     }
 
-    public new async Task<Guid> CreateAsync(Customer entity)
+    public async Task<int> GetMaxCustomerIdAsync()
     {
-        // Auto-generate CustomerId
         var currentTenantId = TenantContext.GetCurrentTenantId();
-        
+
         var query = Context.Customer.AsQueryable();
         if (currentTenantId.HasValue)
         {
             query = query.Where(c => c.TenantId == currentTenantId.Value);
         }
-        
-        var maxCustomerId = await query.MaxAsync(c => (int?)c.CustomerId) ?? 0;
-        entity.CustomerId = maxCustomerId + 1;
-        
+
+        return await query.MaxAsync(c => (int?)c.CustomerId) ?? 0;
+    }
+
+    public new async Task<Guid> CreateAsync(Customer entity)
+    {
+        // Auto-generate the per-tenant CustomerId only when the caller did not pre-assign one. Bulk
+        // importers seed an in-memory counter once (via GetMaxCustomerIdAsync) and set CustomerId
+        // themselves, which avoids a MAX scan over the growing customer table on every inserted row.
+        if (entity.CustomerId == 0)
+        {
+            entity.CustomerId = await GetMaxCustomerIdAsync() + 1;
+        }
+
         return await base.CreateAsync(entity);
     }
 

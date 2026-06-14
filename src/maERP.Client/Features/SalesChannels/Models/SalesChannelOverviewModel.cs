@@ -197,6 +197,36 @@ public partial record SalesChannelOverviewItem(
 {
     public string TypeLabel => SalesChannelOverviewModel.FormatType(Type);
 
+    /// <summary>
+    /// The bare domain of <see cref="Url"/> (e.g. "diy-stoffe.de"), stripping scheme,
+    /// "www." prefix, port, and path. Falls back to the raw value if it can't be parsed.
+    /// </summary>
+    public string DisplayUrl => ExtractDomain(Url);
+
+    internal static string ExtractDomain(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return string.Empty;
+        }
+
+        var value = url.Trim();
+        if (!value.Contains("://", StringComparison.Ordinal))
+        {
+            value = "https://" + value;
+        }
+
+        if (Uri.TryCreate(value, UriKind.Absolute, out var uri) && !string.IsNullOrEmpty(uri.Host))
+        {
+            var host = uri.Host;
+            return host.StartsWith("www.", StringComparison.OrdinalIgnoreCase)
+                ? host[4..]
+                : host;
+        }
+
+        return url.Trim();
+    }
+
     public string RevenueTodayFormatted => RevenueToday.ToString("C0");
     public string RevenueThisWeekFormatted => RevenueThisWeek.ToString("C0");
     public string RevenueThisMonthFormatted => RevenueThisMonth.ToString("C0");

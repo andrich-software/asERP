@@ -26,7 +26,7 @@ public class ProductListHandler : IRequestHandler<ProductListQuery, PaginatedRes
 
     public async Task<PaginatedResult<ProductListDto>> Handle(ProductListQuery request, CancellationToken cancellationToken)
     {
-        var salesFilterSpec = new ProductFilterSpecification(request.SearchString);
+        var salesFilterSpec = new ProductFilterSpecification(request.SearchString, request.IncludeVariants);
 
         _logger.LogInformation("Handle ProductListQuery: {0}", request);
 
@@ -35,6 +35,7 @@ public class ProductListHandler : IRequestHandler<ProductListQuery, PaginatedRes
             var products = await _productRepository.Entities
                .Include(p => p.Manufacturer)
                .Include(p => p.TaxClass)
+               .Include(p => p.Variants)
                .Specify(salesFilterSpec)
                .Select(p => MapToProductListDto(p))
                .AsNoTracking() // Ensure no EF caching
@@ -48,6 +49,7 @@ public class ProductListHandler : IRequestHandler<ProductListQuery, PaginatedRes
         var salesedProducts = await _productRepository.Entities
             .Include(p => p.Manufacturer)
             .Include(p => p.TaxClass)
+            .Include(p => p.Variants)
             .Specify(salesFilterSpec)
             .OrderBy(salesing)
             .Select(p => MapToProductListDto(p))
@@ -69,6 +71,8 @@ public class ProductListHandler : IRequestHandler<ProductListQuery, PaginatedRes
             Price = product.Price,
             Msrp = product.Msrp,
             TaxRate = product.TaxClass?.TaxRate ?? 0,
+            ProductType = product.ProductType,
+            VariantCount = product.Variants.Count,
             Manufacturer = product.Manufacturer != null ? new ManufacturerListDto
             {
                 Id = product.Manufacturer.Id,

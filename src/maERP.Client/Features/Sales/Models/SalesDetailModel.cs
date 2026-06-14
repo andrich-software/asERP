@@ -1,3 +1,4 @@
+using maERP.Client.Features.Customers;
 using maERP.Client.Features.Saless.Services;
 using maERP.Domain.Dtos.Sales;
 
@@ -46,5 +47,18 @@ public partial record SalesDetailModel
     public async Task EditSales()
     {
         await _navigator.NavigateDataAsync(this, new SalesEditData(_salesId));
+    }
+
+    /// <summary>
+    /// Navigate to the detail page of the customer who placed this sale.
+    /// </summary>
+    public async Task NavigateToCustomer(Guid customerId)
+    {
+        if (customerId == Guid.Empty)
+        {
+            return;
+        }
+
+        await _navigator.NavigateDataAsync(this, new CustomerDetailData(customerId));
     }
 }

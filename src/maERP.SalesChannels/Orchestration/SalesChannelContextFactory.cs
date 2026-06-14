@@ -21,7 +21,7 @@ public sealed class SalesChannelContextFactory
         _encryptor = encryptor;
     }
 
-    public SalesChannelContext Create(SalesChannel salesChannel, ChannelSyncRun syncRun, CancellationToken cancellationToken)
+    public SalesChannelContext Create(SalesChannel salesChannel, ChannelSyncRun syncRun, CancellationToken cancellationToken, DateTime? incrementalSince = null)
     {
         var clientName = HttpClientNameFor(salesChannel.Type);
         var httpClient = _httpClientFactory.CreateClient(clientName);
@@ -39,6 +39,7 @@ public sealed class SalesChannelContextFactory
             HttpClient = httpClient,
             SyncRun = syncRun,
             TenantId = salesChannel.TenantId,
+            IncrementalSince = incrementalSince,
             CancellationToken = cancellationToken,
         };
     }

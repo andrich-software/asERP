@@ -16,6 +16,14 @@ public interface ISalesService
         CancellationToken ct = default);
 
     /// <summary>
+    /// Gets a paginated list of saless for a specific customer.
+    /// </summary>
+    Task<PaginatedResponse<SalesListDto>> GetSalessByCustomerAsync(
+        int customerId,
+        QueryParameters parameters,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Gets a single sales by ID.
     /// </summary>
     Task<SalesDetailDto?> GetSalesAsync(Guid id, CancellationToken ct = default);

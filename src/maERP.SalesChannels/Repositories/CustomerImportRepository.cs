@@ -13,6 +13,14 @@ public class CustomerImportRepository : ICustomerImportRepository
     private readonly ICustomerRepository _customerRepository;
     private readonly ICountryRepository _countryRepository;
 
+    // Per-run caches. The repository is scoped, so one instance serves a whole import run and these reset
+    // on the next run. They turn per-customer DB round-trips into one-off lookups:
+    //  - _countryCache:   all countries loaded once instead of a SELECT per address.
+    //  - _nextCustomerId: the per-tenant CustomerId max read once, then incremented in memory, instead of
+    //                     a MAX scan over the growing customer table for every inserted row.
+    private Dictionary<string, Country>? _countryCache;
+    private int? _nextCustomerId;
+
     public CustomerImportRepository(
         ILogger<CustomerImportRepository> logger,
         ICustomerRepository customerRepository,
@@ -42,10 +50,13 @@ public class CustomerImportRepository : ICustomerImportRepository
         }
 
         // Wenn Kunde nicht existiert, neu anlegen
+        var customerIsNew = existingCustomer == null;
         if (existingCustomer == null)
         {
             var newCustomer = new Customer
             {
+                // Assign CustomerId from the per-run counter (seeded once) so CreateAsync skips its MAX scan.
+                CustomerId = await NextCustomerIdAsync(),
                 Email = importCustomer.Email ?? string.Empty,
                 Firstname = importCustomer.Firstname ?? string.Empty,
                 Lastname = importCustomer.Lastname ?? string.Empty,
@@ -76,6 +87,18 @@ public class CustomerImportRepository : ICustomerImportRepository
             existingCustomer.CompanyName = !string.IsNullOrEmpty(importCustomer.CompanyName) ? importCustomer.CompanyName : existingCustomer.CompanyName;
             existingCustomer.Phone = !string.IsNullOrEmpty(importCustomer.Phone) ? importCustomer.Phone : existingCustomer.Phone;
 
+            // The customer may have first been created from an order (or out of order) with a later date than
+            // their real WooCommerce registration. Only ever move the enrollment date earlier so the customer
+            // is never newer than their history; re-running the customer import then heals stale dates.
+            if (importCustomer.DateEnrollment != DateTime.MinValue)
+            {
+                var registered = new DateTimeOffset(DateTime.SpecifyKind(importCustomer.DateEnrollment, DateTimeKind.Utc));
+                if (registered < existingCustomer.DateEnrollment)
+                {
+                    existingCustomer.DateEnrollment = registered;
+                }
+            }
+
             await _customerRepository.UpdateAsync(existingCustomer);
             _logger.LogInformation($"Kunde {existingCustomer.Id} aktualisiert");
         }
@@ -83,52 +106,99 @@ public class CustomerImportRepository : ICustomerImportRepository
         // Adressen verarbeiten
         if (importCustomer.BillingAddress != null)
         {
-            await ProcessAddress(existingCustomer, importCustomer.BillingAddress);
+            await ProcessAddress(existingCustomer, importCustomer.BillingAddress, customerIsNew);
         }
 
         if (importCustomer.ShippingAddress != null &&
             (importCustomer.BillingAddress == null ||
              !AreAddressesEqual(importCustomer.BillingAddress, importCustomer.ShippingAddress)))
         {
-            await ProcessAddress(existingCustomer, importCustomer.ShippingAddress);
+            await ProcessAddress(existingCustomer, importCustomer.ShippingAddress, customerIsNew);
         }
     }
 
-    private async Task ProcessAddress(Customer customer, SalesChannelImportCustomerAddress address)
+    private async Task ProcessAddress(Customer customer, SalesChannelImportCustomerAddress address, bool customerIsNew)
     {
+        // An empty country is normal (e.g. a customer with no separate shipping address) — skip quietly
+        // rather than logging a warning per row, which on a large import floods the log and sync buffer.
+        if (string.IsNullOrWhiteSpace(address.Country))
+        {
+            return;
+        }
+
         // Land aus ISO-Code ermitteln
-        Country? country = await _countryRepository.GetCountryByString(address.Country);
+        Country? country = await ResolveCountryAsync(address.Country);
         if (country == null)
         {
             _logger.LogWarning($"Land mit ISO-Code {address.Country} nicht gefunden");
             return;
         }
 
-        // Prüfen, ob Adresse bereits existiert
-        var existingAddresses = await _customerRepository.GetCustomerAddressByCustomerIdAsync(customer.Id);
-        bool addressExists = existingAddresses.Any(a =>
-            a.Street == address.Street &&
-            a.City == address.City &&
-            a.Zip == address.Zip &&
-            a.CountryId == country.Id);
-
-        if (!addressExists)
+        // A freshly created customer has no stored addresses yet (billing-vs-shipping duplication is
+        // already guarded by AreAddressesEqual at the call site), so skip the existence query for them.
+        if (!customerIsNew)
         {
-            var newAddress = new CustomerAddress
-            {
-                CustomerId = customer.Id,
-                Firstname = address.Firstname,
-                Lastname = address.Lastname,
-                CompanyName = address.CompanyName,
-                Street = address.Street,
-                City = address.City,
-                Zip = address.Zip,
-                CountryId = country.Id
-            };
+            var existingAddresses = await _customerRepository.GetCustomerAddressByCustomerIdAsync(customer.Id);
+            bool addressExists = existingAddresses.Any(a =>
+                a.Street == address.Street &&
+                a.City == address.City &&
+                a.Zip == address.Zip &&
+                a.CountryId == country.Id);
 
-            await _customerRepository.AddCustomerAddressAsync(newAddress);
-            _logger.LogInformation($"Neue Adresse für Kunden {customer.Id} hinzugefügt");
+            if (addressExists)
+            {
+                return;
+            }
         }
+
+        var newAddress = new CustomerAddress
+        {
+            CustomerId = customer.Id,
+            Firstname = address.Firstname,
+            Lastname = address.Lastname,
+            CompanyName = address.CompanyName,
+            Street = address.Street,
+            City = address.City,
+            Zip = address.Zip,
+            CountryId = country.Id
+        };
+
+        await _customerRepository.AddCustomerAddressAsync(newAddress);
+        _logger.LogInformation($"Neue Adresse für Kunden {customer.Id} hinzugefügt");
+    }
+
+    /// <summary>Next per-tenant CustomerId, seeding the counter from the DB max on first use.</summary>
+    private async Task<int> NextCustomerIdAsync()
+    {
+        _nextCustomerId ??= await _customerRepository.GetMaxCustomerIdAsync() + 1;
+        return _nextCustomerId++.Value;
+    }
+
+    /// <summary>Resolves a country by name or ISO code from an all-countries cache loaded once per run.</summary>
+    private async Task<Country?> ResolveCountryAsync(string? country)
+    {
+        if (string.IsNullOrWhiteSpace(country))
+        {
+            return null;
+        }
+
+        if (_countryCache == null)
+        {
+            _countryCache = new Dictionary<string, Country>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in await _countryRepository.GetAllAsync())
+            {
+                if (!string.IsNullOrEmpty(c.Name))
+                {
+                    _countryCache[c.Name] = c;
+                }
+                if (!string.IsNullOrEmpty(c.CountryCode))
+                {
+                    _countryCache[c.CountryCode] = c;
+                }
+            }
+        }
+
+        return _countryCache.TryGetValue(country, out var found) ? found : null;
     }
 
     private bool AreAddressesEqual(SalesChannelImportCustomerAddress address1, SalesChannelImportCustomerAddress address2)

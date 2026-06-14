@@ -543,4 +543,94 @@ public class ProductDeleteCommandTests : TenantIsolatedTestBase
             .FirstOrDefaultAsync(p => p.Id == productId);
         TestAssertions.AssertNotNull(productStillExists);
     }
+
+    // ---- Variant parent cascade delete ----
+
+    private async Task<(Guid attributeId, List<Guid> valueIds)> CreateAttributeAsync(string name, params string[] values)
+    {
+        var dto = new maERP.Domain.Dtos.ProductAttribute.ProductAttributeInputDto
+        {
+            Name = name,
+            SortOrder = 0,
+            Values = values.Select((v, i) => new maERP.Domain.Dtos.ProductAttribute.ProductAttributeValueInputDto
+            {
+                Value = v,
+                SortOrder = i
+            }).ToList()
+        };
+        var response = await PostAsJsonAsync("/api/v1/ProductAttributes", dto);
+        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        var created = await ReadResponseAsync<Result<Guid>>(response);
+
+        var detailResponse = await Client.GetAsync($"/api/v1/ProductAttributes/{created.Data}");
+        TestAssertions.AssertHttpSuccess(detailResponse);
+        var attrDetail = await ReadResponseAsync<Result<maERP.Domain.Dtos.ProductAttribute.ProductAttributeDetailDto>>(detailResponse);
+        return (created.Data, attrDetail!.Data.Values.Select(v => v.Id).ToList());
+    }
+
+    [Fact]
+    public async Task DeleteProduct_VariantParent_ShouldCascadeDeleteVariants()
+    {
+        await SeedTestDataAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var (attributeId, valueIds) = await CreateAttributeAsync($"DelCasc-{Guid.NewGuid():N}", "Red", "Green");
+
+        // Variant parent with one axis
+        var parentDto = new maERP.Domain.Dtos.Product.ProductInputDto
+        {
+            Sku = $"CASC-VP-{Guid.NewGuid():N}",
+            Name = "Cascade Parent",
+            Price = 0m,
+            TaxClassId = TaxClass1Id,
+            ProductType = maERP.Domain.Enums.ProductType.VariantParent,
+            VariantAxisAttributeIds = new List<Guid> { attributeId }
+        };
+        var parentResponse = await PostAsJsonAsync("/api/v1/Products", parentDto);
+        TestAssertions.AssertEqual(HttpStatusCode.Created, parentResponse.StatusCode);
+        var parentId = (await ReadResponseAsync<Result<Guid>>(parentResponse)).Data;
+
+        // Two variants under it
+        var variantIds = new List<Guid>();
+        for (var i = 0; i < 2; i++)
+        {
+            var variantDto = new maERP.Domain.Dtos.Product.ProductInputDto
+            {
+                Sku = $"CASC-VAR-{i}-{Guid.NewGuid():N}",
+                Name = $"Cascade Variant {i}",
+                Price = 5m,
+                TaxClassId = TaxClass1Id,
+                ProductType = maERP.Domain.Enums.ProductType.Variant,
+                ParentProductId = parentId,
+                VariantOptionValueIds = new List<Guid> { valueIds[i] }
+            };
+            var variantResponse = await PostAsJsonAsync("/api/v1/Products", variantDto);
+            TestAssertions.AssertEqual(HttpStatusCode.Created, variantResponse.StatusCode);
+            variantIds.Add((await ReadResponseAsync<Result<Guid>>(variantResponse)).Data);
+        }
+
+        // Delete the parent
+        var deleteResponse = await Client.DeleteAsync($"/api/v1/Products/{parentId}");
+        TestAssertions.AssertEqual(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        // Parent gone
+        var parentDetail = await Client.GetAsync($"/api/v1/Products/{parentId}");
+        TestAssertions.AssertEqual(HttpStatusCode.NotFound, parentDetail.StatusCode);
+
+        // Variants cascaded away
+        foreach (var variantId in variantIds)
+        {
+            var variantDetail = await Client.GetAsync($"/api/v1/Products/{variantId}");
+            TestAssertions.AssertEqual(HttpStatusCode.NotFound, variantDetail.StatusCode);
+        }
+
+        // And gone from the store entirely
+        using var verifyScope = Factory.Services.CreateScope();
+        var verifyDbContext = verifyScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        foreach (var variantId in variantIds)
+        {
+            var row = await verifyDbContext.Product.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == variantId);
+            Assert.Null(row);
+        }
+    }
 }

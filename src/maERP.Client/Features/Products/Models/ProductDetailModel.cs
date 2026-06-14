@@ -47,6 +47,14 @@ public partial record ProductDetailModel
     }
 
     /// <summary>
+    /// Navigate to the detail page of a child variant.
+    /// </summary>
+    public async Task ViewVariant(ProductVariantListDto variant)
+    {
+        await _navigator.NavigateDataAsync(this, new ProductDetailData(variant.Id));
+    }
+
+    /// <summary>
     /// Clear the error message.
     /// </summary>
     public async Task ClearError(CancellationToken ct)

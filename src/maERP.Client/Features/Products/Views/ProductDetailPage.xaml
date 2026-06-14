@@ -636,6 +636,148 @@
                   </Border>
                 </StackPanel>
 
+                <!-- Variant Options Section (when this product IS a variant) -->
+                <StackPanel Spacing="12"
+                            Visibility="{Binding Data.Options.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                  <StackPanel Orientation="Horizontal"
+                              Spacing="12">
+                    <FontIcon Glyph="&#xE8FD;"
+                              FontSize="20"
+                              Foreground="{ThemeResource TertiaryBrush}" />
+                    <TextBlock x:Uid="ProductDetailPage.Section.VariantOptions"
+                               Style="{StaticResource TitleMedium}"
+                               Foreground="{ThemeResource OnSurfaceBrush}" />
+                  </StackPanel>
+
+                  <Border Background="{ThemeResource SurfaceBrush}"
+                          CornerRadius="12"
+                          Padding="16"
+                          Translation="0,0,8">
+                    <Border.Shadow>
+                      <ThemeShadow />
+                    </Border.Shadow>
+                    <ItemsControl ItemsSource="{Binding Data.Options}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Grid Padding="0,4">
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="*" />
+                              <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding AttributeName}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Value}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Border>
+                </StackPanel>
+
+                <!-- Variants Section (when this product is a variant parent) -->
+                <StackPanel Spacing="12"
+                            Visibility="{Binding Data.Variants.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                  <StackPanel Orientation="Horizontal"
+                              Spacing="12">
+                    <FontIcon Glyph="&#xE8FD;"
+                              FontSize="20"
+                              Foreground="{ThemeResource PrimaryBrush}" />
+                    <TextBlock x:Uid="ProductDetailPage.Section.Variants"
+                               Style="{StaticResource TitleMedium}"
+                               Foreground="{ThemeResource OnSurfaceBrush}" />
+                  </StackPanel>
+
+                  <Border Background="{ThemeResource SurfaceBrush}"
+                          CornerRadius="12"
+                          Translation="0,0,8">
+                    <Border.Shadow>
+                      <ThemeShadow />
+                    </Border.Shadow>
+                    <StackPanel>
+                      <!-- Header -->
+                      <Grid Background="{ThemeResource SurfaceVariantBrush}"
+                            CornerRadius="12,12,0,0"
+                            Padding="16,10">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="2*" />
+                          <ColumnDefinition Width="1.5*" />
+                          <ColumnDefinition Width="2*" />
+                          <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" x:Uid="ProductDetailPage.VariantColOptions"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="1" x:Uid="ProductDetailPage.VariantColSku"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="2" x:Uid="ProductDetailPage.VariantColName"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="3" x:Uid="ProductDetailPage.VariantColPrice"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                   HorizontalAlignment="Right" />
+                      </Grid>
+
+                      <ItemsControl ItemsSource="{Binding Data.Variants}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Button Style="{StaticResource TextButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    CornerRadius="0"
+                                    Padding="0"
+                                    Click="VariantRow_Click">
+                              <Grid Padding="16,10"
+                                    BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                    BorderThickness="0,0,0,1">
+                                <Grid.ColumnDefinitions>
+                                  <ColumnDefinition Width="2*" />
+                                  <ColumnDefinition Width="1.5*" />
+                                  <ColumnDefinition Width="2*" />
+                                  <ColumnDefinition Width="1*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0"
+                                           Style="{StaticResource BodyMedium}"
+                                           Foreground="{ThemeResource OnSurfaceBrush}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis">
+                                  <TextBlock.Text>
+                                    <Binding Path="Options" Converter="{StaticResource VariantOptionsSummaryConverter}" />
+                                  </TextBlock.Text>
+                                </TextBlock>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Sku}"
+                                           Style="{StaticResource BodyMedium}"
+                                           Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding Name}"
+                                           Style="{StaticResource BodyMedium}"
+                                           Foreground="{ThemeResource OnSurfaceBrush}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="3"
+                                           Text="{Binding Price, Converter={StaticResource CurrencyConverter}}"
+                                           Style="{StaticResource BodyMedium}"
+                                           Foreground="{ThemeResource OnSurfaceBrush}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right" />
+                              </Grid>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </StackPanel>
+
               </StackPanel>
             </Grid>
           </ScrollViewer>

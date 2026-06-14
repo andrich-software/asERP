@@ -29,4 +29,10 @@ public interface IProductService
     /// Updates an existing product.
     /// </summary>
     Task UpdateProductAsync(Guid id, ProductInputDto input, CancellationToken ct = default);
+
+    /// <summary>
+    /// Generates variant products for a variant parent from the selected attribute values
+    /// per axis. Returns the IDs of the newly created variants (existing combinations are skipped).
+    /// </summary>
+    Task<List<Guid>> GenerateVariantsAsync(Guid parentProductId, ProductVariantGenerateDto request, CancellationToken ct = default);
 }

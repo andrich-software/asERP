@@ -29,7 +29,8 @@ public sealed record StockUpdatePayload(
     Guid ProductSalesChannelId,
     string Sku,
     int Quantity,
-    string? RemoteProductId);
+    string? RemoteProductId,
+    string? ParentRemoteProductId = null);
 
 public sealed record PriceUpdatePayload(
     Guid ProductId,
@@ -38,7 +39,8 @@ public sealed record PriceUpdatePayload(
     decimal Price,
     string? Currency,
     string? RemoteProductId,
-    string? ExternalListingId);
+    string? ExternalListingId,
+    string? ParentRemoteProductId = null);
 
 public sealed record SalesUpdatePayload(
     Guid SalesId,

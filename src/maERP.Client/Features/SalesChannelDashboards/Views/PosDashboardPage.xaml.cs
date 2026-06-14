@@ -9,12 +9,29 @@ namespace maERP.Client.Features.SalesChannelDashboards.Views;
 
 public sealed partial class PosDashboardPage : Page
 {
+    private static readonly TimeSpan AutoRefreshInterval = TimeSpan.FromSeconds(30);
+    private readonly DispatcherTimer _refreshTimer;
+
     private ItemsRepeater? _productResultsRepeater;
     private int _selectedProductIndex = -1;
 
     public PosDashboardPage()
     {
         this.InitializeComponent();
+
+        _refreshTimer = new DispatcherTimer { Interval = AutoRefreshInterval };
+        _refreshTimer.Tick += RefreshTimer_Tick;
+
+        Loaded += (_, _) => _refreshTimer.Start();
+        Unloaded += (_, _) => _refreshTimer.Stop();
+    }
+
+    private async void RefreshTimer_Tick(object? sender, object e)
+    {
+        if (DataContext is PosDashboardModel model)
+        {
+            await model.RefreshAsync();
+        }
     }
 
     private async void CustomerSearchBox_TextChanged(object sender, TextChangedEventArgs e)
