@@ -24,6 +24,19 @@ public class ProductImage : BaseEntity, IBaseEntity
     /// <summary>Original file name as uploaded, kept for download/alt fallback.</summary>
     public string? OriginalFileName { get; set; }
 
+    /// <summary>
+    /// Sales channel this image was imported from, or null for a manual upload. Together with
+    /// <see cref="RemoteImageId"/> it lets the importer sync a channel's photo set incrementally
+    /// (add new, drop removed) without ever touching manually uploaded or other-channel images.
+    /// </summary>
+    public Guid? SalesChannelId { get; set; }
+
+    /// <summary>
+    /// Stable channel-side key of the source photo (the media/image id, or its URL as a fallback).
+    /// Null for manual uploads. Scoped by <see cref="SalesChannelId"/>.
+    /// </summary>
+    public string? RemoteImageId { get; set; }
+
     public string? AltText { get; set; }
 
     public long FileSizeBytes { get; set; }

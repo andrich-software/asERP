@@ -49,7 +49,7 @@ public class ProductImportRepositoryVariantTests : TenantIsolatedTestBase
     /// </summary>
     private sealed class NoOpProductImageImportService : IProductImageImportService
     {
-        public Task<int> ImportImagesAsync(Guid productId, IReadOnlyList<SalesChannelImportImage> images, CancellationToken cancellationToken)
+        public Task<int> ImportImagesAsync(Guid productId, Guid salesChannelId, IReadOnlyList<SalesChannelImportImage> images, CancellationToken cancellationToken)
             => Task.FromResult(0);
     }
 
