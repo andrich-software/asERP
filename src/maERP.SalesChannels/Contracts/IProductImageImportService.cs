@@ -10,10 +10,12 @@ namespace maERP.SalesChannels.Contracts;
 public interface IProductImageImportService
 {
     /// <summary>
-    /// Imports the given images for a product. Idempotent: products that already have images are
-    /// left untouched (first-import-only), so a re-sync never re-downloads or duplicates photos.
-    /// Resilient: a single broken image URL is logged and skipped, never failing the product import.
+    /// Incrementally syncs a channel's photo set onto a product: downloads images new to this channel,
+    /// removes ones the channel no longer lists (files included), and leaves manually uploaded and
+    /// other-channel images untouched. Idempotent — an unchanged set is a no-op. Resilient — a single
+    /// broken image URL is logged and skipped, never failing the product import. As a safety guard an
+    /// empty incoming set makes no changes, so a transient load failure never wipes existing photos.
     /// </summary>
     /// <returns>Number of images newly stored.</returns>
-    Task<int> ImportImagesAsync(Guid productId, IReadOnlyList<SalesChannelImportImage> images, CancellationToken cancellationToken);
+    Task<int> ImportImagesAsync(Guid productId, Guid salesChannelId, IReadOnlyList<SalesChannelImportImage> images, CancellationToken cancellationToken);
 }

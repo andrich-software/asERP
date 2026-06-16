@@ -172,9 +172,10 @@ public class ProductImportRepository : IProductImportRepository
             productId = existingProduct.Id;
         }
 
-        // Photos are attached after the product row exists. First-import-only and resilient inside the
-        // service, so this is safe on both the create and update paths and never fails the product import.
-        await _productImageImportService.ImportImagesAsync(productId, importProduct.Images, CancellationToken.None);
+        // Photos are synced after the product row exists. The service reconciles this channel's photo
+        // set incrementally (add new, drop removed) and is resilient, so this is safe on both the create
+        // and update paths and never fails the product import.
+        await _productImageImportService.ImportImagesAsync(productId, salesChannelId, importProduct.Images, CancellationToken.None);
 
         if (importProduct.IsVariantParent && importProduct.Variants.Count > 0)
         {

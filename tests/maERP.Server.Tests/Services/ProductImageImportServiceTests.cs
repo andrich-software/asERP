@@ -12,13 +12,17 @@ namespace maERP.Server.Tests.Services;
 
 /// <summary>
 /// Direct tests for <see cref="ProductImageImportService"/>: photos are downloaded from the channel's
-/// URLs and attached to the product, the import is idempotent on re-run, and a single broken URL is
-/// skipped rather than failing the whole product. HTTP is stubbed so no real network access happens.
+/// URLs and synced incrementally onto the product (add new, drop removed), while manual uploads and
+/// other channels' images stay untouched. HTTP is stubbed so no real network access happens.
 /// </summary>
 public class ProductImageImportServiceTests : TenantIsolatedTestBase
 {
-    private const string GoodUrl = "https://shop.example/media/front.png";
-    private const string SecondUrl = "https://shop.example/media/back.png";
+    private static readonly Guid ChannelA = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static readonly Guid ChannelB = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+
+    private const string Url1 = "https://shop.example/media/front.png";
+    private const string Url2 = "https://shop.example/media/back.png";
+    private const string Url3 = "https://shop.example/media/side.png";
     private const string BrokenUrl = "https://shop.example/media/missing.png";
 
     private async Task<Guid> SeedProductAsync()
@@ -53,81 +57,172 @@ public class ProductImageImportServiceTests : TenantIsolatedTestBase
         }
     }
 
-    private ProductImageImportService CreateService()
+    // A storage shared across runs in one test so deletions can be asserted against it.
+    private FakeProductImageStorage CreateStorage() => new();
+
+    private ProductImageImportService CreateService(FakeProductImageStorage storage)
     {
         TenantContext.SetCurrentTenantId(TenantConstants.TestTenant1Id);
         var imageRepository = new ProductImageRepository(DbContext, TenantContext);
-        var storage = new FakeProductImageStorage();
-        var handler = new StubHttpMessageHandler();
-        var factory = new StubHttpClientFactory(handler);
+        var factory = new StubHttpClientFactory(new StubHttpMessageHandler());
         return new ProductImageImportService(imageRepository, storage, factory, NullLogger<ProductImageImportService>.Instance);
     }
 
-    [Fact]
-    public async Task ImportImages_DownloadsAndAttaches_OrderedBySortOrder()
+    private static List<SalesChannelImportImage> Images(params (string id, string url, int sort)[] specs) =>
+        specs.Select(s => new SalesChannelImportImage { RemoteImageId = s.id, Url = s.url, SortOrder = s.sort }).ToList();
+
+    private async Task<List<maERP.Domain.Entities.ProductImage>> LoadImagesAsync(Guid productId)
     {
-        var productId = await SeedProductAsync();
-        var service = CreateService();
-
-        var imported = await service.ImportImagesAsync(productId, new List<SalesChannelImportImage>
-        {
-            new() { RemoteImageId = "2", Url = SecondUrl, AltText = "Back", SortOrder = 1 },
-            new() { RemoteImageId = "1", Url = GoodUrl, AltText = "Front", SortOrder = 0 },
-        }, CancellationToken.None);
-
-        TestAssertions.AssertEqual(2, imported);
-
         DbContext.ChangeTracker.Clear();
-        var images = await DbContext.ProductImage.IgnoreQueryFilters()
+        return await DbContext.ProductImage.IgnoreQueryFilters()
             .Where(i => i.ProductId == productId)
             .OrderBy(i => i.SortOrder)
             .ToListAsync();
+    }
 
+    [Fact]
+    public async Task Import_Fresh_DownloadsOrdered_AndStampsChannelAndRemoteId()
+    {
+        var productId = await SeedProductAsync();
+        var storage = CreateStorage();
+
+        var imported = await CreateService(storage).ImportImagesAsync(productId, ChannelA,
+            Images(("2", Url2, 1), ("1", Url1, 0)), CancellationToken.None);
+
+        TestAssertions.AssertEqual(2, imported);
+
+        var images = await LoadImagesAsync(productId);
         TestAssertions.AssertEqual(2, images.Count);
-        // Lowest SortOrder (the SortOrder=0 image) is renumbered to the primary slot.
         TestAssertions.AssertEqual(0, images[0].SortOrder);
-        TestAssertions.AssertEqual("Front", images[0].AltText);
-        TestAssertions.AssertEqual(1, images[1].SortOrder);
-        TestAssertions.AssertEqual(TenantConstants.TestTenant1Id, images[0].TenantId);
+        TestAssertions.AssertEqual("1", images[0].RemoteImageId);
+        TestAssertions.AssertEqual(ChannelA, images[0].SalesChannelId);
         TestAssertions.AssertEqual("front.png", images[0].OriginalFileName);
+        TestAssertions.AssertEqual("2", images[1].RemoteImageId);
     }
 
     [Fact]
-    public async Task ImportImages_RunTwice_IsIdempotent()
+    public async Task Import_RunTwice_SameSet_IsIdempotent()
     {
         var productId = await SeedProductAsync();
-        var payload = new List<SalesChannelImportImage>
-        {
-            new() { RemoteImageId = "1", Url = GoodUrl, SortOrder = 0 },
-        };
+        var storage = CreateStorage();
+        var payload = Images(("1", Url1, 0), ("2", Url2, 1));
 
-        await CreateService().ImportImagesAsync(productId, payload, CancellationToken.None);
-        DbContext.ChangeTracker.Clear();
+        await CreateService(storage).ImportImagesAsync(productId, ChannelA, payload, CancellationToken.None);
+        var secondRun = await CreateService(storage).ImportImagesAsync(productId, ChannelA, payload, CancellationToken.None);
 
-        var secondRunImported = await CreateService().ImportImagesAsync(productId, payload, CancellationToken.None);
-
-        TestAssertions.AssertEqual(0, secondRunImported);
-        DbContext.ChangeTracker.Clear();
-        var count = await DbContext.ProductImage.IgnoreQueryFilters().CountAsync(i => i.ProductId == productId);
-        TestAssertions.AssertEqual(1, count);
+        TestAssertions.AssertEqual(0, secondRun);
+        var images = await LoadImagesAsync(productId);
+        TestAssertions.AssertEqual(2, images.Count);
     }
 
     [Fact]
-    public async Task ImportImages_BrokenUrl_IsSkipped_OthersStillImported()
+    public async Task Import_Incremental_AddsNewImage()
     {
         var productId = await SeedProductAsync();
-        var service = CreateService();
+        var storage = CreateStorage();
 
-        var imported = await service.ImportImagesAsync(productId, new List<SalesChannelImportImage>
+        await CreateService(storage).ImportImagesAsync(productId, ChannelA,
+            Images(("1", Url1, 0), ("2", Url2, 1)), CancellationToken.None);
+
+        var added = await CreateService(storage).ImportImagesAsync(productId, ChannelA,
+            Images(("1", Url1, 0), ("2", Url2, 1), ("3", Url3, 2)), CancellationToken.None);
+
+        TestAssertions.AssertEqual(1, added);
+        var images = await LoadImagesAsync(productId);
+        TestAssertions.AssertEqual(3, images.Count);
+        TestAssertions.AssertTrue(images.Any(i => i.RemoteImageId == "3"));
+        // Contiguous re-index preserved.
+        TestAssertions.AssertEqual(new[] { 0, 1, 2 }, images.Select(i => i.SortOrder).ToArray());
+    }
+
+    [Fact]
+    public async Task Import_Incremental_RemovesDroppedImage_AndDeletesFiles()
+    {
+        var productId = await SeedProductAsync();
+        var storage = CreateStorage();
+
+        await CreateService(storage).ImportImagesAsync(productId, ChannelA,
+            Images(("1", Url1, 0), ("2", Url2, 1), ("3", Url3, 2)), CancellationToken.None);
+        var filesAfterFirst = storage.FileCount; // 3 originals + 3 thumbs = 6
+
+        // Channel no longer lists image "3".
+        await CreateService(storage).ImportImagesAsync(productId, ChannelA,
+            Images(("1", Url1, 0), ("2", Url2, 1)), CancellationToken.None);
+
+        var images = await LoadImagesAsync(productId);
+        TestAssertions.AssertEqual(2, images.Count);
+        TestAssertions.AssertFalse(images.Any(i => i.RemoteImageId == "3"));
+        TestAssertions.AssertEqual(new[] { 0, 1 }, images.Select(i => i.SortOrder).ToArray());
+        // The dropped image's original + thumbnail were removed from storage.
+        TestAssertions.AssertEqual(6, filesAfterFirst);
+        TestAssertions.AssertEqual(4, storage.FileCount);
+    }
+
+    [Fact]
+    public async Task Import_EmptySet_IsNoOp_DoesNotWipeExisting()
+    {
+        var productId = await SeedProductAsync();
+        var storage = CreateStorage();
+
+        await CreateService(storage).ImportImagesAsync(productId, ChannelA,
+            Images(("1", Url1, 0), ("2", Url2, 1)), CancellationToken.None);
+
+        await CreateService(storage).ImportImagesAsync(productId, ChannelA,
+            new List<SalesChannelImportImage>(), CancellationToken.None);
+
+        var images = await LoadImagesAsync(productId);
+        TestAssertions.AssertEqual(2, images.Count);
+    }
+
+    [Fact]
+    public async Task Import_LeavesManualAndOtherChannelImagesUntouched()
+    {
+        var productId = await SeedProductAsync();
+        var storage = CreateStorage();
+
+        // A manual upload (no channel) and another channel's image already exist.
+        TenantContext.SetCurrentTenantId(TenantConstants.TestTenant1Id);
+        DbContext.ProductImage.Add(new maERP.Domain.Entities.ProductImage
         {
-            new() { RemoteImageId = "1", Url = BrokenUrl, SortOrder = 0 },
-            new() { RemoteImageId = "2", Url = GoodUrl, SortOrder = 1 },
-        }, CancellationToken.None);
+            ProductId = productId, RelativePath = "p/manual.png", ThumbnailPath = "p/manual_thumb.png",
+            SortOrder = 0, TenantId = TenantConstants.TestTenant1Id
+        });
+        DbContext.ProductImage.Add(new maERP.Domain.Entities.ProductImage
+        {
+            ProductId = productId, SalesChannelId = ChannelB, RemoteImageId = "b1",
+            RelativePath = "p/b1.png", ThumbnailPath = "p/b1_thumb.png",
+            SortOrder = 1, TenantId = TenantConstants.TestTenant1Id
+        });
+        await DbContext.SaveChangesAsync();
+
+        // Import channel A with one image, then sync channel A to an empty-but... use a removal too.
+        await CreateService(storage).ImportImagesAsync(productId, ChannelA,
+            Images(("a1", Url1, 0)), CancellationToken.None);
+
+        // Re-sync channel A dropping a1 — must remove only a1, never the manual or channel-B image.
+        await CreateService(storage).ImportImagesAsync(productId, ChannelA,
+            Images(("a2", Url2, 0)), CancellationToken.None);
+
+        var images = await LoadImagesAsync(productId);
+        TestAssertions.AssertTrue(images.Any(i => i.SalesChannelId == null));          // manual kept
+        TestAssertions.AssertTrue(images.Any(i => i.SalesChannelId == ChannelB && i.RemoteImageId == "b1")); // other channel kept
+        TestAssertions.AssertTrue(images.Any(i => i.SalesChannelId == ChannelA && i.RemoteImageId == "a2")); // new A image
+        TestAssertions.AssertFalse(images.Any(i => i.RemoteImageId == "a1"));          // dropped A image gone
+    }
+
+    [Fact]
+    public async Task Import_BrokenUrl_IsSkipped_OthersStillImported()
+    {
+        var productId = await SeedProductAsync();
+        var storage = CreateStorage();
+
+        var imported = await CreateService(storage).ImportImagesAsync(productId, ChannelA,
+            Images(("1", BrokenUrl, 0), ("2", Url1, 1)), CancellationToken.None);
 
         TestAssertions.AssertEqual(1, imported);
-        DbContext.ChangeTracker.Clear();
-        var count = await DbContext.ProductImage.IgnoreQueryFilters().CountAsync(i => i.ProductId == productId);
-        TestAssertions.AssertEqual(1, count);
+        var images = await LoadImagesAsync(productId);
+        TestAssertions.AssertEqual(1, images.Count);
+        TestAssertions.AssertEqual("2", images[0].RemoteImageId);
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler
@@ -139,7 +234,6 @@ public class ProductImageImportServiceTests : TenantIsolatedTestBase
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
             }
 
-            // Any non-broken URL returns a tiny payload; FakeProductImageStorage accepts arbitrary bytes.
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new ByteArrayContent(new byte[] { 1, 2, 3, 4 }),
