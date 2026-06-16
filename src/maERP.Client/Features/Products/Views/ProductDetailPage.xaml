@@ -7,7 +7,8 @@
       xmlns:utu="using:Uno.Toolkit.UI"
       Background="{ThemeResource BackgroundBrush}">
 
-  <Grid utu:SafeArea.Insets="VisibleBounds">
+  <Grid x:Name="PageRoot"
+        utu:SafeArea.Insets="VisibleBounds">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
@@ -56,12 +57,13 @@
     </Border>
 
     <!-- Product Details Content -->
-    <mvux:FeedView Grid.Row="2"
-                   Source="{Binding Product}">
-      <mvux:FeedView.ValueTemplate>
-        <DataTemplate>
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <Grid Padding="24">
+    <ScrollViewer Grid.Row="2"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel>
+        <mvux:FeedView Source="{Binding Product}">
+          <mvux:FeedView.ValueTemplate>
+            <DataTemplate>
+              <Grid Padding="24">
               <!-- VisualStateManager for responsive layout -->
               <VisualStateManager.VisualStateGroups>
                 <VisualStateGroup>
@@ -780,11 +782,10 @@
 
               </StackPanel>
             </Grid>
-          </ScrollViewer>
-        </DataTemplate>
-      </mvux:FeedView.ValueTemplate>
+            </DataTemplate>
+          </mvux:FeedView.ValueTemplate>
 
-      <mvux:FeedView.ProgressTemplate>
+          <mvux:FeedView.ProgressTemplate>
         <DataTemplate>
           <Grid HorizontalAlignment="Center"
                 VerticalAlignment="Center">
@@ -820,6 +821,85 @@
           </Grid>
         </DataTemplate>
       </mvux:FeedView.ErrorTemplate>
-    </mvux:FeedView>
+        </mvux:FeedView>
+
+        <!-- Images Gallery (read-only) -->
+        <mvux:FeedView Source="{Binding Images}">
+          <mvux:FeedView.ValueTemplate>
+            <DataTemplate>
+              <Grid Padding="24,0,24,24">
+                <Border MaxWidth="1400"
+                        HorizontalAlignment="Stretch"
+                        Background="{ThemeResource SurfaceBrush}"
+                        CornerRadius="12"
+                        Padding="24"
+                        Translation="0,0,8">
+                  <Border.Shadow>
+                    <ThemeShadow />
+                  </Border.Shadow>
+                  <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <FontIcon Glyph="&#xEB9F;"
+                                FontSize="20"
+                                Foreground="{ThemeResource PrimaryBrush}" />
+                      <TextBlock x:Uid="ProductDetailPage.Section.Images"
+                                 Style="{StaticResource TitleMedium}"
+                                 Foreground="{ThemeResource OnSurfaceBrush}" />
+                    </StackPanel>
+
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Disabled"
+                                  HorizontalScrollMode="Enabled">
+                      <ItemsControl ItemsSource="{Binding}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border Width="120"
+                                    Height="120"
+                                    CornerRadius="8"
+                                    Margin="0,0,12,0"
+                                    Background="{ThemeResource SurfaceVariantBrush}">
+                              <Grid>
+                                <Image Source="{Binding ThumbnailBytes, Converter={StaticResource BytesToImageSourceConverter}}"
+                                       Stretch="UniformToFill" />
+                                <Border VerticalAlignment="Top"
+                                        HorizontalAlignment="Left"
+                                        Margin="6"
+                                        Background="{ThemeResource PrimaryContainerBrush}"
+                                        CornerRadius="4"
+                                        Padding="6,2"
+                                        Visibility="{Binding IsPrimary, Converter={StaticResource BoolToVisibilityConverter}}">
+                                  <TextBlock x:Uid="ProductEditPage.ImagePrimaryBadge"
+                                             Style="{StaticResource LabelSmall}"
+                                             Foreground="{ThemeResource OnPrimaryContainerBrush}" />
+                                </Border>
+                              </Grid>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </ScrollViewer>
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </DataTemplate>
+          </mvux:FeedView.ValueTemplate>
+          <mvux:FeedView.NoneTemplate>
+            <DataTemplate>
+              <Border />
+            </DataTemplate>
+          </mvux:FeedView.NoneTemplate>
+          <mvux:FeedView.ProgressTemplate>
+            <DataTemplate>
+              <Border />
+            </DataTemplate>
+          </mvux:FeedView.ProgressTemplate>
+        </mvux:FeedView>
+      </StackPanel>
+    </ScrollViewer>
   </Grid>
 </Page>

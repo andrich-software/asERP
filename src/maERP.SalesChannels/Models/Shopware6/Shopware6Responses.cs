@@ -33,6 +33,26 @@ public sealed class Sw6Product
     [JsonPropertyName("price")] public List<Sw6Price>? Price { get; set; }
     [JsonPropertyName("translated")] public Sw6Translated? Translated { get; set; }
     [JsonPropertyName("options")] public List<Sw6PropertyGroupOption>? Options { get; set; }
+    // Photo gallery: each entry is a product↔media join; the actual file lives on its nested Media.
+    [JsonPropertyName("media")] public List<Sw6ProductMedia>? Media { get; set; }
+    // The featured image (also one of the Media entries); promoted to the primary photo on import.
+    [JsonPropertyName("cover")] public Sw6ProductMedia? Cover { get; set; }
+}
+
+public sealed class Sw6ProductMedia
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+    [JsonPropertyName("position")] public int? Position { get; set; }
+    [JsonPropertyName("media")] public Sw6Media? Media { get; set; }
+}
+
+public sealed class Sw6Media
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+    // Public CDN URL of the original file — what the import downloads.
+    [JsonPropertyName("url")] public string? Url { get; set; }
+    [JsonPropertyName("alt")] public string? Alt { get; set; }
+    [JsonPropertyName("fileName")] public string? FileName { get; set; }
 }
 
 public sealed class Sw6PropertyGroupOption

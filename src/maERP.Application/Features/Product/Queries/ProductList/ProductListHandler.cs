@@ -1,12 +1,12 @@
-﻿using System.Linq.Dynamic.Core;
+using System.Linq.Dynamic.Core;
 using maERP.Application.Contracts.Logging;
 using maERP.Application.Contracts.Persistence;
 using maERP.Application.Extensions;
-using maERP.Application.Specifications;
-using maERP.Domain.Dtos.Product;
-using maERP.Domain.Dtos.Manufacturer;
-using maERP.Domain.Wrapper;
 using maERP.Application.Mediator;
+using maERP.Application.Specifications;
+using maERP.Domain.Dtos.Manufacturer;
+using maERP.Domain.Dtos.Product;
+using maERP.Domain.Wrapper;
 using Microsoft.EntityFrameworkCore;
 
 namespace maERP.Application.Features.Product.Queries.ProductList;
@@ -73,6 +73,10 @@ public class ProductListHandler : IRequestHandler<ProductListQuery, PaginatedRes
             TaxRate = product.TaxClass?.TaxRate ?? 0,
             ProductType = product.ProductType,
             VariantCount = product.Variants.Count,
+            PrimaryImageId = product.Images
+                .OrderBy(i => i.SortOrder)
+                .Select(i => (Guid?)i.Id)
+                .FirstOrDefault(),
             Manufacturer = product.Manufacturer != null ? new ManufacturerListDto
             {
                 Id = product.Manufacturer.Id,

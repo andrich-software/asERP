@@ -2418,6 +2418,9 @@
   <data name="ProductDetailPage.Section.Identifiers.Text" xml:space="preserve">
     <value>Product Identifiers</value>
   </data>
+  <data name="ProductDetailPage.Section.Images.Text" xml:space="preserve">
+    <value>Images</value>
+  </data>
   <data name="ProductDetailPage.Section.Pricing.Text" xml:space="preserve">
     <value>Pricing</value>
   </data>
@@ -2539,6 +2542,33 @@
   </data>
   <data name="ProductEditPage.RemoveAxisButton.ToolTip" xml:space="preserve">
     <value>Remove axis</value>
+  </data>
+  <data name="ProductEditPage.Section.Images.Text" xml:space="preserve">
+    <value>Images</value>
+  </data>
+  <data name="ProductEditPage.ImagesSaveFirstHint.Text" xml:space="preserve">
+    <value>Save the product first to add images</value>
+  </data>
+  <data name="ProductEditPage.ImagesEmptyHint.Text" xml:space="preserve">
+    <value>No images yet. The first image in the list is the primary image.</value>
+  </data>
+  <data name="ProductEditPage.AddImageButton.Content" xml:space="preserve">
+    <value>Add images</value>
+  </data>
+  <data name="ProductEditPage.ImagePrimaryBadge.Text" xml:space="preserve">
+    <value>Primary</value>
+  </data>
+  <data name="ProductEditPage.MakePrimaryButton.ToolTip" xml:space="preserve">
+    <value>Set as primary</value>
+  </data>
+  <data name="ProductEditPage.MoveImageUpButton.ToolTip" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="ProductEditPage.MoveImageDownButton.ToolTip" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="ProductEditPage.DeleteImageButton.ToolTip" xml:space="preserve">
+    <value>Delete image</value>
   </data>
   <data name="ProductEditPage.VariantColOptions.Text" xml:space="preserve">
     <value>Values</value>
@@ -4158,6 +4188,36 @@
   </data>
   <data name="Shell.Search.Placeholder.Text" xml:space="preserve">
     <value>Quick search…</value>
+  </data>
+  <data name="Shell.Search.PlaceholderText" xml:space="preserve">
+    <value>Quick search…</value>
+  </data>
+  <data name="SearchResultsPage.Customers.Text" xml:space="preserve">
+    <value>Customers</value>
+  </data>
+  <data name="SearchResultsPage.Orders.Text" xml:space="preserve">
+    <value>Orders</value>
+  </data>
+  <data name="SearchResultsPage.Invoices.Text" xml:space="preserve">
+    <value>Invoices</value>
+  </data>
+  <data name="SearchResultsPage.Products.Text" xml:space="preserve">
+    <value>Products</value>
+  </data>
+  <data name="SearchResultsPage.NoResults.Text" xml:space="preserve">
+    <value>No results found.</value>
+  </data>
+  <data name="SearchType.Customer" xml:space="preserve">
+    <value>Customer</value>
+  </data>
+  <data name="SearchType.Sales" xml:space="preserve">
+    <value>Order</value>
+  </data>
+  <data name="SearchType.Invoice" xml:space="preserve">
+    <value>Invoice</value>
+  </data>
+  <data name="SearchType.Product" xml:space="preserve">
+    <value>Product</value>
   </data>
   <!-- Dashboard Breadcrumb and Filters -->
   <data name="DashboardPage.Breadcrumb.Text" xml:space="preserve">

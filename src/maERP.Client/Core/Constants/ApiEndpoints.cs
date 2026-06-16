@@ -38,6 +38,12 @@ public static class ApiEndpoints
         public const string Base = $"{ApiBase}/countries";
     }
 
+    // Global search
+    public static class Search
+    {
+        public const string Base = $"{ApiBase}/search";
+    }
+
     // Customers
     public static class Customers
     {
@@ -60,6 +66,13 @@ public static class ApiEndpoints
         public const string Base = $"{ApiBase}/products";
         public static string ById(Guid id) => $"{Base}/{id}";
         public static string GenerateVariants(Guid id) => $"{Base}/{id}/variants/generate";
+
+        // Images (sub-resource)
+        public static string Images(Guid productId) => $"{Base}/{productId}/images";
+        public static string ImageById(Guid productId, Guid imageId) => $"{Base}/{productId}/images/{imageId}";
+        public static string ImagesReorder(Guid productId) => $"{Base}/{productId}/images/reorder";
+        public static string ImageContent(Guid productId, Guid imageId, bool thumbnail) =>
+            $"{Base}/{productId}/images/{imageId}/content{(thumbnail ? "?thumbnail=true" : string.Empty)}";
     }
 
     // Warehouses

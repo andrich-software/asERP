@@ -52,6 +52,7 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
             .Include(p => p.VariantOptions)
                 .ThenInclude(o => o.ProductAttributeValue)
                     .ThenInclude(av => av!.ProductAttribute)
+            .Include(p => p.Images.OrderBy(i => i.SortOrder))
             .AsSplitQuery()
             .FirstOrDefaultAsync();
     }
@@ -131,6 +132,9 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
 
         Context.ProductStock.RemoveRange(
             await Context.ProductStock.Where(ps => ps.ProductId == productId).ToListAsync());
+
+        Context.ProductImage.RemoveRange(
+            await Context.ProductImage.Where(pi => pi.ProductId == productId).ToListAsync());
     }
 
     public async Task<bool> UpdateStockAsync(Guid productId, Guid warehouseId, int newStock)

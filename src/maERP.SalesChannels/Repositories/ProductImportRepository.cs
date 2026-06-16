@@ -17,6 +17,7 @@ public class ProductImportRepository : IProductImportRepository
     private readonly ITaxClassRepository _taxClassRepository;
     private readonly IProductAttributeRepository _productAttributeRepository;
     private readonly IProductSalesChannelRepository _productSalesChannelRepository;
+    private readonly IProductImageImportService _productImageImportService;
 
     public ProductImportRepository(
         ILogger<ProductImportRepository> logger,
@@ -24,7 +25,8 @@ public class ProductImportRepository : IProductImportRepository
         ISalesChannelRepository salesChannelRepository,
         ITaxClassRepository taxClassRepository,
         IProductAttributeRepository productAttributeRepository,
-        IProductSalesChannelRepository productSalesChannelRepository)
+        IProductSalesChannelRepository productSalesChannelRepository,
+        IProductImageImportService productImageImportService)
     {
         _logger = logger;
         _productRepository = productRepository;
@@ -32,6 +34,7 @@ public class ProductImportRepository : IProductImportRepository
         _taxClassRepository = taxClassRepository;
         _productAttributeRepository = productAttributeRepository;
         _productSalesChannelRepository = productSalesChannelRepository;
+        _productImageImportService = productImageImportService;
     }
 
     public async Task ImportOrUpdateFromSalesChannel(Guid salesChannelId, SalesChannelImportProduct importProduct)
@@ -168,6 +171,10 @@ public class ProductImportRepository : IProductImportRepository
 
             productId = existingProduct.Id;
         }
+
+        // Photos are attached after the product row exists. First-import-only and resilient inside the
+        // service, so this is safe on both the create and update paths and never fails the product import.
+        await _productImageImportService.ImportImagesAsync(productId, importProduct.Images, CancellationToken.None);
 
         if (importProduct.IsVariantParent && importProduct.Variants.Count > 0)
         {

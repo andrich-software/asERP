@@ -119,10 +119,10 @@ public sealed partial class ProductListPage : Page
     private async void ProductRow_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button &&
-            button.DataContext is ProductListDto product &&
+            button.DataContext is ProductListItemModel item &&
             DataContext is ProductListModel model)
         {
-            await model.ViewProduct(product);
+            await model.ViewProduct(item.Dto);
         }
     }
 

@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using maERP.Client.Core.Exceptions;
 using maERP.Client.Features.Products.Services;
 using maERP.Domain.Dtos.Product;
@@ -36,6 +39,40 @@ public partial record ProductDetailModel
     {
         var product = await _productService.GetProductAsync(_productId, ct);
         return product ?? throw new InvalidOperationException($"Product {_productId} not found");
+    });
+
+    /// <summary>
+    /// Read-only gallery: the product's images with their thumbnail bytes loaded via the
+    /// authed client (first in the order is the primary image).
+    /// </summary>
+    public IListFeed<ProductImageRow> Images => ListFeed.Async(async ct =>
+    {
+        var images = await _productService.GetProductImagesAsync(_productId, ct);
+        var rows = new List<ProductImageRow>();
+
+        foreach (var dto in images.OrderBy(i => i.SortOrder))
+        {
+            var row = new ProductImageRow
+            {
+                Id = dto.Id,
+                SortOrder = dto.SortOrder,
+                AltText = dto.AltText,
+                OriginalFileName = dto.OriginalFileName
+            };
+
+            try
+            {
+                row.ThumbnailBytes = await _productService.GetProductImageBytesAsync(_productId, dto.Id, thumbnail: true, ct);
+            }
+            catch
+            {
+                // Thumbnail is non-essential; a missing preview must not break the gallery.
+            }
+
+            rows.Add(row);
+        }
+
+        return (IImmutableList<ProductImageRow>)rows.ToImmutableList();
     });
 
     /// <summary>

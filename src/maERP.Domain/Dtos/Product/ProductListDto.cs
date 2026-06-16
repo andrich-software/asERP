@@ -16,4 +16,7 @@ public class ProductListDto
     public ProductType ProductType { get; set; }
     public int VariantCount { get; set; }
     public ManufacturerListDto? Manufacturer { get; set; }
+
+    /// <summary>Id of the product's primary image (lowest SortOrder), if any, for list thumbnails.</summary>
+    public Guid? PrimaryImageId { get; set; }
 }

@@ -15,6 +15,9 @@ public static class Routes
     // Dashboard
     public const string Dashboard = "Dashboard";
 
+    // Search
+    public const string SearchResults = "SearchResults";
+
     // Customers
     public const string CustomerList = "Customers";
     public const string CustomerDetail = "CustomerDetail";

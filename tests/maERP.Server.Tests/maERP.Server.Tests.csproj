@@ -13,6 +13,7 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+		<PackageReference Include="SixLabors.ImageSharp" />
 		<PackageReference Include="xunit" />
 		<PackageReference Include="xunit.runner.visualstudio" >
 			<PrivateAssets>all</PrivateAssets>

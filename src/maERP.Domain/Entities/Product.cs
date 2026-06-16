@@ -41,4 +41,6 @@ public class Product : BaseEntity, IBaseEntity
     public ICollection<ProductSalesChannel>? ProductSalesChannels { get; set; } = [];
 
     public ICollection<ProductStock> ProductStocks { get; set; } = [];
+
+    public ICollection<ProductImage> Images { get; set; } = [];
 }

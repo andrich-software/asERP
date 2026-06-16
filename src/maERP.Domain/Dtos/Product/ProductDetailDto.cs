@@ -68,4 +68,7 @@ public class ProductDetailDto
     public List<Guid> ProductSalesChannel { get; set; } = new();
 
     public List<Guid> ProductStocks { get; set; } = new();
+
+    /// <summary>Images attached to the product, ordered by SortOrder (first = primary).</summary>
+    public List<ProductImageDto> Images { get; set; } = new();
 }

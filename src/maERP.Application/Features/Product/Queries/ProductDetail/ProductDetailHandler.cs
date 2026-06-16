@@ -1,9 +1,10 @@
 using maERP.Application.Contracts.Logging;
 using maERP.Application.Contracts.Persistence;
-using maERP.Domain.Dtos.Product;
-using maERP.Domain.Dtos.Manufacturer;
-using maERP.Domain.Wrapper;
+using maERP.Application.Features.ProductImage.Shared;
 using maERP.Application.Mediator;
+using maERP.Domain.Dtos.Manufacturer;
+using maERP.Domain.Dtos.Product;
+using maERP.Domain.Wrapper;
 
 namespace maERP.Application.Features.Product.Queries.ProductDetail;
 
@@ -56,7 +57,7 @@ public class ProductDetailHandler : IRequestHandler<ProductDetailQuery, Result<P
             if (product == null)
             {
                 _logger.LogWarning("Product with ID {Id} not found", request.Id);
-                return Result<ProductDetailDto>.Fail(ResultStatusCode.NotFound, 
+                return Result<ProductDetailDto>.Fail(ResultStatusCode.NotFound,
                     $"Product with ID {request.Id} not found");
             }
 
@@ -127,7 +128,11 @@ public class ProductDetailHandler : IRequestHandler<ProductDetailQuery, Result<P
                 Options = MapOptions(product.VariantOptions),
                 // Map related sales channels and stocks
                 ProductSalesChannel = product.ProductSalesChannels?.Select(psc => psc.Id).ToList() ?? new List<Guid>(),
-                ProductStocks = product.ProductStocks.Select(ps => ps.Id).ToList()
+                ProductStocks = product.ProductStocks.Select(ps => ps.Id).ToList(),
+                Images = product.Images
+                    .OrderBy(i => i.SortOrder)
+                    .Select(ProductImageMapping.ToDto)
+                    .ToList()
             };
 
             _logger.LogInformation("Product with ID {Id} retrieved successfully", request.Id);
@@ -138,7 +143,7 @@ public class ProductDetailHandler : IRequestHandler<ProductDetailQuery, Result<P
         {
             // Handle any exceptions during product retrieval
             _logger.LogError("Error retrieving product: {Message}", ex.Message);
-            
+
             return Result<ProductDetailDto>.Fail(ResultStatusCode.InternalServerError,
                 $"An error occurred while retrieving the product: {ex.Message}");
         }

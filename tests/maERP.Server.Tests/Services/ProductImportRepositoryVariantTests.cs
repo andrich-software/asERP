@@ -1,6 +1,7 @@
 using maERP.Domain.Constants;
 using maERP.Domain.Enums;
 using maERP.Persistence.Repositories;
+using maERP.SalesChannels.Contracts;
 using maERP.SalesChannels.Models;
 using maERP.SalesChannels.Repositories;
 using maERP.Server.Tests.Infrastructure;
@@ -38,7 +39,18 @@ public class ProductImportRepositoryVariantTests : TenantIsolatedTestBase
             salesChannelRepository,
             taxClassRepository,
             productAttributeRepository,
-            productSalesChannelRepository);
+            productSalesChannelRepository,
+            new NoOpProductImageImportService());
+    }
+
+    /// <summary>
+    /// These variant tests carry no image payloads; a no-op importer keeps them focused on variant
+    /// behaviour without wiring up image storage / HttpClient. Image import has its own coverage.
+    /// </summary>
+    private sealed class NoOpProductImageImportService : IProductImageImportService
+    {
+        public Task<int> ImportImagesAsync(Guid productId, IReadOnlyList<SalesChannelImportImage> images, CancellationToken cancellationToken)
+            => Task.FromResult(0);
     }
 
     private async Task SeedBaseDataAsync()

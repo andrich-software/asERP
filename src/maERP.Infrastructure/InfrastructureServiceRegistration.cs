@@ -1,11 +1,13 @@
 using maERP.Application.Contracts.Infrastructure;
 using maERP.Application.Contracts.Logging;
 using maERP.Application.Contracts.Services;
+using maERP.Application.Models.Storage;
 using maERP.Infrastructure.EmailService;
 using maERP.Infrastructure.EmailService.Providers;
 using maERP.Infrastructure.Logging;
 using maERP.Infrastructure.PDF;
 using maERP.Infrastructure.Services;
+using maERP.Infrastructure.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,6 +29,10 @@ public static class InfrastructureServiceRegistration
 
         // PDF Service
         services.AddScoped<IPdfService, PdfService>();
+
+        // Product image storage (filesystem)
+        services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.Section));
+        services.AddScoped<IProductImageStorage, ProductImageStorage>();
 
         // Server info (env-var-backed, immutable after startup)
         services.AddSingleton<IServerInfoService, ServerInfoService>();

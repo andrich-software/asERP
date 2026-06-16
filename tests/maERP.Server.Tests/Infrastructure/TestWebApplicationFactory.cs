@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using maERP.Application.Contracts.Infrastructure;
 using maERP.Application.Contracts.Services;
 using maERP.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -92,6 +93,11 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
 
             // Register TestTenantContext as scoped to ensure proper isolation between tests
             services.AddScoped<ITenantContext, TestTenantContext>();
+
+            // Replace the filesystem image storage with an in-memory fake (no disk I/O,
+            // no real image decoding). Singleton so stored bytes persist across scopes.
+            services.RemoveAll<IProductImageStorage>();
+            services.AddSingleton<IProductImageStorage, FakeProductImageStorage>();
 
             // Register Identity Core (UserManager + stores) without touching the auth scheme.
             // AddIdentity (used in production via AddPersistenceServices) would replace the Test

@@ -158,50 +158,52 @@
                    TextTrimming="CharacterEllipsis" />
       </Grid>
 
-      <!-- Quick Search (optical only) -->
-      <Grid Grid.Row="1"
-            Padding="12,12,12,4">
-        <Border Background="{ThemeResource SurfaceBrush}"
-                BorderBrush="{ThemeResource OutlineVariantBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Height="32">
-          <Grid>
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="Auto" />
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+      <!-- Quick Search -->
+      <AutoSuggestBox x:Name="QuickSearchBox"
+                      x:Uid="Shell.Search"
+                      Grid.Row="1"
+                      Margin="12,12,12,4"
+                      QueryIcon="Find"
+                      TextMemberPath="Title"
+                      TextChanged="OnQuickSearchTextChanged"
+                      SuggestionChosen="OnQuickSearchSuggestionChosen"
+                      QuerySubmitted="OnQuickSearchQuerySubmitted">
+        <AutoSuggestBox.ItemTemplate>
+          <DataTemplate>
+            <Grid Padding="0,2"
+                  ColumnSpacing="10">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
 
-            <FontIcon Grid.Column="0"
-                      Glyph="&#xE721;"
-                      FontSize="12"
-                      Foreground="{ThemeResource OnSurfaceVariantBrush}"
-                      Margin="10,0,0,0"
-                      VerticalAlignment="Center" />
+              <FontIcon Grid.Column="0"
+                        FontSize="16"
+                        VerticalAlignment="Center"
+                        Glyph="{Binding Type, Converter={StaticResource SearchEntityTypeToGlyphConverter}}"
+                        Foreground="{ThemeResource OnSurfaceVariantBrush}" />
 
-            <TextBlock Grid.Column="1"
-                       x:Uid="Shell.Search.Placeholder"
-                       Style="{StaticResource BodySmall}"
-                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
-                       Margin="8,0,0,0"
-                       VerticalAlignment="Center" />
-
-            <Border Grid.Column="2"
-                    Background="{ThemeResource SurfaceVariantBrush}"
-                    BorderBrush="{ThemeResource OutlineVariantBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="5,1"
-                    Margin="0,0,6,0"
-                    VerticalAlignment="Center">
-              <TextBlock Text="⌘K"
-                         FontSize="10"
-                         Foreground="{ThemeResource OnSurfaceVariantBrush}" />
-            </Border>
-          </Grid>
-        </Border>
-      </Grid>
+              <StackPanel Grid.Column="1">
+                <TextBlock Text="{Binding Title}"
+                           Style="{StaticResource BodyMedium}"
+                           Foreground="{ThemeResource OnSurfaceBrush}"
+                           TextTrimming="CharacterEllipsis" />
+                <StackPanel Orientation="Horizontal"
+                            Spacing="6">
+                  <TextBlock Text="{Binding Type, Converter={StaticResource SearchEntityTypeToLabelConverter}}"
+                             Style="{StaticResource BodySmall}"
+                             FontWeight="SemiBold"
+                             Foreground="{ThemeResource PrimaryBrush}" />
+                  <TextBlock Text="{Binding Subtitle}"
+                             Style="{StaticResource BodySmall}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                             TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </StackPanel>
+            </Grid>
+          </DataTemplate>
+        </AutoSuggestBox.ItemTemplate>
+      </AutoSuggestBox>
 
       <!-- Navigation Groups -->
       <ScrollViewer Grid.Row="2"

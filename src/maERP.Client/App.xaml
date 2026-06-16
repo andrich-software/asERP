@@ -39,6 +39,7 @@
       <converters:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter" />
       <converters:NotZeroToVisibilityConverter x:Key="NotZeroToVisibilityConverter" />
       <converters:DateTimeOffsetToStringConverter x:Key="DateTimeOffsetToStringConverter" />
+      <converters:BytesToImageSourceConverter x:Key="BytesToImageSourceConverter" />
       <converters:CustomerStatusToTextConverter x:Key="CustomerStatusToTextConverter" />
       <converters:CustomerStatusToBackgroundConverter x:Key="CustomerStatusToBackgroundConverter" />
       <converters:CustomerStatusToForegroundConverter x:Key="CustomerStatusToForegroundConverter" />
@@ -59,6 +60,8 @@
       <converters:ProductTypeToTextConverter x:Key="ProductTypeToTextConverter" />
       <converters:ProductTypeToVisibilityConverter x:Key="ProductTypeToVisibilityConverter" />
       <converters:VariantOptionsSummaryConverter x:Key="VariantOptionsSummaryConverter" />
+      <converters:SearchEntityTypeToGlyphConverter x:Key="SearchEntityTypeToGlyphConverter" />
+      <converters:SearchEntityTypeToLabelConverter x:Key="SearchEntityTypeToLabelConverter" />
 
     </ResourceDictionary>
   </Application.Resources>

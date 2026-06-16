@@ -19,4 +19,7 @@ public class SalesChannelImportProduct
     public List<string> VariantAxes { get; set; } = new();
 
     public List<SalesChannelImportVariant> Variants { get; set; } = new();
+
+    /// <summary>Product photos referenced on the channel, downloaded and attached on import.</summary>
+    public List<SalesChannelImportImage> Images { get; set; } = new();
 }

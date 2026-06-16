@@ -69,6 +69,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<ProductAttributeValue>().ToTable("product_attribute_value");
         modelBuilder.Entity<ProductVariantAxis>().ToTable("product_variant_axis");
         modelBuilder.Entity<ProductVariantOption>().ToTable("product_variant_option");
+        modelBuilder.Entity<ProductImage>().ToTable("product_image");
         modelBuilder.Entity<ProductSalesChannel>().ToTable("product_saleschannel");
         modelBuilder.Entity<ProductStock>().ToTable("product_stock");
         modelBuilder.Entity<SalesChannel>().ToTable("saleschannel");
@@ -118,6 +119,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new ProductAttributeValueConfiguration());
         modelBuilder.ApplyConfiguration(new ProductVariantAxisConfiguration());
         modelBuilder.ApplyConfiguration(new ProductVariantOptionConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductImageConfiguration());
         modelBuilder.ApplyConfiguration(new InvoiceItemConfiguration());
         modelBuilder.ApplyConfiguration(new SalesItemConfiguration());
         modelBuilder.ApplyConfiguration(new ProductSalesChannelConfiguration());
@@ -182,6 +184,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ProductAttributeValue> ProductAttributeValue { get; set; } = null!;
     public DbSet<ProductVariantAxis> ProductVariantAxis { get; set; } = null!;
     public DbSet<ProductVariantOption> ProductVariantOption { get; set; } = null!;
+    public DbSet<ProductImage> ProductImage { get; set; } = null!;
     public DbSet<ProductSalesChannel> ProductSalesChannel { get; set; } = null!;
     public DbSet<ProductStock> ProductStock { get; set; } = null!;
     public DbSet<SalesChannel> SalesChannel { get; set; } = null!;

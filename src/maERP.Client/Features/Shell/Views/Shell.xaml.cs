@@ -13,8 +13,13 @@ using maERP.Client.Features.Dashboard.Models;
 using maERP.Client.Features.Customers.Models;
 using maERP.Client.Features.Invoices.Models;
 using maERP.Client.Features.Manufacturers.Models;
+using maERP.Client.Features.Saless;
 using maERP.Client.Features.Saless.Models;
+using maERP.Client.Features.Customers;
 using maERP.Client.Features.Products.Models;
+using maERP.Client.Features.Search;
+using maERP.Client.Features.Search.Services;
+using maERP.Domain.Dtos.Search;
 using maERP.Client.Features.SalesChannels.Models;
 using maERP.Client.Features.SalesChannels.Services;
 using maERP.Client.Features.SalesChannelDashboards.Models;
@@ -37,6 +42,9 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
     // Currently highlighted sidebar button (active state)
     private Button? _activeNavButton;
+
+    // Debounce token for the quick-search autocomplete
+    private CancellationTokenSource? _searchDebounceCts;
 
     // Cached reference to avoid service lookup on every pointer move
     private ISessionManager? _sessionManager;
@@ -569,6 +577,168 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         {
             Console.WriteLine($"[Shell] Navigation failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Quick-search input changed: debounce, enforce the 3-character threshold and
+    /// fetch autocomplete suggestions from the server.
+    /// </summary>
+    private async void OnQuickSearchTextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        // Only react to typing, not programmatic text changes or suggestion selection.
+        if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput)
+        {
+            return;
+        }
+
+        var query = (sender.Text ?? string.Empty).Trim();
+        if (query.Length < 3)
+        {
+            sender.ItemsSource = null;
+            return;
+        }
+
+        _searchDebounceCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _searchDebounceCts = cts;
+        var token = cts.Token;
+
+        try
+        {
+            await Task.Delay(250, token);
+
+            var app = Application.Current as App;
+            var searchService = app?.Host?.Services?.GetService<ISearchService>();
+            if (searchService == null)
+            {
+                return;
+            }
+
+            var result = await searchService.SearchAsync(query, 5, token);
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            // Flatten the grouped results into a single suggestion list. The two-line
+            // item template renders Title + Subtitle so the type stays distinguishable.
+            var hits = new List<GlobalSearchHitDto>(result.TotalCount);
+            hits.AddRange(result.Customers);
+            hits.AddRange(result.Sales);
+            hits.AddRange(result.Invoices);
+            hits.AddRange(result.Products);
+
+            sender.ItemsSource = hits;
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer keystroke superseded this request — ignore.
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Shell] Quick search failed: {ex.Message}");
+            sender.ItemsSource = null;
+        }
+    }
+
+    /// <summary>
+    /// A suggestion was chosen (click or keyboard highlight) — jump to its detail page.
+    /// </summary>
+    private async void OnQuickSearchSuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+    {
+        if (args.SelectedItem is GlobalSearchHitDto hit)
+        {
+            await NavigateToHit(hit);
+        }
+    }
+
+    /// <summary>
+    /// Enter pressed. With a highlighted suggestion jump straight to it; otherwise open
+    /// the grouped search-results page for the entered query.
+    /// </summary>
+    private async void OnQuickSearchQuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        if (args.ChosenSuggestion is GlobalSearchHitDto hit)
+        {
+            await NavigateToHit(hit);
+            return;
+        }
+
+        var query = (args.QueryText ?? string.Empty).Trim();
+        if (query.Length < 3)
+        {
+            return;
+        }
+
+        var navigator = GetShellNavigator();
+        if (navigator == null)
+        {
+            return;
+        }
+
+        sender.Text = string.Empty;
+        sender.ItemsSource = null;
+
+        try
+        {
+            await navigator.NavigateDataAsync(this, new SearchResultsData(query));
+            UpdateSidebarSelection(null);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Shell] Search results navigation failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Navigate to the detail page matching the hit's entity type.
+    /// </summary>
+    private async Task NavigateToHit(GlobalSearchHitDto hit)
+    {
+        var navigator = GetShellNavigator();
+        if (navigator == null)
+        {
+            return;
+        }
+
+        QuickSearchBox.Text = string.Empty;
+        QuickSearchBox.ItemsSource = null;
+
+        try
+        {
+            switch (hit.Type)
+            {
+                case SearchEntityType.Customer:
+                    await navigator.NavigateDataAsync(this, new CustomerDetailData(hit.Id));
+                    break;
+                case SearchEntityType.Sales:
+                    await navigator.NavigateDataAsync(this, new SalesDetailData(hit.Id));
+                    break;
+                case SearchEntityType.Invoice:
+                    await navigator.NavigateDataAsync(this, new InvoiceDetailData(hit.Id));
+                    break;
+                case SearchEntityType.Product:
+                    await navigator.NavigateDataAsync(this, new ProductDetailData(hit.Id));
+                    break;
+            }
+
+            UpdateSidebarSelection(null);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Shell] Search hit navigation failed: {ex.Message}");
+        }
+    }
+
+    private INavigator? GetShellNavigator()
+    {
+        var navigator = Splash.Navigator();
+        if (navigator == null)
+        {
+            var app = Application.Current as App;
+            navigator = app?.Host?.Services?.GetService<INavigator>();
+        }
+        return navigator;
     }
 
     private async void OnTabBarSelectionChanged(object? sender, TabBarSelectionChangedEventArgs args)

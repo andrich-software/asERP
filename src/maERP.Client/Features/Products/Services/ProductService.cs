@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using maERP.Client.Core.Constants;
 using maERP.Client.Core.Extensions;
@@ -117,5 +118,66 @@ public class ProductService : IProductService
 
         var result = await response.Content.ReadFromJsonAsync(AppJsonSerializerContext.Default.ApiResponseListGuid, ct);
         return result?.Data ?? new List<Guid>();
+    }
+
+    public async Task<List<ProductImageDto>> GetProductImagesAsync(Guid productId, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.Products.Images(productId)}";
+
+        var response = await _httpClient.GetFromJsonAsync(
+            url, AppJsonSerializerContext.Default.ApiResponseListProductImageDto, ct);
+        return response?.Data ?? new List<ProductImageDto>();
+    }
+
+    public async Task<ProductImageDto?> UploadProductImageAsync(
+        Guid productId, Stream content, string fileName, string contentType, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.Products.Images(productId)}";
+
+        _logger.LogInformation("Uploading image '{FileName}' for product {Id}", fileName, productId);
+
+        using var form = new MultipartFormDataContent();
+        var streamContent = new StreamContent(content);
+        if (!string.IsNullOrEmpty(contentType))
+        {
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        }
+        // Field name "file" must match the controller's IFormFile parameter.
+        form.Add(streamContent, "file", fileName);
+
+        var response = await _httpClient.PostAsync(url, form, ct);
+        await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
+
+        var result = await response.Content.ReadFromJsonAsync(AppJsonSerializerContext.Default.ApiResponseProductImageDto, ct);
+        return result?.Data;
+    }
+
+    public async Task DeleteProductImageAsync(Guid productId, Guid imageId, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.Products.ImageById(productId, imageId)}";
+
+        var response = await _httpClient.DeleteAsync(url, ct);
+        await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
+    }
+
+    public async Task ReorderProductImagesAsync(Guid productId, List<Guid> orderedImageIds, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.Products.ImagesReorder(productId)}";
+
+        var request = new ProductImageReorderDto { OrderedImageIds = orderedImageIds };
+        var response = await _httpClient.PutAsJsonAsync(url, request, AppJsonSerializerContext.Default.ProductImageReorderDto, ct);
+        await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
+    }
+
+    public async Task<byte[]> GetProductImageBytesAsync(Guid productId, Guid imageId, bool thumbnail, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.Products.ImageContent(productId, imageId, thumbnail)}";
+
+        return await _httpClient.GetByteArrayAsync(url, ct);
     }
 }

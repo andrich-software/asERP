@@ -103,6 +103,13 @@ public sealed class Shopware6Connector : ConnectorBase
                     {
                         new { type = "equals", field = "parentId", value = (string?)null },
                     },
+                    // Load the photo gallery + featured image; the nested 'media' association is what
+                    // carries the public file url we download. Without it only the join rows come back.
+                    associations = new
+                    {
+                        media = new { associations = new { media = new { } } },
+                        cover = new { associations = new { media = new { } } },
+                    },
                     sort = new[] { new { field = "createdAt", sales = "ASC" } },
                 };
                 var url = $"{baseUrl}/api/search/product";
@@ -141,6 +148,7 @@ public sealed class Shopware6Connector : ConnectorBase
                             TaxRate = 19,
                             Description = description,
                             IsVariantParent = (p.ChildCount ?? 0) > 0,
+                            Images = MapImages(p),
                         };
 
                         if (importProduct.IsVariantParent)
@@ -481,6 +489,44 @@ public sealed class Shopware6Connector : ConnectorBase
                 TaxRate = 19,
             }).ToList(),
         };
+    }
+
+    /// <summary>
+    /// Maps a Shopware product's media gallery to import images. Each entry's public file URL lives on
+    /// the nested Media entity; the join's 'position' gives the gallery order. The product's cover is
+    /// promoted to the front (SortOrder -1) so it becomes the primary photo regardless of its position.
+    /// </summary>
+    private static List<SalesChannelImportImage> MapImages(Sw6Product p)
+    {
+        if (p.Media is null || p.Media.Count == 0)
+        {
+            return [];
+        }
+
+        var coverMediaId = p.Cover?.Media?.Id;
+        var images = new List<SalesChannelImportImage>();
+
+        foreach (var pm in p.Media)
+        {
+            var url = pm.Media?.Url;
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                continue;
+            }
+
+            var mediaId = pm.Media?.Id ?? pm.Id;
+            var isCover = !string.IsNullOrEmpty(coverMediaId) && mediaId == coverMediaId;
+
+            images.Add(new SalesChannelImportImage
+            {
+                RemoteImageId = mediaId,
+                Url = url,
+                AltText = pm.Media?.Alt,
+                SortOrder = isCover ? -1 : pm.Position ?? images.Count,
+            });
+        }
+
+        return images;
     }
 
     private static SalesStatus MapSalesStatus(string? technicalName) => technicalName switch

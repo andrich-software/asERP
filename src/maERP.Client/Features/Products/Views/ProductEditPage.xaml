@@ -684,6 +684,144 @@
             </StackPanel>
           </Border>
 
+          <!-- Images Card -->
+          <Border Background="{ThemeResource SurfaceBrush}"
+                  CornerRadius="12"
+                  Translation="0,0,8"
+                  Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border.Shadow>
+              <ThemeShadow />
+            </Border.Shadow>
+            <StackPanel Spacing="0">
+              <!-- Card Header -->
+              <Grid Padding="16,16,16,8">
+                <StackPanel Orientation="Horizontal">
+                  <FontIcon Glyph="&#xEB9F;"
+                            FontSize="20"
+                            Foreground="{ThemeResource PrimaryBrush}"
+                            Margin="0,0,12,0" />
+                  <TextBlock x:Uid="ProductEditPage.Section.Images"
+                             Style="{StaticResource TitleMedium}"
+                             Foreground="{ThemeResource OnSurfaceBrush}" />
+                </StackPanel>
+              </Grid>
+
+              <StackPanel Padding="16,0,16,16"
+                          Spacing="16">
+
+                <!-- Save-first hint (create mode) -->
+                <Border Background="{ThemeResource SecondaryContainerBrush}"
+                        CornerRadius="8"
+                        Padding="12"
+                        Visibility="{Binding ShowImageSaveFirstHint, Converter={StaticResource BoolToVisibilityConverter}}">
+                  <TextBlock x:Uid="ProductEditPage.ImagesSaveFirstHint"
+                             Style="{StaticResource BodyMedium}"
+                             Foreground="{ThemeResource OnSecondaryContainerBrush}"
+                             TextWrapping="Wrap" />
+                </Border>
+
+                <!-- Image management (edit mode) -->
+                <StackPanel Spacing="12"
+                            Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}">
+
+                  <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Button x:Uid="ProductEditPage.AddImageButton"
+                            Style="{StaticResource OutlinedButtonStyle}"
+                            IsEnabled="{Binding CanModifyImages}"
+                            Click="AddImage_Click" />
+                    <ProgressRing IsActive="{Binding IsImageBusy}"
+                                  Width="24"
+                                  Height="24"
+                                  VerticalAlignment="Center" />
+                  </StackPanel>
+
+                  <!-- Empty hint -->
+                  <TextBlock x:Uid="ProductEditPage.ImagesEmptyHint"
+                             Style="{StaticResource BodyMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                             TextWrapping="Wrap"
+                             Visibility="{Binding Images.Count, Converter={StaticResource ZeroToVisibilityConverter}}" />
+
+                  <!-- Image rows -->
+                  <ItemsControl ItemsSource="{Binding Images}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border Background="{ThemeResource SurfaceVariantBrush}"
+                                CornerRadius="8"
+                                Padding="8"
+                                Margin="0,0,0,8">
+                          <Grid>
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="Auto" />
+                              <ColumnDefinition Width="*" />
+                              <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Thumbnail -->
+                            <Border Grid.Column="0"
+                                    Width="64"
+                                    Height="64"
+                                    CornerRadius="6"
+                                    Background="{ThemeResource SurfaceBrush}">
+                              <Image Source="{Binding ThumbnailBytes, Converter={StaticResource BytesToImageSourceConverter}}"
+                                     Stretch="UniformToFill" />
+                            </Border>
+
+                            <!-- Info -->
+                            <StackPanel Grid.Column="1"
+                                        Margin="12,0"
+                                        VerticalAlignment="Center"
+                                        Spacing="4">
+                              <TextBlock Text="{Binding OriginalFileName}"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceBrush}"
+                                         TextTrimming="CharacterEllipsis" />
+                              <Border Background="{ThemeResource PrimaryContainerBrush}"
+                                      CornerRadius="4"
+                                      Padding="6,2"
+                                      HorizontalAlignment="Left"
+                                      Visibility="{Binding IsPrimary, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock x:Uid="ProductEditPage.ImagePrimaryBadge"
+                                           Style="{StaticResource LabelSmall}"
+                                           Foreground="{ThemeResource OnPrimaryContainerBrush}" />
+                              </Border>
+                            </StackPanel>
+
+                            <!-- Actions -->
+                            <StackPanel Grid.Column="2"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                              <Button x:Uid="ProductEditPage.MakePrimaryButton"
+                                      Style="{StaticResource IconButtonStyle}"
+                                      Click="MakeImagePrimary_Click">
+                                <FontIcon Glyph="&#xE735;" FontSize="16" />
+                              </Button>
+                              <Button x:Uid="ProductEditPage.MoveImageUpButton"
+                                      Style="{StaticResource IconButtonStyle}"
+                                      Click="MoveImageUp_Click">
+                                <FontIcon Glyph="&#xE70E;" FontSize="16" />
+                              </Button>
+                              <Button x:Uid="ProductEditPage.MoveImageDownButton"
+                                      Style="{StaticResource IconButtonStyle}"
+                                      Click="MoveImageDown_Click">
+                                <FontIcon Glyph="&#xE70D;" FontSize="16" />
+                              </Button>
+                              <Button x:Uid="ProductEditPage.DeleteImageButton"
+                                      Style="{StaticResource IconButtonStyle}"
+                                      Click="DeleteImage_Click">
+                                <FontIcon Glyph="&#xE74D;" FontSize="16" />
+                              </Button>
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
           <!-- Description Section -->
           <StackPanel Spacing="12"
                       Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">

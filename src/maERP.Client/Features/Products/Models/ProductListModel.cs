@@ -60,7 +60,7 @@ public partial record ProductListModel
     /// Feed of products from the API.
     /// Automatically refreshes when SearchQuery, CurrentPage, or SortSales changes.
     /// </summary>
-    public IListFeed<ProductListDto> Products => Feed
+    public IListFeed<ProductListItemModel> Products => Feed
         .Combine(SearchQuery, CurrentPage, PageSize, SortSales, IncludeVariants)
         .SelectAsync(async (combined, ct) =>
         {
@@ -87,7 +87,25 @@ public partial record ProductListModel
                 response.HasNextPage,
                 _localizer), ct);
 
-            return response.Data.ToImmutableList();
+            var items = response.Data.Select(d => new ProductListItemModel(d)).ToList();
+
+            // Load primary-image thumbnails in parallel; only for rows that have one.
+            await Task.WhenAll(items
+                .Where(i => i.PrimaryImageId.HasValue)
+                .Select(async item =>
+                {
+                    try
+                    {
+                        item.ThumbnailBytes = await _productService.GetProductImageBytesAsync(
+                            item.Id, item.PrimaryImageId!.Value, thumbnail: true, ct);
+                    }
+                    catch
+                    {
+                        // A missing thumbnail must not break the list.
+                    }
+                }));
+
+            return items.ToImmutableList();
         })
         .AsListFeed();
 

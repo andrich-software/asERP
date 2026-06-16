@@ -111,6 +111,7 @@ public sealed class WooCommerceConnector : ConnectorBase
                         TaxRate = 19,
                         Description = remoteProduct.description,
                         IsVariantParent = isVariable,
+                        Images = MapImages(remoteProduct.images),
                     };
 
                     if (isVariable && remoteProduct.id.HasValue)
@@ -656,6 +657,28 @@ public sealed class WooCommerceConnector : ConnectorBase
             trimmed += ApiPath;
         }
         return trimmed + "/";
+    }
+
+    // WooCommerce returns a product's photos as an ordered list (first entry is the featured image).
+    // 'position' carries the gallery order; fall back to list index when absent. 'src' is the public
+    // file URL the import downloads.
+    private static List<SalesChannelImportImage> MapImages(List<ProductImage> images)
+    {
+        if (images is null || images.Count == 0)
+        {
+            return [];
+        }
+
+        return images
+            .Where(img => !string.IsNullOrWhiteSpace(img.src))
+            .Select((img, index) => new SalesChannelImportImage
+            {
+                RemoteImageId = img.id?.ToString() ?? string.Empty,
+                Url = img.src,
+                AltText = string.IsNullOrWhiteSpace(img.alt) ? img.name : img.alt,
+                SortOrder = img.position ?? index,
+            })
+            .ToList();
     }
 
     // WooCommerce date fields come back without a usable Kind; treat the GMT value as UTC wall-clock so

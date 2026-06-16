@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using maERP.Client.Core.Abstractions;
 using maERP.Client.Core.Exceptions;
@@ -67,6 +68,10 @@ public class ProductEditModel : AsyncInitializableModel
     private ObservableCollection<ProductAxisRow> _axes = new();
     private ObservableCollection<ProductVariantRow> _variants = new();
 
+    // Images
+    private ObservableCollection<ProductImageRow> _images = new();
+    private bool _isImageBusy;
+
     // UI State
     private bool _isSaving;
     private string _errorMessage = string.Empty;
@@ -106,6 +111,7 @@ public class ProductEditModel : AsyncInitializableModel
         if (_productId.HasValue)
         {
             await LoadProductAsync(ct);
+            await LoadImagesAsync(ct);
         }
     }
 
@@ -479,6 +485,216 @@ public class ProductEditModel : AsyncInitializableModel
 
     #endregion
 
+    #region Images
+
+    /// <summary>Images of the product, ordered (first = primary). Edit-mode only.</summary>
+    public ObservableCollection<ProductImageRow> Images
+    {
+        get => _images;
+        set => SetProperty(ref _images, value);
+    }
+
+    /// <summary>True while an image upload/delete/reorder request is in flight.</summary>
+    public bool IsImageBusy
+    {
+        get => _isImageBusy;
+        private set
+        {
+            if (SetProperty(ref _isImageBusy, value))
+            {
+                OnPropertyChanged(nameof(CanModifyImages));
+            }
+        }
+    }
+
+    /// <summary>Images can only be managed for an already-saved product.</summary>
+    public bool CanModifyImages => IsEditMode && !IsImageBusy;
+
+    /// <summary>Hint shown in the images card when the product must be saved first.</summary>
+    public bool ShowImageSaveFirstHint => !IsEditMode;
+
+    private async Task LoadImagesAsync(CancellationToken ct)
+    {
+        if (!_productId.HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            var images = await _productService.GetProductImagesAsync(_productId.Value, ct);
+            Images.Clear();
+            foreach (var dto in images.OrderBy(i => i.SortOrder))
+            {
+                var row = new ProductImageRow
+                {
+                    Id = dto.Id,
+                    SortOrder = dto.SortOrder,
+                    AltText = dto.AltText,
+                    OriginalFileName = dto.OriginalFileName
+                };
+                Images.Add(row);
+                await LoadThumbnailAsync(row, ct);
+            }
+        }
+        catch (ApiException ex)
+        {
+            ErrorMessage = ex.CombinedMessage;
+        }
+    }
+
+    private async Task LoadThumbnailAsync(ProductImageRow row, CancellationToken ct)
+    {
+        if (!_productId.HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            row.ThumbnailBytes = await _productService.GetProductImageBytesAsync(_productId.Value, row.Id, thumbnail: true, ct);
+        }
+        catch
+        {
+            // Thumbnail is non-essential; a missing preview must not break the page.
+        }
+    }
+
+    /// <summary>
+    /// Uploads one or more picked files (re-encoded to PNG server-side) and reloads the list.
+    /// Each stream is disposed after upload.
+    /// </summary>
+    public async Task AddImagesAsync(IReadOnlyList<(Stream Stream, string FileName, string ContentType)> files, CancellationToken ct = default)
+    {
+        if (!_productId.HasValue || files.Count == 0)
+        {
+            return;
+        }
+
+        IsImageBusy = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            foreach (var file in files)
+            {
+                await using (file.Stream)
+                {
+                    await _productService.UploadProductImageAsync(_productId.Value, file.Stream, file.FileName, file.ContentType, ct);
+                }
+            }
+
+            await LoadImagesAsync(ct);
+        }
+        catch (ApiException ex)
+        {
+            ErrorMessage = ex.CombinedMessage;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = string.Format(_localizer["ProductEditPage.SaveFailed"], ex.Message);
+        }
+        finally
+        {
+            IsImageBusy = false;
+        }
+    }
+
+    public async Task DeleteImageAsync(ProductImageRow row, CancellationToken ct = default)
+    {
+        if (!_productId.HasValue)
+        {
+            return;
+        }
+
+        IsImageBusy = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            await _productService.DeleteProductImageAsync(_productId.Value, row.Id, ct);
+            await LoadImagesAsync(ct);
+        }
+        catch (ApiException ex)
+        {
+            ErrorMessage = ex.CombinedMessage;
+        }
+        finally
+        {
+            IsImageBusy = false;
+        }
+    }
+
+    public Task MoveImageUpAsync(ProductImageRow row, CancellationToken ct = default)
+    {
+        var index = Images.IndexOf(row);
+        if (index <= 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        Images.Move(index, index - 1);
+        return PersistImageOrderAsync(ct);
+    }
+
+    public Task MoveImageDownAsync(ProductImageRow row, CancellationToken ct = default)
+    {
+        var index = Images.IndexOf(row);
+        if (index < 0 || index >= Images.Count - 1)
+        {
+            return Task.CompletedTask;
+        }
+
+        Images.Move(index, index + 1);
+        return PersistImageOrderAsync(ct);
+    }
+
+    public Task MakeImagePrimaryAsync(ProductImageRow row, CancellationToken ct = default)
+    {
+        var index = Images.IndexOf(row);
+        if (index <= 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        Images.Move(index, 0);
+        return PersistImageOrderAsync(ct);
+    }
+
+    private async Task PersistImageOrderAsync(CancellationToken ct)
+    {
+        if (!_productId.HasValue)
+        {
+            return;
+        }
+
+        // Reindex locally so IsPrimary and the order update immediately in the UI.
+        for (var i = 0; i < Images.Count; i++)
+        {
+            Images[i].SortOrder = i;
+        }
+
+        IsImageBusy = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            await _productService.ReorderProductImagesAsync(_productId.Value, Images.Select(i => i.Id).ToList(), ct);
+        }
+        catch (ApiException ex)
+        {
+            ErrorMessage = ex.CombinedMessage;
+            // Re-sync with the server if the reorder was rejected.
+            await LoadImagesAsync(ct);
+        }
+        finally
+        {
+            IsImageBusy = false;
+        }
+    }
+
+    #endregion
+
     #region UI State
 
     /// <summary>
@@ -762,6 +978,8 @@ public class ProductEditModel : AsyncInitializableModel
             base.OnPropertyChanged(nameof(CanSave));
             base.OnPropertyChanged(nameof(CanGenerateVariants));
             base.OnPropertyChanged(nameof(ShowSaveFirstHint));
+            base.OnPropertyChanged(nameof(CanModifyImages));
+            base.OnPropertyChanged(nameof(ShowImageSaveFirstHint));
         }
     }
 }

@@ -27,6 +27,7 @@ public static class SalesChannelServiceRegistration
         services.AddScoped<IProductImportRepository, ProductImportRepository>();
         services.AddScoped<ISalesImportRepository, SalesImportRepository>();
         services.AddScoped<ICustomerImportRepository, CustomerImportRepository>();
+        services.AddScoped<IProductImageImportService, ProductImageImportService>();
         // Auth helpers are singletons because they hold per-channel access-token caches; they
         // resolve the scoped IOAuthAppSettingsService internally via IServiceScopeFactory.
         services.AddSingleton<EbayAuthHelper>();
@@ -42,6 +43,8 @@ public static class SalesChannelServiceRegistration
         // Dedicated client for the LWA token endpoint — different host (api.amazon.com) and
         // shorter Polly settings make sense; for now we share the default policy.
         services.AddHttpClient("amazon-lwa").AddPollyHandlers();
+        // Plain (unauthenticated) client for downloading product photos from the shops' public URLs.
+        services.AddHttpClient(ProductImageImportService.HttpClientName).AddPollyHandlers();
 
         // Connectors (one per SalesChannelType). Resolved through the registry, never via
         // direct DI — keeps the channel-specific switch in one place.

@@ -10,6 +10,7 @@ using maERP.Domain.Dtos.Customer;
 using maERP.Domain.Dtos.Invoice;
 using maERP.Domain.Dtos.Manufacturer;
 using maERP.Domain.Dtos.Sales;
+using maERP.Domain.Dtos.Search;
 using maERP.Domain.Dtos.Product;
 using maERP.Domain.Dtos.ProductAttribute;
 using maERP.Domain.Dtos.SalesChannel;
@@ -47,6 +48,8 @@ namespace maERP.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<Guid>))]
 [JsonSerializable(typeof(ApiResponse<UserListDto>))]
 [JsonSerializable(typeof(ApiResponse<ProductDetailDto>))]
+[JsonSerializable(typeof(ApiResponse<ProductImageDto>))]
+[JsonSerializable(typeof(ApiResponse<List<ProductImageDto>>))]
 [JsonSerializable(typeof(ApiResponse<WarehouseDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<CustomerDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<TaxClassDetailDto>))]
@@ -75,8 +78,11 @@ namespace maERP.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<CurrentUserProfileDto>))]
 [JsonSerializable(typeof(ApiResponse<string>))]
 [JsonSerializable(typeof(ApiResponse<List<Guid>>))]
+[JsonSerializable(typeof(ApiResponse<GlobalSearchResultDto>))]
 
 // Direct response types
+[JsonSerializable(typeof(GlobalSearchResultDto))]
+[JsonSerializable(typeof(GlobalSearchHitDto))]
 [JsonSerializable(typeof(AiModelDetailDto))]
 [JsonSerializable(typeof(AiPromptDetailDto))]
 [JsonSerializable(typeof(ManufacturerDetailDto))]
@@ -92,6 +98,7 @@ namespace maERP.Client.Core.Json;
 [JsonSerializable(typeof(SalesChannelInputDto))]
 [JsonSerializable(typeof(ProductInputDto))]
 [JsonSerializable(typeof(ProductVariantGenerateDto))]
+[JsonSerializable(typeof(ProductImageReorderDto))]
 [JsonSerializable(typeof(SalesInputDto))]
 [JsonSerializable(typeof(ManufacturerInputDto))]
 [JsonSerializable(typeof(CustomerInputDto))]
