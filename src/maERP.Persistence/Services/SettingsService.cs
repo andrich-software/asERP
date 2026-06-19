@@ -1,5 +1,6 @@
 using maERP.Application.Contracts.Persistence;
 using maERP.Application.Contracts.Services;
+using maERP.Application.Models.Analytics;
 using maERP.Application.Models.Email;
 using maERP.Application.Models.Grafana;
 using maERP.Application.Models.Identity;
@@ -171,6 +172,44 @@ public class SettingsService : ISettingsService
         }
 
         return Task.FromResult(grafanaSettings);
+    }
+
+    public Task<ClickHouseSettings> GetClickHouseSettingsAsync()
+    {
+        var settings = _settingRepository.Entities.Where(s => s.Key.StartsWith("ClickHouse.")).ToList();
+
+        var clickHouseSettings = new ClickHouseSettings();
+
+        foreach (var setting in settings)
+        {
+            switch (setting.Key)
+            {
+                case "ClickHouse.Host":
+                    if (!string.IsNullOrWhiteSpace(setting.Value)) clickHouseSettings.Host = setting.Value;
+                    break;
+                case "ClickHouse.Port":
+                    if (int.TryParse(setting.Value, out var port)) clickHouseSettings.Port = port;
+                    break;
+                case "ClickHouse.Database":
+                    if (!string.IsNullOrWhiteSpace(setting.Value)) clickHouseSettings.Database = setting.Value;
+                    break;
+                case "ClickHouse.User":
+                    if (!string.IsNullOrWhiteSpace(setting.Value)) clickHouseSettings.User = setting.Value;
+                    break;
+                case "ClickHouse.Password":
+                    // Password is stored encrypted; decrypt via the encryptor (plaintext rows pass through).
+                    clickHouseSettings.Password = setting.IsEncrypted ? _encryptor.Decrypt(setting.Value) : setting.Value;
+                    break;
+                case "ClickHouse.UseTls":
+                    if (bool.TryParse(setting.Value, out var useTls)) clickHouseSettings.UseTls = useTls;
+                    break;
+                case "ClickHouse.Enabled":
+                    if (bool.TryParse(setting.Value, out var enabled)) clickHouseSettings.Enabled = enabled;
+                    break;
+            }
+        }
+
+        return Task.FromResult(clickHouseSettings);
     }
 
     public Task<string> GetSettingValueAsync(string key)

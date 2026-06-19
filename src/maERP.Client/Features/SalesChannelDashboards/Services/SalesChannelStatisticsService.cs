@@ -4,6 +4,7 @@ using maERP.Client.Core.Json;
 using maERP.Client.Core.Models;
 using maERP.Client.Features.Auth.Services;
 using maERP.Domain.Dtos.Statistic;
+using maERP.Domain.Dtos.WebAnalytics;
 using Microsoft.Extensions.Logging;
 
 namespace maERP.Client.Features.SalesChannelDashboards.Services;
@@ -132,6 +133,57 @@ public class SalesChannelStatisticsService : ISalesChannelStatisticsService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching latest saless for SalesChannel {SalesChannelId}", salesChannelId);
+            throw;
+        }
+    }
+
+    public async Task<WebSessionsSummaryDto?> GetWebSessionsAsync(Guid salesChannelId, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.WebStatistics.Sessions}?salesChannelId={salesChannelId}";
+
+        try
+        {
+            var apiResponse = await _httpClient.GetFromJsonAsync(
+                url, AppJsonSerializerContext.Default.ApiResponseWebSessionsSummaryDto, ct);
+
+            if (apiResponse?.Succeeded != true)
+            {
+                _logger.LogWarning("API returned unsuccessful response for WebSessions (SalesChannel {SalesChannelId})", salesChannelId);
+                return null;
+            }
+
+            return apiResponse.Data ?? new WebSessionsSummaryDto();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching web sessions for SalesChannel {SalesChannelId}", salesChannelId);
+            throw;
+        }
+    }
+
+    public async Task<WebTopProductsDto?> GetWebTopProductsAsync(Guid salesChannelId, DateTime startDate, DateTime endDate, int count = 10, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.WebStatistics.TopProducts}" +
+                  $"?salesChannelId={salesChannelId}&startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}&count={count}";
+
+        try
+        {
+            var apiResponse = await _httpClient.GetFromJsonAsync(
+                url, AppJsonSerializerContext.Default.ApiResponseWebTopProductsDto, ct);
+
+            if (apiResponse?.Succeeded != true)
+            {
+                _logger.LogWarning("API returned unsuccessful response for WebTopProducts (SalesChannel {SalesChannelId})", salesChannelId);
+                return null;
+            }
+
+            return apiResponse.Data ?? new WebTopProductsDto();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching web top products for SalesChannel {SalesChannelId}", salesChannelId);
             throw;
         }
     }

@@ -4,6 +4,7 @@ using maERP.Application.Features.Statistic.Queries.SalessLatest;
 using maERP.Application.Features.Statistic.Queries.SalessToday;
 using maERP.Application.Features.Statistic.Queries.ProductsBestSelling;
 using maERP.Application.Features.Statistic.Queries.ProductsToday;
+using maERP.Application.Features.Statistic.Queries.RevenueChart;
 using maERP.Application.Features.Statistic.Queries.SalesToday;
 using maERP.Application.Features.Statistic.Queries.StatisticSales;
 using maERP.Application.Features.Statistic.Queries.StatisticSalesCustomerChart;
@@ -89,6 +90,21 @@ public class StatisticsController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<Result<ProductsBestSellingDto>>> ProductsBestSelling([FromQuery] int count = 5)
     {
         var result = await mediator.Send(new ProductsBestSellingQuery(count));
+
+        if (!result.Succeeded)
+            return StatusCode((int)result.StatusCode, result);
+
+        return Ok(result);
+    }
+
+    // GET: api/v1/<StatisticsController>/RevenueChart
+    [HttpGet("RevenueChart")]
+    public async Task<ActionResult<Result<RevenueChartDto>>> RevenueChart(
+        [FromQuery] DateTime startDate,
+        [FromQuery] DateTime endDate,
+        [FromQuery] Guid? salesChannelId = null)
+    {
+        var result = await mediator.Send(new RevenueChartQuery(startDate, endDate, salesChannelId));
 
         if (!result.Succeeded)
             return StatusCode((int)result.StatusCode, result);

@@ -239,12 +239,27 @@ public sealed class SyncDispatcher
             return null;
         }
 
+        // While the resumable backfill is still walking the full history, the connector pages oldest-first from
+        // its own date_created cursor and ignores modified_after — so don't compute a watermark yet. The
+        // incremental watermark only applies once the whole history is in.
+        if (!salesChannel.InitialSalesImportCompleted)
+        {
+            return null;
+        }
+
+        // Advance the watermark ONLY past fully successful runs. A PartialFailure means the run aborted
+        // mid-walk (e.g. a page fetch failed), so the orders it never reached were not imported. If we
+        // treated its StartedAt as the new baseline, the next incremental run's 'modified_after' would skip
+        // straight past those never-fetched orders and they would be lost forever — exactly the gap that
+        // left this shop at ~17% coverage. By keying off the last *Success* only, a failed/partial run makes
+        // the next scheduled run re-pull the same window (idempotent upserts), so the import self-heals once
+        // connectivity is restored instead of cementing the hole.
         var lastSuccessfulStart = await _context.ChannelSyncRun
             .IgnoreQueryFilters()
             .Where(r => r.SalesChannelId == salesChannel.Id
                         && r.Operation == ChannelSyncOperation.ImportSaless
                         && r.Id != currentRun.Id
-                        && (r.Status == ChannelSyncRunStatus.Success || r.Status == ChannelSyncRunStatus.PartialFailure))
+                        && r.Status == ChannelSyncRunStatus.Success)
             .MaxAsync(r => (DateTime?)r.StartedAt, cancellationToken);
 
         return lastSuccessfulStart is null ? null : lastSuccessfulStart.Value - IncrementalOverlap;

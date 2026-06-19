@@ -1,3 +1,4 @@
+using maERP.Application.Models.Analytics;
 using maERP.Application.Models.Email;
 using maERP.Application.Models.Grafana;
 using maERP.Application.Models.Identity;
@@ -11,6 +12,13 @@ public interface ISettingsService
     Task<EmailSettings> GetEmailSettingsAsync();
     Task<TelemetrySettings> GetTelemetrySettingsAsync();
     Task<GrafanaSettings> GetGrafanaSettingsAsync();
+
+    /// <summary>
+    /// Reads the <c>ClickHouse.*</c> settings (the password via the encrypted path) into a typed model.
+    /// Used by the analytics module to connect to the configured (internal or external) ClickHouse.
+    /// </summary>
+    Task<ClickHouseSettings> GetClickHouseSettingsAsync();
+
     Task<string> GetSettingValueAsync(string key);
     Task SetSettingValueAsync(string key, string value);
 

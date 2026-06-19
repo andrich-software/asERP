@@ -290,6 +290,44 @@
             <ItemsControl x:Name="SalesChannelSubItemsContainer" />
           </StackPanel>
 
+          <!-- STATISTIK -->
+          <Button x:Name="GroupStatistikHeader"
+                  Style="{StaticResource SidebarGroupHeaderStyle}"
+                  Tag="GroupStatistikContent"
+                  Click="OnGroupHeaderClick">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock x:Uid="Shell.NavGroup.Statistik"
+                         FontSize="11"
+                         FontWeight="SemiBold"
+                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                         CharacterSpacing="60"
+                         VerticalAlignment="Center" />
+              <FontIcon x:Name="GroupStatistikChevron"
+                        Grid.Column="1"
+                        Glyph="&#xE70D;"
+                        FontSize="10"
+                        Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                        VerticalAlignment="Center" />
+            </Grid>
+          </Button>
+          <StackPanel x:Name="GroupStatistikContent">
+            <Button x:Name="NavItemRevenue"
+                    Style="{StaticResource SidebarNavItemStyle}"
+                    Tag="StatisticsRevenue"
+                    Click="OnNavItemClick">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <FontIcon Glyph="&#xE9D2;" FontSize="16" />
+                <TextBlock x:Uid="Shell.NavItem.Revenue"
+                           Style="{StaticResource BodyMedium}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+
           <!-- STAMMDATEN -->
           <Button x:Name="GroupStammdatenHeader"
                   Style="{StaticResource SidebarGroupHeaderStyle}"
@@ -315,18 +353,6 @@
             </Grid>
           </Button>
           <StackPanel x:Name="GroupStammdatenContent">
-            <Button x:Name="NavItemCustomers"
-                    Style="{StaticResource SidebarNavItemStyle}"
-                    Tag="Customers"
-                    Click="OnNavItemClick">
-              <StackPanel Orientation="Horizontal" Spacing="12">
-                <FontIcon Glyph="&#xE716;" FontSize="16" />
-                <TextBlock x:Uid="Shell.NavItem.Customers"
-                           Style="{StaticResource BodyMedium}"
-                           VerticalAlignment="Center" />
-              </StackPanel>
-            </Button>
-
             <Button x:Name="NavItemProducts"
                     Style="{StaticResource SidebarNavItemStyle}"
                     Tag="Products"
@@ -334,6 +360,18 @@
               <StackPanel Orientation="Horizontal" Spacing="12">
                 <FontIcon Glyph="&#xE7BF;" FontSize="16" />
                 <TextBlock x:Uid="Shell.NavItem.Products"
+                           Style="{StaticResource BodyMedium}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
+            <Button x:Name="NavItemCustomers"
+                    Style="{StaticResource SidebarNavItemStyle}"
+                    Tag="Customers"
+                    Click="OnNavItemClick">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <FontIcon Glyph="&#xE716;" FontSize="16" />
+                <TextBlock x:Uid="Shell.NavItem.Customers"
                            Style="{StaticResource BodyMedium}"
                            VerticalAlignment="Center" />
               </StackPanel>

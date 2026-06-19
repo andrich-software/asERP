@@ -55,5 +55,11 @@ public class SalesChannelConfiguration : IEntityTypeConfiguration<SalesChannel>
         builder.Property(q => q.Password).HasMaxLength(4096);
         builder.Property(q => q.AccessToken).HasMaxLength(8192);
         builder.Property(q => q.RefreshToken).HasMaxLength(8192);
+
+        // Web-analytics tracking. The token is encrypted at rest (longer ciphertext); the hash is a
+        // plain, indexed SHA-256 hex used for the anonymous hot-path token lookup.
+        builder.Property(q => q.TrackingToken).HasMaxLength(4096);
+        builder.Property(q => q.TrackingTokenHash).HasMaxLength(64);
+        builder.HasIndex(q => q.TrackingTokenHash);
     }
 }

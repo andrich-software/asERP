@@ -173,9 +173,6 @@ public sealed class WooCommerceConnector : ConnectorBase
             return SyncResult.Failed($"Invalid sales channel URL: {ex.Message}");
         }
 
-        var processed = 0;
-        var failed = 0;
-
         RestAPI rest;
         try
         {
@@ -186,18 +183,164 @@ public sealed class WooCommerceConnector : ConnectorBase
             return SyncResult.Failed(ex.Message);
         }
 
-        // Orders are heavier than customers (line items + two addresses each) and a large shop can hold
-        // far more than fits a single timeout window. Page and persist each order immediately so a late
-        // page failure keeps every order imported so far. Sorted by 'modified' ascending and, on incremental
-        // runs, filtered to 'modified_after' the previous run's watermark, so a steady shop only pulls the
-        // handful of new/changed orders per tick instead of its full history. Upserts are idempotent, so the
-        // overlap window and any retry simply refill what is missing.
-        // Sort by 'id' (immutable), NOT 'modified': offset pagination over a result set sorted by a mutable
-        // key is unstable. With orderby=modified, any order touched mid-walk jumps to a later page, so orders
-        // slip past the cursor and are never fetched — and a page that comes back entirely already-seen would
-        // trip the newInBatch==0 guard and stop the import early. 'id' never changes, so every order is paged
-        // exactly once even while the shop keeps taking orders. 'modified_after' still filters the set on
-        // incremental runs; it is independent of the sort key.
+        // Two modes, picked by the channel's backfill state:
+        //  - Backfill (InitialSalesImportCompleted == false): walk the WHOLE order history oldest-first and
+        //    resume across runs from a persisted cursor, so a large shop is filled completely without ever
+        //    restarting from page 1. See ImportSalesBackfillAsync.
+        //  - Incremental (completed): pull only orders changed since the last successful run (modified_after),
+        //    which also catches edits/refunds to existing orders. See ImportSalesIncrementalAsync.
+        return context.SalesChannel.InitialSalesImportCompleted
+            ? await ImportSalesIncrementalAsync(context, rest)
+            : await ImportSalesBackfillAsync(context, rest);
+    }
+
+    /// <summary>
+    /// Resumable, oldest-first backfill of the full order history. WooCommerce's REST <c>orders</c> endpoint
+    /// has no "id greater than" filter, but <c>date_created</c> is immutable, so <c>orderby=date&amp;order=asc</c>
+    /// is a stable walk: new orders only ever append at the tail and nothing an earlier page already returned
+    /// can shift (unlike <c>modified</c>, which jumps a touched order to a later page mid-walk). We persist the
+    /// <c>date_created</c> of the furthest order imported as the channel's cursor after every page, so an
+    /// interrupted run (timeout, page failure, graceful shutdown) resumes from there next time instead of
+    /// starting over. The boundary second is re-fetched (<c>after</c> is exclusive, we step back 1s) but upserts
+    /// are idempotent. The cursor never advances past an order that failed to import, so failures are retried
+    /// rather than skipped. When a short page proves we walked off the end with no error, we flip
+    /// <see cref="SalesChannel.InitialSalesImportCompleted"/> and the channel switches to incremental mode.
+    /// </summary>
+    private async Task<SyncResult> ImportSalesBackfillAsync(SalesChannelContext context, RestAPI rest)
+    {
+        var processed = 0;
+        var failed = 0;
+
+        var baseParameters = new Dictionary<string, string>
+        {
+            ["per_page"] = PageSize.ToString(),
+            ["orderby"] = "date",
+            ["order"] = "asc",
+            ["dates_are_gmt"] = "true",
+        };
+
+        var startCursor = context.SalesChannel.SalesImportBackfillCursor;
+        if (startCursor is { } c)
+        {
+            // 'after' is exclusive; step back a second so orders sharing the cursor's timestamp are not skipped.
+            baseParameters["after"] = c.AddSeconds(-1).ToString("yyyy-MM-ddTHH:mm:ss");
+        }
+
+        // Highest date_created we can safely claim as "everything below is imported". Frozen the moment an
+        // order fails so the cursor never advances past a gap; the next run resumes at the failure and retries.
+        var cursorAdvance = startCursor;
+        var frozen = false;
+        var reachedEnd = false;
+        var fetchFailed = false;
+        var seen = new HashSet<string>();
+
+        for (var page = 1; page <= MaxPages; page++)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            List<WooOrder> batch;
+            try
+            {
+                var parameters = new Dictionary<string, string>(baseParameters) { ["page"] = page.ToString() };
+                batch = await GetOrderPageWithRetryAsync(rest, parameters, page, context.CancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "WooCommerce order backfill page {Page} fetch failed after {Attempts} attempts", page, PageFetchAttempts);
+                fetchFailed = true;
+                break;
+            }
+
+            if (batch is null || batch.Count == 0)
+            {
+                reachedEnd = true;
+                break;
+            }
+
+            var newInBatch = 0;
+            foreach (var remoteSales in batch)
+            {
+                // Guard against an endpoint that ignores 'page' and keeps returning the same rows.
+                var key = remoteSales.id?.ToString() ?? $"__noid_{processed}_{failed}";
+                if (!seen.Add(key))
+                {
+                    continue;
+                }
+                newInBatch++;
+
+                try
+                {
+                    await _salesImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, MapOrder(remoteSales));
+                    processed++;
+
+                    if (!frozen)
+                    {
+                        var orderedAt = ToUtc(remoteSales.date_created_gmt ?? remoteSales.date_created);
+                        if (cursorAdvance is null || orderedAt > cursorAdvance)
+                        {
+                            cursorAdvance = orderedAt;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    frozen = true;
+                    _logger.LogError(ex, "WooCommerce sales backfill failed for {Id}", remoteSales.id);
+                }
+            }
+
+            // Persist progress after every page (in-memory on the tracked entity; the orchestrator/CloseRun
+            // saves it) so a shutdown-canceled or failed run still resumes from here.
+            if (cursorAdvance is { } adv && adv != context.SalesChannel.SalesImportBackfillCursor)
+            {
+                context.SalesChannel.SalesImportBackfillCursor = adv;
+            }
+
+            if (batch.Count < PageSize)
+            {
+                reachedEnd = true;
+                break;
+            }
+            if (newInBatch == 0)
+            {
+                break;
+            }
+        }
+
+        // Only declare the history fully imported when we walked off the end cleanly — no fetch error and no
+        // order left behind. Otherwise stay in backfill mode so the next run keeps filling from the cursor.
+        if (reachedEnd && !fetchFailed && !frozen)
+        {
+            context.SalesChannel.InitialSalesImportCompleted = true;
+        }
+
+        if (fetchFailed && failed == 0)
+        {
+            // Page fetch died but everything pulled so far is kept. Report partial (not clean Success) when we
+            // imported something, so this run does not become an incremental watermark ahead of un-fetched orders.
+            return processed > 0
+                ? new SyncResult(processed, 1)
+                : SyncResult.Failed("WooCommerce order backfill page fetch failed");
+        }
+
+        return new SyncResult(processed, failed);
+    }
+
+    /// <summary>
+    /// Incremental order pull for a caught-up channel. Sorted by 'id' (immutable), NOT 'modified': offset
+    /// pagination over a result set sorted by a mutable key is unstable — with orderby=modified, any order
+    /// touched mid-walk jumps to a later page and slips past the cursor. 'id' never changes, so every order is
+    /// paged exactly once even while the shop keeps taking orders. 'modified_after' (from the previous
+    /// successful run's watermark) still filters the set, independent of the sort key, so a steady shop only
+    /// pulls the handful of new/changed orders per tick. Upserts are idempotent, so the overlap window and any
+    /// retry simply refill what is missing.
+    /// </summary>
+    private async Task<SyncResult> ImportSalesIncrementalAsync(SalesChannelContext context, RestAPI rest)
+    {
+        var processed = 0;
+        var failed = 0;
+
         var baseParameters = new Dictionary<string, string>
         {
             ["per_page"] = PageSize.ToString(),
@@ -221,11 +364,11 @@ public sealed class WooCommerceConnector : ConnectorBase
             try
             {
                 var parameters = new Dictionary<string, string>(baseParameters) { ["page"] = page.ToString() };
-                batch = await GetOrderPageAsync(rest, parameters, context.CancellationToken);
+                batch = await GetOrderPageWithRetryAsync(rest, parameters, page, context.CancellationToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "WooCommerce order page {Page} fetch failed", page);
+                _logger.LogError(ex, "WooCommerce order page {Page} fetch failed after {Attempts} attempts", page, PageFetchAttempts);
                 return processed > 0
                     ? new SyncResult(processed, failed + 1)
                     : SyncResult.Failed(ex.Message);
@@ -266,6 +409,40 @@ public sealed class WooCommerceConnector : ConnectorBase
         }
 
         return new SyncResult(processed, failed);
+    }
+
+    /// <summary>
+    /// Fetches one page of orders, retrying a handful of times on transient failures (timeouts, 5xx,
+    /// brief DNS/TLS hiccups, a Cloudflare interstitial). Without this, a single transient blip on any
+    /// page aborts the whole run as a PartialFailure — which used to advance the incremental watermark
+    /// and permanently skip every order the run never reached. Retrying lets a run actually complete and
+    /// reach Success. Cancellation (server shutdown) is never retried; it propagates to end the walk.
+    /// </summary>
+    private async Task<List<WooOrder>> GetOrderPageWithRetryAsync(RestAPI rest, Dictionary<string, string> parameters, int page, CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                return await GetOrderPageAsync(rest, parameters, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "WooCommerce order page {Page} fetch attempt {Attempt}/{Max} failed", page, attempt, PageFetchAttempts);
+                if (attempt >= PageFetchAttempts)
+                {
+                    throw;
+                }
+
+                // Linear backoff: 3s, 6s, ... gives a brief outage or rate-limit window time to clear.
+                await Task.Delay(PageRetryDelay * attempt, cancellationToken);
+            }
+        }
     }
 
     /// <summary>
@@ -553,6 +730,11 @@ public sealed class WooCommerceConnector : ConnectorBase
     // pull. The page cap is a safety net so a misbehaving endpoint can never spin the import forever.
     private const int PageSize = 100;
     private const int MaxPages = 1000;
+
+    // Retry budget for a single order-page fetch. Transient blips (timeout, 5xx, brief DNS/TLS hiccup,
+    // Cloudflare interstitial) should not abort an otherwise-healthy run.
+    private const int PageFetchAttempts = 3;
+    private static readonly TimeSpan PageRetryDelay = TimeSpan.FromSeconds(3);
 
     /// <summary>
     /// WooCommerce returns products in pages (default 10, max 100 per request). <c>GetAll()</c> with no

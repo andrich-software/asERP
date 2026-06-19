@@ -161,6 +161,7 @@ public class TenantAwareEmailServiceFallbackTest
         public Task<EmailSettings> GetEmailSettingsAsync() => Task.FromResult(_email);
         public Task<maERP.Application.Models.Telemetry.TelemetrySettings> GetTelemetrySettingsAsync() => Task.FromResult(new maERP.Application.Models.Telemetry.TelemetrySettings());
         public Task<maERP.Application.Models.Grafana.GrafanaSettings> GetGrafanaSettingsAsync() => Task.FromResult(new maERP.Application.Models.Grafana.GrafanaSettings());
+        public Task<maERP.Application.Models.Analytics.ClickHouseSettings> GetClickHouseSettingsAsync() => Task.FromResult(new maERP.Application.Models.Analytics.ClickHouseSettings());
         public Task<string> GetSettingValueAsync(string key) => Task.FromResult(string.Empty);
         public Task SetSettingValueAsync(string key, string value) => Task.CompletedTask;
         public Task<string> GetEncryptedSettingValueAsync(string key) => Task.FromResult(string.Empty);

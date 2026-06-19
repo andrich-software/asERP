@@ -1,6 +1,7 @@
 ﻿using maERP.Application.Contracts.Persistence;
 using maERP.Application.Contracts.Services;
 using maERP.Application.Exceptions;
+using maERP.Domain.Dtos.WebAnalytics;
 using maERP.Domain.Entities;
 using maERP.Persistence.DatabaseContext;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,26 @@ public class SalesChannelRepository : GenericRepository<SalesChannel>, ISalesCha
         }
 
         return salesChannel;
+    }
+
+    public async Task<List<SalesChannelTrackingRef>> GetEnabledTrackingChannelsAsync(CancellationToken cancellationToken = default)
+    {
+        // Anonymous, cross-tenant lookup for the ingest hot path: bypass the tenant query filter.
+        // Only channels that are tracking-enabled and have a configured token hash are returned.
+        return await Context.SalesChannel
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(s => s.TrackingEnabled
+                        && s.TenantId != null
+                        && s.TrackingTokenHash != null
+                        && s.TrackingTokenHash != "")
+            .Select(s => new SalesChannelTrackingRef
+            {
+                SalesChannelId = s.Id,
+                TenantId = s.TenantId!.Value,
+                TrackingTokenHash = s.TrackingTokenHash!
+            })
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<bool> SalesChannelIsUniqueAsync(SalesChannel salesChannel, Guid? id = null)

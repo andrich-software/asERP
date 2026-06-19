@@ -43,10 +43,14 @@ public class TenantMiddleware
         // OAuthCallbackHandler (it calls TenantContext.SetCurrentTenantId after state lookup).
         // The /start and /disconnect routes still require the tenant header as usual.
         var isOAuthCallback = pathLower != null && pathLower.Contains("/oauth/") && pathLower.EndsWith("/callback");
+        // Storefront web-analytics ingest is anonymous and authenticated by a per-channel tracking token;
+        // it carries no X-Tenant-Id. The tenant is resolved server-side from the token inside the ingest
+        // pipeline. Without this skip the middleware would 401 every beacon before the controller runs.
+        var isStorefrontIngest = pathLower != null && pathLower.Contains("/storefront/");
 
         logger.LogDebug($"🔍 TenantMiddleware - isAuthEndpoint: {isAuthEndpoint}, isSuperadminEndpoint: {isSuperadminEndpoint}, isSwaggerEndpoint: {isSwaggerEndpoint}, isOAuthCallback: {isOAuthCallback}");
 
-        if (isAuthEndpoint || isSuperadminEndpoint || isSwaggerEndpoint || isHealthEndpoint || isServerInfoEndpoint || isOAuthCallback)
+        if (isAuthEndpoint || isSuperadminEndpoint || isSwaggerEndpoint || isHealthEndpoint || isServerInfoEndpoint || isOAuthCallback || isStorefrontIngest)
         {
             logger.LogDebug($"✅  TenantMiddleware - Skipping tenant validation for: {path}");
             await _next(context);

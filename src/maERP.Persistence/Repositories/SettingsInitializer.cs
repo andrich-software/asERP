@@ -125,6 +125,19 @@ namespace maERP.Persistence.Repositories
                 new Setting { Key = "Grafana.MetricsEnabled", Value = "False" },
                 new Setting { Key = "Grafana.LogsEnabled", Value = "False" },
 
+                // ClickHouse (web analytics). Seeded from environment so docker-compose can point the
+                // server at the bundled 'clickhouse' service; defaults to localhost for local dev. These
+                // are the source of truth afterwards — edit them to use an external ClickHouse. The
+                // password is stored plaintext here for the non-secret internal default; switching to an
+                // external server should re-save it via the encrypted settings path.
+                new Setting { Key = "ClickHouse.Host", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_HOST") ?? "localhost" },
+                new Setting { Key = "ClickHouse.Port", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_PORT") ?? "8123" },
+                new Setting { Key = "ClickHouse.Database", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_DB") ?? "maerp_analytics" },
+                new Setting { Key = "ClickHouse.User", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_USER") ?? "maerp" },
+                new Setting { Key = "ClickHouse.Password", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_PASSWORD") ?? "maerp" },
+                new Setting { Key = "ClickHouse.UseTls", Value = "False" },
+                new Setting { Key = "ClickHouse.Enabled", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_ENABLED") ?? "True" },
+
                 // OAuth — generic
                 // Public base URL the third-party redirects back to. Must be HTTPS in production
                 // (eBay/Amazon enforce). e.g. "https://erp.acme.com".

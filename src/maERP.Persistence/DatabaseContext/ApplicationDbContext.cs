@@ -108,6 +108,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<SalesChannel>().Property(e => e.Password).HasConversion(encryptedConverter);
         modelBuilder.Entity<SalesChannel>().Property(e => e.AccessToken).HasConversion(encryptedConverter!);
         modelBuilder.Entity<SalesChannel>().Property(e => e.RefreshToken).HasConversion(encryptedConverter!);
+        // Web-analytics token encrypted at rest with the same key ring. The TrackingTokenHash column
+        // stays plaintext — it is a non-reversible SHA-256 used only for the indexed token lookup.
+        modelBuilder.Entity<SalesChannel>().Property(e => e.TrackingToken).HasConversion(encryptedConverter!);
         // OAuth Developer-App ClientSecret encrypted at rest with the same key ring.
         modelBuilder.Entity<TenantOAuthAppSettings>().Property(e => e.ClientSecret).HasConversion(encryptedConverter!);
         modelBuilder.ApplyConfiguration(new TaxClassConfiguration());

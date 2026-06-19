@@ -1,13 +1,16 @@
 ﻿using Asp.Versioning;
 using maERP.Application.Contracts.Persistence;
+using maERP.Application.Contracts.Services;
 using maERP.Application.Features.SalesChannel.Commands.SalesChannelCreate;
 using maERP.Application.Features.SalesChannel.Commands.SalesChannelDelete;
 using maERP.Application.Features.SalesChannel.Commands.SalesChannelUpdate;
 using maERP.Application.Features.SalesChannel.Queries.SalesChannelDetail;
 using maERP.Application.Features.SalesChannel.Queries.SalesChannelList;
 using maERP.Domain.Dtos.SalesChannel;
+using maERP.Domain.Dtos.WebAnalytics;
 using maERP.Domain.Entities;
 using maERP.Domain.Enums;
+using maERP.Domain.Services;
 using maERP.Domain.Wrapper;
 using maERP.Application.Mediator;
 using maERP.Persistence.DatabaseContext;
@@ -30,8 +33,21 @@ public class SalesChannelsController(
     SyncDispatcher syncDispatcher,
     SalesChannelContextFactory contextFactory,
     ISalesChannelConnectorRegistry connectorRegistry,
+    ITenantContext tenantContext,
     ApplicationDbContext dbContext) : ControllerBase
 {
+    /// <summary>
+    /// Loads a channel scoped to the current tenant. The global query filter is the primary guard, but
+    /// it is disabled in the Testing environment and bypassed by some paths — so tracking mutations filter
+    /// the tenant explicitly here (defense in depth), matching the repository pattern.
+    /// </summary>
+    private Task<SalesChannel?> FindTenantChannelAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var currentTenantId = tenantContext.GetCurrentTenantId();
+        return dbContext.SalesChannel
+            .FirstOrDefaultAsync(s => s.Id == id && (s.TenantId == null || s.TenantId == currentTenantId), cancellationToken);
+    }
+
     // GET: api/v1/<SalesChannelsController>
     [HttpGet]
     public async Task<ActionResult<PaginatedResult<SalesChannelListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
@@ -259,6 +275,79 @@ public class SalesChannelsController(
         row.NextAttemptAt = DateTime.UtcNow;
         row.LastError = null;
         row.CompletedAt = null;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Web-analytics tracking status for the channel (whether tracking is on and a token is configured).
+    /// Tenant-isolated via the global query filter.
+    /// </summary>
+    [HttpGet("{id:guid}/tracking")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SalesChannelTrackingStatusDto>> GetTrackingStatus(Guid id, CancellationToken cancellationToken)
+    {
+        var channel = await FindTenantChannelAsync(id, cancellationToken);
+        if (channel is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new SalesChannelTrackingStatusDto
+        {
+            SalesChannelId = id,
+            TrackingEnabled = channel.TrackingEnabled,
+            HasToken = !string.IsNullOrEmpty(channel.TrackingTokenHash)
+        });
+    }
+
+    /// <summary>
+    /// Generates (or rotates) the channel's web-analytics tracking token and enables tracking. Returns
+    /// the plaintext token ONCE — paste it into the shop plugin. Rotating invalidates the previous token
+    /// and any historical pseudonymised-customer (cid) matching. Tenant-isolated via the query filter.
+    /// </summary>
+    [HttpPost("{id:guid}/tracking-token")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SalesChannelTrackingTokenDto>> RotateTrackingToken(Guid id, CancellationToken cancellationToken)
+    {
+        var channel = await FindTenantChannelAsync(id, cancellationToken);
+        if (channel is null)
+        {
+            return NotFound();
+        }
+
+        var token = TrackingTokenHasher.GenerateToken();
+        channel.TrackingToken = token;                          // encrypted at rest by the value converter
+        channel.TrackingTokenHash = TrackingTokenHasher.Hash(token);
+        channel.TrackingEnabled = true;
+        channel.DateModified = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new SalesChannelTrackingTokenDto
+        {
+            SalesChannelId = id,
+            Token = token,
+            TrackingEnabled = true
+        });
+    }
+
+    /// <summary>Disables web-analytics tracking for the channel (keeps the stored token).</summary>
+    [HttpDelete("{id:guid}/tracking")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> DisableTracking(Guid id, CancellationToken cancellationToken)
+    {
+        var channel = await FindTenantChannelAsync(id, cancellationToken);
+        if (channel is null)
+        {
+            return NotFound();
+        }
+
+        channel.TrackingEnabled = false;
+        channel.DateModified = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return NoContent();

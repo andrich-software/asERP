@@ -27,6 +27,7 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
     <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="10.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.7" />
     <PackageVersion Include="Amazon.SellingPartnerAPIAA" Version="1.2.0" />
     <!-- Uno Platform -->
     <PackageVersion Include="Tmds.DBus.Protocol" Version="0.93.0" />
@@ -92,6 +93,7 @@
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.7" />
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.2" />
     <PackageVersion Include="WooCommerceNET" Version="0.8.7" />
+    <PackageVersion Include="ClickHouse.Client" Version="7.14.0" />
   </ItemGroup>
   <ItemGroup Condition="$(UsingUnoSdk) != 'true'">
     <PackageVersion Include="Uno.Wasm.Bootstrap.Server" Version="10.0.0" />

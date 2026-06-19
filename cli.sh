@@ -300,7 +300,8 @@ cmd_logs() {
         server)
             local -a profiles
             mapfile -t profiles < <(profile_args server)
-            local -a services=(server)
+            # clickhouse runs in the 'server' profile (web analytics); include it in server logs.
+            local -a services=(server clickhouse)
             [[ "$DB_MODE" == "internal" ]] && services+=(postgres)
             "${COMPOSE[@]}" "${profiles[@]}" logs -f --tail=200 "${services[@]}"
             ;;

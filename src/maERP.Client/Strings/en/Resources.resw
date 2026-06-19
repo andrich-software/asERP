@@ -4149,6 +4149,36 @@
   <data name="SalesChannelDashboard.Tab.RecentSales.Header" xml:space="preserve">
     <value>Recent Orders</value>
   </data>
+  <data name="SalesChannelDashboard.Tab.WebStatistics.Header" xml:space="preserve">
+    <value>Web Statistics</value>
+  </data>
+  <data name="SalesChannelDashboard.WebStats.SessionsToday.Text" xml:space="preserve">
+    <value>Sessions today</value>
+  </data>
+  <data name="SalesChannelDashboard.WebStats.SessionsYesterday.Text" xml:space="preserve">
+    <value>Sessions yesterday</value>
+  </data>
+  <data name="SalesChannelDashboard.WebStats.SessionsThisWeek.Text" xml:space="preserve">
+    <value>Sessions this week</value>
+  </data>
+  <data name="SalesChannelDashboard.WebStats.SessionsLastWeek.Text" xml:space="preserve">
+    <value>Sessions last week</value>
+  </data>
+  <data name="SalesChannelDashboard.WebStats.TopProducts.Text" xml:space="preserve">
+    <value>Most visited products</value>
+  </data>
+  <data name="SalesChannelDashboard.WebStats.ColProduct.Text" xml:space="preserve">
+    <value>Product</value>
+  </data>
+  <data name="SalesChannelDashboard.WebStats.ColViews.Text" xml:space="preserve">
+    <value>Views</value>
+  </data>
+  <data name="SalesChannelDashboard.WebStats.ColVisitors.Text" xml:space="preserve">
+    <value>Visitors</value>
+  </data>
+  <data name="SalesChannelDashboard.WebStats.Empty.Text" xml:space="preserve">
+    <value>No visitor data yet</value>
+  </data>
   <data name="SalesChannelDashboard.RecentSales.SalesNumber.Text" xml:space="preserve">
     <value>Recent Orders</value>
   </data>
@@ -4170,6 +4200,30 @@
   </data>
   <data name="Shell.NavGroup.Verkauf.Text" xml:space="preserve">
     <value>SALES</value>
+  </data>
+  <data name="Shell.NavGroup.Statistik.Text" xml:space="preserve">
+    <value>STATISTICS</value>
+  </data>
+  <data name="Shell.NavItem.Revenue.Text" xml:space="preserve">
+    <value>Revenue</value>
+  </data>
+  <data name="RevenuePage.Breadcrumb.Text" xml:space="preserve">
+    <value>Statistics</value>
+  </data>
+  <data name="RevenuePage.Title.Text" xml:space="preserve">
+    <value>Revenue</value>
+  </data>
+  <data name="RevenuePage.StartDate.Header" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="RevenuePage.EndDate.Header" xml:space="preserve">
+    <value>To</value>
+  </data>
+  <data name="RevenuePage.TotalLabel.Text" xml:space="preserve">
+    <value>Total revenue</value>
+  </data>
+  <data name="RevenuePage.NoData.Text" xml:space="preserve">
+    <value>No data for the selected period</value>
   </data>
   <data name="Shell.NavGroup.Einstellungen.Text" xml:space="preserve">
     <value>SETTINGS</value>

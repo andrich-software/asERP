@@ -21,6 +21,7 @@ using maERP.Domain.Dtos.TaxClass;
 using maERP.Domain.Dtos.Tenant;
 using maERP.Domain.Dtos.User;
 using maERP.Domain.Dtos.Warehouse;
+using maERP.Domain.Dtos.WebAnalytics;
 
 namespace maERP.Client.Core.Json;
 
@@ -57,11 +58,14 @@ namespace maERP.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<SuperadminTenantDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<InvoiceDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<SalesTodayDto>))]
+[JsonSerializable(typeof(ApiResponse<RevenueChartDto>))]
 [JsonSerializable(typeof(ApiResponse<SalessTodayDto>))]
 [JsonSerializable(typeof(ApiResponse<CustomersTodayDto>))]
 [JsonSerializable(typeof(ApiResponse<ProductsTodayDto>))]
 [JsonSerializable(typeof(ApiResponse<SalessLatestDto>))]
 [JsonSerializable(typeof(ApiResponse<ProductsBestSellingDto>))]
+[JsonSerializable(typeof(ApiResponse<WebSessionsSummaryDto>))]
+[JsonSerializable(typeof(ApiResponse<WebTopProductsDto>))]
 [JsonSerializable(typeof(ApiResponse<SalesDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<SalesChannelDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<maERP.Domain.Dtos.SalesChannelOAuth.OAuthStartResponseDto>))]

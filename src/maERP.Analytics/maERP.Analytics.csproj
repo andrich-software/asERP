@@ -10,4 +10,8 @@
 	<ItemGroup>
 		<ProjectReference Include="..\maERP.Application\maERP.Application.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="ClickHouse.Client" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+	</ItemGroup>
 </Project>

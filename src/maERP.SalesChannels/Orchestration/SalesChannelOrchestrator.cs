@@ -186,6 +186,13 @@ public sealed class SalesChannelOrchestrator : BackgroundService
                 if (channel.ImportSaless)
                 {
                     await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportSaless, ChannelSyncTriggerSource.Scheduler, cancellationToken);
+
+                    // The sales import advances its resumable backfill cursor on the channel entity as it pages
+                    // (and flips InitialSalesImportCompleted once the whole history is in). Persist that progress
+                    // every tick — even after a partial or shutdown-canceled run — so the next run resumes from
+                    // the cursor instead of restarting. CancellationToken.None: this must still save when the
+                    // poll's own token was canceled by a shutdown.
+                    await context.SaveChangesAsync(CancellationToken.None);
                 }
                 // Like the product import, the customer import is a full, non-incremental pull. Gate the
                 // scheduled run to once-until-complete so it does not re-pull the entire customer base every

@@ -160,6 +160,15 @@ public static class ApiEndpoints
         public const string ProductsToday = $"{Base}/ProductsToday";
         public const string SalessLatest = $"{Base}/SalessLatest";
         public const string ProductsBestSelling = $"{Base}/ProductsBestSelling";
+        public const string RevenueChart = $"{Base}/RevenueChart";
+    }
+
+    // Web statistics (sales-channel visitor analytics)
+    public static class WebStatistics
+    {
+        public const string Base = $"{ApiBase}/webstatistics";
+        public const string Sessions = $"{Base}/Sessions";
+        public const string TopProducts = $"{Base}/TopProducts";
     }
 
     // Tenants

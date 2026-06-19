@@ -99,6 +99,9 @@ public static class Routes
     public const string ProductAttributeEdit = "ProductAttributeEdit";
     public const string ProductAttributeCreate = "ProductAttributeCreate";
 
+    // Statistics
+    public const string StatisticsRevenue = "StatisticsRevenue";
+
     // Admin
     public const string AdminUsers = "AdminUsers";
     public const string AdminTenants = "AdminTenants";

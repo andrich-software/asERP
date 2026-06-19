@@ -5,6 +5,8 @@ using maERP.Client.Features.Saless.Models;
 using maERP.Client.Features.Saless.Services;
 using maERP.Client.Features.SalesChannelDashboards.Services;
 using maERP.Client.Features.SalesChannels.Models;
+using maERP.Domain.Dtos.WebAnalytics;
+using maERP.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace maERP.Client.Features.SalesChannelDashboards.Models;
@@ -22,8 +24,15 @@ public partial record SalesChannelDashboardModel
     private readonly IStringLocalizer _localizer;
     private readonly ILogger<SalesChannelDashboardModel> _logger;
     private readonly Guid _salesChannelId;
+    private readonly SalesChannelType _salesChannelType;
 
     public string Title { get; }
+
+    /// <summary>
+    /// Web analytics is only offered for the channel types that ship a tracking plugin (WooCommerce,
+    /// Shopware 6). Used to show/hide the "Web-Statistiken" tab.
+    /// </summary>
+    public bool ShowWebStatistics => _salesChannelType is SalesChannelType.WooCommerce or SalesChannelType.Shopware6;
 
     public SalesChannelDashboardModel(
         ISalesChannelStatisticsService statisticsService,
@@ -39,6 +48,7 @@ public partial record SalesChannelDashboardModel
         _localizer = localizer;
         _logger = logger;
         _salesChannelId = data?.SalesChannelId ?? Guid.Empty;
+        _salesChannelType = data?.SalesChannelType ?? default;
         Title = data?.SalesChannelName ?? string.Empty;
     }
 
@@ -60,6 +70,10 @@ public partial record SalesChannelDashboardModel
         .Combine(CurrentPage, PageSize, RefreshTick)
         .SelectAsync(LoadRecentSalessAsync)
         .AsListFeed();
+
+    // Tab: Web statistics (visitor analytics; only for WooCommerce / Shopware 6)
+    public IFeed<WebSessionsSummaryDto> WebSessions => RefreshTick.SelectAsync((_, ct) => LoadWebSessionsAsync(ct));
+    public IListFeed<WebTopProductDto> WebTopProducts => RefreshTick.SelectAsync((_, ct) => LoadWebTopProductsAsync(ct)).AsListFeed();
 
     /// <summary>
     /// Triggers a reload of all dashboard data (KPIs and recent sales for the current page).
@@ -150,6 +164,37 @@ public partial record SalesChannelDashboardModel
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading saless KPI data for SalesChannel {SalesChannelId}", _salesChannelId);
+            throw;
+        }
+    }
+
+    private async ValueTask<WebSessionsSummaryDto> LoadWebSessionsAsync(CancellationToken ct)
+    {
+        try
+        {
+            var data = await _statisticsService.GetWebSessionsAsync(_salesChannelId, ct);
+            return data ?? new WebSessionsSummaryDto();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading web sessions for SalesChannel {SalesChannelId}", _salesChannelId);
+            throw;
+        }
+    }
+
+    private async ValueTask<IImmutableList<WebTopProductDto>> LoadWebTopProductsAsync(CancellationToken ct)
+    {
+        try
+        {
+            // Most-visited products over the last 30 days.
+            var end = DateTime.UtcNow.Date;
+            var start = end.AddDays(-29);
+            var data = await _statisticsService.GetWebTopProductsAsync(_salesChannelId, start, end, 10, ct);
+            return (data?.Products ?? new List<WebTopProductDto>()).ToImmutableList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading web top products for SalesChannel {SalesChannelId}", _salesChannelId);
             throw;
         }
     }

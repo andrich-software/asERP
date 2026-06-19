@@ -10,6 +10,7 @@ using maERP.Client.Features.Tenants.Services;
 using maERP.Domain.Dtos.Auth;
 using maERP.Domain.Dtos.Tenant;
 using maERP.Client.Features.Dashboard.Models;
+using maERP.Client.Features.Statistics.Models;
 using maERP.Client.Features.Customers.Models;
 using maERP.Client.Features.Invoices.Models;
 using maERP.Client.Features.Manufacturers.Models;
@@ -88,6 +89,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             { "Manufacturers", NavItemManufacturers },
             { "Saless", NavItemSaless },
             { "Invoices", NavItemInvoices },
+            { "StatisticsRevenue", NavItemRevenue },
             { "SalesChannelOverview", NavItemSalesChannels },
             { "SalesChannels", NavItemSalesChannelList },
             { "TaxClasses", NavItemTaxClasses },
@@ -306,6 +308,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         NavItemManufacturers.Visibility = Visibility.Visible;
         NavItemSaless.Visibility = Visibility.Visible;
         NavItemInvoices.Visibility = Visibility.Visible;
+        NavItemRevenue.Visibility = Visibility.Visible;
         NavItemSalesChannels.Visibility = Visibility.Visible;
         NavItemTaxClasses.Visibility = Visibility.Visible;
         NavItemProductAttributes.Visibility = Visibility.Visible;
@@ -500,6 +503,9 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                     break;
                 case "Invoices":
                     await navigator.NavigateViewModelAsync<InvoiceListModel>(this);
+                    break;
+                case "StatisticsRevenue":
+                    await navigator.NavigateViewModelAsync<RevenueModel>(this);
                     break;
                 case "Warehouses":
                     await navigator.NavigateViewModelAsync<WarehouseListModel>(this);

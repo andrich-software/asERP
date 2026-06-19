@@ -41,6 +41,20 @@ public class SalesChannel : BaseEntity, IBaseEntity
     public bool InitialProductExportCompleted { get; set; }
     public bool InitialCustomerImportCompleted { get; set; }
 
+    /// <summary>
+    /// True once the resumable, oldest-first order backfill has walked the whole remote history. Until then,
+    /// scheduled sales imports run in backfill mode; afterwards they switch to the lighter incremental
+    /// (modified_after) mode. Clear this to force a fresh full backfill.
+    /// </summary>
+    public bool InitialSalesImportCompleted { get; set; }
+
+    /// <summary>
+    /// Resume point for the order backfill: the UTC <c>date_created</c> of the furthest order imported so far.
+    /// The next backfill run continues from here (WooCommerce <c>after=</c>) instead of restarting, so an
+    /// interrupted sweep never loses ground. Null means "start from the beginning of history".
+    /// </summary>
+    public DateTime? SalesImportBackfillCursor { get; set; }
+
     /// <summary>Polling interval used by the orchestrator. Defaults to 60s.</summary>
     public int SyncIntervalSeconds { get; set; } = 60;
 
@@ -49,6 +63,26 @@ public class SalesChannel : BaseEntity, IBaseEntity
 
     /// <summary>Kill-switch independent of the per-direction Import/Export flags.</summary>
     public bool IsEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Enables web-analytics tracking for this channel. The shop-side plugin only forwards beacons
+    /// when a token is configured; the server additionally ignores beacons for channels with this off.
+    /// </summary>
+    public bool TrackingEnabled { get; set; }
+
+    /// <summary>
+    /// Secret per-channel tracking token (encrypted at rest via <c>EncryptedStringConverter</c>).
+    /// Held only server-side in the shop plugin and added to each beacon there — it never reaches the
+    /// browser. The server maps it to this channel + tenant. Rotatable; rotation invalidates historical
+    /// pseudonymised customer (cid) matching. Kept for display/rotation in the admin UI.
+    /// </summary>
+    public string? TrackingToken { get; set; }
+
+    /// <summary>
+    /// SHA-256 (hex) of <see cref="TrackingToken"/>. Indexed, non-reversible lookup key used on the hot,
+    /// anonymous ingest path — the encrypted <see cref="TrackingToken"/> cannot be queried directly.
+    /// </summary>
+    public string? TrackingTokenHash { get; set; }
 
     public ICollection<Warehouse> Warehouses { get; set; } = null!;
 }

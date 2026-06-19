@@ -3,6 +3,7 @@ using maERP.Client.Features.Auth;
 using maERP.Client.Features.Auth.Services;
 using maERP.Client.Features.Customers;
 using maERP.Client.Features.Dashboard;
+using maERP.Client.Features.Statistics;
 using maERP.Client.Features.Dashboard.Models;
 using maERP.Client.Features.Invoices;
 using maERP.Client.Features.Manufacturers;
@@ -347,6 +348,7 @@ public partial class App : Application
         ShellModule.RegisterServices(services);
         AuthModule.RegisterServices(services);
         DashboardModule.RegisterServices(services);
+        StatisticsModule.RegisterServices(services);
         SearchModule.RegisterServices(services);
         CustomersModule.RegisterServices(services);
         SalessModule.RegisterServices(services);
@@ -376,6 +378,7 @@ public partial class App : Application
         ShellModule.RegisterViews(views);
         AuthModule.RegisterViews(views);
         DashboardModule.RegisterViews(views);
+        StatisticsModule.RegisterViews(views);
         SearchModule.RegisterViews(views);
         CustomersModule.RegisterViews(views);
         SalessModule.RegisterViews(views);
@@ -399,6 +402,7 @@ public partial class App : Application
         var nestedRoutes = new List<RouteMap>();
         nestedRoutes.AddRange(AuthModule.GetRoutes(views));
         nestedRoutes.AddRange(DashboardModule.GetRoutes(views));
+        nestedRoutes.AddRange(StatisticsModule.GetRoutes(views));
         nestedRoutes.AddRange(SearchModule.GetRoutes(views));
         nestedRoutes.AddRange(CustomersModule.GetRoutes(views));
         nestedRoutes.AddRange(SalessModule.GetRoutes(views));

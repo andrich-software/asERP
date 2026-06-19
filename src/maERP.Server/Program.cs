@@ -17,6 +17,7 @@ using maERP.Persistence.DatabaseContext;
 using maERP.Persistence.Repositories;
 using maERP.Persistence.Services;
 using maERP.Server.Services;
+using maERP.Analytics;
 using maERP.SalesChannels;
 using maERP.SalesChannels.Logging;
 using maERP.Server.Infrastructure.Logging;
@@ -153,6 +154,7 @@ builder.Services.AddControllers().AddJsonOptions(opts =>
     opts.JsonSerializerOptions.Converters.Add(new StrictEnumConverter<SalesStatus>());
     opts.JsonSerializerOptions.Converters.Add(new StrictEnumConverter<PaymentStatus>());
     opts.JsonSerializerOptions.Converters.Add(new StrictEnumConverter<CustomerStatus>());
+    opts.JsonSerializerOptions.Converters.Add(new StrictEnumConverter<WebAnalyticsEventType>());
 });
 
 // Configure API behavior to return consistent Result<T> format for validation errors
@@ -199,12 +201,42 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
+
+    // Web-analytics ingest: partition by the per-channel token (all of a shop's beacons arrive from the
+    // shop server's single IP, so an IP partition would throttle a whole busy shop). High limit; excess
+    // beacons are simply dropped (429) — analytics loss is acceptable. Falls back to a tight per-IP limit
+    // when no token is present (probes / misconfiguration).
+    options.AddPolicy("analytics", context =>
+    {
+        var token = context.Request.Headers["X-Storefront-Token"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(token))
+        {
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: $"t:{token}",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 6000,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                });
+        }
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
 });
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddPersistenceServices();
     builder.Services.AddSalesChannelServices();
+    builder.Services.AddAnalyticsServices();
 }
 else
 {
@@ -212,6 +244,9 @@ else
     // its dependencies — but the orchestrator hosted service must NOT run (would chase tenants
     // across the test InMemory DB). Skip background services only.
     builder.Services.AddSalesChannelServices(includeBackgroundServices: false);
+    // Analytics: register the query/ingest/resolver graph so controllers resolve, but skip the
+    // ClickHouse hosted services (schema bootstrapper + batch writer) — tests have no ClickHouse.
+    builder.Services.AddAnalyticsServices(includeBackgroundServices: false);
 }
 
 builder.Services.AddHttpContextAccessor();
