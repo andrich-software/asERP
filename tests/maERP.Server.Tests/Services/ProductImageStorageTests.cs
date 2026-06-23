@@ -3,22 +3,24 @@ using maERP.Application.Models.Storage;
 using maERP.Infrastructure.Storage;
 using maERP.Server.Tests.Infrastructure;
 using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 using Xunit;
 
 namespace maERP.Server.Tests.Services;
 
 public class ProductImageStorageTests : IDisposable
 {
-    // A valid 4x3 JPEG, generated via ImageSharp, to prove the re-encode-to-PNG path.
+    // A valid 4x3 JPEG, generated via SkiaSharp, to prove the re-encode-to-PNG path.
     private static byte[] CreateJpeg(int width = 4, int height = 3)
     {
-        using var image = new Image<Rgba32>(width, height, Color.CornflowerBlue.ToPixel<Rgba32>());
-        using var ms = new MemoryStream();
-        image.Save(ms, new JpegEncoder());
-        return ms.ToArray();
+        using var bitmap = new SKBitmap(width, height);
+        using (var canvas = new SKCanvas(bitmap))
+        {
+            canvas.Clear(new SKColor(100, 149, 237)); // CornflowerBlue
+        }
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Jpeg, 90);
+        return data.ToArray();
     }
 
     private readonly string _root = Path.Combine(Path.GetTempPath(), "maerp_img_test_" + Guid.NewGuid().ToString("N"));
@@ -49,8 +51,8 @@ public class ProductImageStorageTests : IDisposable
         var originalPath = Path.Combine(_root, "products", segments[1], stored.FileName);
         TestAssertions.AssertTrue(File.Exists(originalPath));
         // The JPEG input must have been re-encoded to a real PNG on disk.
-        var format = await Image.DetectFormatAsync(originalPath);
-        TestAssertions.AssertEqual("PNG", format.Name);
+        using var codec = SKCodec.Create(originalPath);
+        TestAssertions.AssertEqual(SKEncodedImageFormat.Png, codec.EncodedFormat);
         TestAssertions.AssertEqual(4, stored.Width);
         TestAssertions.AssertEqual(3, stored.Height);
     }

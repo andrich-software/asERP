@@ -1,3 +1,5 @@
+using System.Windows.Input;
+using maERP.Client.Core.Events;
 using maERP.Client.Features.Products.Models;
 using maERP.Domain.Dtos.Product;
 
@@ -12,10 +14,28 @@ public sealed partial class ProductListPage : Page
     // Sort icon references - will be found after template is applied
     private readonly Dictionary<string, FontIcon> _sortIcons = new();
 
+    // The model we are currently subscribed to (for empty-state updates), so we can unsubscribe.
+    private ProductListModel? _subscribedModel;
+
+    // Action behind the currently shown empty-state button.
+    private ProductEmptyStateAction _emptyStateAction = ProductEmptyStateAction.None;
+
+    // Polls for server-side (orchestrator) background imports that the client never triggered, so an
+    // open product list still refreshes once such an import finishes. Only refreshes on a genuinely
+    // new completed run (see ProductListModel.PollForCompletedImportAsync), not on every tick.
+    private static readonly TimeSpan ImportPollInterval = TimeSpan.FromSeconds(15);
+    private readonly DispatcherTimer _importPollTimer;
+    private bool _isPolling;
+
     public ProductListPage()
     {
         this.InitializeComponent();
         this.Loaded += OnLoaded;
+        this.Unloaded += OnUnloaded;
+        this.DataContextChanged += OnDataContextChanged;
+
+        _importPollTimer = new DispatcherTimer { Interval = ImportPollInterval };
+        _importPollTimer.Tick += ImportPollTimer_Tick;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -24,6 +44,137 @@ public sealed partial class ProductListPage : Page
 
         // Cache sort icons for later updates
         CacheSortIcons();
+
+        SubscribeModel();
+
+        // Auto-refresh the list when an import elsewhere reports that products changed.
+        AppRefreshSignals.ProductsChanged += OnProductsChangedSignal;
+
+        // And poll for server-side background imports that emit no client-side signal.
+        _importPollTimer.Start();
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        AppRefreshSignals.ProductsChanged -= OnProductsChangedSignal;
+        _importPollTimer.Stop();
+        if (_subscribedModel is not null)
+        {
+            _subscribedModel.ProductsLoaded -= OnProductsLoaded;
+            _subscribedModel = null;
+        }
+    }
+
+    private async void ImportPollTimer_Tick(object? sender, object e)
+    {
+        // Guard against overlapping polls if a slow request outlasts the interval.
+        if (_isPolling || DataContext is not ProductListModel model)
+        {
+            return;
+        }
+
+        _isPolling = true;
+        try
+        {
+            if (await model.PollForCompletedImportAsync() &&
+                ProductsFeedView.Refresh is ICommand command &&
+                command.CanExecute(null))
+            {
+                command.Execute(null);
+            }
+        }
+        finally
+        {
+            _isPolling = false;
+        }
+    }
+
+    private void OnDataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args)
+        => SubscribeModel();
+
+    private void SubscribeModel()
+    {
+        if (DataContext is not ProductListModel model || ReferenceEquals(model, _subscribedModel))
+        {
+            return;
+        }
+
+        if (_subscribedModel is not null)
+        {
+            _subscribedModel.ProductsLoaded -= OnProductsLoaded;
+        }
+
+        _subscribedModel = model;
+        _subscribedModel.ProductsLoaded += OnProductsLoaded;
+    }
+
+    private void OnProductsChangedSignal(object? sender, EventArgs e)
+    {
+        // May be raised from a background thread — marshal to the UI thread before touching the view.
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (ProductsFeedView.Refresh is ICommand command && command.CanExecute(null))
+            {
+                command.Execute(null);
+            }
+        });
+    }
+
+    private void OnProductsLoaded(int totalCount)
+    {
+        DispatcherQueue.TryEnqueue(async () =>
+        {
+            if (totalCount > 0)
+            {
+                EmptyStateOverlay.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            if (DataContext is not ProductListModel model)
+            {
+                return;
+            }
+
+            var info = await model.GetEmptyStateAsync();
+
+            EmptyStateIcon.Glyph = info.Glyph;
+            EmptyStateTitle.Text = info.Title;
+            EmptyStateMessage.Text = info.Message;
+            _emptyStateAction = info.Action;
+
+            if (info.Action != ProductEmptyStateAction.None && !string.IsNullOrEmpty(info.ActionLabel))
+            {
+                EmptyStateActionButton.Content = info.ActionLabel;
+                EmptyStateActionButton.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                EmptyStateActionButton.Visibility = Visibility.Collapsed;
+            }
+
+            EmptyStateOverlay.Visibility = Visibility.Visible;
+        });
+    }
+
+    private async void EmptyStateAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ProductListModel model)
+        {
+            return;
+        }
+
+        switch (_emptyStateAction)
+        {
+            case ProductEmptyStateAction.OpenSalesChannels:
+                await model.OpenSalesChannels();
+                break;
+            case ProductEmptyStateAction.Refresh:
+                if (ProductsFeedView.Refresh is ICommand command && command.CanExecute(null))
+                {
+                    command.Execute(null);
+                }
+                break;
+        }
     }
 
     private void CacheSortIcons()

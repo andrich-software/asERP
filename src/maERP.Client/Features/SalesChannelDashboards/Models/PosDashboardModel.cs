@@ -1,4 +1,5 @@
-﻿using maERP.Client.Core.Models;
+﻿using System.Collections.Immutable;
+using maERP.Client.Core.Models;
 using maERP.Client.Features.Customers.Services;
 using maERP.Client.Features.Dashboard.Models;
 using maERP.Client.Features.Saless;
@@ -125,12 +126,13 @@ public partial record PosDashboardModel
     {
         await CartItems.UpdateAsync(items =>
         {
-            var existing = items.FirstOrDefault(i => i.ProductId == product.Id);
+            var list = items ?? ImmutableList<PosCartItem>.Empty;
+            var existing = list.FirstOrDefault(i => i.ProductId == product.Id);
             if (existing != null)
             {
-                return items.Replace(existing, existing with { Quantity = existing.Quantity + 1 });
+                return list.Replace(existing, existing with { Quantity = existing.Quantity + 1 });
             }
-            return items.Add(new PosCartItem(product.Id, product.Name, product.Sku, product.Price, 1, product.TaxRate));
+            return list.Add(new PosCartItem(product.Id, product.Name, product.Sku, product.Price, 1, product.TaxRate));
         });
         await RefreshCartTotal();
     }
@@ -142,7 +144,7 @@ public partial record PosDashboardModel
 
     public async ValueTask RemoveFromCart(PosCartItem item)
     {
-        await CartItems.UpdateAsync(items => items.Remove(item));
+        await CartItems.UpdateAsync(items => (items ?? ImmutableList<PosCartItem>.Empty).Remove(item));
         await RefreshCartTotal();
     }
 
@@ -153,14 +155,14 @@ public partial record PosDashboardModel
             await RemoveFromCart(item);
             return;
         }
-        await CartItems.UpdateAsync(items => items.Replace(item, item with { Quantity = newQuantity }));
+        await CartItems.UpdateAsync(items => (items ?? ImmutableList<PosCartItem>.Empty).Replace(item, item with { Quantity = newQuantity }));
         await RefreshCartTotal();
     }
 
     public async ValueTask UpdateCartItemPrice(PosCartItem item, decimal newPrice)
     {
         if (newPrice < 0) return;
-        await CartItems.UpdateAsync(items => items.Replace(item, item with { UnitPrice = newPrice }));
+        await CartItems.UpdateAsync(items => (items ?? ImmutableList<PosCartItem>.Empty).Replace(item, item with { UnitPrice = newPrice }));
         await RefreshCartTotal();
     }
 

@@ -81,7 +81,9 @@
     <PackageReference Include="Xamarin.AndroidX.RecyclerView" />
     <PackageReference Include="Xamarin.Google.Android.Material" />
     <!-- Exclude duplicate Compose annotation JVM to fix D8 "defined multiple times" error -->
-    <PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.Jvm" ExcludeAssets="all" PrivateAssets="all" />
+    <PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.Jvm" ExcludeAssets="all" PrivateAssets="all">
+      <IncludeAssets>none</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-desktop'">
@@ -96,7 +98,6 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browserwasm'">
-    <PackageReference Include="Microsoft.DotNet.HotReload.WebAssembly.Browser" />
     <PackageReference Include="Uno.WinUI.Runtime.Skia.WebAssembly.Browser" />
 
     <PackageReference Include="SkiaSharp.Skottie" />

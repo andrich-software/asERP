@@ -264,4 +264,62 @@ public class ProductImportRepositoryVariantTests : TenantIsolatedTestBase
         TestAssertions.AssertNotNull(updated);
         TestAssertions.AssertEqual("REAL-SKU-201", updated!.Sku);
     }
+
+    [Fact]
+    public async Task Import_TaxRateWithoutMatchingClass_CreatesTaxClass_TenantScoped()
+    {
+        await SeedBaseDataAsync();
+        var repo = CreateImportRepository();
+
+        // 5.5% has no seeded tax class. The import must create one for the current tenant on the fly
+        // rather than failing the product.
+        const double unseededRate = 5.5;
+        var importProduct = new SalesChannelImportProduct
+        {
+            RemoteProductId = "900",
+            Name = "Foreign-rate product",
+            Sku = "TAX-900",
+            Description = "<p>desc</p>",
+            TaxRate = unseededRate,
+            Price = 9.99m,
+        };
+
+        await repo.ImportOrUpdateFromSalesChannel(SalesChannel1Id, importProduct);
+
+        DbContext.ChangeTracker.Clear();
+        var createdClass = await DbContext.TaxClass.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.TaxRate == unseededRate);
+        TestAssertions.AssertNotNull(createdClass);
+        TestAssertions.AssertEqual(TenantConstants.TestTenant1Id, createdClass!.TenantId);
+
+        var product = await DbContext.Product.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Sku == "TAX-900");
+        TestAssertions.AssertNotNull(product);
+        TestAssertions.AssertEqual(createdClass.Id, product!.TaxClassId);
+    }
+
+    [Fact]
+    public async Task Import_TwoProductsSameUnseededRate_ReusesSingleTaxClass()
+    {
+        await SeedBaseDataAsync();
+        const double unseededRate = 5.5;
+
+        SalesChannelImportProduct Build(string sku, string remoteId) => new()
+        {
+            RemoteProductId = remoteId,
+            Name = $"Product {sku}",
+            Sku = sku,
+            Description = "<p>desc</p>",
+            TaxRate = unseededRate,
+            Price = 1.00m,
+        };
+
+        await CreateImportRepository().ImportOrUpdateFromSalesChannel(SalesChannel1Id, Build("TAX-A", "910"));
+        await CreateImportRepository().ImportOrUpdateFromSalesChannel(SalesChannel1Id, Build("TAX-B", "911"));
+
+        DbContext.ChangeTracker.Clear();
+        var classCount = await DbContext.TaxClass.IgnoreQueryFilters()
+            .CountAsync(t => t.TaxRate == unseededRate && t.TenantId == TenantConstants.TestTenant1Id);
+        TestAssertions.AssertEqual(1, classCount);
+    }
 }

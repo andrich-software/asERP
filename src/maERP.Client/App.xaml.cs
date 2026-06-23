@@ -48,6 +48,8 @@ public partial class App : Application
     public new static App Current => (App)Application.Current;
     public IServiceProvider Services => Host!.Services;
 
+    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Uno Platform framework APIs are not trim-compatible by design")]
+    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Interoperability", "CA1416", Justification = "Browser-specific calls are guarded by #if __WASM__")]
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
     {
         // Load runtime config (WASM: from /config.json written by nginx entrypoint)
@@ -299,6 +301,7 @@ public partial class App : Application
     [JSImport("globalThis.history.replaceState")]
     private static partial void HistoryReplaceState(string? state, string title, string url);
 
+    [System.Runtime.Versioning.SupportedOSPlatform("browser")]
     private static void ReplaceWasmUrlWithRoot()
     {
         try

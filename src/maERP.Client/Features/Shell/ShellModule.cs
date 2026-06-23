@@ -1,4 +1,5 @@
 using maERP.Client.Core.Abstractions;
+using maERP.Client.Core.Notifications;
 using maERP.Client.Features.Shell.Models;
 using maERP.Client.Features.Shell.Views;
 
@@ -17,6 +18,11 @@ public static class ShellModule
     {
         // ShellModel is singleton to share authentication state across the app
         services.AddSingleton<ShellModel>();
+
+        // App-wide toast/notification bus. Singleton so background work (e.g. a sales-channel
+        // import started after navigation) can surface results to the user. Rendered by the
+        // NotificationHost hosted in Shell.xaml.
+        services.AddSingleton<INotificationService, NotificationService>();
         return services;
     }
 

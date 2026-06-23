@@ -8,7 +8,7 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> builder)
     {
-        builder.HasIndex(e => e.Sku)
+        builder.HasIndex(e => new { e.TenantId, e.Sku })
             .IsUnique();
 
         builder.HasIndex(e => e.Gtin);

@@ -1,8 +1,7 @@
 using maERP.Application.Contracts.Infrastructure;
 using maERP.Application.Models.Storage;
 using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 namespace maERP.Infrastructure.Storage;
 
@@ -43,25 +42,55 @@ public class ProductImageStorage : IProductImageStorage
         var originalFullPath = Path.Combine(directory, fileName);
         var thumbnailFullPath = Path.Combine(directory, thumbName);
 
-        using var image = await Image.LoadAsync(content, cancellationToken);
+        // Skia decodes synchronously and needs a seekable source, so buffer the upload first.
+        using var buffer = new MemoryStream();
+        await content.CopyToAsync(buffer, cancellationToken);
+        buffer.Position = 0;
+
+        using var image = SKBitmap.Decode(buffer)
+            ?? throw new InvalidOperationException("The uploaded content is not a supported image.");
         var width = image.Width;
         var height = image.Height;
 
         // Original: re-encode whatever was uploaded to PNG.
-        await image.SaveAsPngAsync(originalFullPath, cancellationToken);
+        await WritePngAsync(image, originalFullPath, cancellationToken);
 
         // Thumbnail: fit within a square box without upscaling, then PNG.
-        image.Mutate(x => x.Resize(new ResizeOptions
-        {
-            Mode = ResizeMode.Max,
-            Size = new Size(_options.ThumbnailSize, _options.ThumbnailSize),
-            Sampler = KnownResamplers.Lanczos3
-        }));
-        await image.SaveAsPngAsync(thumbnailFullPath, cancellationToken);
+        using var thumbnail = CreateThumbnail(image, _options.ThumbnailSize);
+        await WritePngAsync(thumbnail, thumbnailFullPath, cancellationToken);
 
         var fileSize = new FileInfo(originalFullPath).Length;
 
         return new StoredImage(fileName, relativePath, thumbnailPath, width, height, fileSize);
+    }
+
+    /// <summary>
+    /// Scales <paramref name="source"/> to fit within a square box of <paramref name="maxSize"/>,
+    /// preserving aspect ratio and never upscaling — the equivalent of ImageSharp's <c>ResizeMode.Max</c>.
+    /// </summary>
+    private static SKBitmap CreateThumbnail(SKBitmap source, int maxSize)
+    {
+        var scale = Math.Min(1.0, Math.Min((double)maxSize / source.Width, (double)maxSize / source.Height));
+        var targetWidth = Math.Max(1, (int)Math.Round(source.Width * scale));
+        var targetHeight = Math.Max(1, (int)Math.Round(source.Height * scale));
+
+        if (targetWidth == source.Width && targetHeight == source.Height)
+        {
+            return source.Copy();
+        }
+
+        var info = new SKImageInfo(targetWidth, targetHeight);
+        return source.Resize(info, new SKSamplingOptions(SKCubicResampler.Mitchell))
+            ?? throw new InvalidOperationException("Failed to generate the image thumbnail.");
+    }
+
+    private static async Task WritePngAsync(SKBitmap bitmap, string path, CancellationToken cancellationToken)
+    {
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+
+        await using var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        await data.AsStream().CopyToAsync(fileStream, cancellationToken);
     }
 
     public Task<Stream?> OpenReadAsync(string relativePath, CancellationToken cancellationToken = default)

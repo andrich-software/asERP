@@ -12,13 +12,17 @@
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter" />
-    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="GitHubActionsTestLogger">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="SkiaSharp.Skottie" />
     <PackageReference Include="SkiaSharp.Views.Uno.WinUI" />
+    <PackageReference Include="Uno.WinUI" />
   </ItemGroup>
 
   <ItemGroup>

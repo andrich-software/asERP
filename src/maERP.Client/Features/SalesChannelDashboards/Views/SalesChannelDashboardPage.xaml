@@ -33,7 +33,7 @@
     </Grid>
 
     <!-- Pivot Tabs -->
-    <Pivot Grid.Row="1">
+    <Pivot x:Name="DashboardPivot" Grid.Row="1">
 
       <!-- Tab 1: Dashboard -->
       <PivotItem x:Uid="SalesChannelDashboard.Tab.Dashboard">
@@ -361,9 +361,12 @@
         </Border>
       </PivotItem>
 
-      <!-- Tab: Web Statistics (visitor analytics; only for WooCommerce / Shopware 6) -->
-      <PivotItem x:Uid="SalesChannelDashboard.Tab.WebStatistics"
-                 Visibility="{Binding ShowWebStatistics, Converter={StaticResource BoolToVisibilityConverter}}">
+      <!-- Tab: Web Statistics (visitor analytics; only for WooCommerce / Shopware 6).
+           The tab is added/removed in code-behind based on ShowWebStatistics — a bound
+           Visibility on a PivotItem corrupts the Pivot layout (items overlap), so it
+           must not be set here. -->
+      <PivotItem x:Name="WebStatisticsTab"
+                 x:Uid="SalesChannelDashboard.Tab.WebStatistics">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Spacing="16" Padding="0,16,0,0">
 

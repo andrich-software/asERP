@@ -7,6 +7,7 @@
      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
      xmlns:utu="using:Uno.Toolkit.UI"
      xmlns:uen="using:Uno.Extensions.Navigation.UI"
+     xmlns:views="using:maERP.Client.Features.Shell.Views"
      mc:Ignorable="d"
      d:DesignHeight="800"
      d:DesignWidth="1280">
@@ -1180,5 +1181,10 @@
         </StackPanel>
       </ScrollViewer>
     </Grid>
+
+    <!-- App-wide toast notifications — topmost layer, spans both columns. Empty regions
+         pass pointer events through (the host has no background); only toasts capture clicks. -->
+    <views:NotificationHost Grid.Column="0"
+                            Grid.ColumnSpan="2" />
   </Grid>
 </UserControl>

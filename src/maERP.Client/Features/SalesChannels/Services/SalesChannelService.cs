@@ -83,12 +83,17 @@ public class SalesChannelService : ISalesChannelService
         return apiResponse?.Data;
     }
 
-    public async Task CreateSalesChannelAsync(SalesChannelInputDto input, CancellationToken ct = default)
+    public async Task<Guid> CreateSalesChannelAsync(SalesChannelInputDto input, CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.SalesChannels.Base}";
         var response = await _httpClient.PostAsJsonAsync(url, input, AppJsonSerializerContext.Default.SalesChannelInputDto, ct);
         await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
+
+        // The Create endpoint returns Result<Guid> with the new channel's id in Data.
+        var apiResponse = await response.Content.ReadFromJsonAsync(
+            AppJsonSerializerContext.Default.ApiResponseGuid, ct);
+        return apiResponse?.Data ?? Guid.Empty;
     }
 
     public async Task UpdateSalesChannelAsync(Guid id, SalesChannelInputDto input, CancellationToken ct = default)

@@ -1453,7 +1453,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             var input = new TenantInputDto
             {
                 Name = tenantName,
-                Description = FirstTenantDescription.Text?.Trim()
+                Description = FirstTenantDescription.Text?.Trim() ?? string.Empty
             };
 
             var newTenantId = await tenantService.CreateTenantAsync(input);

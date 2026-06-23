@@ -672,6 +672,39 @@
   <data name="ProductListPage.LoadError.Text" xml:space="preserve">
     <value>Failed to load products</value>
   </data>
+  <data name="ProductListPage.EmptyNoChannelTitle" xml:space="preserve">
+    <value>No products yet</value>
+  </data>
+  <data name="ProductListPage.EmptyNoChannelMessage" xml:space="preserve">
+    <value>No sales channel with product import is set up. Add a channel to import products.</value>
+  </data>
+  <data name="ProductListPage.EmptySetupChannelAction" xml:space="preserve">
+    <value>Set up sales channel</value>
+  </data>
+  <data name="ProductListPage.EmptyImportingTitle" xml:space="preserve">
+    <value>Import running…</value>
+  </data>
+  <data name="ProductListPage.EmptyImportingMessage" xml:space="preserve">
+    <value>Products are being imported from a sales channel. This may take a moment.</value>
+  </data>
+  <data name="ProductListPage.EmptyRefreshAction" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="ProductListPage.EmptyFailedTitle" xml:space="preserve">
+    <value>Import failed</value>
+  </data>
+  <data name="ProductListPage.EmptyFailedMessage" xml:space="preserve">
+    <value>The last product import failed. See the sync log on the sales channel for details.</value>
+  </data>
+  <data name="ProductListPage.EmptyOpenSalesChannelsAction" xml:space="preserve">
+    <value>Go to sales channels</value>
+  </data>
+  <data name="ProductListPage.EmptyNoProductsTitle" xml:space="preserve">
+    <value>No products yet</value>
+  </data>
+  <data name="ProductListPage.EmptyNoProductsMessage" xml:space="preserve">
+    <value>No products have been imported or created yet.</value>
+  </data>
   <data name="ProductListPage.PreviousPage.ToolTip" xml:space="preserve">
     <value>Previous page</value>
   </data>
@@ -2240,6 +2273,24 @@
   </data>
   <data name="SalesChannelEditPage.Error.SaveFailed" xml:space="preserve">
     <value>Failed to save sales channel: {0}</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastCreated" xml:space="preserve">
+    <value>Sales channel "{0}" was created.</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastUpdated" xml:space="preserve">
+    <value>Sales channel "{0}" was saved.</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastImportStarted" xml:space="preserve">
+    <value>Started product import for "{0}"…</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastImportDone" xml:space="preserve">
+    <value>Product import "{0}": {1} imported, {2} failed.</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastImportEmpty" xml:space="preserve">
+    <value>Product import "{0}": no products found.</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastImportFailed" xml:space="preserve">
+    <value>Product import "{0}" failed: {1}</value>
   </data>
 
   <!-- Sales Channel Type Names -->

@@ -15,6 +15,6 @@ public class ClickHouseSettings
     /// <summary>Use HTTPS for the ClickHouse HTTP interface (external/managed ClickHouse).</summary>
     public bool UseTls { get; set; }
 
-    /// <summary>Master switch — when false the analytics pipeline stays dormant (no schema, no writes).</summary>
-    public bool Enabled { get; set; } = true;
+    /// <summary>Master switch — when false the analytics pipeline stays dormant (no schema, no writes). Disabled by default; opt in via settings or the CLICKHOUSE_ENABLED env var.</summary>
+    public bool Enabled { get; set; } = false;
 }

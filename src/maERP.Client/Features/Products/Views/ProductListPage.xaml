@@ -391,6 +391,44 @@
       </mvux:FeedView.ErrorTemplate>
     </mvux:FeedView>
 
+    <!-- Contextual empty state — overlays the FeedView's None state with an actionable message
+         (no channel / import running / import failed / nothing imported yet). Driven from code-behind
+         via ProductListModel.ProductsLoaded + GetEmptyStateAsync. Collapsed until products load empty. -->
+    <Border x:Name="EmptyStateOverlay"
+            Grid.Row="2"
+            Visibility="Collapsed"
+            CornerRadius="12"
+            BorderBrush="{ThemeResource OutlineVariantBrush}"
+            BorderThickness="1"
+            Background="{ThemeResource SurfaceBrush}">
+      <StackPanel HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Spacing="16"
+                  MaxWidth="420"
+                  Margin="48">
+        <FontIcon x:Name="EmptyStateIcon"
+                  Glyph="&#xE7BF;"
+                  FontSize="48"
+                  Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+        <TextBlock x:Name="EmptyStateTitle"
+                   Style="{StaticResource TitleMedium}"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap" />
+        <TextBlock x:Name="EmptyStateMessage"
+                   Style="{StaticResource BodyMedium}"
+                   Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap" />
+        <Button x:Name="EmptyStateActionButton"
+                Style="{StaticResource FilledButtonStyle}"
+                HorizontalAlignment="Center"
+                Visibility="Collapsed"
+                Click="EmptyStateAction_Click" />
+      </StackPanel>
+    </Border>
+
     <!-- Pagination Controls -->
     <Border Grid.Row="3"
             Background="{ThemeResource SurfaceBrush}"

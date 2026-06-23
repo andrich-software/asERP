@@ -378,3 +378,6 @@ src/maERP.Server/maerp.db-wal
 src/maERP.Server/appsettings.Production.json
 .claude/settings.local.json
 /.claude/plans
+
+# Product images downloaded by the importer
+src/maERP.Server/App_Data/files/products/

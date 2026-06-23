@@ -139,8 +139,7 @@ public class SalesChannelsController(
             return NotFound();
         }
 
-        if (!Enum.TryParse<ChannelSyncOperation>(operation, ignoreCase: true, out var op) ||
-            !IsImportOperation(op))
+        if (!TryResolveImportOperation(operation, out var op))
         {
             return BadRequest(new { Error = $"Operation '{operation}' is not a valid import (products|saless|customers)" });
         }
@@ -357,4 +356,21 @@ public class SalesChannelsController(
         is ChannelSyncOperation.ImportProducts
         or ChannelSyncOperation.ImportSaless
         or ChannelSyncOperation.ImportCustomers;
+
+    /// <summary>
+    /// Resolves the {operation} route token to an import operation. Accepts both the short tokens
+    /// the client sends ("products" | "saless" | "customers") and the full enum names
+    /// (e.g. "ImportProducts"), so the advertised contract and the enum both work.
+    /// </summary>
+    private static bool TryResolveImportOperation(string? operation, out ChannelSyncOperation op)
+    {
+        switch (operation?.Trim().ToLowerInvariant())
+        {
+            case "products": op = ChannelSyncOperation.ImportProducts; return true;
+            case "saless": op = ChannelSyncOperation.ImportSaless; return true;
+            case "customers": op = ChannelSyncOperation.ImportCustomers; return true;
+        }
+
+        return Enum.TryParse(operation, ignoreCase: true, out op) && IsImportOperation(op);
+    }
 }

@@ -44,7 +44,13 @@ public static class SalesChannelServiceRegistration
         // shorter Polly settings make sense; for now we share the default policy.
         services.AddHttpClient("amazon-lwa").AddPollyHandlers();
         // Plain (unauthenticated) client for downloading product photos from the shops' public URLs.
-        services.AddHttpClient(ProductImageImportService.HttpClientName).AddPollyHandlers();
+        // The Chrome UA + "maERP" suffix lets Cloudflare rules identify and allow the importer.
+        services.AddHttpClient(ProductImageImportService.HttpClientName, client =>
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 maERP");
+            })
+            .AddPollyHandlers();
 
         // Connectors (one per SalesChannelType). Resolved through the registry, never via
         // direct DI — keeps the channel-specific switch in one place.

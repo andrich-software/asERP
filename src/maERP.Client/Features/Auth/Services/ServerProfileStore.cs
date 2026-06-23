@@ -10,6 +10,9 @@ public class ServerProfileStore : IServerProfileStore
     private const string ProfilesKey = "server_profiles";
     private const string LastUsedIdKey = "last_used_server_id";
     private const string LegacyServerUrlKey = "server_url";
+#if DEBUG
+    private const string DevProfileSeededKey = "dev_profile_seeded";
+#endif
 
     private readonly ILogger<ServerProfileStore> _logger;
 
@@ -20,6 +23,9 @@ public class ServerProfileStore : IServerProfileStore
 
     public Task<IReadOnlyList<ServerProfile>> GetAllAsync()
     {
+#if DEBUG
+        SeedDevProfileOnce();
+#endif
         var profiles = LoadProfiles();
         EnsureBuiltIn(profiles);
         Migrate(profiles);
@@ -32,6 +38,38 @@ public class ServerProfileStore : IServerProfileStore
 
         return Task.FromResult<IReadOnlyList<ServerProfile>>(ordered);
     }
+
+#if DEBUG
+    /// <summary>
+    /// Dev convenience: on a fresh client, seed a "Local Dev" server profile pointing at the local
+    /// Server and pre-select it, so the prefilled dev credentials log in against localhost instead of
+    /// the built-in maERP Cloud entry. Runs once (guarded by a flag) so a developer can still edit or
+    /// delete the profile without it reappearing.
+    /// </summary>
+    private void SeedDevProfileOnce()
+    {
+        var values = ApplicationData.Current.LocalSettings.Values;
+        if (values.TryGetValue(DevProfileSeededKey, out var seeded) && seeded is bool already && already)
+        {
+            return;
+        }
+
+        var profiles = LoadProfiles();
+        if (profiles.All(p => p.Id != ServerProfile.LocalDevId))
+        {
+            profiles.Add(ServerProfile.CreateLocalDev());
+            SaveProfiles(profiles);
+        }
+
+        // Pre-select the local dev server unless the user has already chosen one.
+        if (!values.ContainsKey(LastUsedIdKey))
+        {
+            values[LastUsedIdKey] = ServerProfile.LocalDevId.ToString();
+        }
+
+        values[DevProfileSeededKey] = true;
+    }
+#endif
 
     public Task UpsertAsync(ServerProfile profile)
     {

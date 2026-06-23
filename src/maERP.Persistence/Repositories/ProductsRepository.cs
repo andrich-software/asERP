@@ -15,13 +15,19 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
 
     public async Task<Product?> GetBySkuAsync(string sku)
     {
-        var query = Context.Product.Where(p => p.Sku == sku);
+        // IgnoreQueryFilters so the global EF filter (whose closure may evaluate to a different
+        // tenant at query time) cannot silently exclude a product that belongs to the current tenant.
+        // Same pattern as GetByIdAsync in GenericRepository.
+        var query = Context.Product.IgnoreQueryFilters().Where(p => p.Sku == sku);
 
-        // Apply manual tenant filtering
         var currentTenantId = TenantContext.GetCurrentTenantId();
         if (currentTenantId.HasValue)
         {
             query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
+        }
+        else
+        {
+            query = query.Where(x => x.TenantId == null);
         }
 
         return await query.Include(ps => ps.ProductSalesChannels).FirstOrDefaultAsync();
@@ -29,13 +35,16 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
 
     public async Task<Product?> GetWithDetailsAsync(Guid id)
     {
-        var query = Context.Product.Where(p => p.Id == id);
+        var query = Context.Product.IgnoreQueryFilters().Where(p => p.Id == id);
 
-        // Apply manual tenant filtering
         var currentTenantId = TenantContext.GetCurrentTenantId();
         if (currentTenantId.HasValue)
         {
             query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
+        }
+        else
+        {
+            query = query.Where(x => x.TenantId == null);
         }
 
         return await query
@@ -59,13 +68,16 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
 
     public async Task<List<Product>> GetVariantsAsync(Guid parentProductId)
     {
-        var query = Context.Product.Where(p => p.ParentProductId == parentProductId);
+        var query = Context.Product.IgnoreQueryFilters().Where(p => p.ParentProductId == parentProductId);
 
-        // Apply manual tenant filtering
         var currentTenantId = TenantContext.GetCurrentTenantId();
         if (currentTenantId.HasValue)
         {
             query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
+        }
+        else
+        {
+            query = query.Where(x => x.TenantId == null);
         }
 
         return await query

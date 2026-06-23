@@ -2,7 +2,9 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using maERP.Client.Core.Abstractions;
+using maERP.Client.Core.Events;
 using maERP.Client.Core.Exceptions;
+using maERP.Client.Core.Notifications;
 using maERP.Client.Features.SalesChannels.Services;
 using maERP.Client.Features.Shell.Models;
 using maERP.Client.Features.Warehouses.Services;
@@ -28,7 +30,12 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private readonly IWarehouseService _warehouseService;
     private readonly INavigator _navigator;
     private readonly IStringLocalizer _localizer;
+    private readonly INotificationService _notifications;
     private readonly Guid? _salesChannelId;
+
+    // Snapshot of ImportProducts as loaded from the server (edit mode) — lets us detect when the
+    // user just turned product import on, so we trigger a one-off import for them.
+    private bool _originalImportProducts;
 
     // Basic Information
     private string _name = string.Empty;
@@ -72,6 +79,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
         IWarehouseService warehouseService,
         INavigator navigator,
         IStringLocalizer localizer,
+        INotificationService notifications,
         ILogger<SalesChannelEditModel> logger,
         SalesChannelEditData? data = null)
         : base(logger)
@@ -80,6 +88,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
         _warehouseService = warehouseService;
         _navigator = navigator;
         _localizer = localizer;
+        _notifications = notifications;
         _salesChannelId = data?.SalesChannelId;
 
         // Start async initialization with proper error handling
@@ -503,6 +512,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
             ImportProducts = salesChannel.ImportProducts;
             ImportCustomers = salesChannel.ImportCustomers;
             ImportSaless = salesChannel.ImportSaless;
+            _originalImportProducts = salesChannel.ImportProducts;
 
             // Export Settings
             ExportProducts = salesChannel.ExportProducts;
@@ -658,18 +668,37 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 WarehouseIds = Warehouses.Where(w => w.IsSelected).Select(w => w.Id).ToList()
             };
 
+            var isNew = !_salesChannelId.HasValue;
+            Guid channelId;
+
             if (_salesChannelId.HasValue)
             {
                 input.Id = _salesChannelId.Value;
                 await _salesChannelService.UpdateSalesChannelAsync(_salesChannelId.Value, input, ct);
+                channelId = _salesChannelId.Value;
             }
             else
             {
-                await _salesChannelService.CreateSalesChannelAsync(input, ct);
+                channelId = await _salesChannelService.CreateSalesChannelAsync(input, ct);
             }
 
             // Notify Shell to refresh dynamic sidebar items
             ShellModel.NotifySalesChannelsChanged();
+
+            // Confirm the save to the user — previously this was silent (just a navigate-back).
+            _notifications.Show(
+                string.Format(_localizer[isNew ? "SalesChannelEditPage.ToastCreated" : "SalesChannelEditPage.ToastUpdated"], Name),
+                NotificationSeverity.Success);
+
+            // Kick off a product import immediately when products should be imported and either the
+            // channel is new or product import was just enabled. Otherwise the orchestrator would only
+            // pick it up after its poll interval, with no feedback to the user. OAuth channels
+            // (eBay/Amazon) are skipped — they must complete the OAuth connect step first.
+            var shouldImportNow = ImportProducts && (isNew || !_originalImportProducts) && !IsOAuthChannel;
+            if (shouldImportNow && channelId != Guid.Empty)
+            {
+                StartBackgroundProductImport(channelId, Name);
+            }
 
             await _navigator.NavigateBackAsync(this);
         }
@@ -691,6 +720,63 @@ public class SalesChannelEditModel : AsyncInitializableModel
     public async Task CancelAsync()
     {
         await _navigator.NavigateBackAsync(this);
+    }
+
+    /// <summary>
+    /// Triggers a one-off product import for the channel and surfaces the outcome as a toast.
+    /// Runs detached (fire-and-forget) so navigation back is not blocked by the import, and uses the
+    /// singleton notification service so the result still reaches the user after this page is gone.
+    /// </summary>
+    private void StartBackgroundProductImport(Guid channelId, string channelName)
+    {
+        _notifications.Show(
+            string.Format(_localizer["SalesChannelEditPage.ToastImportStarted"], channelName),
+            NotificationSeverity.Info);
+
+        // Not tied to the page's CancellationToken — that is cancelled on navigate-back.
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var result = await _salesChannelService.TriggerSyncAsync(channelId, "products", CancellationToken.None);
+
+                if (result is null || (result.ItemsProcessed == 0 && result.ItemsFailed == 0))
+                {
+                    _notifications.Show(
+                        string.Format(_localizer["SalesChannelEditPage.ToastImportEmpty"], channelName),
+                        NotificationSeverity.Warning);
+                    return;
+                }
+
+                var severity = result.ItemsFailed == 0
+                    ? NotificationSeverity.Success
+                    : result.ItemsProcessed == 0
+                        ? NotificationSeverity.Error
+                        : NotificationSeverity.Warning;
+
+                _notifications.Show(
+                    string.Format(_localizer["SalesChannelEditPage.ToastImportDone"], channelName, result.ItemsProcessed, result.ItemsFailed),
+                    severity);
+
+                // Products were (at least partly) imported — let an open product list refresh itself.
+                if (result.ItemsProcessed > 0)
+                {
+                    AppRefreshSignals.RaiseProductsChanged();
+                }
+            }
+            catch (ApiException ex)
+            {
+                _notifications.Show(
+                    string.Format(_localizer["SalesChannelEditPage.ToastImportFailed"], channelName, ex.CombinedMessage),
+                    NotificationSeverity.Error);
+            }
+            catch (Exception ex)
+            {
+                _notifications.Show(
+                    string.Format(_localizer["SalesChannelEditPage.ToastImportFailed"], channelName, ex.Message),
+                    NotificationSeverity.Error);
+            }
+        });
     }
 
     /// <summary>

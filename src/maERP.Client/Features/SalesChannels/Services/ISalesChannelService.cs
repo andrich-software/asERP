@@ -21,9 +21,9 @@ public interface ISalesChannelService
     Task<SalesChannelDetailDto?> GetSalesChannelAsync(Guid id, CancellationToken ct = default);
 
     /// <summary>
-    /// Creates a new sales channel.
+    /// Creates a new sales channel and returns the id of the newly created channel.
     /// </summary>
-    Task CreateSalesChannelAsync(SalesChannelInputDto input, CancellationToken ct = default);
+    Task<Guid> CreateSalesChannelAsync(SalesChannelInputDto input, CancellationToken ct = default);
 
     /// <summary>
     /// Updates an existing sales channel.

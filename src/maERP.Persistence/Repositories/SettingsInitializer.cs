@@ -136,7 +136,7 @@ namespace maERP.Persistence.Repositories
                 new Setting { Key = "ClickHouse.User", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_USER") ?? "maerp" },
                 new Setting { Key = "ClickHouse.Password", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_PASSWORD") ?? "maerp" },
                 new Setting { Key = "ClickHouse.UseTls", Value = "False" },
-                new Setting { Key = "ClickHouse.Enabled", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_ENABLED") ?? "True" },
+                new Setting { Key = "ClickHouse.Enabled", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_ENABLED") ?? "False" },
 
                 // OAuth — generic
                 // Public base URL the third-party redirects back to. Must be HTTPS in production

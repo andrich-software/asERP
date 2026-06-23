@@ -15,6 +15,15 @@ public sealed class ServerProfile
     /// <summary>Display name of the built-in maERP Cloud server.</summary>
     public const string BuiltInName = "maERP Cloud";
 
+    /// <summary>Fixed id of the DEBUG-only local dev server entry (auto-seeded for convenience).</summary>
+    public static readonly Guid LocalDevId = new("22222222-2222-2222-2222-222222222222");
+
+    /// <summary>Url of the local dev server — matches the Server's <c>https</c> launch profile.</summary>
+    public const string LocalDevUrl = "https://localhost:8443";
+
+    /// <summary>Display name of the local dev server entry.</summary>
+    public const string LocalDevName = "Local Dev";
+
     public Guid Id { get; set; }
 
     public string Name { get; set; } = string.Empty;
@@ -37,5 +46,14 @@ public sealed class ServerProfile
         Name = BuiltInName,
         Url = BuiltInUrl,
         IsBuiltIn = true
+    };
+
+    /// <summary>A regular (editable/removable) profile pointing at the local dev server.</summary>
+    public static ServerProfile CreateLocalDev() => new()
+    {
+        Id = LocalDevId,
+        Name = LocalDevName,
+        Url = LocalDevUrl,
+        IsBuiltIn = false
     };
 }

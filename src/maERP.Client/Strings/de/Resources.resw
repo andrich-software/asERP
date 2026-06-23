@@ -672,6 +672,39 @@
   <data name="ProductListPage.LoadError.Text" xml:space="preserve">
     <value>Produkte konnten nicht geladen werden</value>
   </data>
+  <data name="ProductListPage.EmptyNoChannelTitle" xml:space="preserve">
+    <value>Noch keine Produkte</value>
+  </data>
+  <data name="ProductListPage.EmptyNoChannelMessage" xml:space="preserve">
+    <value>Es ist kein Vertriebskanal mit aktiviertem Produktimport eingerichtet. Lege einen Kanal an, um Produkte zu importieren.</value>
+  </data>
+  <data name="ProductListPage.EmptySetupChannelAction" xml:space="preserve">
+    <value>Vertriebskanal einrichten</value>
+  </data>
+  <data name="ProductListPage.EmptyImportingTitle" xml:space="preserve">
+    <value>Import läuft…</value>
+  </data>
+  <data name="ProductListPage.EmptyImportingMessage" xml:space="preserve">
+    <value>Produkte werden gerade aus einem Vertriebskanal importiert. Das kann einen Moment dauern.</value>
+  </data>
+  <data name="ProductListPage.EmptyRefreshAction" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
+  <data name="ProductListPage.EmptyFailedTitle" xml:space="preserve">
+    <value>Import fehlgeschlagen</value>
+  </data>
+  <data name="ProductListPage.EmptyFailedMessage" xml:space="preserve">
+    <value>Der letzte Produktimport ist fehlgeschlagen. Details findest du beim Vertriebskanal im Synchronisierungs-Log.</value>
+  </data>
+  <data name="ProductListPage.EmptyOpenSalesChannelsAction" xml:space="preserve">
+    <value>Zu den Vertriebskanälen</value>
+  </data>
+  <data name="ProductListPage.EmptyNoProductsTitle" xml:space="preserve">
+    <value>Noch keine Produkte</value>
+  </data>
+  <data name="ProductListPage.EmptyNoProductsMessage" xml:space="preserve">
+    <value>Es wurden noch keine Produkte importiert oder angelegt.</value>
+  </data>
   <data name="ProductListPage.PreviousPage.ToolTip" xml:space="preserve">
     <value>Vorherige Seite</value>
   </data>
@@ -2240,6 +2273,24 @@
   </data>
   <data name="SalesChannelEditPage.Error.SaveFailed" xml:space="preserve">
     <value>Vertriebskanal konnte nicht gespeichert werden: {0}</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastCreated" xml:space="preserve">
+    <value>Vertriebskanal „{0}“ wurde erstellt.</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastUpdated" xml:space="preserve">
+    <value>Vertriebskanal „{0}“ wurde gespeichert.</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastImportStarted" xml:space="preserve">
+    <value>Produktimport für „{0}“ gestartet…</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastImportDone" xml:space="preserve">
+    <value>Produktimport „{0}“: {1} importiert, {2} fehlgeschlagen.</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastImportEmpty" xml:space="preserve">
+    <value>Produktimport „{0}“: keine Produkte gefunden.</value>
+  </data>
+  <data name="SalesChannelEditPage.ToastImportFailed" xml:space="preserve">
+    <value>Produktimport „{0}“ fehlgeschlagen: {1}</value>
   </data>
 
   <!-- Sales Channel Type Names -->

@@ -1,4 +1,5 @@
 #nullable disable
+using System.Globalization;
 using System.Text.Json;
 using maERP.Application.Contracts.Persistence;
 using maERP.Domain.Enums;
@@ -78,6 +79,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         try
         {
             var wc = BuildClient(context);
+            var taxRateMap = await BuildTaxRateMapAsync(wc, context.CancellationToken);
             var remoteProducts = await GetAllProductsAsync(wc, context.CancellationToken);
             foreach (var remoteProduct in remoteProducts)
             {
@@ -108,7 +110,7 @@ public sealed class WooCommerceConnector : ConnectorBase
                         // letting the cast throw and dropping the row as a failed import.
                         Price = remoteProduct.price ?? 0m,
                         Sku = sku,
-                        TaxRate = 19,
+                        TaxRate = ResolveTaxRate(remoteProduct, taxRateMap),
                         Description = remoteProduct.description,
                         IsVariantParent = isVariable,
                         Images = MapImages(remoteProduct.images),
@@ -541,6 +543,69 @@ public sealed class WooCommerceConnector : ConnectorBase
         }
 
         return (double)Math.Round(lineSubtotalTax / lineSubtotal * 100m, 0);
+    }
+
+    // Last-resort tax rate when the shop exposes no usable tax configuration at all (taxes disabled or
+    // the /taxes endpoint returns nothing). German standard VAT — keeps imports working out of the box
+    // and matches the previously hard-coded value, so shops without REST tax data behave as before.
+    private const double DefaultTaxRate = 19;
+
+    /// <summary>
+    /// Builds a map of WooCommerce tax-class slug → percentage from the shop's /taxes endpoint. A product
+    /// only carries its tax-class label ("", "reduced-rate", …), never the number, so the actual rate must
+    /// come from here. A class can hold several rows (one per country/state); the highest is taken as the
+    /// representative full rate (e.g. a German shop maps 'standard' → 19, 'reduced-rate' → 7). The empty
+    /// slug used by standard-rate products is normalized to "standard". Returns an empty map (callers fall
+    /// back to <see cref="DefaultTaxRate"/>) if the shop has taxes disabled or the endpoint is unavailable.
+    /// </summary>
+    private async Task<Dictionary<string, double>> BuildTaxRateMapAsync(WCObject wc, CancellationToken cancellationToken)
+    {
+        List<TaxRate> rates;
+        try
+        {
+            rates = await GetAllPagedAsync(parms => wc.TaxRate.GetAll(parms), t => t.id, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "WooCommerce tax rates could not be fetched; falling back to default tax rate {Rate}", DefaultTaxRate);
+            return new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var map = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        foreach (var taxRate in rates)
+        {
+            if (!double.TryParse(taxRate.rate, NumberStyles.Any, CultureInfo.InvariantCulture, out var rate))
+            {
+                continue;
+            }
+
+            var slug = string.IsNullOrEmpty(taxRate._class) ? "standard" : taxRate._class;
+            if (!map.TryGetValue(slug, out var existing) || rate > existing)
+            {
+                map[slug] = rate;
+            }
+        }
+
+        return map;
+    }
+
+    // Resolves a product's effective tax percentage from its tax-class label via the shop's rate map.
+    // 'none' tax status means the product is not taxed; an unknown class falls back to the standard rate,
+    // then to DefaultTaxRate when the shop exposed no rates at all.
+    private static double ResolveTaxRate(Product product, IReadOnlyDictionary<string, double> taxRateMap)
+    {
+        if (string.Equals(product.tax_status, "none", StringComparison.OrdinalIgnoreCase))
+        {
+            return 0;
+        }
+
+        var slug = string.IsNullOrEmpty(product.tax_class) ? "standard" : product.tax_class;
+        if (taxRateMap.TryGetValue(slug, out var rate))
+        {
+            return rate;
+        }
+
+        return taxRateMap.TryGetValue("standard", out var standardRate) ? standardRate : DefaultTaxRate;
     }
 
     public override async Task<SyncResult> ImportCustomersAsync(SalesChannelContext context)

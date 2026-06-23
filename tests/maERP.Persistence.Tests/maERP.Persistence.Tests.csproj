@@ -10,14 +10,15 @@
 		<WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;NU1608</WarningsNotAsErrors>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="coverlet.collector" >
+		<PackageReference Include="coverlet.collector">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+		<PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
 		<PackageReference Include="xunit" />
-		<PackageReference Include="xunit.runner.visualstudio" >
+		<PackageReference Include="xunit.runner.visualstudio">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>

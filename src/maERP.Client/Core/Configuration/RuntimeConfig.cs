@@ -31,6 +31,7 @@ public static class RuntimeConfig
     /// Best-effort fetch of <c>/config.json</c>. Always succeeds; on failure
     /// (file missing, malformed, non-WASM platform) the config stays empty.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Interoperability", "CA1416", Justification = "Browser-specific call is guarded by #if __WASM__")]
     public static async Task LoadAsync(CancellationToken ct = default)
     {
 #if __WASM__
@@ -66,6 +67,7 @@ public static class RuntimeConfig
 #if __WASM__
     // Reads window.location.origin via the .NET 7+ JS interop. Returns
     // empty string when JS host isn't available (shouldn't happen on WASM).
+    [System.Runtime.Versioning.SupportedOSPlatform("browser")]
     private static string GetWindowOrigin()
     {
         try

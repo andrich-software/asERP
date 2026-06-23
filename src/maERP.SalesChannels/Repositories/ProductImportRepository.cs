@@ -43,13 +43,13 @@ public class ProductImportRepository : IProductImportRepository
 
         if (taxClass == null)
         {
-            // Without a matching tax class the product cannot be created. Surface this as a failure
-            // (the connector loop counts the throw as a failed item and records it in the sync run's
-            // error summary) instead of silently returning, which previously masked the problem by
-            // counting the row as "processed" while importing nothing.
-            _logger.LogWarning("No matching tax class found for tax rate {TaxRate}; skipping product {Sku}", importProduct.TaxRate, importProduct.Sku);
-            throw new InvalidOperationException(
-                $"No tax class configured for tax rate {importProduct.TaxRate}; product '{importProduct.Sku}' could not be imported.");
+            // The shop may use a tax rate the local tenant has no class for yet (e.g. a fresh install,
+            // or a foreign rate). Rather than failing every affected product, create the missing class
+            // on the fly. CreateAsync persists it with the current tenant's id (set by the DbContext from
+            // the sync's tenant context), so subsequent products with the same rate reuse it.
+            _logger.LogInformation("No tax class for rate {TaxRate}; creating one for product {Sku}", importProduct.TaxRate, importProduct.Sku);
+            taxClass = new TaxClass { TaxRate = importProduct.TaxRate };
+            await _taxClassRepository.CreateAsync(taxClass);
         }
 
         // Sales channels deliver the description as HTML; store it in a compact Markdown-like form.
@@ -298,6 +298,12 @@ public class ProductImportRepository : IProductImportRepository
                     ManufacturerId = parent.ManufacturerId,
                     ProductType = ProductType.Variant,
                     ParentProductId = parent.Id,
+                    // Stamp the variant with the parent's tenant explicitly. The DbContext would also
+                    // stamp it from the ambient tenant context, but pinning it to the parent guarantees
+                    // the SKU lookup (tenant-scoped) and the unique (TenantId, Sku) index always agree —
+                    // even if a later run resolves a different ambient tenant — so re-imports stay
+                    // idempotent instead of inserting a duplicate that the index then rejects.
+                    TenantId = parent.TenantId,
                     VariantSortOrder = importVariant.SortOrder,
                     VariantOptions = optionValueIds
                         .Select(valueId => new ProductVariantOption { ProductAttributeValueId = valueId })
@@ -308,7 +314,8 @@ public class ProductImportRepository : IProductImportRepository
                         {
                             SalesChannelId = salesChannelId,
                             RemoteProductId = importVariant.RemoteVariantId,
-                            Price = effectivePrice
+                            Price = effectivePrice,
+                            TenantId = parent.TenantId
                         }
                     ]
                 };
