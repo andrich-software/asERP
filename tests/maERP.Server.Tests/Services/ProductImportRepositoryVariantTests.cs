@@ -35,6 +35,7 @@ public class ProductImportRepositoryVariantTests : TenantIsolatedTestBase
 
         return new ProductImportRepository(
             NullLogger<ProductImportRepository>.Instance,
+            DbContext,
             productRepository,
             salesChannelRepository,
             taxClassRepository,
@@ -176,6 +177,35 @@ public class ProductImportRepositoryVariantTests : TenantIsolatedTestBase
 
         TestAssertions.AssertEqual(2, countAfterFirst);
         TestAssertions.AssertEqual(countAfterFirst, countAfterSecond);
+    }
+
+    [Fact]
+    public async Task Import_VariantChannelLink_DoesNotCreatePhantomSalesChannelOrProduct()
+    {
+        await SeedBaseDataAsync();
+
+        var channelsBefore = await DbContext.SalesChannel.IgnoreQueryFilters().CountAsync();
+
+        // Import twice: the first run links variants as graph children; the second hits the
+        // "channel link missing" path that adds a ProductSalesChannel standalone — the case where an
+        // auto-initialized navigation would otherwise insert a phantom SalesChannel/Product.
+        await CreateImportRepository().ImportOrUpdateFromSalesChannel(SalesChannel1Id, BuildImportProduct());
+        DbContext.ChangeTracker.Clear();
+        await CreateImportRepository().ImportOrUpdateFromSalesChannel(SalesChannel1Id, BuildImportProduct());
+        DbContext.ChangeTracker.Clear();
+
+        // No empty phantom SalesChannel rows were inserted; every channel link points at the real channel.
+        var channelsAfter = await DbContext.SalesChannel.IgnoreQueryFilters().CountAsync();
+        TestAssertions.AssertEqual(channelsBefore, channelsAfter);
+
+        var links = await DbContext.ProductSalesChannel.IgnoreQueryFilters().ToListAsync();
+        TestAssertions.AssertTrue(links.Count > 0);
+        TestAssertions.AssertTrue(links.All(psc => psc.SalesChannelId == SalesChannel1Id));
+
+        // No phantom default Product (a new Product() carries TaxClassId == Guid.Empty, which is what the
+        // standalone link insert used to drag in and fail the foreign key on).
+        var products = await DbContext.Product.IgnoreQueryFilters().ToListAsync();
+        TestAssertions.AssertTrue(products.All(p => p.TaxClassId != Guid.Empty));
     }
 
     [Fact]

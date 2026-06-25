@@ -40,13 +40,25 @@ public class SalesImportRepository : ISalesImportRepository
 
     public async Task ImportOrUpdateFromSalesChannel(SalesChannel salesChannel, SalesChannelImportSales importSales)
     {
-        // Every repository in this run shares one scoped DbContext. If a previous order failed mid-save, its
-        // half-tracked entities stay in the change tracker and poison the next SaveChanges with
-        // "Unexpected entry.EntityState: Detached", turning one bad order into a cascade that fails the whole
-        // run. Each order is self-contained and prior orders are already persisted, so resetting the tracker
-        // here isolates failures to the single order that caused them.
-        _dbContext.ChangeTracker.Clear();
+        // Every repository in this run shares one scoped DbContext. If an order fails mid-save its
+        // half-applied Added/Modified entries stay tracked and poison the next SaveChanges, turning one bad
+        // order into a run-wide cascade. Each order is self-contained and prior orders are already persisted,
+        // so on failure we revert just this order's pending changes (rather than ChangeTracker.Clear(), which
+        // would also detach the dispatcher's run row and drop the per-run identity cache) and rethrow so the
+        // connector logs and counts the single failure.
+        try
+        {
+            await ImportOrUpdateCoreAsync(salesChannel, importSales);
+        }
+        catch
+        {
+            _dbContext.DiscardPendingChanges();
+            throw;
+        }
+    }
 
+    private async Task ImportOrUpdateCoreAsync(SalesChannel salesChannel, SalesChannelImportSales importSales)
+    {
         var existingSales = await _salesRepository.GetByRemoteSalesIdAsync(salesChannel.Id, importSales.RemoteSalesId);
 
         if (existingSales == null)

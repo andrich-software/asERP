@@ -2,9 +2,11 @@ using maERP.Application.Contracts.Persistence;
 using maERP.Application.Exceptions;
 using maERP.Domain.Entities;
 using maERP.Domain.Enums;
+using maERP.Persistence.DatabaseContext;
 using maERP.SalesChannels.Contracts;
 using maERP.SalesChannels.Models;
 using maERP.SalesChannels.Text;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace maERP.SalesChannels.Repositories;
@@ -12,6 +14,7 @@ namespace maERP.SalesChannels.Repositories;
 public class ProductImportRepository : IProductImportRepository
 {
     private readonly ILogger<ProductImportRepository> _logger;
+    private readonly ApplicationDbContext _context;
     private readonly IProductRepository _productRepository;
     private readonly ISalesChannelRepository _salesChannelRepository;
     private readonly ITaxClassRepository _taxClassRepository;
@@ -21,6 +24,7 @@ public class ProductImportRepository : IProductImportRepository
 
     public ProductImportRepository(
         ILogger<ProductImportRepository> logger,
+        ApplicationDbContext context,
         IProductRepository productRepository,
         ISalesChannelRepository salesChannelRepository,
         ITaxClassRepository taxClassRepository,
@@ -29,6 +33,7 @@ public class ProductImportRepository : IProductImportRepository
         IProductImageImportService productImageImportService)
     {
         _logger = logger;
+        _context = context;
         _productRepository = productRepository;
         _salesChannelRepository = salesChannelRepository;
         _taxClassRepository = taxClassRepository;
@@ -38,6 +43,54 @@ public class ProductImportRepository : IProductImportRepository
     }
 
     public async Task ImportOrUpdateFromSalesChannel(Guid salesChannelId, SalesChannelImportProduct importProduct)
+    {
+        // All import repositories share one scoped DbContext for the whole sync run. Each product is
+        // its own unit of work (the repositories SaveChanges as they go), but a failed SaveChanges leaves
+        // the half-applied entities tracked as Added/Modified. The connector catches per product and moves
+        // on, so without a reset those stuck entries are re-flushed on every later SaveChanges and keep
+        // failing — e.g. an Added product whose on-the-fly TaxClass was rolled back re-triggers
+        // "FOREIGN KEY constraint failed" for the rest of the run. Roll the tracker back to a clean state
+        // on failure so the next product (and its images/variants) starts fresh, then rethrow so the
+        // connector still logs and counts the failure.
+        try
+        {
+            await ImportOrUpdateCoreAsync(salesChannelId, importProduct);
+        }
+        catch (Exception ex)
+        {
+            LogPendingChangeFailure(ex, importProduct.Sku);
+            _context.DiscardPendingChanges();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// On a save failure, logs the entities EF could not persist together with the foreign-key values that
+    /// a relational provider rejects (the raw "FOREIGN KEY constraint failed" names no column). Runs before
+    /// <see cref="ImportChangeTrackerExtensions.DiscardPendingChanges"/> detaches them, so the offending row
+    /// can be identified without re-deriving it from a post-rollback database.
+    /// </summary>
+    private void LogPendingChangeFailure(Exception ex, string sku)
+    {
+        if (ex is not DbUpdateException dbEx)
+        {
+            return;
+        }
+
+        foreach (var entry in dbEx.Entries)
+        {
+            var fks = entry.Metadata.GetForeignKeys()
+                .SelectMany(fk => fk.Properties)
+                .Distinct()
+                .Select(p => $"{p.Name}={entry.CurrentValues[p] ?? "NULL"}");
+
+            _logger.LogError(
+                "Product import {Sku}: cannot save {EntityType} (state {State}); foreign keys: {ForeignKeys}",
+                sku, entry.Metadata.ClrType.Name, entry.State, string.Join(", ", fks));
+        }
+    }
+
+    private async Task ImportOrUpdateCoreAsync(Guid salesChannelId, SalesChannelImportProduct importProduct)
     {
         var taxClass = await _taxClassRepository.GetByTaxRateAsync(importProduct.TaxRate);
 
