@@ -20,19 +20,39 @@ internal static class ImportChangeTrackerExtensions
     /// </summary>
     public static void DiscardPendingChanges(this DbContext context)
     {
-        foreach (var entry in context.ChangeTracker.Entries().ToList())
+        // Detaching an Added principal while its Added dependents are still tracked severs a required
+        // relationship; with the default Immediate timing EF runs the fixup right away and throws
+        // ("The association ... has been severed ...") before the loop reaches those dependents — e.g. a
+        // new Product detached ahead of its ProductVariantOption rows. Defer the fixup so the whole
+        // Added graph can be detached entry-by-entry regardless of iteration order; we never SaveChanges
+        // here, so the deferred cascade never has to run. Restored afterwards to leave the shared
+        // context's timing as we found it.
+        var cascadeDeleteTiming = context.ChangeTracker.CascadeDeleteTiming;
+        var deleteOrphansTiming = context.ChangeTracker.DeleteOrphansTiming;
+        context.ChangeTracker.CascadeDeleteTiming = CascadeTiming.Never;
+        context.ChangeTracker.DeleteOrphansTiming = CascadeTiming.Never;
+
+        try
         {
-            switch (entry.State)
+            foreach (var entry in context.ChangeTracker.Entries().ToList())
             {
-                case EntityState.Added:
-                    entry.State = EntityState.Detached;
-                    break;
-                case EntityState.Modified:
-                case EntityState.Deleted:
-                    entry.CurrentValues.SetValues(entry.OriginalValues);
-                    entry.State = EntityState.Unchanged;
-                    break;
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        entry.State = EntityState.Detached;
+                        break;
+                    case EntityState.Modified:
+                    case EntityState.Deleted:
+                        entry.CurrentValues.SetValues(entry.OriginalValues);
+                        entry.State = EntityState.Unchanged;
+                        break;
+                }
             }
+        }
+        finally
+        {
+            context.ChangeTracker.CascadeDeleteTiming = cascadeDeleteTiming;
+            context.ChangeTracker.DeleteOrphansTiming = deleteOrphansTiming;
         }
     }
 }
