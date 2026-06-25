@@ -15,4 +15,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\maERP.Persistence\maERP.Persistence.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="maERP.Server.Tests" />
+	</ItemGroup>
 </Project>
