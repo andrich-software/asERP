@@ -5,10 +5,15 @@ namespace maERP.Domain.Entities;
 
 public class ProductSalesChannel : BaseEntity, IBaseEntity
 {
-    public SalesChannel SalesChannel { get; set; } = new();
+    // Navigations must NOT be auto-initialized to new(): a fresh BaseEntity gets a random Guid Id, so a
+    // ProductSalesChannel created from FK ids alone (e.g. a variant's channel link) would carry a phantom
+    // SalesChannel/Product. When such a row is added standalone, EF marks those phantoms Added — inserting an
+    // empty SalesChannel and a default Product (TaxClassId = Guid.Empty → "FOREIGN KEY constraint failed") and
+    // overwriting the real FK with the phantom's id. Leave them unset; EF binds via the FK scalars below.
+    public SalesChannel SalesChannel { get; set; } = null!;
     public Guid SalesChannelId { get; set; }
-    public Guid ProductId { get; set; } = new();
-    public Product Product { get; set; } = new();
+    public Guid ProductId { get; set; }
+    public Product Product { get; set; } = null!;
 
     /// <summary>
     /// Channel-side identifier for this listing (eBay SKU, Amazon ASIN/SKU, Shopware product number, ...).

@@ -1,6 +1,7 @@
 using maERP.Application.Contracts.Persistence;
 using maERP.Domain.Entities;
 using maERP.Domain.Enums;
+using maERP.Persistence.DatabaseContext;
 using maERP.SalesChannels.Contracts;
 using maERP.SalesChannels.Models;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,7 @@ namespace maERP.SalesChannels.Repositories;
 public class CustomerImportRepository : ICustomerImportRepository
 {
     private readonly ILogger<CustomerImportRepository> _logger;
+    private readonly ApplicationDbContext _dbContext;
     private readonly ICustomerRepository _customerRepository;
     private readonly ICountryRepository _countryRepository;
 
@@ -23,15 +25,35 @@ public class CustomerImportRepository : ICustomerImportRepository
 
     public CustomerImportRepository(
         ILogger<CustomerImportRepository> logger,
+        ApplicationDbContext dbContext,
         ICustomerRepository customerRepository,
         ICountryRepository countryRepository)
     {
         _logger = logger;
+        _dbContext = dbContext;
         _customerRepository = customerRepository;
         _countryRepository = countryRepository;
     }
 
     public async Task ImportOrUpdateFromSalesChannel(SalesChannel salesChannel, SalesChannelImportCustomer importCustomer)
+    {
+        // Every repository in this run shares one scoped DbContext. If a customer fails mid-save its
+        // half-applied Added/Modified entries stay tracked and poison the next SaveChanges, turning one bad
+        // customer into a run-wide cascade. Each customer is self-contained and prior ones are already
+        // persisted, so on failure we revert just this customer's pending changes and rethrow so the
+        // connector logs and counts the single failure.
+        try
+        {
+            await ImportOrUpdateCoreAsync(salesChannel, importCustomer);
+        }
+        catch
+        {
+            _dbContext.DiscardPendingChanges();
+            throw;
+        }
+    }
+
+    private async Task ImportOrUpdateCoreAsync(SalesChannel salesChannel, SalesChannelImportCustomer importCustomer)
     {
         // Überprüfen, ob Kunde bereits existiert (nach Remote-ID suchen)
         var existingCustomer = await _customerRepository.GetCustomerByRemoteCustomerIdAsync(salesChannel.Id, importCustomer.RemoteCustomerId);
