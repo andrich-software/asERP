@@ -1,0 +1,29 @@
+﻿{
+    "name": "astoolkit/analytics",
+    "description": "asToolkit Web Analytics for Shopware 6 — first-party, privacy-friendly visitor tracking that reports into your asToolkit server.",
+    "version": "1.0.0",
+    "type": "shopware-platform-plugin",
+    "license": "MIT",
+    "authors": [
+        { "name": "Martin Andrich Softwareentwicklung" }
+    ],
+    "require": {
+        "shopware/core": "~6.5.0 || ~6.6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Maerp\\Analytics\\": "src/"
+        }
+    },
+    "extra": {
+        "shopware-plugin-class": "Maerp\\Analytics\\MaerpAnalytics",
+        "label": {
+            "en-GB": "asToolkit Web Analytics",
+            "de-DE": "asToolkit Web-Statistiken"
+        },
+        "description": {
+            "en-GB": "First-party, privacy-friendly web analytics reporting into your asToolkit server.",
+            "de-DE": "First-Party-Web-Statistiken (datenschutzfreundlich), die an deinen asToolkit-Server melden."
+        }
+    }
+}

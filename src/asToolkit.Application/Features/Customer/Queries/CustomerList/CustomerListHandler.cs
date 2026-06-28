@@ -1,0 +1,60 @@
+﻿using System.Linq.Dynamic.Core;
+using asToolkit.Application.Contracts.Logging;
+using asToolkit.Application.Contracts.Persistence;
+using asToolkit.Application.Extensions;
+using asToolkit.Application.Specifications;
+using asToolkit.Domain.Dtos.Customer;
+using asToolkit.Domain.Wrapper;
+using asToolkit.Application.Mediator;
+
+namespace asToolkit.Application.Features.Customer.Queries.CustomerList;
+
+public class CustomerListHandler : IRequestHandler<CustomerListQuery, PaginatedResult<CustomerListDto>>
+{
+    private readonly IAppLogger<CustomerListHandler> _logger;
+    private readonly ICustomerRepository _customerRepository;
+
+    public CustomerListHandler(
+        IAppLogger<CustomerListHandler> logger,
+        ICustomerRepository customerRepository)
+    {
+        _logger = logger;
+        _customerRepository = customerRepository;
+    }
+    public async Task<PaginatedResult<CustomerListDto>> Handle(CustomerListQuery request, CancellationToken cancellationToken)
+    {
+        var customerFilterSpec = new CustomerFilterSpecification(request.SearchString);
+
+        _logger.LogInformation("CustomerListHandler.Handle: Retrieving customers.");
+
+        if (request.SalesBy.Any() != true)
+        {
+            return await _customerRepository.Entities
+               .Specify(customerFilterSpec)
+               .Select(c => new CustomerListDto
+               {
+                   Id = c.Id,
+                   CustomerId = c.CustomerId,
+                   Firstname = c.Firstname,
+                   Lastname = c.Lastname,
+                   DateEnrollment = c.DateEnrollment
+               })
+               .ToPaginatedListAsync(request.PageNumber, request.PageSize);
+        }
+
+        var salesing = string.Join(",", request.SalesBy);
+
+        return await _customerRepository.Entities
+            .Specify(customerFilterSpec)
+            .OrderBy(salesing)
+            .Select(c => new CustomerListDto
+            {
+                Id = c.Id,
+                CustomerId = c.CustomerId,
+                Firstname = c.Firstname,
+                Lastname = c.Lastname,
+                DateEnrollment = c.DateEnrollment
+            })
+            .ToPaginatedListAsync(request.PageNumber, request.PageSize);
+    }
+}

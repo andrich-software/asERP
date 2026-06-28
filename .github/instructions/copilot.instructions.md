@@ -1,19 +1,19 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-maERP is a C# client-server, cross-platform, open-source ERP system developed with .NET 9, Uno Platform and Entity Framework. It follows the Clean Architecture with a clear separation of concerns. It consists of the projects:
+asToolkit is a C# client-server, cross-platform, open-source ERP system developed with .NET 9, Uno Platform and Entity Framework. It follows the Clean Architecture with a clear separation of concerns. It consists of the projects:
 
-1. **maERP.Domain** - Core domain entities and interfaces
-2. **maERP.Application** - Application logic, CQRS handlers
-3. **maERP.Infrastructure** - Cross-cutting concerns (email, logging, PDF generation)
-4. **maERP.Persistence** - Database access, repositories
-5. **maERP.Identity** - Authentication and authorization
-6. **maERP.SalesChannels** - Integrations with e-commerce platforms
-7. **maERP.Server** - Backend API server (headless, no frontend)
-8. **maERP.Client** - Client using Uno Platform for Desktop, WASM, iOS, Android, Windows
+1. **asToolkit.Domain** - Core domain entities and interfaces
+2. **asToolkit.Application** - Application logic, CQRS handlers
+3. **asToolkit.Infrastructure** - Cross-cutting concerns (email, logging, PDF generation)
+4. **asToolkit.Persistence** - Database access, repositories
+5. **asToolkit.Identity** - Authentication and authorization
+6. **asToolkit.SalesChannels** - Integrations with e-commerce platforms
+7. **asToolkit.Server** - Backend API server (headless, no frontend)
+8. **asToolkit.Client** - Client using Uno Platform for Desktop, WASM, iOS, Android, Windows
 
 ## Architecture
 
@@ -26,7 +26,7 @@ The codebase implements:
 - Uno Platform Client Application for Desktop, iOS, Android and WASM
 - UI projects not using direct database access, using REST-API instead
 
-### maERP.Client Project Structure
+### asToolkit.Client Project Structure
 
 The client follows a **feature-based architecture** optimized for large-scale ERP applications:
 
@@ -41,7 +41,7 @@ The client follows a **feature-based architecture** optimized for large-scale ER
 - `Services/` - Application services layer
   - `Api/Clients/` - API client classes per resource
   - `Api/Handlers/` - HTTP message handlers (Auth, Logging, DebugHttpHandler)
-  - `Api/Models/` - API DTOs if not from maERP.Domain
+  - `Api/Models/` - API DTOs if not from asToolkit.Domain
   - `Authentication/` - Auth service & token management
   - `Navigation/` - Navigation service
   - `Storage/` - Local storage (settings, cache)
@@ -68,7 +68,7 @@ The client follows a **feature-based architecture** optimized for large-scale ER
 **Conventions for New Features:**
 - IMPORTANT: Always create new features in `Features/` directory
 - IMPORTANT: Each feature MUST have separate `Views/` and `Models/` subdirectories
-- IMPORTANT: Use namespace pattern: `maERP.Client.Features.{FeatureName}.{Views|Models}`
+- IMPORTANT: Use namespace pattern: `asToolkit.Client.Features.{FeatureName}.{Views|Models}`
 - IMPORTANT: Register views in `App.xaml.cs` using `ViewMap<TView, TViewModel>`
 - IMPORTANT: Register routes in `App.xaml.cs` RegisterRoutes method
 - IMPORTANT: Add commonly used namespaces to `GlobalUsings.cs`
@@ -80,14 +80,14 @@ The client follows a **feature-based architecture** optimized for large-scale ER
 ```
 Features/Customers/
   Views/
-    CustomerListPage.xaml         (namespace: maERP.Client.Features.Customers.Views)
+    CustomerListPage.xaml         (namespace: asToolkit.Client.Features.Customers.Views)
     CustomerListPage.xaml.cs
     CustomerDetailPage.xaml
     CustomerDetailPage.xaml.cs
     CustomerEditPage.xaml
     CustomerEditPage.xaml.cs
   Models/
-    CustomerListModel.cs          (namespace: maERP.Client.Features.Customers.Models)
+    CustomerListModel.cs          (namespace: asToolkit.Client.Features.Customers.Models)
     CustomerDetailModel.cs
     CustomerEditModel.cs
 
@@ -122,11 +122,11 @@ Use MCP Server if needed. Do not use jetbrains for shell commands.
 # Build the entire solution
 dotnet build
 
-# Build maERP.Server project
-dotnet build src/maERP.Server/maERP.Server.csproj
+# Build asToolkit.Server project
+dotnet build src/asToolkit.Server/asToolkit.Server.csproj
 
-# Build maERP.Client project (multi-platform)
-dotnet build src/maERP.Client/maERP.Client.csproj
+# Build asToolkit.Client project (multi-platform)
+dotnet build src/asToolkit.Client/asToolkit.Client.csproj
 
 ```
 
@@ -134,13 +134,13 @@ dotnet build src/maERP.Client/maERP.Client.csproj
 
 ```bash
 # Run the server
-dotnet run --project src/maERP.Server/maERP.Server.csproj
+dotnet run --project src/asToolkit.Server/asToolkit.Server.csproj
 
 # Run the client (WebAssembly in browser)
-dotnet run --project src/maERP.Client/maERP.Client.csproj
+dotnet run --project src/asToolkit.Client/asToolkit.Client.csproj
 
 # Run the client (Desktop)
-dotnet run --project src/maERP.Client/maERP.Client.csproj -f net10.0-desktop
+dotnet run --project src/asToolkit.Client/asToolkit.Client.csproj -f net10.0-desktop
 ```
 
 ### Testing
@@ -150,13 +150,13 @@ dotnet run --project src/maERP.Client/maERP.Client.csproj -f net10.0-desktop
 dotnet test
 
 # Run specific test project
-dotnet test tests/maERP.Server.Tests/maERP.Server.Tests.csproj
+dotnet test tests/asToolkit.Server.Tests/asToolkit.Server.Tests.csproj
 
 # Run specific test class
-dotnet test tests/maERP.Server.Tests/maERP.Server.Tests.csproj --filter "FullyQualifiedName~CustomerCrudTest"
+dotnet test tests/asToolkit.Server.Tests/asToolkit.Server.Tests.csproj --filter "FullyQualifiedName~CustomerCrudTest"
 
 # Run specific test method
-dotnet test tests/maERP.Server.Tests/maERP.Server.Tests.csproj --filter "FullyQualifiedName~CustomerCrudTest.CustomerCreateTest"
+dotnet test tests/asToolkit.Server.Tests/asToolkit.Server.Tests.csproj --filter "FullyQualifiedName~CustomerCrudTest.CustomerCreateTest"
 ```
 
 #### Multi-Tenant Testing Infrastructure
@@ -238,22 +238,22 @@ dotnet format
 - Database provider can be configured in appsettings.json or environment variables
 - Docker containerization is fully supported and recommended for deployment
 - Authentication is JWT-based
-- maERP.Server is built with .NET 9 ASP.NET Core
-- maERP.Server uses MediatR for CQRS pattern
+- asToolkit.Server is built with .NET 9 ASP.NET Core
+- asToolkit.Server uses MediatR for CQRS pattern
 - The project is multi tenancy enabled
 - The project uses Entity Framework Core for database access
 - The project uses C# 10+ features when appropriate
 - The project uses FluentValidation for validation
 - The project uses Serilog for logging
 - The project uses GitHub Actions for CI/CD
-- maERP.UI is not executable. It is a shared library for maERP.Browser, maERP.Desktop, maERP.iOS and maERP.Android
+- asToolkit.UI is not executable. It is a shared library for asToolkit.Browser, asToolkit.Desktop, asToolkit.iOS and asToolkit.Android
 - Uno Platform is used for cross-platform UI development
 - Uno Platform is using MVUX Pattern and Fluent Theme
-- maERP.Client uses feature-based architecture - see "maERP.Client Project Structure" section above
+- asToolkit.Client uses feature-based architecture - see "asToolkit.Client Project Structure" section above
 - ViewModels/Models are registered in App.xaml.cs using ViewMap and RouteMap
-- DTOs are defined in maERP.Domain an available as ListDto, DetailDto and InputDto
-- Repositories are defined in maERP.Persistence
-- Services are defined in maERP.Application
+- DTOs are defined in asToolkit.Domain an available as ListDto, DetailDto and InputDto
+- Repositories are defined in asToolkit.Persistence
+- Services are defined in asToolkit.Application
 - on layout changes, always consider the Uno Platform limitations and capabilities
 - when implementing new features, always consider the cross-platform nature of the project
 - when implementing new features, always consider the performance and scalability of the solution

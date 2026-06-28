@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# maERP CLI — manage Server and WASM containers via docker compose profiles.
+# asToolkit CLI — manage Server and WASM containers via docker compose profiles.
 #
 # Usage:
 #   ./cli.sh deploy server         git pull, build & (re)start the server stack
@@ -74,9 +74,9 @@ BACKUP_DIR="${SCRIPT_DIR}/backups"
 # the docker network and the user shouldn't have to configure them.
 PG_INTERNAL_HOST="postgres"
 PG_INTERNAL_PORT="5432"
-PG_INTERNAL_DB="maerp"
-PG_INTERNAL_USER="maerp"
-PG_INTERNAL_PASSWORD="maerp"
+PG_INTERNAL_DB="astoolkit"
+PG_INTERNAL_USER="astoolkit"
+PG_INTERNAL_PASSWORD="astoolkit"
 
 # Client image used to run pg_dump against external DBs.
 PG_CLIENT_IMAGE="postgres:16-alpine"
@@ -341,7 +341,7 @@ db_backup() {
     mkdir -p "$BACKUP_DIR"
     local ts file
     ts="$(date +%Y%m%d-%H%M%S)"
-    file="${BACKUP_DIR}/${ts}_maerp_${DB_ENGINE}.sql.gz"
+    file="${BACKUP_DIR}/${ts}_astoolkit_${DB_ENGINE}.sql.gz"
 
     echo ">>> Dumping ${DB_ENGINE} '${DB_NAME}' from ${DB_HOST}:${DB_PORT} (mode: ${DB_MODE}) → ${file}"
     case "$DB_ENGINE" in
@@ -557,11 +557,11 @@ superadmin_create() {
     fi
 
     "${COMPOSE[@]}" --profile server exec -T \
-        -e MAERP_CLI_EMAIL="$email" \
-        -e MAERP_CLI_FIRSTNAME="$firstname" \
-        -e MAERP_CLI_LASTNAME="$lastname" \
-        -e MAERP_CLI_PASSWORD="$password" \
-        server dotnet maERP.Server.dll cli superadmin create
+        -e ASTOOLKIT_CLI_EMAIL="$email" \
+        -e ASTOOLKIT_CLI_FIRSTNAME="$firstname" \
+        -e ASTOOLKIT_CLI_LASTNAME="$lastname" \
+        -e ASTOOLKIT_CLI_PASSWORD="$password" \
+        server dotnet asToolkit.Server.dll cli superadmin create
 }
 
 superadmin_update() {
@@ -588,11 +588,11 @@ superadmin_update() {
     fi
 
     "${COMPOSE[@]}" --profile server exec -T \
-        -e MAERP_CLI_NEW_EMAIL="$new_email" \
-        -e MAERP_CLI_FIRSTNAME="$firstname" \
-        -e MAERP_CLI_LASTNAME="$lastname" \
-        -e MAERP_CLI_PASSWORD="$password" \
-        server dotnet maERP.Server.dll cli superadmin update "$email"
+        -e ASTOOLKIT_CLI_NEW_EMAIL="$new_email" \
+        -e ASTOOLKIT_CLI_FIRSTNAME="$firstname" \
+        -e ASTOOLKIT_CLI_LASTNAME="$lastname" \
+        -e ASTOOLKIT_CLI_PASSWORD="$password" \
+        server dotnet asToolkit.Server.dll cli superadmin update "$email"
 }
 
 superadmin_delete() {
@@ -602,7 +602,7 @@ superadmin_delete() {
     fi
     require_server_running
     "${COMPOSE[@]}" --profile server exec -T \
-        server dotnet maERP.Server.dll cli superadmin delete "$email"
+        server dotnet asToolkit.Server.dll cli superadmin delete "$email"
 }
 
 main "$@"

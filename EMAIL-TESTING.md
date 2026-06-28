@@ -1,6 +1,6 @@
-# E-Mail Testing Guide für maERP
+﻿# E-Mail Testing Guide für asToolkit
 
-Diese Anleitung zeigt, wie Sie die Passwort-Zurücksetzen-Funktionalität und andere E-Mail-Features in maERP testen können.
+Diese Anleitung zeigt, wie Sie die Passwort-Zurücksetzen-Funktionalität und andere E-Mail-Features in asToolkit testen können.
 
 ## 📧 SMTP Test-Server starten (Mailpit)
 
@@ -38,7 +38,7 @@ Hier sehen Sie alle E-Mails, die von Ihrer Anwendung versendet werden.
 ## 🚀 Server starten
 
 ```bash
-cd src/maERP.Server
+cd src/asToolkit.Server
 dotnet run
 ```
 
@@ -158,8 +158,8 @@ Die Datei enthält bereits die Mailpit-Konfiguration:
     "SmtpUsername": "",
     "SmtpPassword": "",
     "SmtpEnableSsl": false,
-    "FromAddress": "noreply@maerp.local",
-    "FromName": "maERP Development",
+    "FromAddress": "noreply@astoolkit.local",
+    "FromName": "asToolkit Development",
     "PasswordResetUrl": "http://localhost:5173/reset-password"
   }
 }

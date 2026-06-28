@@ -1,33 +1,33 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 Guidance for Claude Code working in this repository. Subdirectories contain their own `CLAUDE.md` with focused conventions — they are loaded automatically when working in those folders. Read this file first, then defer to the nested files for layer-specific rules.
 
 ## Project Overview
 
-maERP is an open-source, multi-tenant ERP system. C#, .NET 10, Clean Architecture, cross-platform UI via Uno Platform.
+asToolkit is an open-source, multi-tenant ERP system. C#, .NET 10, Clean Architecture, cross-platform UI via Uno Platform.
 
 ### Solution layout
 
 | Project | Purpose |
 |---|---|
-| `src/maERP.Domain` | Entities, DTOs, Enums, Wrappers, Validators. No infrastructure dependencies. |
-| `src/maERP.Application` | CQRS handlers (Features/), custom Mediator, contracts, services |
-| `src/maERP.Infrastructure` | Email, PDF, logging, cross-cutting services |
-| `src/maERP.Persistence` | EF Core DbContext, repositories, configurations, seeders |
-| `src/maERP.Persistence.{MSSQL,PostgreSQL,SQLite}` | Provider-specific migration assemblies |
-| `src/maERP.Identity` | ASP.NET Identity, JWT auth, token services |
-| `src/maERP.SalesChannels` | Integrations: PointOfSale, Shopware 5/6, WooCommerce, eBay |
-| `src/maERP.Analytics` | Analytics scaffolding |
-| `src/maERP.Server` | ASP.NET Core Web API (no frontend) |
-| `src/maERP.Client` | Uno Platform app (Desktop, WASM, Android, iOS) |
-| `tests/maERP.Server.Tests` | xUnit, multi-tenant integration tests |
-| `tests/maERP.Persistence.Tests` | xUnit, persistence layer |
-| `tests/maERP.Client.Tests`, `tests/maERP.Client.UITests` | NUnit |
+| `src/asToolkit.Domain` | Entities, DTOs, Enums, Wrappers, Validators. No infrastructure dependencies. |
+| `src/asToolkit.Application` | CQRS handlers (Features/), custom Mediator, contracts, services |
+| `src/asToolkit.Infrastructure` | Email, PDF, logging, cross-cutting services |
+| `src/asToolkit.Persistence` | EF Core DbContext, repositories, configurations, seeders |
+| `src/asToolkit.Persistence.{MSSQL,PostgreSQL,SQLite}` | Provider-specific migration assemblies |
+| `src/asToolkit.Identity` | ASP.NET Identity, JWT auth, token services |
+| `src/asToolkit.SalesChannels` | Integrations: PointOfSale, Shopware 5/6, WooCommerce, eBay |
+| `src/asToolkit.Analytics` | Analytics scaffolding |
+| `src/asToolkit.Server` | ASP.NET Core Web API (no frontend) |
+| `src/asToolkit.Client` | Uno Platform app (Desktop, WASM, Android, iOS) |
+| `tests/asToolkit.Server.Tests` | xUnit, multi-tenant integration tests |
+| `tests/asToolkit.Persistence.Tests` | xUnit, persistence layer |
+| `tests/asToolkit.Client.Tests`, `tests/asToolkit.Client.UITests` | NUnit |
 
 ### Architecture in one screen
 
 - **CQRS** — `Features/{Area}/Commands/{Name}` and `Features/{Area}/Queries/{Name}`. Each has a request, handler, and (where applicable) validator.
-- **Custom Mediator** — `maERP.Application.Mediator` namespace (not the MediatR NuGet package). Same `IRequest<TResponse>` / `IRequestHandler<TRequest, TResponse>` shape. Some doc comments still mention "MediatR" — they refer to the custom implementation.
+- **Custom Mediator** — `asToolkit.Application.Mediator` namespace (not the MediatR NuGet package). Same `IRequest<TResponse>` / `IRequestHandler<TRequest, TResponse>` shape. Some doc comments still mention "MediatR" — they refer to the custom implementation.
 - **Manual mapping** — no AutoMapper; mapping done explicitly in handlers/extensions.
 - **Repositories** for data access; entities inherit `BaseEntity` (with `Guid? TenantId`) or `BaseEntityWithoutTenant`. All Ids are `System.Guid` (`BaseEntity.cs`).
 - **Tenancy** — global EF Core query filters enforce tenant isolation; `ITenantContext` is the runtime source of truth.
@@ -39,24 +39,24 @@ maERP is an open-source, multi-tenant ERP system. C#, .NET 10, Clean Architectur
 ```bash
 # Build
 dotnet build
-dotnet build src/maERP.Server/maERP.Server.csproj
-dotnet build src/maERP.Client/maERP.Client.csproj
+dotnet build src/asToolkit.Server/asToolkit.Server.csproj
+dotnet build src/asToolkit.Client/asToolkit.Client.csproj
 
 # Run
-dotnet run --project src/maERP.Server/maERP.Server.csproj
-dotnet run --project src/maERP.Client/maERP.Client.csproj                       # WASM in browser
-dotnet run --project src/maERP.Client/maERP.Client.csproj -f net10.0-desktop    # Desktop
+dotnet run --project src/asToolkit.Server/asToolkit.Server.csproj
+dotnet run --project src/asToolkit.Client/asToolkit.Client.csproj                       # WASM in browser
+dotnet run --project src/asToolkit.Client/asToolkit.Client.csproj -f net10.0-desktop    # Desktop
 
 # Tests
 dotnet test
-dotnet test tests/maERP.Server.Tests/maERP.Server.Tests.csproj
-dotnet test tests/maERP.Server.Tests/maERP.Server.Tests.csproj --filter "FullyQualifiedName~CustomerCrudTest"
+dotnet test tests/asToolkit.Server.Tests/asToolkit.Server.Tests.csproj
+dotnet test tests/asToolkit.Server.Tests/asToolkit.Server.Tests.csproj --filter "FullyQualifiedName~CustomerCrudTest"
 
 # Format
 dotnet format
 dotnet format --verify-no-changes
 
-# Migrations — see src/maERP.Persistence/CLAUDE.md
+# Migrations — see src/asToolkit.Persistence/CLAUDE.md
 ./create-migrations.sh "MigrationName"               # all providers
 ./create-migrations.sh "MigrationName" postgresql    # one provider
 ```
@@ -76,7 +76,7 @@ When adding a feature or layout, **find a similar one and mirror it**. Naming, f
 - `TenantId` is `Guid?` on every tenant-scoped entity (`BaseEntity`).
 - Tenant isolation is enforced via EF Core global query filters — never bypass them in queries unless explicitly cross-tenant (e.g. Superadmin operations).
 - Cascade deletes must be implemented in handlers/repositories — do not rely on EF cascade defaults.
-- Test cross-tenant access prevention for every new tenant-scoped feature (see `tests/maERP.Server.Tests/CLAUDE.md`).
+- Test cross-tenant access prevention for every new tenant-scoped feature (see `tests/asToolkit.Server.Tests/CLAUDE.md`).
 
 ### Roles
 - **Superadmin** — only role permitted to use `SuperadminController` to manage users across tenants.
@@ -104,7 +104,7 @@ When adding a feature or layout, **find a similar one and mirror it**. Naming, f
 - Tests use **per-test factories**, not shared fixtures.
 - **Don't use FluentAssertions** — use plain xUnit/NUnit assertions or the `TestAssertions` helper.
 - When a test fails, first check whether the test logic is correct. If it is, fix the production code.
-- Multi-tenant integration tests inherit `TenantIsolatedTestBase` — see `tests/maERP.Server.Tests/CLAUDE.md`.
+- Multi-tenant integration tests inherit `TenantIsolatedTestBase` — see `tests/asToolkit.Server.Tests/CLAUDE.md`.
 
 ## Stack & Versions
 

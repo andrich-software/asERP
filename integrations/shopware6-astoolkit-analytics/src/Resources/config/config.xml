@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/platform/trunk/src/Core/System/SystemConfig/Schema/config.xsd">
+    <card>
+        <title lang="en-GB">asToolkit connection</title>
+        <title lang="de-DE">asToolkit-Verbindung</title>
+
+        <input-field type="url">
+            <name>serverUrl</name>
+            <label lang="en-GB">asToolkit Server URL</label>
+            <label lang="de-DE">asToolkit-Server-URL</label>
+            <placeholder lang="en-GB">https://erp.example.com</placeholder>
+        </input-field>
+
+        <input-field type="password">
+            <name>trackingToken</name>
+            <label lang="en-GB">Tracking Token</label>
+            <label lang="de-DE">Tracking-Token</label>
+            <helpText lang="en-GB">Generated in asToolkit (Sales channel → Web analytics). Stored server-side only; never sent to the browser.</helpText>
+            <helpText lang="de-DE">In asToolkit erzeugt (Vertriebskanal → Web-Statistiken). Wird nur serverseitig gespeichert und nie an den Browser gesendet.</helpText>
+        </input-field>
+    </card>
+</config>

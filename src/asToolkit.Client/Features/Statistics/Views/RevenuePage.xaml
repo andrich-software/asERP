@@ -1,0 +1,101 @@
+﻿<Page x:Class="asToolkit.Client.Features.Statistics.Views.RevenuePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:local="using:asToolkit.Client.Features.Statistics.Views"
+      xmlns:models="using:asToolkit.Client.Features.Statistics.Models"
+      xmlns:utu="using:Uno.Toolkit.UI"
+      Background="{ThemeResource BackgroundBrush}">
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <Grid utu:SafeArea.Insets="VisibleBounds"
+          Padding="24">
+      <StackPanel Spacing="24">
+
+        <!-- Page Header (Breadcrumb + Title) -->
+        <StackPanel Spacing="2">
+          <TextBlock x:Uid="RevenuePage.Breadcrumb"
+                     Style="{StaticResource LabelSmall}"
+                     Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+          <TextBlock x:Uid="RevenuePage.Title"
+                     Style="{StaticResource HeadlineMedium}"
+                     Foreground="{ThemeResource OnBackgroundBrush}" />
+        </StackPanel>
+
+        <!-- Chart card (full width) -->
+        <Border Background="{ThemeResource SurfaceBrush}"
+                CornerRadius="12"
+                Translation="0,0,8">
+          <Border.Shadow>
+            <ThemeShadow />
+          </Border.Shadow>
+
+          <StackPanel Padding="24"
+                      Spacing="20">
+
+            <!-- Date range controls + total -->
+            <Grid ColumnSpacing="16"
+                  RowSpacing="12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+
+              <DatePicker x:Name="StartDatePicker"
+                          x:Uid="RevenuePage.StartDate"
+                          Grid.Column="0"
+                          DateChanged="OnDateChanged" />
+
+              <DatePicker x:Name="EndDatePicker"
+                          x:Uid="RevenuePage.EndDate"
+                          Grid.Column="1"
+                          DateChanged="OnDateChanged" />
+
+              <StackPanel Grid.Column="2"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          Spacing="2">
+                <TextBlock x:Uid="RevenuePage.TotalLabel"
+                           Style="{StaticResource LabelSmall}"
+                           HorizontalAlignment="Right"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                <TextBlock x:Name="TotalRevenueText"
+                           Style="{StaticResource TitleLarge}"
+                           HorizontalAlignment="Right"
+                           Foreground="{ThemeResource OnSurfaceBrush}" />
+              </StackPanel>
+            </Grid>
+
+            <!-- Chart surface -->
+            <Grid Height="360">
+              <Canvas x:Name="ChartCanvas"
+                      Background="Transparent"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      SizeChanged="OnChartCanvasSizeChanged"
+                      PointerMoved="OnChartPointerMoved"
+                      PointerExited="OnChartPointerExited" />
+
+              <ProgressRing x:Name="ChartProgress"
+                            IsActive="False"
+                            Width="48"
+                            Height="48"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+
+              <TextBlock x:Name="NoDataText"
+                         x:Uid="RevenuePage.NoData"
+                         Style="{StaticResource BodyMedium}"
+                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         Visibility="Collapsed" />
+            </Grid>
+
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </Grid>
+  </ScrollViewer>
+</Page>

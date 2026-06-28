@@ -1,37 +1,37 @@
--- MSSQL Initialization Script for maERP
--- This script creates the database and user for maERP
+﻿-- MSSQL Initialization Script for asToolkit
+-- This script creates the database and user for asToolkit
 
 USE master;
 GO
 
 -- Create database if it doesn't exist
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'maerp_01')
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'astoolkit_01')
 BEGIN
-    CREATE DATABASE maerp_01;
+    CREATE DATABASE astoolkit_01;
 END
 GO
 
 -- Create login if it doesn't exist
-IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = 'maerp')
+IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = 'astoolkit')
 BEGIN
-    CREATE LOGIN maerp WITH PASSWORD = 'maerp123!', CHECK_POLICY = OFF;
+    CREATE LOGIN astoolkit WITH PASSWORD = 'astoolkit123!', CHECK_POLICY = OFF;
 END
 GO
 
--- Use the maerp database
-USE maerp_01;
+-- Use the astoolkit database
+USE astoolkit_01;
 GO
 
 -- Create user if it doesn't exist
-IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = 'maerp')
+IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = 'astoolkit')
 BEGIN
-    CREATE USER maerp FOR LOGIN maerp;
+    CREATE USER astoolkit FOR LOGIN astoolkit;
 END
 GO
 
 -- Grant necessary permissions
-ALTER ROLE db_owner ADD MEMBER maerp;
+ALTER ROLE db_owner ADD MEMBER astoolkit;
 GO
 
-PRINT 'maERP database and user setup completed successfully.';
+PRINT 'asToolkit database and user setup completed successfully.';
 GO
