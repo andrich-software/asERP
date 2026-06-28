@@ -1,0 +1,24 @@
+﻿using asToolkit.Domain.Dtos.Warehouse;
+using asToolkit.Domain.Enums;
+
+namespace asToolkit.Domain.Dtos.SalesChannel;
+
+public class SalesChannelListDto
+{
+    public Guid Id { get; set; }
+    public SalesChannelType SalesChannelType { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public DateTime DateCreated { get; set; }
+
+    public string Url { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+
+    public bool ImportProducts { get; set; }
+    public bool ExportProducts { get; set; }
+    public bool ImportCustomers { get; set; }
+    public bool ExportCustomers { get; set; }
+    public bool ImportSaless { get; set; }
+    public bool ExportSaless { get; set; }
+
+    public List<WarehouseDetailDto> Warehouses { get; set; } = new();
+}

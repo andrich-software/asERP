@@ -1,4 +1,4 @@
-name: "CodeQL"
+﻿name: "CodeQL"
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   schedule:
     - cron: '30 1 * * 0'  # Runs at 01:30 UTC every Sunday
 env:
-  maerp_sln : "maERP.sln"
+  astoolkit_sln : "asToolkit.sln"
 jobs:
   analyze:
     name: Analyze
@@ -53,10 +53,10 @@ jobs:
       run: dotnet workload list
 
     - name: Restore nuget packages
-      run: msbuild ${{env.maerp_sln}} -t:restore -p:Configuration=Debug
+      run: msbuild ${{env.astoolkit_sln}} -t:restore -p:Configuration=Debug
 
     - name: Build app
-      run: msbuild ${{env.maerp_sln}} -t:Build -p:Configuration=Debug -p:Platform="Any CPU" -p:RestorePackagesConfig=true -p:GenerateFullPaths=true
+      run: msbuild ${{env.astoolkit_sln}} -t:Build -p:Configuration=Debug -p:Platform="Any CPU" -p:RestorePackagesConfig=true -p:GenerateFullPaths=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3

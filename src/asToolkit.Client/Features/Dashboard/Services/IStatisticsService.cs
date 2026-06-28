@@ -1,0 +1,39 @@
+﻿using asToolkit.Domain.Dtos.Statistic;
+
+namespace asToolkit.Client.Features.Dashboard.Services;
+
+/// <summary>
+/// Service interface for statistics-related API operations.
+/// </summary>
+public interface IStatisticsService
+{
+    /// <summary>
+    /// Gets the revenue/sales statistics for today.
+    /// </summary>
+    Task<SalesTodayDto?> GetSalesTodayAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets the saless statistics for today.
+    /// </summary>
+    Task<SalessTodayDto?> GetSalessTodayAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets the customer statistics.
+    /// </summary>
+    Task<CustomersTodayDto?> GetCustomersTodayAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets the product/inventory statistics.
+    /// </summary>
+    Task<ProductsTodayDto?> GetProductsTodayAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets the latest saless.
+    /// </summary>
+    Task<SalessLatestDto?> GetSalessLatestAsync(int count = 5, CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets the best-selling products.
+    /// </summary>
+    Task<ProductsBestSellingDto?> GetProductsBestSellingAsync(int count = 5, CancellationToken ct = default);
+}

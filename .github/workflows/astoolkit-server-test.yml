@@ -1,0 +1,57 @@
+﻿name: asToolkit.Server Build and Test
+
+on:
+  push:
+    branches-ignore: [ main ]
+    paths:
+      - '.github/workflows/**'
+      - 'src/asToolkit.Server/**'
+      - 'src/asToolkit.Core/**'
+      - 'src/asToolkit.Domain/**'
+      - 'src/asToolkit.Application/**'
+      - 'src/asToolkit.Analytics/**'
+      - 'src/asToolkit.Identity/**'
+      - 'src/asToolkit.Infrastructure/**'
+      - 'src/asToolkit.Persistence/**'
+      - 'src/asToolkit.Persistence.MSSQL/**'
+      - 'src/asToolkit.Persistence.PosgreSQL/**'
+      - 'src/asToolkit.SalesChannels/**'
+      - 'src/asToolkit.Persistence/**'
+      - 'src/asToolkit.Application.Persistence.IntegrationTests/**'
+      - 'src/asToolkit.Application.UnitTests/**'
+      - 'src/asToolkit.Server.Tests/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/asToolkit.Server/**'
+      - 'src/asToolkit.Core/**'
+      - 'src/asToolkit.Domain/**'
+      - 'src/asToolkit.Application/**'
+      - 'src/asToolkit.Analytics/**'
+      - 'src/asToolkit.Identity/**'
+      - 'src/asToolkit.Infrastructure/**'
+      - 'src/asToolkit.Persistence/**'
+      - 'src/asToolkit.SalesChannels/**'
+      - 'src/asToolkit.Persistence/**'
+      - 'src/asToolkit.Persistence.MSSQL/**'
+      - 'src/asToolkit.Persistence.PostgreSQL/**'
+      - 'src/asToolkit.Application.Persistence.IntegrationTests/**'
+      - 'src/asToolkit.Application.UnitTests/**'
+      - 'src/asToolkit.Server.Tests/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+
+      - name: Restore asToolkit.Server.Tests
+        run: dotnet restore tests/asToolkit.Server.Tests
+      - name: Build asToolkit.Server.Tests
+        run: dotnet build tests/asToolkit.Server.Tests
+      - name: Test asToolkit.Server.Tests
+        run: dotnet test tests/asToolkit.Server.Tests --no-build --verbosity normal

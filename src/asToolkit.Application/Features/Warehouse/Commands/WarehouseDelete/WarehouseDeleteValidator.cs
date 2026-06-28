@@ -1,0 +1,34 @@
+﻿using FluentValidation;
+using asToolkit.Application.Contracts.Persistence;
+
+namespace asToolkit.Application.Features.Warehouse.Commands.WarehouseDelete;
+
+public class WarehouseDeleteValidator : AbstractValidator<WarehouseDeleteCommand>
+{
+    private readonly IWarehouseRepository _warehouseRepository;
+    private readonly ISalesChannelRepository _salesChannelRepository;
+
+    public WarehouseDeleteValidator(
+        IWarehouseRepository warehouseRepository,
+        ISalesChannelRepository salesChannelRepository)
+    {
+        _warehouseRepository = warehouseRepository;
+        _salesChannelRepository = salesChannelRepository;
+
+        RuleFor(p => p.Id)
+            .NotNull()
+            .NotEqual(Guid.Empty).WithMessage("{PropertyName} cannot be empty.");
+
+
+        RuleFor(w => w)
+            .MustAsync(WarehouseIsNotUsedInSalesChannel)
+            .WithMessage("Cannot delete warehouse as it is being used by one or more sales channels.");
+    }
+
+
+    private async Task<bool> WarehouseIsNotUsedInSalesChannel(WarehouseDeleteCommand command, CancellationToken cancellationToken)
+    {
+        var salesChannels = await _salesChannelRepository.GetAllAsync();
+        return !salesChannels.Any(sc => sc.Warehouses != null && sc.Warehouses.Any(w => w.Id == command.Id));
+    }
+}

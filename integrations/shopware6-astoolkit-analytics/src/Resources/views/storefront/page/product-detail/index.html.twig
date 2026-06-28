@@ -1,0 +1,16 @@
+﻿{% sw_extends '@Storefront/storefront/page/product-detail/index.html.twig' %}
+
+{# Provide product context so the tracker emits a ProductView. This runs in the body before the deferred
+   tracker script executes. #}
+{% block page_product_detail_content %}
+    <script>
+        window.astoolkitTrackConfig = window.astoolkitTrackConfig || {};
+        window.astoolkitTrackConfig.product = {
+            ref: '{{ page.product.id }}',
+            name: '{{ page.product.translated.name|e('js') }}',
+            value: {{ page.product.calculatedPrice.unitPrice|default(0) }},
+            currency: '{{ context.currency.isoCode }}'
+        };
+    </script>
+    {{ parent() }}
+{% endblock %}

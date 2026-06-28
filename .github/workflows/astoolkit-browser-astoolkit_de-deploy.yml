@@ -1,0 +1,68 @@
+name: asToolkit.Client Browser SFTP Deploy
+
+on:
+  workflow_dispatch:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy via SFTP
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+
+      - name: Restore workloads
+        run: dotnet workload restore src/asToolkit.Client/asToolkit.Client.csproj
+
+      - name: Cache .NET packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore src/asToolkit.Client/asToolkit.Client.csproj --verbosity minimal
+
+      - name: Publish asToolkit.Client
+        run: dotnet publish src/asToolkit.Client/asToolkit.Client.csproj -c Release -f net10.0-browserwasm -o ./publish --no-restore --verbosity minimal
+
+      - name: List published files
+        run: ls -la ./publish/wwwroot/
+
+      - name: Clear remote directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ASTOOLKITDE_SFTP_HOST }}
+          port: ${{ secrets.ASTOOLKITDE_SFTP_PORT }}
+          username: ${{ secrets.ASTOOLKITDE_SFTP_USERNAME }}
+          password: ${{ secrets.ASTOOLKITDE_SFTP_PASSWORD }}
+          script: |
+            cd /wwwroot/
+            find . -type f -not -name ".htaccess" -not -name "web.config" -delete
+            find . -type d -empty -delete
+
+      - name: Deploy to MonsterASP.NET via SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          username: ${{ secrets.ASTOOLKITDE_SFTP_USERNAME }}
+          server: ${{ secrets.ASTOOLKITDE_SFTP_HOST }}
+          port: ${{ secrets.ASTOOLKITDE_SFTP_PORT }}
+          password: ${{ secrets.ASTOOLKITDE_SFTP_PASSWORD }}
+          local_path: './publish/wwwroot/*'
+          remote_path: '/wwwroot/'
+          sftp_only: true
+          delete_remote_files: true

@@ -1,0 +1,60 @@
+﻿using System.Linq.Dynamic.Core;
+using asToolkit.Application.Contracts.Logging;
+using asToolkit.Application.Contracts.Persistence;
+using asToolkit.Application.Extensions;
+using asToolkit.Application.Specifications;
+using asToolkit.Domain.Dtos.AiModel;
+using asToolkit.Domain.Wrapper;
+using asToolkit.Application.Mediator;
+
+namespace asToolkit.Application.Features.AiModel.Queries.AiModelList;
+
+// ReSharper disable once UnusedType.Global
+public class AiModelListHandler : IRequestHandler<AiModelListQuery, PaginatedResult<AiModelListDto>>
+{
+    private readonly IAppLogger<AiModelListHandler> _logger;
+    private readonly IAiModelRepository _aiModelRepository;
+
+    public AiModelListHandler(
+        IAppLogger<AiModelListHandler> logger,
+        IAiModelRepository aiModelRepository)
+    {
+        _logger = logger;
+        _aiModelRepository = aiModelRepository;
+    }
+
+    public async Task<PaginatedResult<AiModelListDto>> Handle(AiModelListQuery request, CancellationToken cancellationToken)
+    {
+        var aiModelFilterSpec = new AiModelFilterSpecification(request.SearchString);
+
+        _logger.LogInformation("Handle AiModelListQuery: {0}", request);
+
+        if (request.SalesBy.Any() != true)
+        {
+            return await _aiModelRepository.Entities
+               .Specify(aiModelFilterSpec)
+               .Select(a => new AiModelListDto
+               {
+                   Id = a.Id,
+                   AiModelType = (int)a.AiModelType,
+                   Name = a.Name,
+                   NCtx = a.NCtx
+               })
+               .ToPaginatedListAsync(request.PageNumber, request.PageSize);
+        }
+
+        var salesing = string.Join(",", request.SalesBy);
+
+        return await _aiModelRepository.Entities
+            .Specify(aiModelFilterSpec)
+            .OrderBy(salesing)
+            .Select(a => new AiModelListDto
+            {
+                Id = a.Id,
+                AiModelType = (int)a.AiModelType,
+                Name = a.Name,
+                NCtx = a.NCtx
+            })
+            .ToPaginatedListAsync(request.PageNumber, request.PageSize);
+    }
+}

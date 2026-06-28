@@ -1,4 +1,4 @@
-# Contributing
+﻿# Contributing
 
 Danke, dass du daran interessiert bist, zu unserem Projekt beizutragen! Diese Anleitung soll dir helfen, wie du am besten deinen Beitrag leisten kannst.
 
@@ -19,7 +19,7 @@ Dieses Projekt und alle Beteiligten verpflichten sich zu einem respektvollen und
 ## Wie kann ich beitragen?
 
 ### Fehler melden
-Wenn du einen Fehler findest, melde ihn bitte im [Issue-Tracker](https://github.com/maERP/maERP/issues). Bevor du einen neuen Fehler meldest, überprüfe bitte, ob der Fehler nicht bereits gemeldet wurde.
+Wenn du einen Fehler findest, melde ihn bitte im [Issue-Tracker](https://github.com/asToolkit/asToolkit/issues). Bevor du einen neuen Fehler meldest, überprüfe bitte, ob der Fehler nicht bereits gemeldet wurde.
 
 #### Fehlerbericht Checkliste:
 - **Titel**: Ein kurzer und prägnanter Titel.
@@ -31,7 +31,7 @@ Wenn du einen Fehler findest, melde ihn bitte im [Issue-Tracker](https://github.
 - **Umgebung**: Details zur Umgebung (Betriebssystem, Browser, usw.)
 
 ### Feature-Anfragen
-Wir sind immer offen für neue Ideen! Wenn du eine Funktion vorschlagen möchtest, erstelle bitte ein neues Issue im [Issue-Tracker](https://github.com/maERP/maERP/issues).
+Wir sind immer offen für neue Ideen! Wenn du eine Funktion vorschlagen möchtest, erstelle bitte ein neues Issue im [Issue-Tracker](https://github.com/asToolkit/asToolkit/issues).
 
 #### Feature-Anfrage Checkliste:
 - **Titel**: Ein kurzer und prägnanter Titel.
@@ -47,12 +47,12 @@ Um mit der Entwicklung zu beginnen, folge bitte diesen Schritten:
 1. Forke das Repository.
 2. Klone dein geforktes Repository:
    ```bash
-   git clone https://github.com/maERP/maERP.git
+   git clone https://github.com/asToolkit/asToolkit.git
    ```
 3. Herunterladen der Abhängigkeiten und starten des Server-Projektes:
    ```bash
    dotnet restore
-   cd maERP.Server && dotnet run
+   cd asToolkit.Server && dotnet run
    ```
 
 ## Pull Requests
@@ -84,8 +84,8 @@ Bevor du einen Pull Request erstellst, stelle bitte sicher, dass:
 ## Kontakt
 Wenn du Fragen hast oder weitere Hilfe benötigst, zögere nicht, uns zu kontaktieren:
 
-- [GitHub Issues](https://github.com/maERP/maERP/issues)
-- E-Mail: [info@maERP.de](mailto:info@maERP.de)
+- [GitHub Issues](https://github.com/asToolkit/asToolkit/issues)
+- E-Mail: [info@asToolkit.de](mailto:info@asToolkit.de)
 
 Vielen Dank für deinen Beitrag!
 

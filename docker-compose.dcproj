@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" Sdk="Microsoft.Docker.Sdk" DefaultTargets="Build">
   <PropertyGroup Label="Globals">
     <ProjectVersion>2.1</ProjectVersion>
@@ -6,7 +6,7 @@
     <ProjectGuid>f5fff0ee-10f3-4fe8-b173-22a9fefd33b7</ProjectGuid>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
     <DockerServiceUrl>{Scheme}://localhost:{ServicePort}</DockerServiceUrl>
-    <DockerServiceName>maerp.web</DockerServiceName>
+    <DockerServiceName>astoolkit.web</DockerServiceName>
     <DockerLaunchBrowser>true</DockerLaunchBrowser>
     <Configurations>Debug;Release</Configurations>
     <Platforms>AnyCPU</Platforms>

@@ -1,6 +1,6 @@
-name: maerp-postgresql
+name: astoolkit-postgresql
 
-# Alternate stack — PostgreSQL backend with the legacy 'maerp_01' database
+# Alternate stack — PostgreSQL backend with the legacy 'astoolkit_01' database
 # name (kept for parity with the other engine-specific compose files).
 # For the canonical postgres setup, use docker-compose.yml together with
 # ./cli.sh which supports both internal and external postgres.
@@ -10,18 +10,18 @@ name: maerp-postgresql
 
 services:
   server:
-    image: ${DOCKER_REGISTRY-}maerp/server
+    image: ${DOCKER_REGISTRY-}astoolkit/server
     build:
       context: .
-      dockerfile: src/maERP.Server/Dockerfile
+      dockerfile: src/asToolkit.Server/Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - HTTP_PORTS=8443
       - DatabaseConfig__Provider=PostgreSQL
-      - DatabaseConfig__ConnectionString=Host=postgresql;Port=5432;Database=maerp_01;Username=maerp;Password=maerp;
+      - DatabaseConfig__ConnectionString=Host=postgresql;Port=5432;Database=astoolkit_01;Username=astoolkit;Password=astoolkit;
       - Logging__LogLevel__Default=Warning
     ports:
-      - "${MAERP_SERVER_PORT:-8443}:8443"
+      - "${ASTOOLKIT_SERVER_PORT:-8443}:8443"
     depends_on:
       postgresql:
         condition: service_healthy
@@ -32,18 +32,18 @@ services:
   postgresql:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: maerp_01
-      POSTGRES_USER: maerp
-      POSTGRES_PASSWORD: maerp
+      POSTGRES_DB: astoolkit_01
+      POSTGRES_USER: astoolkit
+      POSTGRES_PASSWORD: astoolkit
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - maerp-postgresql-data:/var/lib/postgresql/data
+      - astoolkit-postgresql-data:/var/lib/postgresql/data
       - ./backups/postgresql:/backups
     networks:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U maerp -d maerp_01"]
+      test: ["CMD-SHELL", "pg_isready -U astoolkit -d astoolkit_01"]
       timeout: 20s
       retries: 10
       interval: 10s
@@ -51,20 +51,20 @@ services:
 
   wasm:
     profiles: ["wasm"]
-    image: ${DOCKER_REGISTRY-}maerp/wasm
+    image: ${DOCKER_REGISTRY-}astoolkit/wasm
     build:
       context: .
-      dockerfile: src/maERP.Client/Dockerfile
+      dockerfile: src/asToolkit.Client/Dockerfile
     environment:
-      - MAERP_RESTRICT_SERVER_URL=${MAERP_RESTRICT_SERVER_URL:-}
+      - ASTOOLKIT_RESTRICT_SERVER_URL=${ASTOOLKIT_RESTRICT_SERVER_URL:-}
     ports:
-      - "${MAERP_WASM_PORT:-8444}:80"
+      - "${ASTOOLKIT_WASM_PORT:-8444}:80"
     networks:
       - backend
     restart: unless-stopped
 
 volumes:
-  maerp-postgresql-data:
+  astoolkit-postgresql-data:
 
 networks:
   backend:

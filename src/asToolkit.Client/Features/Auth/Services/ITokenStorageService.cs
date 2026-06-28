@@ -1,0 +1,23 @@
+﻿namespace asToolkit.Client.Features.Auth.Services;
+
+public interface ITokenStorageService
+{
+    Task<string?> GetTokenAsync();
+    Task SetTokenAsync(string token);
+    Task ClearTokenAsync();
+    Task<string?> GetServerUrlAsync();
+    Task SetServerUrlAsync(string serverUrl);
+    Task<Guid?> GetCurrentTenantIdAsync();
+    Task SetCurrentTenantIdAsync(Guid? tenantId);
+    Task<IReadOnlyList<string>> GetRolesAsync();
+    Task<bool> IsInRoleAsync(string role);
+    Task<DateTimeOffset?> GetTokenExpiryAsync();
+    Task<bool> GetRememberMeAsync();
+    Task SetRememberMeAsync(bool rememberMe);
+
+    /// <summary>Long-lived refresh token. Read-write through <see cref="ISecureCredentialStore"/>.</summary>
+    Task<string?> GetRefreshTokenAsync();
+    Task SetRefreshTokenAsync(string refreshToken, DateTime? expiresAt);
+    Task ClearRefreshTokenAsync();
+    Task<DateTime?> GetRefreshTokenExpiryAsync();
+}

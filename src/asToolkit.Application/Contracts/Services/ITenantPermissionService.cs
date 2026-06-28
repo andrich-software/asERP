@@ -1,0 +1,11 @@
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace asToolkit.Application.Contracts.Services;
+
+public interface ITenantPermissionService
+{
+    Task<bool> CanManageUsersAsync(string userId, Guid tenantId, CancellationToken cancellationToken = default);
+    Task<bool> CanManageTenantAsync(string userId, Guid tenantId, CancellationToken cancellationToken = default);
+}

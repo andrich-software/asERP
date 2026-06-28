@@ -1,0 +1,32 @@
+﻿using FluentValidation;
+using asToolkit.Application.Contracts.Persistence;
+using asToolkit.Domain.Validators;
+
+namespace asToolkit.Application.Features.TaxClass.Commands.TaxClassUpdate;
+
+public class TaxClassUpdateValidator : TaxClassBaseValidator<TaxClassUpdateCommand>
+{
+    private readonly ITaxClassRepository _taxClassRepository;
+
+    public TaxClassUpdateValidator(ITaxClassRepository taxClassRepository)
+    {
+        _taxClassRepository = taxClassRepository;
+
+        RuleFor(p => p.Id)
+            .NotNull()
+            .NotEqual(Guid.Empty).WithMessage("{PropertyName} cannot be empty.");
+
+        RuleFor(t => t)
+            .MustAsync(IsUniqueAsync).WithMessage("TaxClass with the same tax rate already exists.");
+    }
+
+    private async Task<bool> IsUniqueAsync(TaxClassUpdateCommand command, CancellationToken cancellationToken)
+    {
+        var taxClass = new Domain.Entities.TaxClass
+        {
+            TaxRate = command.TaxRate
+        };
+
+        return await _taxClassRepository.IsUniqueAsync(taxClass, command.Id);
+    }
+}
