@@ -1,17 +1,17 @@
-{
+﻿{
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "maERP.Client (WASM)",
+      "name": "asToolkit.Client (WASM)",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": [
         "run",
         "--project",
-        "src/maERP.Client/maERP.Client.csproj",
+        "src/asToolkit.Client/asToolkit.Client.csproj",
         "-f",
         "net10.0-browserwasm",
         "--launch-profile",
-        "maERP.Client (WebAssembly)"
+        "asToolkit.Client (WebAssembly)"
       ],
       "port": 5001
     }

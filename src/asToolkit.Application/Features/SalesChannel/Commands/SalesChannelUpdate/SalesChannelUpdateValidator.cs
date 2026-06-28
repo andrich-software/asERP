@@ -1,0 +1,36 @@
+﻿using FluentValidation;
+using asToolkit.Application.Contracts.Persistence;
+using asToolkit.Domain.Validators;
+
+namespace asToolkit.Application.Features.SalesChannel.Commands.SalesChannelUpdate;
+
+public class SalesChannelUpdateValidator : SalesChannelBaseValidator<SalesChannelUpdateCommand>
+{
+    private readonly ISalesChannelRepository _salesChannelRepository;
+
+    // requirePassword: false — on update an empty password keeps the stored secret unchanged.
+    public SalesChannelUpdateValidator(ISalesChannelRepository salesChannelRepository)
+        : base(requirePassword: false)
+    {
+        _salesChannelRepository = salesChannelRepository;
+
+        RuleFor(p => p.Id)
+            .NotNull()
+            .NotEqual(Guid.Empty).WithMessage("{PropertyName} cannot be empty.");
+
+        RuleFor(s => s)
+            .MustAsync(IsUnique).WithMessage("Sales Channel is not unique.");
+    }
+
+    private async Task<bool> IsUnique(SalesChannelUpdateCommand command, CancellationToken cancellationToken)
+    {
+        var salesChannel = new Domain.Entities.SalesChannel
+        {
+            Name = command.Name
+        };
+
+        var test = await _salesChannelRepository.SalesChannelIsUniqueAsync(salesChannel, command.Id);
+
+        return test;
+    }
+}

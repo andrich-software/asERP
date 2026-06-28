@@ -1,0 +1,570 @@
+﻿<Page x:Class="asToolkit.Client.Features.SalesChannelDashboards.Views.SalesChannelDashboardPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:models="using:asToolkit.Client.Features.SalesChannelDashboards.Models"
+      xmlns:mvux="using:Uno.Extensions.Reactive.UI"
+      xmlns:utu="using:Uno.Toolkit.UI"
+      Background="{ThemeResource BackgroundBrush}">
+
+  <Page.Resources>
+    <SolidColorBrush x:Key="PositiveChangeBrush" Color="#16A34A" />
+    <SolidColorBrush x:Key="NegativeChangeBrush" Color="#DC2626" />
+  </Page.Resources>
+
+  <Grid utu:SafeArea.Insets="VisibleBounds"
+        Padding="24">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <!-- Page Header -->
+    <Grid Grid.Row="0" Margin="0,0,0,16">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+
+      <TextBlock Grid.Column="0"
+                 Text="{Binding Title}"
+                 Style="{StaticResource HeadlineMedium}"
+                 Foreground="{ThemeResource OnBackgroundBrush}"
+                 VerticalAlignment="Center" />
+    </Grid>
+
+    <!-- Pivot Tabs -->
+    <Pivot x:Name="DashboardPivot" Grid.Row="1">
+
+      <!-- Tab 1: Dashboard -->
+      <PivotItem x:Uid="SalesChannelDashboard.Tab.Dashboard">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="16" Padding="0,16,0,0">
+            <!-- KPI Cards -->
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+
+              <!-- Revenue KPI -->
+              <mvux:FeedView Grid.Column="0"
+                             Margin="0,0,8,0"
+                             Source="{Binding RevenueData}">
+                <mvux:FeedView.ValueTemplate>
+                  <DataTemplate>
+                    <Border Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="12"
+                            Padding="20"
+                            Translation="0,0,8">
+                      <Border.Shadow>
+                        <ThemeShadow />
+                      </Border.Shadow>
+                      <Grid>
+                        <Grid.RowDefinitions>
+                          <RowDefinition Height="Auto" />
+                          <RowDefinition Height="Auto" />
+                          <RowDefinition Height="Auto" />
+                          <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Row="0" Grid.Column="1"
+                                Background="{ThemeResource TertiaryContainerBrush}"
+                                CornerRadius="20" Width="40" Height="40">
+                          <FontIcon Glyph="&#xE7BF;" FontSize="18"
+                                    Foreground="{ThemeResource OnTertiaryContainerBrush}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                   x:Uid="DashboardPage.KPI.Revenue"
+                                   Style="{StaticResource LabelLarge}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                   Text="{Binding Data.RevenueTodayFormatted}"
+                                   Style="{StaticResource HeadlineLarge}"
+                                   Foreground="{ThemeResource OnSurfaceBrush}"
+                                   Margin="0,8,0,0" />
+                        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                    Orientation="Horizontal" Margin="0,8,0,0">
+                          <FontIcon Glyph="&#xE74A;" FontSize="12"
+                                    Foreground="{StaticResource PositiveChangeBrush}" Margin="0,0,4,0" />
+                          <TextBlock Text="{Binding Data.RevenueChangeFormatted}"
+                                     Style="{StaticResource LabelMedium}"
+                                     Foreground="{StaticResource PositiveChangeBrush}" />
+                          <TextBlock x:Uid="DashboardPage.KPI.VsLastWeek"
+                                     Style="{StaticResource LabelMedium}"
+                                     Foreground="{ThemeResource OnSurfaceVariantBrush}" Margin="4,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                                   Style="{StaticResource BodySmall}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" Margin="0,4,0,0">
+                          <Run x:Uid="DashboardPage.KPI.ThisWeek" />
+                          <Run Text="{Binding Data.RevenueThisWeekFormatted}" />
+                        </TextBlock>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </mvux:FeedView.ValueTemplate>
+                <mvux:FeedView.ProgressTemplate>
+                  <DataTemplate>
+                    <Border Background="{ThemeResource SurfaceBrush}" CornerRadius="12"
+                            Padding="20" MinHeight="140" Translation="0,0,8">
+                      <Border.Shadow><ThemeShadow /></Border.Shadow>
+                      <ProgressRing IsActive="True" Width="32" Height="32"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                  </DataTemplate>
+                </mvux:FeedView.ProgressTemplate>
+              </mvux:FeedView>
+
+              <!-- Saless KPI -->
+              <mvux:FeedView Grid.Column="1"
+                             Margin="8,0,0,0"
+                             Source="{Binding SalessData}">
+                <mvux:FeedView.ValueTemplate>
+                  <DataTemplate>
+                    <Border Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="12"
+                            Padding="20"
+                            Translation="0,0,8">
+                      <Border.Shadow>
+                        <ThemeShadow />
+                      </Border.Shadow>
+                      <Grid>
+                        <Grid.RowDefinitions>
+                          <RowDefinition Height="Auto" />
+                          <RowDefinition Height="Auto" />
+                          <RowDefinition Height="Auto" />
+                          <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Row="0" Grid.Column="1"
+                                Background="{ThemeResource PrimaryContainerBrush}"
+                                CornerRadius="20" Width="40" Height="40">
+                          <FontIcon Glyph="&#xE7BF;" FontSize="18"
+                                    Foreground="{ThemeResource OnPrimaryContainerBrush}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                   x:Uid="DashboardPage.KPI.Saless"
+                                   Style="{StaticResource LabelLarge}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                   Text="{Binding Data.SalessToday}"
+                                   Style="{StaticResource HeadlineLarge}"
+                                   Foreground="{ThemeResource OnSurfaceBrush}"
+                                   Margin="0,8,0,0" />
+                        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                    Orientation="Horizontal" Margin="0,8,0,0">
+                          <FontIcon Glyph="&#xE74A;" FontSize="12"
+                                    Foreground="{StaticResource PositiveChangeBrush}" Margin="0,0,4,0" />
+                          <TextBlock Text="{Binding Data.SalessChangeFormatted}"
+                                     Style="{StaticResource LabelMedium}"
+                                     Foreground="{StaticResource PositiveChangeBrush}" />
+                          <TextBlock x:Uid="DashboardPage.KPI.VsLastWeek"
+                                     Style="{StaticResource LabelMedium}"
+                                     Foreground="{ThemeResource OnSurfaceVariantBrush}" Margin="4,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                                   Style="{StaticResource BodySmall}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" Margin="0,4,0,0">
+                          <Run Text="{Binding Data.SalessPending}" />
+                          <Run x:Uid="DashboardPage.KPI.Pending" />
+                        </TextBlock>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </mvux:FeedView.ValueTemplate>
+                <mvux:FeedView.ProgressTemplate>
+                  <DataTemplate>
+                    <Border Background="{ThemeResource SurfaceBrush}" CornerRadius="12"
+                            Padding="20" MinHeight="140" Translation="0,0,8">
+                      <Border.Shadow><ThemeShadow /></Border.Shadow>
+                      <ProgressRing IsActive="True" Width="32" Height="32"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                  </DataTemplate>
+                </mvux:FeedView.ProgressTemplate>
+              </mvux:FeedView>
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </PivotItem>
+
+      <!-- Tab 2: Recent Sales -->
+      <PivotItem x:Uid="SalesChannelDashboard.Tab.RecentSales">
+        <Border Background="{ThemeResource SurfaceBrush}" CornerRadius="12"
+                Padding="0" Margin="0,16,0,0" MinHeight="300"
+                VerticalAlignment="Stretch"
+                Translation="0,0,8">
+          <Border.Shadow><ThemeShadow /></Border.Shadow>
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Padding="16,16,16,8">
+              <FontIcon Glyph="&#xE7BF;" FontSize="20"
+                        Foreground="{ThemeResource PrimaryBrush}" Margin="0,0,12,0" />
+              <TextBlock x:Uid="SalesChannelDashboard.RecentSales.SalesNumber"
+                         Style="{StaticResource TitleMedium}"
+                         Foreground="{ThemeResource OnSurfaceBrush}" />
+            </StackPanel>
+
+            <!-- Saless List (scrollable) -->
+            <ScrollViewer Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          VerticalScrollMode="Auto">
+              <mvux:FeedView Source="{Binding RecentSaless}"
+                             Padding="0,0,0,8">
+                <mvux:FeedView.ValueTemplate>
+                  <DataTemplate>
+                    <ItemsRepeater ItemsSource="{Binding Data}">
+                      <ItemsRepeater.ItemTemplate>
+                        <DataTemplate>
+                          <Button Click="SalesRow_Click"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  Padding="0">
+                            <Grid Padding="16,10" Background="Transparent">
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                              </Grid.ColumnDefinitions>
+                              <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                              </Grid.RowDefinitions>
+
+                              <FontIcon Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                                        Glyph="{Binding StatusIcon}" FontSize="16"
+                                        Foreground="{ThemeResource PrimaryBrush}"
+                                        VerticalAlignment="Center" Margin="0,0,12,0" />
+
+                              <TextBlock Grid.Row="0" Grid.Column="1"
+                                         Text="{Binding CustomerName}"
+                                         Style="{StaticResource BodyLarge}"
+                                         FontWeight="SemiBold"
+                                         Foreground="{ThemeResource OnSurfaceBrush}" />
+                              <TextBlock Grid.Row="1" Grid.Column="1"
+                                         Style="{StaticResource BodySmall}"
+                                         Foreground="{ThemeResource OnSurfaceVariantBrush}">
+                                <Run Text="#" /><Run Text="{Binding SalesNumber}" />
+                              </TextBlock>
+
+                              <TextBlock Grid.Row="0" Grid.Column="2"
+                                         Text="{Binding AmountFormatted}"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceBrush}"
+                                         HorizontalAlignment="Right" />
+                              <TextBlock Grid.Row="1" Grid.Column="2"
+                                         Text="{Binding DateFormatted}"
+                                         Style="{StaticResource BodySmall}"
+                                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                         HorizontalAlignment="Right" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                  </DataTemplate>
+                </mvux:FeedView.ValueTemplate>
+                <mvux:FeedView.ProgressTemplate>
+                  <DataTemplate>
+                    <ProgressRing IsActive="True" Width="32" Height="32"
+                                  Margin="16" HorizontalAlignment="Center" />
+                  </DataTemplate>
+                </mvux:FeedView.ProgressTemplate>
+                <mvux:FeedView.NoneTemplate>
+                  <DataTemplate>
+                    <TextBlock x:Uid="SalesChannelDashboard.RecentSales.Empty"
+                               Style="{StaticResource BodyMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="16" />
+                  </DataTemplate>
+                </mvux:FeedView.NoneTemplate>
+              </mvux:FeedView>
+            </ScrollViewer>
+
+            <!-- Pagination Controls -->
+            <Border Grid.Row="2"
+                    BorderBrush="{ThemeResource OutlineVariantBrush}"
+                    BorderThickness="0,1,0,0"
+                    Padding="16,8">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Count Info (Left) -->
+                <mvux:FeedView Grid.Column="0" Source="{Binding Pagination}">
+                  <mvux:FeedView.ValueTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Data.CountInfo}"
+                                 Style="{StaticResource BodySmall}"
+                                 Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                 VerticalAlignment="Center" />
+                    </DataTemplate>
+                  </mvux:FeedView.ValueTemplate>
+                </mvux:FeedView>
+
+                <!-- Page Navigation (Center) -->
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Spacing="8">
+                  <Button Style="{StaticResource IconButtonStyle}"
+                          x:Uid="SalesChannelDashboard.RecentSales.PreviousPage"
+                          Click="PreviousPage_Click">
+                    <FontIcon Glyph="&#xE76B;" FontSize="16" />
+                  </Button>
+
+                  <mvux:FeedView Source="{Binding Pagination}">
+                    <mvux:FeedView.ValueTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding Data.PageInfo}"
+                                   Style="{StaticResource BodyMedium}"
+                                   VerticalAlignment="Center"
+                                   MinWidth="100"
+                                   TextAlignment="Center" />
+                      </DataTemplate>
+                    </mvux:FeedView.ValueTemplate>
+                  </mvux:FeedView>
+
+                  <Button Style="{StaticResource IconButtonStyle}"
+                          x:Uid="SalesChannelDashboard.RecentSales.NextPage"
+                          Click="NextPage_Click">
+                    <FontIcon Glyph="&#xE76C;" FontSize="16" />
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </Grid>
+        </Border>
+      </PivotItem>
+
+      <!-- Tab: Web Statistics (visitor analytics; only for WooCommerce / Shopware 6).
+           The tab is added/removed in code-behind based on ShowWebStatistics — a bound
+           Visibility on a PivotItem corrupts the Pivot layout (items overlap), so it
+           must not be set here. -->
+      <PivotItem x:Name="WebStatisticsTab"
+                 x:Uid="SalesChannelDashboard.Tab.WebStatistics">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="16" Padding="0,16,0,0">
+
+            <!-- Session KPI cards -->
+            <mvux:FeedView Source="{Binding WebSessions}">
+              <mvux:FeedView.ValueTemplate>
+                <DataTemplate>
+                  <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="12" Padding="20" Translation="0,0,8">
+                      <Border.Shadow><ThemeShadow /></Border.Shadow>
+                      <StackPanel Spacing="8">
+                        <TextBlock x:Uid="SalesChannelDashboard.WebStats.SessionsToday"
+                                   Style="{StaticResource LabelLarge}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Text="{Binding Data.SessionsToday}"
+                                   Style="{StaticResource HeadlineLarge}"
+                                   Foreground="{ThemeResource OnSurfaceBrush}" />
+                      </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="1" Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="12" Padding="20" Translation="0,0,8">
+                      <Border.Shadow><ThemeShadow /></Border.Shadow>
+                      <StackPanel Spacing="8">
+                        <TextBlock x:Uid="SalesChannelDashboard.WebStats.SessionsYesterday"
+                                   Style="{StaticResource LabelLarge}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Text="{Binding Data.SessionsYesterday}"
+                                   Style="{StaticResource HeadlineLarge}"
+                                   Foreground="{ThemeResource OnSurfaceBrush}" />
+                      </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="12" Padding="20" Translation="0,0,8">
+                      <Border.Shadow><ThemeShadow /></Border.Shadow>
+                      <StackPanel Spacing="8">
+                        <TextBlock x:Uid="SalesChannelDashboard.WebStats.SessionsThisWeek"
+                                   Style="{StaticResource LabelLarge}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Text="{Binding Data.SessionsThisWeek}"
+                                   Style="{StaticResource HeadlineLarge}"
+                                   Foreground="{ThemeResource OnSurfaceBrush}" />
+                      </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="3" Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="12" Padding="20" Translation="0,0,8">
+                      <Border.Shadow><ThemeShadow /></Border.Shadow>
+                      <StackPanel Spacing="8">
+                        <TextBlock x:Uid="SalesChannelDashboard.WebStats.SessionsLastWeek"
+                                   Style="{StaticResource LabelLarge}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Text="{Binding Data.SessionsLastWeek}"
+                                   Style="{StaticResource HeadlineLarge}"
+                                   Foreground="{ThemeResource OnSurfaceBrush}" />
+                      </StackPanel>
+                    </Border>
+                  </Grid>
+                </DataTemplate>
+              </mvux:FeedView.ValueTemplate>
+              <mvux:FeedView.ProgressTemplate>
+                <DataTemplate>
+                  <Border Background="{ThemeResource SurfaceBrush}" CornerRadius="12"
+                          Padding="20" MinHeight="100" Translation="0,0,8">
+                    <Border.Shadow><ThemeShadow /></Border.Shadow>
+                    <ProgressRing IsActive="True" Width="32" Height="32"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                </DataTemplate>
+              </mvux:FeedView.ProgressTemplate>
+            </mvux:FeedView>
+
+            <!-- Most-visited products table -->
+            <Border Background="{ThemeResource SurfaceBrush}" CornerRadius="12"
+                    Padding="0" MinHeight="240" Translation="0,0,8">
+              <Border.Shadow><ThemeShadow /></Border.Shadow>
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Title -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Padding="16,16,16,8">
+                  <FontIcon Glyph="&#xE7BF;" FontSize="20"
+                            Foreground="{ThemeResource PrimaryBrush}" Margin="0,0,12,0" />
+                  <TextBlock x:Uid="SalesChannelDashboard.WebStats.TopProducts"
+                             Style="{StaticResource TitleMedium}"
+                             Foreground="{ThemeResource OnSurfaceBrush}" />
+                </StackPanel>
+
+                <!-- Column headers -->
+                <Grid Grid.Row="1" Padding="16,4,16,8">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock x:Uid="SalesChannelDashboard.WebStats.ColProduct"
+                             Grid.Column="0"
+                             Style="{StaticResource LabelMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                  <TextBlock x:Uid="SalesChannelDashboard.WebStats.ColViews"
+                             Grid.Column="1" MinWidth="80" TextAlignment="Right"
+                             Style="{StaticResource LabelMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                  <TextBlock x:Uid="SalesChannelDashboard.WebStats.ColVisitors"
+                             Grid.Column="2" MinWidth="90" TextAlignment="Right"
+                             Style="{StaticResource LabelMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                </Grid>
+
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                  <mvux:FeedView Source="{Binding WebTopProducts}" Padding="0,0,0,8">
+                    <mvux:FeedView.ValueTemplate>
+                      <DataTemplate>
+                        <ItemsRepeater ItemsSource="{Binding Data}">
+                          <ItemsRepeater.ItemTemplate>
+                            <DataTemplate>
+                              <Grid Padding="16,10">
+                                <Grid.ColumnDefinitions>
+                                  <ColumnDefinition Width="*" />
+                                  <ColumnDefinition Width="Auto" />
+                                  <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                  <TextBlock Text="{Binding ProductName}"
+                                             Style="{StaticResource BodyLarge}"
+                                             FontWeight="SemiBold"
+                                             TextTrimming="CharacterEllipsis"
+                                             Foreground="{ThemeResource OnSurfaceBrush}" />
+                                  <TextBlock Text="{Binding ProductRef}"
+                                             Style="{StaticResource BodySmall}"
+                                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="{Binding Views}"
+                                           MinWidth="80" TextAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           Style="{StaticResource BodyMedium}"
+                                           Foreground="{ThemeResource OnSurfaceBrush}" />
+                                <TextBlock Grid.Column="2" Text="{Binding UniqueVisitors}"
+                                           MinWidth="90" TextAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           Style="{StaticResource BodyMedium}"
+                                           Foreground="{ThemeResource OnSurfaceBrush}" />
+                              </Grid>
+                            </DataTemplate>
+                          </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
+                      </DataTemplate>
+                    </mvux:FeedView.ValueTemplate>
+                    <mvux:FeedView.ProgressTemplate>
+                      <DataTemplate>
+                        <ProgressRing IsActive="True" Width="32" Height="32"
+                                      Margin="16" HorizontalAlignment="Center" />
+                      </DataTemplate>
+                    </mvux:FeedView.ProgressTemplate>
+                    <mvux:FeedView.NoneTemplate>
+                      <DataTemplate>
+                        <TextBlock x:Uid="SalesChannelDashboard.WebStats.Empty"
+                                   Style="{StaticResource BodyMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                   HorizontalAlignment="Center" Margin="16" />
+                      </DataTemplate>
+                    </mvux:FeedView.NoneTemplate>
+                  </mvux:FeedView>
+                </ScrollViewer>
+              </Grid>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </PivotItem>
+
+      <!-- Tab 3: Sync Status (Placeholder) -->
+      <PivotItem x:Uid="SalesChannelDashboard.Tab.SyncStatus">
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="16">
+          <FontIcon Glyph="&#xE895;"
+                    FontSize="48"
+                    Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                    HorizontalAlignment="Center" />
+          <TextBlock x:Uid="SalesChannelDashboard.Placeholder.SyncStatus"
+                     Style="{StaticResource BodyLarge}"
+                     Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                     HorizontalAlignment="Center" />
+        </StackPanel>
+      </PivotItem>
+    </Pivot>
+  </Grid>
+</Page>

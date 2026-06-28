@@ -1,4 +1,4 @@
-{
+﻿{
   // Use IntelliSense to find out which attributes exist for C# debugging
   // Use hover for the description of the existing attributes
   // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
@@ -19,17 +19,17 @@
       "type": "chrome",
       "request": "launch",
       "url": "http://localhost:5000",
-      "webRoot": "${workspaceFolder}/maERP",
+      "webRoot": "${workspaceFolder}/asToolkit",
       "inspectUri": "{wsProtocol}://{url.hostname}:{url.port}/_framework/debug/ws-proxy?browser={browserInspectUri}",
       "timeout": 30000,
       "preLaunchTask": "build-wasm",
       "server": {
         "runtimeExecutable": "dotnet",
         "program": "run",
-        "args": ["--no-build","-f","net10.0-browserwasm","--launch-profile", "maERP (WebAssembly)"],
+        "args": ["--no-build","-f","net10.0-browserwasm","--launch-profile", "asToolkit (WebAssembly)"],
         "outputCapture": "std",
         "timeout": 30000,
-        "cwd": "${workspaceFolder}/maERP"
+        "cwd": "${workspaceFolder}/asToolkit"
       }
     },
     {
@@ -40,17 +40,17 @@
       "type": "msedge",
       "request": "launch",
       "url": "http://localhost:5000",
-      "webRoot": "${workspaceFolder}/maERP",
+      "webRoot": "${workspaceFolder}/asToolkit",
       "inspectUri": "{wsProtocol}://{url.hostname}:{url.port}/_framework/debug/ws-proxy?browser={browserInspectUri}",
       "timeout": 30000,
       "preLaunchTask": "build-wasm",
       "server": {
         "runtimeExecutable": "dotnet",
         "program": "run",
-        "args": ["--no-build","-f","net10.0-browserwasm","--launch-profile", "maERP (WebAssembly)"],
+        "args": ["--no-build","-f","net10.0-browserwasm","--launch-profile", "asToolkit (WebAssembly)"],
         "outputCapture": "std",
         "timeout": 30000,
-        "cwd": "${workspaceFolder}/maERP"
+        "cwd": "${workspaceFolder}/asToolkit"
       }
     },
     {
@@ -62,13 +62,13 @@
       "request": "launch",
       "preLaunchTask": "build-desktop",
       // If you have changed target frameworks, make sure to update the program path.
-      "program": "${workspaceFolder}/maERP/bin/Debug/net10.0-desktop/maERP.dll",
+      "program": "${workspaceFolder}/asToolkit/bin/Debug/net10.0-desktop/asToolkit.dll",
       "args": [],
-      "launchSettingsProfile": "maERP (Desktop)",
+      "launchSettingsProfile": "asToolkit (Desktop)",
       "env": {
         "DOTNET_MODIFIABLE_ASSEMBLIES": "debug"
       },
-      "cwd": "${workspaceFolder}/maERP",
+      "cwd": "${workspaceFolder}/asToolkit",
       // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
       "console": "internalConsole",
       "stopAtEntry": false
