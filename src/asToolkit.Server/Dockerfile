@@ -6,8 +6,10 @@ EXPOSE 8443
 
 # libgssapi-krb5-2 is needed by Npgsql so it doesn't log
 # "Cannot load library libgssapi_krb5.so.2" on every startup.
+# curl is needed for the HEALTHCHECK below — the aspnet image ships neither
+# curl nor wget, so the healthcheck would otherwise always fail.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 curl \
     && rm -rf /var/lib/apt/lists/*
 
 ENV DatabaseConfig__Provider=Sqlite
@@ -48,7 +50,10 @@ FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
+# Use 127.0.0.1, not localhost: localhost resolves to ::1 (IPv6) in the
+# container while Kestrel may listen on IPv4 only — a localhost healthcheck
+# could get "connection refused" and report the container unhealthy.
 HEALTHCHECK --interval=30s --timeout=3s \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8443/health || exit 1
+    CMD curl -fsS http://127.0.0.1:8443/health || exit 1
 
 ENTRYPOINT ["dotnet", "asToolkit.Server.dll"]
