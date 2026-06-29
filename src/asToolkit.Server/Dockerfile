@@ -14,6 +14,14 @@ ENV DatabaseConfig__Provider=Sqlite
 ENV DatabaseConfig__ConnectionString=Data Source=astoolkit.db
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# Tame the build's memory footprint on small/loaded hosts: workstation GC instead
+# of per-core server heaps, and pretend to have 2 cores so MSBuild's Copy task and
+# friends don't spawn a thread per real core. Prevents OutOfMemory/SIGBUS during
+# the build on memory-constrained machines.
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_NOLOGO=1 \
+    DOTNET_gcServer=0 \
+    DOTNET_PROCESSOR_COUNT=2
 WORKDIR /src
 COPY ["Directory.Packages.props", "/src/"]
 COPY ["Directory.Build.props", "/src/"]
@@ -31,14 +39,14 @@ COPY ["src/asToolkit.SalesChannels/asToolkit.SalesChannels.csproj", "asToolkit.S
 RUN dotnet restore "asToolkit.Server/asToolkit.Server.csproj"
 COPY src/ .
 WORKDIR "/src/asToolkit.Server"
-RUN dotnet build "asToolkit.Server.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "asToolkit.Server.csproj" -c Release -o /app/publish /p:UseAppHost=false
+# publish builds the project itself — no need for a separate `dotnet build` pass.
+# -m:1 + BuildInParallel=false build the projects serially to avoid memory spikes.
+RUN dotnet publish "asToolkit.Server.csproj" -c Release -o /app/publish \
+    /p:UseAppHost=false -m:1 -p:BuildInParallel=false
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 
 HEALTHCHECK --interval=30s --timeout=3s \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8443/health || exit 1
