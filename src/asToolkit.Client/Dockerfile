@@ -65,5 +65,8 @@ RUN chmod +x /docker-entrypoint.d/10-write-config.sh
 
 EXPOSE 80
 
+# Use 127.0.0.1, not localhost: localhost resolves to ::1 (IPv6) in the
+# container while nginx listens on IPv4 — a localhost healthcheck would get
+# "connection refused" and report the container unhealthy.
 HEALTHCHECK --interval=30s --timeout=3s \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:80/ || exit 1
