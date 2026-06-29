@@ -137,6 +137,47 @@ public class ProductImportRepositoryVariantTests : TenantIsolatedTestBase
     }
 
     [Fact]
+    public async Task Import_VariantSkuEqualsParentSku_SynthesizesSku_DoesNotCollideWithParent()
+    {
+        // WooCommerce returns the parent SKU for variations without their own. Such a variant must
+        // not be created with the parent's SKU (the unique (TenantId, Sku) index would reject the
+        // whole batch); it gets the stable synthesized "{parentSku}-V{RemoteVariantId}" instead.
+        await SeedBaseDataAsync();
+        var repo = CreateImportRepository();
+
+        var importProduct = BuildImportProduct(parentSku: "P-1", variants: new List<SalesChannelImportVariant>
+        {
+            new()
+            {
+                RemoteVariantId = "201",
+                Sku = "P-1", // echoes the parent SKU
+                Price = 3.05m,
+                Options = new List<SalesChannelImportVariantOption>
+                {
+                    new() { AttributeName = "Länge", Value = "22" }
+                }
+            }
+        });
+
+        await repo.ImportOrUpdateFromSalesChannel(SalesChannel1Id, importProduct);
+
+        DbContext.ChangeTracker.Clear();
+
+        // Exactly one product carries the parent SKU, and it is the parent.
+        var parentSkuRows = await DbContext.Product.IgnoreQueryFilters()
+            .Where(p => p.Sku == "P-1").ToListAsync();
+        TestAssertions.AssertEqual(1, parentSkuRows.Count);
+        TestAssertions.AssertEqual(ProductType.VariantParent, parentSkuRows[0].ProductType);
+
+        // The variant was created under a synthesized SKU instead of the parent's.
+        var variant = await DbContext.Product.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Sku == "P-1-V201");
+        TestAssertions.AssertNotNull(variant);
+        TestAssertions.AssertEqual(ProductType.Variant, variant!.ProductType);
+        TestAssertions.AssertEqual(parentSkuRows[0].Id, variant.ParentProductId);
+    }
+
+    [Fact]
     public async Task Import_UpsertsAttributeAndValue_TenantScoped()
     {
         await SeedBaseDataAsync();

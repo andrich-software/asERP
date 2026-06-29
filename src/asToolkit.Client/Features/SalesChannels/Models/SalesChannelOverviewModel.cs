@@ -1,4 +1,5 @@
-﻿using asToolkit.Client.Core.Models;
+﻿using asToolkit.Client.Core.Formatting;
+using asToolkit.Client.Core.Models;
 using asToolkit.Client.Features.SalesChannels.Services;
 using asToolkit.Client.Features.SalesChannelDashboards.Models;
 using asToolkit.Client.Features.SalesChannelDashboards.Services;
@@ -170,10 +171,10 @@ public record SalesChannelOverviewData
     public bool HasChannels => TotalChannels > 0;
     public bool HasNoChannels => TotalChannels == 0;
 
-    public string TotalRevenueTodayFormatted => TotalRevenueToday.ToString("C0");
-    public string TotalRevenueThisWeekFormatted => TotalRevenueThisWeek.ToString("C0");
-    public string TotalRevenueThisMonthFormatted => TotalRevenueThisMonth.ToString("C0");
-    public string TopChannelRevenueFormatted => TopChannelRevenueThisMonth.ToString("C0");
+    public string TotalRevenueTodayFormatted => CurrencyFormatter.Format(TotalRevenueToday, 0);
+    public string TotalRevenueThisWeekFormatted => CurrencyFormatter.Format(TotalRevenueThisWeek, 0);
+    public string TotalRevenueThisMonthFormatted => CurrencyFormatter.Format(TotalRevenueThisMonth, 0);
+    public string TopChannelRevenueFormatted => CurrencyFormatter.Format(TopChannelRevenueThisMonth, 0);
     public string ActiveOfTotalFormatted => $"{ActiveChannels} / {TotalChannels}";
 }
 
@@ -227,9 +228,9 @@ public partial record SalesChannelOverviewItem(
         return url.Trim();
     }
 
-    public string RevenueTodayFormatted => RevenueToday.ToString("C0");
-    public string RevenueThisWeekFormatted => RevenueThisWeek.ToString("C0");
-    public string RevenueThisMonthFormatted => RevenueThisMonth.ToString("C0");
+    public string RevenueTodayFormatted => CurrencyFormatter.Format(RevenueToday, 0);
+    public string RevenueThisWeekFormatted => CurrencyFormatter.Format(RevenueThisWeek, 0);
+    public string RevenueThisMonthFormatted => CurrencyFormatter.Format(RevenueThisMonth, 0);
     public string RevenueChangeFormatted =>
         $"{(RevenueChangePercent >= 0 ? "+" : string.Empty)}{RevenueChangePercent:F1}%";
     public bool RevenueChangePositive => RevenueChangePercent >= 0;

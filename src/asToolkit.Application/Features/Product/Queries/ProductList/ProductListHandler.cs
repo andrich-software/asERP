@@ -37,6 +37,7 @@ public class ProductListHandler : IRequestHandler<ProductListQuery, PaginatedRes
                .Include(p => p.TaxClass)
                .Include(p => p.Variants)
                .Specify(salesFilterSpec)
+               .AsSingleQuery() // Projection reads two collections (Variants, Images); keep one query and silence the multi-collection warning
                .Select(p => MapToProductListDto(p))
                .AsNoTracking() // Ensure no EF caching
                .ToPaginatedListAsync(request.PageNumber, request.PageSize);
@@ -52,6 +53,7 @@ public class ProductListHandler : IRequestHandler<ProductListQuery, PaginatedRes
             .Include(p => p.Variants)
             .Specify(salesFilterSpec)
             .OrderBy(salesing)
+            .AsSingleQuery() // Projection reads two collections (Variants, Images); keep one query and silence the multi-collection warning
             .Select(p => MapToProductListDto(p))
             .AsNoTracking() // Ensure no EF caching
             .ToPaginatedListAsync(request.PageNumber, request.PageSize);

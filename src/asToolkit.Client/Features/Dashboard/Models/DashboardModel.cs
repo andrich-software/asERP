@@ -1,4 +1,5 @@
-﻿using asToolkit.Client.Features.Dashboard.Services;
+﻿using asToolkit.Client.Core.Formatting;
+using asToolkit.Client.Features.Dashboard.Services;
 using asToolkit.Client.Features.Saless;
 using asToolkit.Client.Features.Saless.Models;
 using asToolkit.Client.Features.Products.Models;
@@ -272,8 +273,8 @@ public record RevenueKpiData
     public decimal RevenueThisMonth { get; init; }
     public decimal RevenueChange { get; init; }
 
-    public string RevenueTodayFormatted => RevenueToday.ToString("C0");
-    public string RevenueThisWeekFormatted => RevenueThisWeek.ToString("C0");
+    public string RevenueTodayFormatted => CurrencyFormatter.Format(RevenueToday, 0);
+    public string RevenueThisWeekFormatted => CurrencyFormatter.Format(RevenueThisWeek, 0);
     public string RevenueChangeFormatted => $"{(RevenueChange >= 0 ? "+" : "")}{RevenueChange:F1}%";
     public bool RevenueChangePositive => RevenueChange >= 0;
 }
@@ -337,7 +338,7 @@ public partial record RecentSalesItem
     public SalesStatus Status { get; init; }
     public DateTime SalesDate { get; init; }
 
-    public string AmountFormatted => Amount.ToString("C2");
+    public string AmountFormatted => CurrencyFormatter.Format(Amount);
     public string DateFormatted => SalesDate.ToString("g");
     public string StatusIcon => Status switch
     {
@@ -366,7 +367,7 @@ public record TopProductItem
     public int QuantitySold { get; init; }
     public decimal Revenue { get; init; }
 
-    public string RevenueFormatted => Revenue.ToString("C0");
+    public string RevenueFormatted => CurrencyFormatter.Format(Revenue, 0);
     public string QuantitySoldFormatted => QuantitySold.ToString("N0");
     public string RankFormatted => $"#{Rank}";
 }

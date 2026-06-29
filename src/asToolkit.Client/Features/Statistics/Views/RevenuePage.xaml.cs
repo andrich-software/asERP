@@ -1,4 +1,5 @@
-﻿using asToolkit.Client.Features.Statistics.Models;
+﻿using asToolkit.Client.Core.Formatting;
+using asToolkit.Client.Features.Statistics.Models;
 using asToolkit.Domain.Dtos.Statistic;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Shapes;
@@ -118,7 +119,7 @@ public sealed partial class RevenuePage : Page
             }
 
             _currentData = data;
-            TotalRevenueText.Text = data.TotalRevenue.ToString("C0");
+            TotalRevenueText.Text = CurrencyFormatter.Format(data.TotalRevenue, 0);
             DrawChart();
         }
         catch (OperationCanceledException)
@@ -203,7 +204,7 @@ public sealed partial class RevenuePage : Page
             var value = (decimal)(maxRevenue * ratio);
             var valueLabel = new TextBlock
             {
-                Text = value.ToString("C0"),
+                Text = CurrencyFormatter.Format(value, 0),
                 FontSize = 11,
                 Foreground = labelBrush
             };
@@ -369,7 +370,7 @@ public sealed partial class RevenuePage : Page
         }
         if (_hoverValueText != null)
         {
-            _hoverValueText.Text = nearest.Point.Revenue.ToString("C2");
+            _hoverValueText.Text = CurrencyFormatter.Format(nearest.Point.Revenue);
         }
 
         // Position the tooltip above the point, clamped to the canvas bounds.

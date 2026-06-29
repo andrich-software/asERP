@@ -326,7 +326,13 @@ public class ProductImportRepository : IProductImportRepository
         {
             // Stable SKU synthesis for channels that allow SKU-less variations (WooCommerce):
             // the remote variation id never changes, so re-imports resolve to the same SKU.
+            // A variation that echoes the parent's SKU is treated as SKU-less too: WooCommerce
+            // returns the parent SKU for variations without their own, and a variant may never
+            // carry the parent's SKU — otherwise the create path inserts a row that the unique
+            // (TenantId, Sku) index rejects, failing the whole batch and dropping the entire
+            // variable product from the import.
             var sku = string.IsNullOrWhiteSpace(importVariant.Sku)
+                      || string.Equals(importVariant.Sku, parent.Sku, StringComparison.Ordinal)
                 ? $"{parent.Sku}-V{importVariant.RemoteVariantId}"
                 : importVariant.Sku!;
 

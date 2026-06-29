@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using asToolkit.Client.Core.Formatting;
 using asToolkit.Client.Core.Models;
 using asToolkit.Client.Features.Customers.Services;
 using asToolkit.Client.Features.Dashboard.Models;
@@ -73,9 +74,9 @@ public partial record PosDashboardModel
     public IState<string> PosErrorMessage => State<string>.Value(this, () => string.Empty);
     public IState<string> PosSuccessMessage => State<string>.Value(this, () => string.Empty);
     public IState<bool> IsProcessingSale => State<bool>.Value(this, () => false);
-    public IState<string> CartTotalFormatted => State<string>.Value(this, () => 0m.ToString("C2"));
-    public IState<string> CartTaxTotalFormatted => State<string>.Value(this, () => 0m.ToString("C2"));
-    public IState<string> CartGrandTotalFormatted => State<string>.Value(this, () => 0m.ToString("C2"));
+    public IState<string> CartTotalFormatted => State<string>.Value(this, () => CurrencyFormatter.Format(0m));
+    public IState<string> CartTaxTotalFormatted => State<string>.Value(this, () => CurrencyFormatter.Format(0m));
+    public IState<string> CartGrandTotalFormatted => State<string>.Value(this, () => CurrencyFormatter.Format(0m));
     public IState<IImmutableList<PosTaxLineItem>> TaxBreakdown => State<IImmutableList<PosTaxLineItem>>.Value(this, () => (IImmutableList<PosTaxLineItem>)ImmutableList<PosTaxLineItem>.Empty);
     public string InvoiceDateFormatted => DateTime.Now.ToString("d");
 
@@ -250,9 +251,9 @@ public partial record PosDashboardModel
             .ToImmutableList()
             ?? ImmutableList<PosTaxLineItem>.Empty;
 
-        await CartTotalFormatted.UpdateAsync(_ => subtotal.ToString("C2"));
-        await CartTaxTotalFormatted.UpdateAsync(_ => totalTax.ToString("C2"));
-        await CartGrandTotalFormatted.UpdateAsync(_ => grandTotal.ToString("C2"));
+        await CartTotalFormatted.UpdateAsync(_ => CurrencyFormatter.Format(subtotal));
+        await CartTaxTotalFormatted.UpdateAsync(_ => CurrencyFormatter.Format(totalTax));
+        await CartGrandTotalFormatted.UpdateAsync(_ => CurrencyFormatter.Format(grandTotal));
         await TaxBreakdown.UpdateAsync(_ => taxLines);
     }
 
@@ -377,8 +378,8 @@ public record PosCartItem(Guid ProductId, string ProductName, string Sku, decima
 {
     public decimal LineTotal => UnitPrice * Quantity;
     public decimal LineTax => LineTotal * (decimal)(TaxRate / 100.0);
-    public string LineTotalFormatted => LineTotal.ToString("C2");
-    public string UnitPriceFormatted => UnitPrice.ToString("C2");
+    public string LineTotalFormatted => CurrencyFormatter.Format(LineTotal);
+    public string UnitPriceFormatted => CurrencyFormatter.Format(UnitPrice);
     public string UnitPriceEditable => UnitPrice.ToString("F2");
 }
 
@@ -388,5 +389,5 @@ public record PosCartItem(Guid ProductId, string ProductName, string Sku, decima
 public record PosTaxLineItem(double TaxRate, decimal TaxAmount)
 {
     public string Label => $"MwSt {TaxRate:0.##}%";
-    public string AmountFormatted => TaxAmount.ToString("C2");
+    public string AmountFormatted => CurrencyFormatter.Format(TaxAmount);
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.UI.Xaml.Data;
+﻿using asToolkit.Client.Core.Formatting;
+using Microsoft.UI.Xaml.Data;
 
 namespace asToolkit.Client.Presentation;
 
@@ -11,10 +12,10 @@ public class CurrencyConverter : IValueConverter
     {
         return value switch
         {
-            decimal decimalValue => decimalValue.ToString("C2"),
-            double doubleValue => doubleValue.ToString("C2"),
-            float floatValue => floatValue.ToString("C2"),
-            int intValue => intValue.ToString("C2"),
+            decimal decimalValue => CurrencyFormatter.Format(decimalValue),
+            double doubleValue => CurrencyFormatter.Format(doubleValue),
+            float floatValue => CurrencyFormatter.Format(floatValue),
+            int intValue => CurrencyFormatter.Format(intValue),
             _ => value?.ToString() ?? string.Empty
         };
     }
