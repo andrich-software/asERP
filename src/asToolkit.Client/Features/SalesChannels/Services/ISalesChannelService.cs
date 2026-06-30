@@ -30,6 +30,9 @@ public interface ISalesChannelService
     /// </summary>
     Task UpdateSalesChannelAsync(Guid id, SalesChannelInputDto input, CancellationToken ct = default);
 
+    /// <summary>Aggregated synchronization status: per-operation last/next run, channel scheduling state, dead-letter count.</summary>
+    Task<SalesChannelSyncStatusDto?> GetSyncStatusAsync(Guid id, CancellationToken ct = default);
+
     /// <summary>Trigger a manual sync (operation = "products" | "saless" | "customers" | "all").</summary>
     Task<SalesChannelSyncResultDto?> TriggerSyncAsync(Guid id, string operation, CancellationToken ct = default);
 

@@ -145,13 +145,13 @@ public class SalesChannelsController(
         }
 
         var run = await syncDispatcher.RunImportAsync(salesChannel, op, ChannelSyncTriggerSource.Manual, cancellationToken);
-        return Ok(new
+        return Ok(new SalesChannelSyncResultDto
         {
-            runId = run.Id,
-            run.Status,
-            run.ItemsProcessed,
-            run.ItemsFailed,
-            run.ErrorSummary,
+            RunId = run.Id,
+            Status = run.Status,
+            ItemsProcessed = run.ItemsProcessed,
+            ItemsFailed = run.ItemsFailed,
+            ErrorSummary = run.ErrorSummary,
         });
     }
 
@@ -202,9 +202,112 @@ public class SalesChannelsController(
             .OrderByDescending(r => r.StartedAt)
             .Skip(offset)
             .Take(Math.Clamp(take, 1, 200))
+            .Select(r => new ChannelSyncRunDto
+            {
+                Id = r.Id,
+                SalesChannelId = r.SalesChannelId,
+                Operation = r.Operation,
+                TriggerSource = r.TriggerSource,
+                Status = r.Status,
+                StartedAt = r.StartedAt,
+                FinishedAt = r.FinishedAt,
+                ItemsProcessed = r.ItemsProcessed,
+                ItemsFailed = r.ItemsFailed,
+                ErrorSummary = r.ErrorSummary,
+                CorrelationId = r.CorrelationId,
+            })
             .ToListAsync(cancellationToken);
 
         return Ok(runs);
+    }
+
+    /// <summary>
+    /// Aggregated synchronization status: per-operation latest run + computed next-run, plus the
+    /// channel's scheduling state and dead-letter count. Feeds the Client's Sync-Status dashboard tab.
+    /// Encodes the orchestrator's <c>PollImportsAsync</c> rules so "next run" is honest (products and
+    /// customers run their full import once, then become manual-only; orders run every interval).
+    /// </summary>
+    [HttpGet("{id:guid}/sync-status")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SalesChannelSyncStatusDto>> GetSyncStatus(Guid id, CancellationToken cancellationToken)
+    {
+        var channel = await FindTenantChannelAsync(id, cancellationToken);
+        if (channel is null)
+        {
+            return NotFound();
+        }
+
+        var now = DateTime.UtcNow;
+        var interval = TimeSpan.FromSeconds(Math.Max(1, channel.SyncIntervalSeconds));
+        DateTime? nextPoll = channel.IsEnabled ? (channel.LastSyncStartedAt ?? now) + interval : null;
+
+        var deadLetterCount = await dbContext.ChannelExportOutbox
+            .CountAsync(o => o.SalesChannelId == id && o.Status == ChannelOutboxStatus.DeadLetter, cancellationToken);
+
+        var products = await BuildOperationStatusAsync(
+            id, ChannelSyncOperation.ImportProducts, channel.ImportProducts,
+            channel.InitialProductImportCompleted, willRunOnSchedule: channel.ImportProducts && !channel.InitialProductImportCompleted,
+            nextPoll, cancellationToken);
+
+        var customers = await BuildOperationStatusAsync(
+            id, ChannelSyncOperation.ImportCustomers, channel.ImportCustomers,
+            channel.InitialCustomerImportCompleted, willRunOnSchedule: channel.ImportCustomers && !channel.InitialCustomerImportCompleted,
+            nextPoll, cancellationToken);
+
+        var saless = await BuildOperationStatusAsync(
+            id, ChannelSyncOperation.ImportSaless, channel.ImportSaless,
+            initialImportCompleted: false, willRunOnSchedule: channel.ImportSaless,
+            nextPoll, cancellationToken);
+
+        return Ok(new SalesChannelSyncStatusDto
+        {
+            SalesChannelId = id,
+            IsEnabled = channel.IsEnabled,
+            SyncIntervalSeconds = channel.SyncIntervalSeconds,
+            NextScheduledPollAt = nextPoll,
+            DeadLetterCount = deadLetterCount,
+            InitialSalesImportCompleted = channel.InitialSalesImportCompleted,
+            SalesImportBackfillCursor = channel.SalesImportBackfillCursor,
+            Products = products,
+            Customers = customers,
+            Saless = saless,
+        });
+    }
+
+    /// <summary>Builds the status block for one import operation from its latest <c>ChannelSyncRun</c>.</summary>
+    private async Task<SyncOperationStatusDto> BuildOperationStatusAsync(
+        Guid salesChannelId,
+        ChannelSyncOperation operation,
+        bool isImportEnabled,
+        bool initialImportCompleted,
+        bool willRunOnSchedule,
+        DateTime? nextPoll,
+        CancellationToken cancellationToken)
+    {
+        var lastRun = await dbContext.ChannelSyncRun
+            .Where(r => r.SalesChannelId == salesChannelId && r.Operation == operation)
+            .OrderByDescending(r => r.StartedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var isRunning = lastRun is { Status: ChannelSyncRunStatus.Running, FinishedAt: null };
+
+        return new SyncOperationStatusDto
+        {
+            Operation = operation,
+            IsImportEnabled = isImportEnabled,
+            InitialImportCompleted = initialImportCompleted,
+            WillRunOnSchedule = willRunOnSchedule,
+            NextRunAt = willRunOnSchedule ? nextPoll : null,
+            LastStatus = lastRun?.Status,
+            LastStartedAt = lastRun?.StartedAt,
+            LastFinishedAt = lastRun?.FinishedAt,
+            IsRunning = isRunning,
+            LastItemsProcessed = lastRun?.ItemsProcessed ?? 0,
+            LastItemsFailed = lastRun?.ItemsFailed ?? 0,
+            LastErrorSummary = lastRun?.ErrorSummary,
+            LastTriggerSource = lastRun?.TriggerSource,
+        };
     }
 
     /// <summary>
@@ -253,6 +356,21 @@ public class SalesChannelsController(
         var rows = await dbContext.ChannelExportOutbox
             .Where(o => o.SalesChannelId == id && o.Status == ChannelOutboxStatus.DeadLetter)
             .OrderBy(o => o.NextAttemptAt)
+            .Select(o => new ChannelExportOutboxDto
+            {
+                Id = o.Id,
+                SalesChannelId = o.SalesChannelId,
+                Operation = o.Operation,
+                AggregateType = o.AggregateType,
+                AggregateId = o.AggregateId,
+                IdempotencyKey = o.IdempotencyKey,
+                AttemptCount = o.AttemptCount,
+                NextAttemptAt = o.NextAttemptAt,
+                Status = o.Status,
+                LastError = o.LastError,
+                CreatedAt = o.DateCreated,
+                CompletedAt = o.CompletedAt,
+            })
             .ToListAsync(cancellationToken);
 
         return Ok(rows);
