@@ -109,6 +109,12 @@ services:
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-astoolkit}
       # Let the created user run DDL (CREATE TABLE) for its own database.
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    # ClickHouse uses NUMA syscalls (get_mempolicy/set_mempolicy/mbind) for
+    # NUMA-aware memory allocation. Docker's default seccomp profile denies them,
+    # so ClickHouse logs a harmless "get_mempolicy: Operation not permitted" on
+    # every start. SYS_NICE allows the syscalls and silences the noise.
+    cap_add:
+      - SYS_NICE
     ulimits:
       nofile:
         soft: 262144

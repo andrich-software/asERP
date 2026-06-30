@@ -9,7 +9,7 @@
     <PackageVersion Include="Microsoft.Extensions.Identity.Stores" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.DotNet.HotReload.WebAssembly.Browser" Version="10.0.204" />
+    <!--<PackageVersion Include="Microsoft.DotNet.HotReload.WebAssembly.Browser" Version="10.0.204" />-->
     <!-- Native SQLite binary pinned ahead of the managed stack (core/bundle/provider 2.1.11, pulled by
          EF Core) to ship a patched SQLite. 3.50.3 closes GHSA-2m69-gcr7-jv3q (NU1903 on 2.1.11). -->
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
