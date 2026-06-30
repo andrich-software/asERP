@@ -18,6 +18,9 @@
 #                                    Drop & recreate the schema/database before restore
 #   ./cli.sh db     purge            Wipe the database (drop & recreate the schema).
 #                                    Asks for confirmation; ALL data is lost.
+#   ./cli.sh db     shell [args...]  Open an interactive psql session against the
+#                                    database (postgres only). Extra args are passed
+#                                    to psql, e.g. db shell -c "SELECT now();"
 #   ./cli.sh superadmin create       Interactively create a Superadmin user
 #   ./cli.sh superadmin update <email>
 #                                    Interactively update a Superadmin user
@@ -322,13 +325,44 @@ cmd_db() {
         backup)  db_backup ;;
         restore) shift; db_restore "$@" ;;
         purge)   db_purge ;;
+        shell)   shift; db_shell "$@" ;;
         "")
-            die_usage "'db' requires a subcommand (backup|restore|purge)."
+            die_usage "'db' requires a subcommand (backup|restore|purge|shell)."
             ;;
         *)
-            die_usage "unknown db subcommand '$sub' (expected: backup|restore|purge)."
+            die_usage "unknown db subcommand '$sub' (expected: backup|restore|purge|shell)."
             ;;
     esac
+}
+
+# Open an interactive psql session. Unlike pg_run (which uses -T for piping),
+# this allocates a TTY so the psql prompt is usable. Extra args are forwarded
+# to psql (e.g. -c "SELECT ...").
+db_shell() {
+    if [[ "$DB_ENGINE" != "postgres" ]]; then
+        echo "error: 'db shell' is only available for postgres (DB_MODE=internal|postgres)." >&2
+        echo "       For mssql, connect with sqlcmd or a GUI client instead." >&2
+        exit 1
+    fi
+
+    if [[ "$DB_MODE" == "internal" ]]; then
+        if ! postgres_internal_running; then
+            echo "error: internal postgres container is not running. Start it with: ./cli.sh start server" >&2
+            exit 1
+        fi
+        "${COMPOSE[@]}" exec \
+            -e PGPASSWORD="$DB_PASSWORD" \
+            postgres psql \
+            -h "$DB_HOST" -p "$DB_PORT" \
+            -U "$DB_USER" -d "$DB_NAME" "$@"
+    else
+        docker run --rm -it \
+            --add-host=host.docker.internal:host-gateway \
+            -e PGPASSWORD="$DB_PASSWORD" \
+            "$PG_CLIENT_IMAGE" psql \
+            -h "$DB_HOST" -p "$DB_PORT" \
+            -U "$DB_USER" -d "$DB_NAME" "$@"
+    fi
 }
 
 db_backup() {

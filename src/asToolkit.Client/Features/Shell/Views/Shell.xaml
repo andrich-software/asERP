@@ -288,7 +288,7 @@
             </Button>
 
             <!-- Dynamic SalesChannel sub-items -->
-            <ItemsControl x:Name="SalesChannelSubItemsContainer" />
+            <StackPanel x:Name="SalesChannelSubItemsContainer" />
           </StackPanel>
 
           <!-- STATISTIK -->

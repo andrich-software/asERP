@@ -942,7 +942,10 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                 _sidebarTagMap![tag] = btn;
             }
 
-            SalesChannelSubItemsContainer.ItemsSource = items;
+            foreach (var btn in items)
+            {
+                SalesChannelSubItemsContainer.Children.Add(btn);
+            }
             _dynamicSalesChannelItems.AddRange(items);
         }
         catch (Exception ex)
@@ -957,7 +960,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
     private void ClearDynamicSalesChannelItems()
     {
-        SalesChannelSubItemsContainer.ItemsSource = null;
+        SalesChannelSubItemsContainer.Children.Clear();
         _dynamicSalesChannelItems.Clear();
 
         if (_sidebarTagMap != null)
