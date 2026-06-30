@@ -27,6 +27,16 @@ public sealed class SalesChannelContext
     /// <summary>Sync-run audit row this dispatch logs against. Connector writes ItemsProcessed/Failed.</summary>
     public required ChannelSyncRun SyncRun { get; init; }
 
+    /// <summary>
+    /// Mid-run progress checkpoint: <c>(processed, failed, ct)</c>. A long import (e.g. a full order
+    /// backfill that walks years of history in one run) should call this periodically so the audit row's
+    /// item counts — and any cursor the connector advanced on the channel entity — are persisted *during*
+    /// the run instead of only at <c>CloseRun</c>. Without it the Sync-Status dashboard shows 0 processed
+    /// for hours. Null when no checkpoint sink is wired (the connector must null-check). Throttle calls
+    /// (the dispatcher persists on every invocation); a few-seconds cadence is plenty.
+    /// </summary>
+    public Func<int, int, CancellationToken, Task>? ReportProgressAsync { get; init; }
+
     public Guid? TenantId { get; init; }
 
     /// <summary>

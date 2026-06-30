@@ -9,6 +9,91 @@
   <Page.Resources>
     <SolidColorBrush x:Key="PositiveChangeBrush" Color="#16A34A" />
     <SolidColorBrush x:Key="NegativeChangeBrush" Color="#DC2626" />
+
+    <!-- One sync-operation status card (Products / Customers / Orders). DataContext = SyncOperationCardData. -->
+    <DataTemplate x:Key="SyncOperationCardTemplate">
+      <Border Background="{ThemeResource SurfaceBrush}" CornerRadius="12"
+              Padding="16" Translation="0,0,8" VerticalAlignment="Top">
+        <Border.Shadow><ThemeShadow /></Border.Shadow>
+        <StackPanel Spacing="10">
+
+          <!-- Header: name + running ring + status badge -->
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <TextBlock Text="{Binding OperationName}"
+                         Style="{StaticResource TitleMedium}"
+                         Foreground="{ThemeResource OnSurfaceBrush}" />
+              <ProgressRing IsActive="True" Width="16" Height="16"
+                            Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}" />
+            </StackPanel>
+            <Border Grid.Column="1" VerticalAlignment="Center"
+                    Background="{Binding LastStatus, Converter={StaticResource SyncRunStatusToBrushConverter}, ConverterParameter=Background}"
+                    CornerRadius="8" Padding="8,2">
+              <TextBlock Text="{Binding StatusText}"
+                         Foreground="{Binding LastStatus, Converter={StaticResource SyncRunStatusToBrushConverter}, ConverterParameter=Foreground}"
+                         Style="{StaticResource LabelMedium}" />
+            </Border>
+          </Grid>
+
+          <!-- Last run -->
+          <StackPanel Spacing="2">
+            <TextBlock x:Uid="SalesChannelDashboard.Sync.LastRunLabel"
+                       Style="{StaticResource LabelMedium}"
+                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+            <TextBlock Text="{Binding LastRunText}"
+                       ToolTipService.ToolTip="{Binding LastRunTooltip}"
+                       Style="{StaticResource BodyMedium}"
+                       Foreground="{ThemeResource OnSurfaceBrush}" />
+            <TextBlock Text="{Binding DurationText}"
+                       Style="{StaticResource BodySmall}"
+                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+          </StackPanel>
+
+          <!-- Items processed / failed -->
+          <StackPanel Spacing="2">
+            <TextBlock x:Uid="SalesChannelDashboard.Sync.ItemsLabel"
+                       Style="{StaticResource LabelMedium}"
+                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+            <TextBlock Text="{Binding ItemsText}"
+                       Style="{StaticResource BodyMedium}"
+                       Foreground="{ThemeResource OnSurfaceBrush}" />
+          </StackPanel>
+
+          <!-- Next run -->
+          <StackPanel Spacing="2">
+            <TextBlock x:Uid="SalesChannelDashboard.Sync.NextRunLabel"
+                       Style="{StaticResource LabelMedium}"
+                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+            <TextBlock Text="{Binding NextRunText}"
+                       Style="{StaticResource BodyMedium}"
+                       Foreground="{ThemeResource OnSurfaceBrush}" />
+          </StackPanel>
+
+          <!-- Trigger source of last run -->
+          <TextBlock Text="{Binding TriggerText}"
+                     Style="{StaticResource BodySmall}"
+                     Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+
+          <!-- Error summary -->
+          <TextBlock Text="{Binding ErrorSummary}"
+                     Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}"
+                     TextWrapping="Wrap"
+                     Style="{StaticResource BodySmall}"
+                     Foreground="{StaticResource NegativeChangeBrush}" />
+
+          <!-- Manual trigger -->
+          <Button x:Uid="SalesChannelDashboard.Sync.SyncNowButton"
+                  Click="SyncNow_Click"
+                  HorizontalAlignment="Stretch"
+                  Margin="0,4,0,0"
+                  IsEnabled="{Binding DataContext.IsSyncBusy, ElementName=RootGrid, Converter={StaticResource InverseBooleanConverter}}" />
+        </StackPanel>
+      </Border>
+    </DataTemplate>
   </Page.Resources>
 
   <Grid x:Name="RootGrid"
@@ -621,98 +706,25 @@
                     </Border>
 
                     <!-- Per-operation status cards (Products / Customers / Orders) -->
-                    <ItemsRepeater ItemsSource="{Binding Data.Operations}">
-                      <ItemsRepeater.Layout>
-                        <UniformGridLayout MinItemWidth="260" MinColumnSpacing="12"
-                                           MinRowSpacing="12" MaximumRowsOrColumns="3"
-                                           ItemsStretch="Fill" />
-                      </ItemsRepeater.Layout>
-                      <ItemsRepeater.ItemTemplate>
-                        <DataTemplate>
-                          <Border Background="{ThemeResource SurfaceBrush}" CornerRadius="12"
-                                  Padding="16" Translation="0,0,8">
-                            <Border.Shadow><ThemeShadow /></Border.Shadow>
-                            <StackPanel Spacing="10">
-
-                              <!-- Header: name + running ring + status badge -->
-                              <Grid>
-                                <Grid.ColumnDefinitions>
-                                  <ColumnDefinition Width="*" />
-                                  <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                  <TextBlock Text="{Binding OperationName}"
-                                             Style="{StaticResource TitleMedium}"
-                                             Foreground="{ThemeResource OnSurfaceBrush}" />
-                                  <ProgressRing IsActive="True" Width="16" Height="16"
-                                                Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                </StackPanel>
-                                <Border Grid.Column="1" VerticalAlignment="Center"
-                                        Background="{Binding LastStatus, Converter={StaticResource SyncRunStatusToBrushConverter}, ConverterParameter=Background}"
-                                        CornerRadius="8" Padding="8,2">
-                                  <TextBlock Text="{Binding StatusText}"
-                                             Foreground="{Binding LastStatus, Converter={StaticResource SyncRunStatusToBrushConverter}, ConverterParameter=Foreground}"
-                                             Style="{StaticResource LabelMedium}" />
-                                </Border>
-                              </Grid>
-
-                              <!-- Last run -->
-                              <StackPanel Spacing="2">
-                                <TextBlock x:Uid="SalesChannelDashboard.Sync.LastRunLabel"
-                                           Style="{StaticResource LabelMedium}"
-                                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
-                                <TextBlock Text="{Binding LastRunText}"
-                                           ToolTipService.ToolTip="{Binding LastRunTooltip}"
-                                           Style="{StaticResource BodyMedium}"
-                                           Foreground="{ThemeResource OnSurfaceBrush}" />
-                                <TextBlock Text="{Binding DurationText}"
-                                           Style="{StaticResource BodySmall}"
-                                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
-                              </StackPanel>
-
-                              <!-- Items processed / failed -->
-                              <StackPanel Spacing="2">
-                                <TextBlock x:Uid="SalesChannelDashboard.Sync.ItemsLabel"
-                                           Style="{StaticResource LabelMedium}"
-                                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
-                                <TextBlock Text="{Binding ItemsText}"
-                                           Style="{StaticResource BodyMedium}"
-                                           Foreground="{ThemeResource OnSurfaceBrush}" />
-                              </StackPanel>
-
-                              <!-- Next run -->
-                              <StackPanel Spacing="2">
-                                <TextBlock x:Uid="SalesChannelDashboard.Sync.NextRunLabel"
-                                           Style="{StaticResource LabelMedium}"
-                                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
-                                <TextBlock Text="{Binding NextRunText}"
-                                           Style="{StaticResource BodyMedium}"
-                                           Foreground="{ThemeResource OnSurfaceBrush}" />
-                              </StackPanel>
-
-                              <!-- Trigger source of last run -->
-                              <TextBlock Text="{Binding TriggerText}"
-                                         Style="{StaticResource BodySmall}"
-                                         Foreground="{ThemeResource OnSurfaceVariantBrush}" />
-
-                              <!-- Error summary -->
-                              <TextBlock Text="{Binding ErrorSummary}"
-                                         Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}"
-                                         TextWrapping="Wrap"
-                                         Style="{StaticResource BodySmall}"
-                                         Foreground="{StaticResource NegativeChangeBrush}" />
-
-                              <!-- Manual trigger -->
-                              <Button x:Uid="SalesChannelDashboard.Sync.SyncNowButton"
-                                      Click="SyncNow_Click"
-                                      HorizontalAlignment="Stretch"
-                                      Margin="0,4,0,0"
-                                      IsEnabled="{Binding DataContext.IsSyncBusy, ElementName=RootGrid, Converter={StaticResource InverseBooleanConverter}}" />
-                            </StackPanel>
-                          </Border>
-                        </DataTemplate>
-                      </ItemsRepeater.ItemTemplate>
-                    </ItemsRepeater>
+                    <Grid ColumnSpacing="12">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <ContentControl Grid.Column="0" HorizontalContentAlignment="Stretch"
+                                      VerticalAlignment="Top"
+                                      Content="{Binding Data.Products}"
+                                      ContentTemplate="{StaticResource SyncOperationCardTemplate}" />
+                      <ContentControl Grid.Column="1" HorizontalContentAlignment="Stretch"
+                                      VerticalAlignment="Top"
+                                      Content="{Binding Data.Customers}"
+                                      ContentTemplate="{StaticResource SyncOperationCardTemplate}" />
+                      <ContentControl Grid.Column="2" HorizontalContentAlignment="Stretch"
+                                      VerticalAlignment="Top"
+                                      Content="{Binding Data.Saless}"
+                                      ContentTemplate="{StaticResource SyncOperationCardTemplate}" />
+                    </Grid>
                   </StackPanel>
                 </DataTemplate>
               </mvux:FeedView.ValueTemplate>

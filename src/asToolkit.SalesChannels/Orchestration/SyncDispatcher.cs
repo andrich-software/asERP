@@ -129,7 +129,19 @@ public sealed class SyncDispatcher
             try
             {
                 var incrementalSince = await ComputeIncrementalSinceAsync(salesChannel, operation, trigger, run, cancellationToken);
-                var context = _contextFactory.Create(salesChannel, run, cancellationToken, incrementalSince);
+
+                // Mid-run checkpoint: persist the audit row's item counts (and any cursor the connector
+                // advanced on the tracked channel entity) while the import is still walking pages. Both
+                // `run` and `salesChannel` are tracked by this scope's _context, so one SaveChanges flushes
+                // counts + cursor together. The connector throttles how often it calls this.
+                async Task ReportProgressAsync(int processed, int failed, CancellationToken ct)
+                {
+                    run.ItemsProcessed = processed;
+                    run.ItemsFailed = failed;
+                    await _context.SaveChangesAsync(ct);
+                }
+
+                var context = _contextFactory.Create(salesChannel, run, cancellationToken, incrementalSince, ReportProgressAsync);
                 var result = operation switch
                 {
                     ChannelSyncOperation.ImportProducts => await connector.ImportProductsAsync(context),

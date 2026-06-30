@@ -22,8 +22,10 @@ public record SyncStatusViewData
     public bool HasDeadLetters { get; init; }
     public string DeadLetterText { get; init; } = string.Empty;
 
-    /// <summary>Products, Customers, Orders — rendered as cards.</summary>
-    public IImmutableList<SyncOperationCardData> Operations { get; init; } = ImmutableList<SyncOperationCardData>.Empty;
+    // Rendered as three fixed cards (explicit grid, mirroring the Web-Statistics tab).
+    public SyncOperationCardData Products { get; init; } = new();
+    public SyncOperationCardData Customers { get; init; } = new();
+    public SyncOperationCardData Saless { get; init; } = new();
 }
 
 /// <summary>Status of one import operation, pre-formatted for a status card.</summary>
@@ -72,11 +74,6 @@ public static class SyncStatusViewMapper
 {
     public static SyncStatusViewData ToViewData(SalesChannelSyncStatusDto dto, IStringLocalizer l, DateTime nowUtc)
     {
-        var operations = ImmutableList.Create(
-            ToCard(dto.Products, "products", l["SyncStatus.OpProducts"], dto.IsEnabled, nowUtc, l),
-            ToCard(dto.Customers, "customers", l["SyncStatus.OpCustomers"], dto.IsEnabled, nowUtc, l),
-            ToCard(dto.Saless, "saless", l["SyncStatus.OpOrders"], dto.IsEnabled, nowUtc, l, ordersDto: dto));
-
         return new SyncStatusViewData
         {
             IsEnabled = dto.IsEnabled,
@@ -86,7 +83,9 @@ public static class SyncStatusViewMapper
             DeadLetterCount = dto.DeadLetterCount,
             HasDeadLetters = dto.DeadLetterCount > 0,
             DeadLetterText = string.Format(Culture, l["SyncStatus.DeadLetterFormat"], dto.DeadLetterCount),
-            Operations = operations,
+            Products = ToCard(dto.Products, "products", l["SyncStatus.OpProducts"], dto.IsEnabled, nowUtc, l),
+            Customers = ToCard(dto.Customers, "customers", l["SyncStatus.OpCustomers"], dto.IsEnabled, nowUtc, l),
+            Saless = ToCard(dto.Saless, "saless", l["SyncStatus.OpOrders"], dto.IsEnabled, nowUtc, l),
         };
     }
 
@@ -119,8 +118,7 @@ public static class SyncStatusViewMapper
         string name,
         bool channelEnabled,
         DateTime nowUtc,
-        IStringLocalizer l,
-        SalesChannelSyncStatusDto? ordersDto = null)
+        IStringLocalizer l)
     {
         var neverRun = op.LastStatus is null;
 

@@ -81,6 +81,7 @@ public sealed class WooCommerceConnector : ConnectorBase
             var wc = BuildClient(context);
             var taxRateMap = await BuildTaxRateMapAsync(wc, context.CancellationToken);
             var remoteProducts = await GetAllProductsAsync(wc, context.CancellationToken);
+            var progress = new ProgressThrottle(context);
             foreach (var remoteProduct in remoteProducts)
             {
                 var isVariable = remoteProduct.type == "variable";
@@ -154,6 +155,8 @@ public sealed class WooCommerceConnector : ConnectorBase
                     failed++;
                     _logger.LogError(ex, "WooCommerce product import failed for SKU {Sku}", sku);
                 }
+
+                await progress.MaybeReportAsync(processed, failed);
             }
         }
         catch (Exception ex)
@@ -235,6 +238,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         var reachedEnd = false;
         var fetchFailed = false;
         var seen = new HashSet<string>();
+        var progress = new ProgressThrottle(context);
 
         for (var page = 1; page <= MaxPages; page++)
         {
@@ -299,6 +303,10 @@ public sealed class WooCommerceConnector : ConnectorBase
                 context.SalesChannel.SalesImportBackfillCursor = adv;
             }
 
+            // Flush running counts + the advanced cursor to the DB mid-walk (throttled) so the dashboard
+            // reflects a long backfill's progress instead of sitting at 0 until the whole history is in.
+            await progress.MaybeReportAsync(processed, failed);
+
             if (batch.Count < PageSize)
             {
                 reachedEnd = true;
@@ -358,6 +366,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         }
 
         var seen = new HashSet<string>();
+        var progress = new ProgressThrottle(context);
         for (var page = 1; page <= MaxPages; page++)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
@@ -403,6 +412,8 @@ public sealed class WooCommerceConnector : ConnectorBase
                     _logger.LogError(ex, "WooCommerce sales import failed for {Id}", remoteSales.id);
                 }
             }
+
+            await progress.MaybeReportAsync(processed, failed);
 
             if (newInBatch == 0 || batch.Count < PageSize)
             {
@@ -638,6 +649,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         // buffering the whole list first would discard all progress on the first slow page. Upserts
         // are idempotent, so a subsequent run simply resumes filling in what is still missing.
         var seen = new HashSet<string>();
+        var progress = new ProgressThrottle(context);
         for (var page = 1; page <= MaxPages; page++)
         {
             // WooCommerceNET's HTTP calls do not observe the token, so check between pages: a server
@@ -707,6 +719,8 @@ public sealed class WooCommerceConnector : ConnectorBase
                     _logger.LogError(ex, "WooCommerce customer import failed for {Id}", remoteCustomer.id);
                 }
             }
+
+            await progress.MaybeReportAsync(processed, failed);
 
             // No new rows (endpoint repeated a page) or a short page → we have reached the end.
             if (newInBatch == 0 || batch.Count < PageSize)
@@ -880,6 +894,42 @@ public sealed class WooCommerceConnector : ConnectorBase
     // Upper bound on a single list-page fetch. WooCommerceNET's own HttpClient has no effective cap here,
     // so a hung request (seen when a CDN stops responding) would block the orchestrator indefinitely.
     private static readonly TimeSpan PageFetchTimeout = TimeSpan.FromSeconds(60);
+
+    // How often a long import flushes its running item counts (and any advanced cursor) to the audit row
+    // via context.ReportProgressAsync. Frequent enough that the Sync-Status dashboard moves visibly,
+    // sparse enough that a fast-paging import does not hammer the DB with a write per page.
+    private static readonly TimeSpan CheckpointInterval = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Throttles mid-run progress checkpoints. Connectors call <see cref="MaybeReportAsync"/> after each
+    /// page; it forwards to <see cref="SalesChannelContext.ReportProgressAsync"/> at most once per
+    /// <see cref="CheckpointInterval"/>. Single-threaded per run (pages are walked sequentially), so the
+    /// non-locked last-write timestamp is safe.
+    /// </summary>
+    private sealed class ProgressThrottle
+    {
+        private readonly SalesChannelContext _context;
+        private DateTime _lastReport = DateTime.UtcNow;
+
+        public ProgressThrottle(SalesChannelContext context) => _context = context;
+
+        public async Task MaybeReportAsync(int processed, int failed)
+        {
+            if (_context.ReportProgressAsync is null)
+            {
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            if (now - _lastReport < CheckpointInterval)
+            {
+                return;
+            }
+
+            _lastReport = now;
+            await _context.ReportProgressAsync(processed, failed, _context.CancellationToken);
+        }
+    }
 
     private static WCObject BuildClient(SalesChannelContext context) => new(BuildRestApi(context));
 
