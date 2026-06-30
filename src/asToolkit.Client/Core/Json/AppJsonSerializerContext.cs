@@ -75,6 +75,7 @@ namespace asToolkit.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<List<asToolkit.Domain.Dtos.TenantOAuthAppSettings.TenantOAuthAppSettingsListDto>>))]
 [JsonSerializable(typeof(asToolkit.Domain.Dtos.TenantOAuthAppSettings.TenantOAuthAppSettingsInputDto))]
 [JsonSerializable(typeof(SalesChannelSyncResultDto))]
+[JsonSerializable(typeof(SalesChannelSyncStatusDto))]
 [JsonSerializable(typeof(List<ChannelSyncRunDto>))]
 [JsonSerializable(typeof(List<ChannelSyncLogDto>))]
 [JsonSerializable(typeof(List<ChannelExportOutboxDto>))]

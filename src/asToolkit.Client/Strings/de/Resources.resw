@@ -4400,4 +4400,145 @@
   <data name="Account.Password.MismatchError" xml:space="preserve">
     <value>Die Passwortbestätigung stimmt nicht mit dem neuen Passwort überein.</value>
   </data>
+  <data name="SalesChannelDashboard.Sync.StateLabel.Text" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.IntervalLabel.Text" xml:space="preserve">
+    <value>Intervall</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.BackfillLabel.Text" xml:space="preserve">
+    <value>Bestell-Backfill</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.DeadLetterLabel.Text" xml:space="preserve">
+    <value>Fehlerhafte Exporte</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.RetryDeadLetterButton.Content" xml:space="preserve">
+    <value>Erneut versuchen</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.LastRunLabel.Text" xml:space="preserve">
+    <value>Letzter Lauf</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.ItemsLabel.Text" xml:space="preserve">
+    <value>Verarbeitet</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.NextRunLabel.Text" xml:space="preserve">
+    <value>Nächster Lauf</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.SyncNowButton.Content" xml:space="preserve">
+    <value>Jetzt synchronisieren</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.LogTitle.Text" xml:space="preserve">
+    <value>Protokoll (letzte 24 Std)</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.LevelAll.Content" xml:space="preserve">
+    <value>Alle Ebenen</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.LevelWarning.Content" xml:space="preserve">
+    <value>Ab Warnung</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.LevelError.Content" xml:space="preserve">
+    <value>Nur Fehler</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.CopyLogButton.Content" xml:space="preserve">
+    <value>Protokoll kopieren</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.LogEmpty.Text" xml:space="preserve">
+    <value>Keine Protokolleinträge</value>
+  </data>
+  <data name="SyncStatus.OpProducts" xml:space="preserve">
+    <value>Produkte</value>
+  </data>
+  <data name="SyncStatus.OpCustomers" xml:space="preserve">
+    <value>Kunden</value>
+  </data>
+  <data name="SyncStatus.OpOrders" xml:space="preserve">
+    <value>Bestellungen</value>
+  </data>
+  <data name="SyncStatus.Active" xml:space="preserve">
+    <value>Aktiv</value>
+  </data>
+  <data name="SyncStatus.Paused" xml:space="preserve">
+    <value>Pausiert</value>
+  </data>
+  <data name="SyncStatus.Running" xml:space="preserve">
+    <value>Läuft…</value>
+  </data>
+  <data name="SyncStatus.Success" xml:space="preserve">
+    <value>Erfolgreich</value>
+  </data>
+  <data name="SyncStatus.PartialFailure" xml:space="preserve">
+    <value>Teilweise fehlgeschlagen</value>
+  </data>
+  <data name="SyncStatus.Failed" xml:space="preserve">
+    <value>Fehlgeschlagen</value>
+  </data>
+  <data name="SyncStatus.NeverRun" xml:space="preserve">
+    <value>Noch nie ausgeführt</value>
+  </data>
+  <data name="SyncStatus.ManualOnly" xml:space="preserve">
+    <value>Nur manuell</value>
+  </data>
+  <data name="SyncStatus.ImportOff" xml:space="preserve">
+    <value>Import deaktiviert</value>
+  </data>
+  <data name="SyncStatus.JustNow" xml:space="preserve">
+    <value>gerade eben</value>
+  </data>
+  <data name="SyncStatus.DueNow" xml:space="preserve">
+    <value>jetzt fällig</value>
+  </data>
+  <data name="SyncStatus.IntervalFormat" xml:space="preserve">
+    <value>{0} Sek.</value>
+  </data>
+  <data name="SyncStatus.DeadLetterFormat" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="SyncStatus.ItemsFormat" xml:space="preserve">
+    <value>{0} verarbeitet · {1} fehlgeschlagen</value>
+  </data>
+  <data name="SyncStatus.DurationFormat" xml:space="preserve">
+    <value>Dauer: {0}</value>
+  </data>
+  <data name="SyncStatus.RunningSinceFormat" xml:space="preserve">
+    <value>Läuft seit {0}</value>
+  </data>
+  <data name="SyncStatus.NextRunFormat" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="SyncStatus.TriggerFormat" xml:space="preserve">
+    <value>Zuletzt: {0}</value>
+  </data>
+  <data name="SyncStatus.AgoSecFormat" xml:space="preserve">
+    <value>vor {0} Sek.</value>
+  </data>
+  <data name="SyncStatus.AgoMinFormat" xml:space="preserve">
+    <value>vor {0} Min.</value>
+  </data>
+  <data name="SyncStatus.AgoHourFormat" xml:space="preserve">
+    <value>vor {0} Std.</value>
+  </data>
+  <data name="SyncStatus.InSecFormat" xml:space="preserve">
+    <value>in {0} Sek.</value>
+  </data>
+  <data name="SyncStatus.InMinFormat" xml:space="preserve">
+    <value>in {0} Min.</value>
+  </data>
+  <data name="SyncStatus.BackfillDone" xml:space="preserve">
+    <value>Abgeschlossen (inkrementell)</value>
+  </data>
+  <data name="SyncStatus.BackfillRunningFormat" xml:space="preserve">
+    <value>Läuft – zurück bis {0}</value>
+  </data>
+  <data name="SyncStatus.BackfillNotStarted" xml:space="preserve">
+    <value>Noch nicht gestartet</value>
+  </data>
+  <data name="SyncStatus.TriggerManual" xml:space="preserve">
+    <value>Manuell</value>
+  </data>
+  <data name="SyncStatus.TriggerEvent" xml:space="preserve">
+    <value>Ereignis</value>
+  </data>
+  <data name="SyncStatus.TriggerScheduler" xml:space="preserve">
+    <value>Zeitplan</value>
+  </data>
 </root>

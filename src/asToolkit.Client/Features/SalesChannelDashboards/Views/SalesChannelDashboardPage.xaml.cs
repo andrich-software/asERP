@@ -1,5 +1,6 @@
 ﻿using asToolkit.Client.Features.Dashboard.Models;
 using asToolkit.Client.Features.SalesChannelDashboards.Models;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace asToolkit.Client.Features.SalesChannelDashboards.Views;
 
@@ -68,6 +69,40 @@ public sealed partial class SalesChannelDashboardPage : Page
         if (this.DataContext is SalesChannelDashboardModel model)
         {
             await model.GoToNextPage();
+        }
+    }
+
+    private async void SyncNow_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button
+            && button.DataContext is SyncOperationCardData card
+            && this.DataContext is SalesChannelDashboardModel model)
+        {
+            await model.TriggerSync(card.OperationToken);
+        }
+    }
+
+    private async void RetryDeadLetter_Click(object sender, RoutedEventArgs e)
+    {
+        if (this.DataContext is SalesChannelDashboardModel model)
+        {
+            await model.RetryDeadLetters();
+        }
+    }
+
+    private async void CopyLog_Click(object sender, RoutedEventArgs e)
+    {
+        if (this.DataContext is SalesChannelDashboardModel model)
+        {
+            var text = await model.BuildLogClipboardTextAsync();
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            var package = new DataPackage();
+            package.SetText(text);
+            Clipboard.SetContent(package);
         }
     }
 }

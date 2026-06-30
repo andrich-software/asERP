@@ -1,10 +1,12 @@
-﻿using asToolkit.Client.Core.Models;
+﻿using asToolkit.Client.Core.Exceptions;
+using asToolkit.Client.Core.Models;
 using asToolkit.Client.Features.Dashboard.Models;
 using asToolkit.Client.Features.Saless;
 using asToolkit.Client.Features.Saless.Models;
 using asToolkit.Client.Features.Saless.Services;
 using asToolkit.Client.Features.SalesChannelDashboards.Services;
 using asToolkit.Client.Features.SalesChannels.Models;
+using asToolkit.Client.Features.SalesChannels.Services;
 using asToolkit.Domain.Dtos.WebAnalytics;
 using asToolkit.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -20,6 +22,7 @@ public partial record SalesChannelDashboardModel
 {
     private readonly ISalesChannelStatisticsService _statisticsService;
     private readonly ISalesService _salesService;
+    private readonly ISalesChannelService _salesChannelService;
     private readonly INavigator _navigator;
     private readonly IStringLocalizer _localizer;
     private readonly ILogger<SalesChannelDashboardModel> _logger;
@@ -37,6 +40,7 @@ public partial record SalesChannelDashboardModel
     public SalesChannelDashboardModel(
         ISalesChannelStatisticsService statisticsService,
         ISalesService salesService,
+        ISalesChannelService salesChannelService,
         INavigator navigator,
         IStringLocalizer localizer,
         ILogger<SalesChannelDashboardModel> logger,
@@ -44,6 +48,7 @@ public partial record SalesChannelDashboardModel
     {
         _statisticsService = statisticsService;
         _salesService = salesService;
+        _salesChannelService = salesChannelService;
         _navigator = navigator;
         _localizer = localizer;
         _logger = logger;
@@ -74,6 +79,23 @@ public partial record SalesChannelDashboardModel
     // Tab: Web statistics (visitor analytics; only for WooCommerce / Shopware 6)
     public IFeed<WebSessionsSummaryDto> WebSessions => RefreshTick.SelectAsync((_, ct) => LoadWebSessionsAsync(ct));
     public IListFeed<WebTopProductDto> WebTopProducts => RefreshTick.SelectAsync((_, ct) => LoadWebTopProductsAsync(ct)).AsListFeed();
+
+    // Tab: Sync status (per-operation last/next run + scrollable 24h log)
+    public IFeed<SyncStatusViewData> SyncStatus => RefreshTick.SelectAsync((_, ct) => LoadSyncStatusAsync(ct));
+
+    /// <summary>Minimum log level shown: 0 = Information (all), 1 = Warning, 2 = Error. Bound to the filter ComboBox.</summary>
+    public IState<int> LogLevelFilterIndex => State<int>.Value(this, () => 0);
+
+    public IListFeed<SyncLogLineViewData> SyncLog => Feed
+        .Combine(LogLevelFilterIndex, RefreshTick)
+        .SelectAsync(LoadSyncLogAsync)
+        .AsListFeed();
+
+    /// <summary>True while a manual sync / retry request is in flight — disables the action buttons.</summary>
+    public IState<bool> IsSyncBusy => State<bool>.Value(this, () => false);
+
+    /// <summary>Last sync-action error (RFC 7807 messages), surfaced under the action buttons.</summary>
+    public IState<string?> SyncError => State<string?>.Value(this, () => null);
 
     /// <summary>
     /// Triggers a reload of all dashboard data (KPIs and recent sales for the current page).
@@ -197,6 +219,110 @@ public partial record SalesChannelDashboardModel
             _logger.LogError(ex, "Error loading web top products for SalesChannel {SalesChannelId}", _salesChannelId);
             throw;
         }
+    }
+
+    private async ValueTask<SyncStatusViewData> LoadSyncStatusAsync(CancellationToken ct)
+    {
+        try
+        {
+            var dto = await _salesChannelService.GetSyncStatusAsync(_salesChannelId, ct);
+            if (dto is null) return new SyncStatusViewData();
+
+            return SyncStatusViewMapper.ToViewData(dto, _localizer, DateTime.UtcNow);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading sync status for SalesChannel {SalesChannelId}", _salesChannelId);
+            throw;
+        }
+    }
+
+    private async ValueTask<IImmutableList<SyncLogLineViewData>> LoadSyncLogAsync((int levelIndex, int tick) input, CancellationToken ct)
+    {
+        var (levelIndex, _) = input;
+        try
+        {
+            var minLevel = levelIndex switch
+            {
+                1 => "Warning",
+                2 => "Error",
+                _ => "Information",
+            };
+
+            var logs = await _salesChannelService.GetSyncLogsAsync(_salesChannelId, take: 500, offset: 0, minLevel: minLevel, ct: ct);
+            return logs.Select(l => SyncStatusViewMapper.ToLogLine(l, _localizer)).ToImmutableList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading sync log for SalesChannel {SalesChannelId}", _salesChannelId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Triggers a manual import for one operation ("products" | "customers" | "saless"). Runs
+    /// synchronously server-side, so the action buttons are disabled via <see cref="IsSyncBusy"/>
+    /// until it returns; then all feeds refresh.
+    /// </summary>
+    public async ValueTask TriggerSync(string operation, CancellationToken ct = default)
+    {
+        await IsSyncBusy.UpdateAsync(_ => true, ct);
+        await SyncError.UpdateAsync(_ => null, ct);
+        try
+        {
+            await _salesChannelService.TriggerSyncAsync(_salesChannelId, operation, ct);
+        }
+        catch (ApiException ex)
+        {
+            await SyncError.UpdateAsync(_ => ex.CombinedMessage, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Manual sync '{Operation}' failed for SalesChannel {SalesChannelId}", operation, _salesChannelId);
+            await SyncError.UpdateAsync(_ => ex.Message, ct);
+        }
+        finally
+        {
+            await IsSyncBusy.UpdateAsync(_ => false, ct);
+            await RefreshAsync(ct);
+        }
+    }
+
+    /// <summary>Resets every DeadLetter export row for this channel back to Pending so the drainer retries them.</summary>
+    public async ValueTask RetryDeadLetters(CancellationToken ct = default)
+    {
+        await IsSyncBusy.UpdateAsync(_ => true, ct);
+        await SyncError.UpdateAsync(_ => null, ct);
+        try
+        {
+            var rows = await _salesChannelService.GetDeadLetterAsync(_salesChannelId, ct);
+            foreach (var row in rows)
+            {
+                await _salesChannelService.RetryDeadLetterAsync(_salesChannelId, row.Id, ct);
+            }
+        }
+        catch (ApiException ex)
+        {
+            await SyncError.UpdateAsync(_ => ex.CombinedMessage, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Dead-letter retry failed for SalesChannel {SalesChannelId}", _salesChannelId);
+            await SyncError.UpdateAsync(_ => ex.Message, ct);
+        }
+        finally
+        {
+            await IsSyncBusy.UpdateAsync(_ => false, ct);
+            await RefreshAsync(ct);
+        }
+    }
+
+    /// <summary>Builds the full visible log as plain text for the "Copy log" button (uses the current level filter).</summary>
+    public async Task<string> BuildLogClipboardTextAsync(CancellationToken ct = default)
+    {
+        var levelIndex = await LogLevelFilterIndex.Value(ct);
+        var lines = await LoadSyncLogAsync((levelIndex, 0), ct);
+        return string.Join(Environment.NewLine, lines.Select(l => l.RawLine));
     }
 
     private async ValueTask<IImmutableList<RecentSalesItem>> LoadRecentSalessAsync((int page, int size, int tick) paging, CancellationToken ct)

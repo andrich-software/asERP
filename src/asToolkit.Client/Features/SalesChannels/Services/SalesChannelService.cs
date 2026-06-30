@@ -104,6 +104,14 @@ public class SalesChannelService : ISalesChannelService
         await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
     }
 
+    public async Task<SalesChannelSyncStatusDto?> GetSyncStatusAsync(Guid id, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.SalesChannels.SyncStatus(id)}";
+        return await _httpClient.GetFromJsonAsync(
+            url, AppJsonSerializerContext.Default.SalesChannelSyncStatusDto, ct);
+    }
+
     public async Task<SalesChannelSyncResultDto?> TriggerSyncAsync(Guid id, string operation, CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();

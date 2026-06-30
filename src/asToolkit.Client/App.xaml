@@ -57,6 +57,7 @@
       <converters:SalesStatusToForegroundConverter x:Key="SalesStatusToForegroundConverter" />
       <converters:SalesChannelTypeToTextConverter x:Key="SalesChannelTypeToTextConverter" />
       <converters:SyncLogLevelToForegroundConverter x:Key="SyncLogLevelToForegroundConverter" />
+      <converters:SyncRunStatusToBrushConverter x:Key="SyncRunStatusToBrushConverter" />
       <converters:ProductTypeToTextConverter x:Key="ProductTypeToTextConverter" />
       <converters:ProductTypeToVisibilityConverter x:Key="ProductTypeToVisibilityConverter" />
       <converters:VariantOptionsSummaryConverter x:Key="VariantOptionsSummaryConverter" />
