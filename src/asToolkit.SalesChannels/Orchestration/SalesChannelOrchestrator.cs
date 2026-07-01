@@ -281,18 +281,15 @@ public sealed class SalesChannelOrchestrator : BackgroundService
                 // token was canceled by a shutdown.
                 await context.SaveChangesAsync(CancellationToken.None);
             }
-            // Like the product import, the customer import is a full, non-incremental pull. Gate the
-            // scheduled run to once-until-complete so it does not re-pull the entire customer base every
-            // interval and hammer the remote shop. Manual "Sync customers" bypasses this gate; clearing
-            // InitialCustomerImportCompleted re-enables a scheduled full import.
+            // The customer import is a full pull, walked in time-boxed, resumable chunks (like the sales
+            // backfill). The connector advances CustomerImportPageCursor per page and flips
+            // InitialCustomerImportCompleted once the whole base is in — so run it while that flag is unset
+            // and just persist the progress it made, even after a partial or shutdown-canceled chunk.
+            // CancellationToken.None: this must still save when the poll's own token was canceled by shutdown.
             if (channel.ImportCustomers && !channel.InitialCustomerImportCompleted)
             {
-                var run = await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportCustomers, ChannelSyncTriggerSource.Scheduler, cancellationToken);
-                if (run.Status is ChannelSyncRunStatus.Success or ChannelSyncRunStatus.PartialFailure)
-                {
-                    channel.InitialCustomerImportCompleted = true;
-                    await context.SaveChangesAsync(cancellationToken);
-                }
+                await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportCustomers, ChannelSyncTriggerSource.Scheduler, cancellationToken);
+                await context.SaveChangesAsync(CancellationToken.None);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

@@ -188,11 +188,15 @@ public sealed class WooCommerceConnector : ConnectorBase
             return SyncResult.Failed(ex.Message);
         }
 
+        // One throttle for the whole run so a checkpoint reflects the cumulative order count across both
+        // passes below (each pass counts from 0 locally).
+        var progress = new ProgressThrottle(context);
+
         // Caught up: pull only orders changed since the last successful run (modified_after), which also
         // catches edits/refunds to existing orders.
         if (context.SalesChannel.InitialSalesImportCompleted)
         {
-            return await ImportSalesByModifiedAsync(context, rest, context.IncrementalSince);
+            return await ImportSalesByModifiedAsync(context, rest, context.IncrementalSince, progress);
         }
 
         // Still backfilling the full history. Two passes per run so the shop sees CURRENT orders within a
@@ -203,8 +207,9 @@ public sealed class WooCommerceConnector : ConnectorBase
         //   2) a time-bounded chunk of the oldest-first history backfill, resumed from the persisted cursor.
         // Both upsert idempotently, so the inevitable overlap between the two passes is harmless.
         var recentSince = context.IncrementalSince ?? DateTime.UtcNow - RecentSalesSeedWindow;
-        var recent = await ImportSalesByModifiedAsync(context, rest, recentSince);
-        var backfill = await ImportSalesBackfillAsync(context, rest);
+        var recent = await ImportSalesByModifiedAsync(context, rest, recentSince, progress);
+        progress.AddCompletedPass(recent.ItemsProcessed, recent.ItemsFailed);
+        var backfill = await ImportSalesBackfillAsync(context, rest, progress);
 
         return new SyncResult(
             recent.ItemsProcessed + backfill.ItemsProcessed,
@@ -224,7 +229,7 @@ public sealed class WooCommerceConnector : ConnectorBase
     /// rather than skipped. When a short page proves we walked off the end with no error, we flip
     /// <see cref="SalesChannel.InitialSalesImportCompleted"/> and the channel switches to incremental mode.
     /// </summary>
-    private async Task<SyncResult> ImportSalesBackfillAsync(SalesChannelContext context, RestAPI rest)
+    private async Task<SyncResult> ImportSalesBackfillAsync(SalesChannelContext context, RestAPI rest, ProgressThrottle progress)
     {
         var processed = 0;
         var failed = 0;
@@ -251,7 +256,6 @@ public sealed class WooCommerceConnector : ConnectorBase
         var reachedEnd = false;
         var fetchFailed = false;
         var seen = new HashSet<string>();
-        var progress = new ProgressThrottle(context);
         var runStart = DateTime.UtcNow;
 
         for (var page = 1; page <= MaxPages; page++)
@@ -369,7 +373,7 @@ public sealed class WooCommerceConnector : ConnectorBase
     /// the handful of new/changed orders per tick. Upserts are idempotent, so the overlap window and any retry
     /// simply refill what is missing.
     /// </summary>
-    private async Task<SyncResult> ImportSalesByModifiedAsync(SalesChannelContext context, RestAPI rest, DateTime? modifiedSince)
+    private async Task<SyncResult> ImportSalesByModifiedAsync(SalesChannelContext context, RestAPI rest, DateTime? modifiedSince, ProgressThrottle progress)
     {
         var processed = 0;
         var failed = 0;
@@ -389,7 +393,6 @@ public sealed class WooCommerceConnector : ConnectorBase
         }
 
         var seen = new HashSet<string>();
-        var progress = new ProgressThrottle(context);
         for (var page = 1; page <= MaxPages; page++)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
@@ -673,7 +676,16 @@ public sealed class WooCommerceConnector : ConnectorBase
         // are idempotent, so a subsequent run simply resumes filling in what is still missing.
         var seen = new HashSet<string>();
         var progress = new ProgressThrottle(context);
-        for (var page = 1; page <= MaxPages; page++)
+        var runStart = DateTime.UtcNow;
+
+        // Resume from the page after the last one fully imported (id-ordered for stable pagination across
+        // resumes, mirroring the order backfill). 0 → start at page 1. This keeps a time-boxed run from
+        // re-walking everything from the top on every tick.
+        var startPage = context.SalesChannel.CustomerImportPageCursor + 1;
+        var reachedEnd = false;
+        var frozen = false;
+
+        for (var page = startPage; page <= MaxPages; page++)
         {
             // WooCommerceNET's HTTP calls do not observe the token, so check between pages: a server
             // shutdown then ends the walk promptly and the dispatcher closes the run as canceled rather
@@ -687,6 +699,8 @@ public sealed class WooCommerceConnector : ConnectorBase
                 {
                     ["per_page"] = PageSize.ToString(),
                     ["page"] = page.ToString(),
+                    ["orderby"] = "id",
+                    ["order"] = "asc",
                 }).WaitAsync(PageFetchTimeout, context.CancellationToken);
             }
             catch (Exception ex)
@@ -701,6 +715,7 @@ public sealed class WooCommerceConnector : ConnectorBase
 
             if (batch is null || batch.Count == 0)
             {
+                reachedEnd = true;
                 break;
             }
 
@@ -739,17 +754,41 @@ public sealed class WooCommerceConnector : ConnectorBase
                 catch (Exception ex)
                 {
                     failed++;
+                    frozen = true;   // a failed customer freezes the cursor so the next run retries this page
                     _logger.LogError(ex, "WooCommerce customer import failed for {Id}", remoteCustomer.id);
                 }
             }
 
             await progress.MaybeReportAsync(processed, failed);
 
+            // Advance the resume cursor only past a fully clean page (in-memory on the tracked entity; the
+            // orchestrator saves it), so a failed customer is retried next run rather than skipped.
+            if (!frozen)
+            {
+                context.SalesChannel.CustomerImportPageCursor = page;
+            }
+
             // No new rows (endpoint repeated a page) or a short page → we have reached the end.
             if (newInBatch == 0 || batch.Count < PageSize)
             {
+                reachedEnd = true;
                 break;
             }
+
+            // Time box the invocation: yield the channel to the order import instead of walking the whole
+            // customer base in one run. The cursor above lets the next run resume from the following page.
+            if (DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
+            {
+                break;
+            }
+        }
+
+        // Only declare the customer base fully imported when we walked off the end with nothing left behind.
+        // Reset the cursor so clearing the flag later forces a clean re-import from page 1.
+        if (reachedEnd && !frozen)
+        {
+            context.SalesChannel.InitialCustomerImportCompleted = true;
+            context.SalesChannel.CustomerImportPageCursor = 0;
         }
 
         return new SyncResult(processed, failed);
@@ -938,14 +977,25 @@ public sealed class WooCommerceConnector : ConnectorBase
     /// Throttles mid-run progress checkpoints. Connectors call <see cref="MaybeReportAsync"/> after each
     /// page; it forwards to <see cref="SalesChannelContext.ReportProgressAsync"/> at most once per
     /// <see cref="CheckpointInterval"/>. Single-threaded per run (pages are walked sequentially), so the
-    /// non-locked last-write timestamp is safe.
+    /// non-locked last-write timestamp is safe. When one run spans several passes (e.g. the sales import's
+    /// recent + backfill passes, each counting from 0), <see cref="AddCompletedPass"/> rolls a finished
+    /// pass's totals into the base so the reported count keeps climbing instead of resetting between passes.
     /// </summary>
     private sealed class ProgressThrottle
     {
         private readonly SalesChannelContext _context;
         private DateTime _lastReport = DateTime.UtcNow;
+        private int _baseProcessed;
+        private int _baseFailed;
 
         public ProgressThrottle(SalesChannelContext context) => _context = context;
+
+        /// <summary>Folds a completed pass's totals into the running base for subsequent passes.</summary>
+        public void AddCompletedPass(int processed, int failed)
+        {
+            _baseProcessed += processed;
+            _baseFailed += failed;
+        }
 
         public async Task MaybeReportAsync(int processed, int failed)
         {
@@ -961,7 +1011,7 @@ public sealed class WooCommerceConnector : ConnectorBase
             }
 
             _lastReport = now;
-            await _context.ReportProgressAsync(processed, failed, _context.CancellationToken);
+            await _context.ReportProgressAsync(_baseProcessed + processed, _baseFailed + failed, _context.CancellationToken);
         }
     }
 
