@@ -45,6 +45,43 @@ public class SyncOrchestrationTests
         Assert.Equal(5, run.ItemsProcessed);                       // final count from CloseRun
     }
 
+    // --- Recent-first: dispatcher computes a watermark even during backfill ------------------------
+
+    [Fact]
+    public async Task Dispatcher_ComputesWatermark_DuringBackfill_ForRecentPass()
+    {
+        var options = NewInMemoryOptions(Guid.NewGuid().ToString());
+        await using var context = new ApplicationDbContext(options, new TestTenantContext());
+
+        // Channel is still backfilling history (InitialSalesImportCompleted = false).
+        var channel = NewChannel(initialSalesDone: false);
+
+        // A previous *successful* sales run exists — its start is the watermark the recent pass should use.
+        var previousStart = DateTime.UtcNow.AddHours(-3);
+        context.ChannelSyncRun.Add(new ChannelSyncRun
+        {
+            Id = Guid.NewGuid(),
+            SalesChannelId = channel.Id,
+            Operation = ChannelSyncOperation.ImportSaless,
+            TriggerSource = ChannelSyncTriggerSource.Scheduler,
+            Status = ChannelSyncRunStatus.Success,
+            StartedAt = previousStart,
+            FinishedAt = previousStart.AddMinutes(5),
+            CorrelationId = Guid.NewGuid(),
+        });
+        await context.SaveChangesAsync();
+
+        var connector = new WatermarkCapturingConnector();
+        var dispatcher = NewDispatcher(context, connector);
+
+        // A SCHEDULED run (not manual) is what should carry the incremental watermark.
+        await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportSaless, ChannelSyncTriggerSource.Scheduler, CancellationToken.None);
+
+        Assert.True(connector.CapturedSince.HasValue, "recent pass must receive a watermark even during backfill");
+        // Watermark = previous successful run start minus the 1h safety overlap.
+        Assert.True(connector.CapturedSince!.Value <= previousStart, "watermark should be at/behind the previous run start (overlap subtracted)");
+    }
+
     // --- Fix 2b: drain the whole buffer per call ---------------------------------------------------
 
     [Fact]
@@ -235,6 +272,18 @@ public class SyncOrchestrationTests
             PersistedProcessedDuringRun = persisted.ItemsProcessed;
 
             return new SyncResult(FinalProcessed, 0);
+        }
+    }
+
+    /// <summary>Captures the incremental watermark the dispatcher hands to the sales import.</summary>
+    private sealed class WatermarkCapturingConnector : TestConnectorBase
+    {
+        public DateTime? CapturedSince { get; private set; }
+        public override SalesChannelType Type => SalesChannelType.WooCommerce;
+        public override Task<SyncResult> ImportSalessAsync(SalesChannelContext context)
+        {
+            CapturedSince = context.IncrementalSince;
+            return Task.FromResult(new SyncResult(1, 0));
         }
     }
 

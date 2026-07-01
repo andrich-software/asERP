@@ -188,15 +188,28 @@ public sealed class WooCommerceConnector : ConnectorBase
             return SyncResult.Failed(ex.Message);
         }
 
-        // Two modes, picked by the channel's backfill state:
-        //  - Backfill (InitialSalesImportCompleted == false): walk the WHOLE order history oldest-first and
-        //    resume across runs from a persisted cursor, so a large shop is filled completely without ever
-        //    restarting from page 1. See ImportSalesBackfillAsync.
-        //  - Incremental (completed): pull only orders changed since the last successful run (modified_after),
-        //    which also catches edits/refunds to existing orders. See ImportSalesIncrementalAsync.
-        return context.SalesChannel.InitialSalesImportCompleted
-            ? await ImportSalesIncrementalAsync(context, rest)
-            : await ImportSalesBackfillAsync(context, rest);
+        // Caught up: pull only orders changed since the last successful run (modified_after), which also
+        // catches edits/refunds to existing orders.
+        if (context.SalesChannel.InitialSalesImportCompleted)
+        {
+            return await ImportSalesByModifiedAsync(context, rest, context.IncrementalSince);
+        }
+
+        // Still backfilling the full history. Two passes per run so the shop sees CURRENT orders within a
+        // cycle instead of only once the oldest-first walk (which can take days on a large shop) reaches the
+        // present:
+        //   1) a "recent" pass — orders modified since this run's watermark, or the seed window on the first
+        //      run — so today's orders are imported up front, and
+        //   2) a time-bounded chunk of the oldest-first history backfill, resumed from the persisted cursor.
+        // Both upsert idempotently, so the inevitable overlap between the two passes is harmless.
+        var recentSince = context.IncrementalSince ?? DateTime.UtcNow - RecentSalesSeedWindow;
+        var recent = await ImportSalesByModifiedAsync(context, rest, recentSince);
+        var backfill = await ImportSalesBackfillAsync(context, rest);
+
+        return new SyncResult(
+            recent.ItemsProcessed + backfill.ItemsProcessed,
+            recent.ItemsFailed + backfill.ItemsFailed,
+            backfill.ErrorSummary ?? recent.ErrorSummary);
     }
 
     /// <summary>
@@ -239,6 +252,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         var fetchFailed = false;
         var seen = new HashSet<string>();
         var progress = new ProgressThrottle(context);
+        var runStart = DateTime.UtcNow;
 
         for (var page = 1; page <= MaxPages; page++)
         {
@@ -316,6 +330,14 @@ public sealed class WooCommerceConnector : ConnectorBase
             {
                 break;
             }
+
+            // Time box the invocation: yield the channel to the customer import and the next run's recent pull
+            // rather than walking the entire multi-day history in one go. reachedEnd stays false, so the next
+            // scheduled run resumes the backfill from the persisted cursor.
+            if (DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
+            {
+                break;
+            }
         }
 
         // Only declare the history fully imported when we walked off the end cleanly — no fetch error and no
@@ -338,15 +360,16 @@ public sealed class WooCommerceConnector : ConnectorBase
     }
 
     /// <summary>
-    /// Incremental order pull for a caught-up channel. Sorted by 'id' (immutable), NOT 'modified': offset
-    /// pagination over a result set sorted by a mutable key is unstable — with orderby=modified, any order
-    /// touched mid-walk jumps to a later page and slips past the cursor. 'id' never changes, so every order is
-    /// paged exactly once even while the shop keeps taking orders. 'modified_after' (from the previous
-    /// successful run's watermark) still filters the set, independent of the sort key, so a steady shop only
-    /// pulls the handful of new/changed orders per tick. Upserts are idempotent, so the overlap window and any
-    /// retry simply refill what is missing.
+    /// Pulls orders modified at/after <paramref name="modifiedSince"/> (null → all orders). Used both for the
+    /// caught-up channel's incremental tick and, during backfill, for the per-run "recent orders" pass.
+    /// Sorted by 'id' (immutable), NOT 'modified': offset pagination over a result set sorted by a mutable key
+    /// is unstable — with orderby=modified, any order touched mid-walk jumps to a later page and slips past the
+    /// cursor. 'id' never changes, so every order is paged exactly once even while the shop keeps taking
+    /// orders. 'modified_after' still filters the set, independent of the sort key, so a steady shop only pulls
+    /// the handful of new/changed orders per tick. Upserts are idempotent, so the overlap window and any retry
+    /// simply refill what is missing.
     /// </summary>
-    private async Task<SyncResult> ImportSalesIncrementalAsync(SalesChannelContext context, RestAPI rest)
+    private async Task<SyncResult> ImportSalesByModifiedAsync(SalesChannelContext context, RestAPI rest, DateTime? modifiedSince)
     {
         var processed = 0;
         var failed = 0;
@@ -358,7 +381,7 @@ public sealed class WooCommerceConnector : ConnectorBase
             ["order"] = "asc",
         };
 
-        if (context.IncrementalSince is { } since)
+        if (modifiedSince is { } since)
         {
             // WooCommerce compares 'modified_after' against the GMT timestamp when dates_are_gmt=true.
             baseParameters["modified_after"] = since.ToString("yyyy-MM-ddTHH:mm:ss");
@@ -809,6 +832,17 @@ public sealed class WooCommerceConnector : ConnectorBase
     // pull. The page cap is a safety net so a misbehaving endpoint can never spin the import forever.
     private const int PageSize = 100;
     private const int MaxPages = 1000;
+
+    // While the full order history is still backfilling (oldest-first, potentially days of walking), each
+    // scheduled run first refreshes a "recent" window so the shop sees current orders within a cycle instead
+    // of only once the walk reaches the present. On the very first run there is no watermark yet, so we seed
+    // with this lookback; afterwards the run's own modified_after watermark keeps the window cheap.
+    private static readonly TimeSpan RecentSalesSeedWindow = TimeSpan.FromDays(14);
+
+    // Cap on how long one backfill invocation walks before yielding. Without it a single run holds the channel
+    // for days (blocking the per-channel-sequential customer import and the next run's recent pull). The
+    // date_created cursor is persisted per page, so the next run resumes exactly where this one stopped.
+    private static readonly TimeSpan MaxBackfillRunDuration = TimeSpan.FromMinutes(15);
 
     // Retry budget for a single order-page fetch. Transient blips (timeout, 5xx, brief DNS/TLS hiccup,
     // Cloudflare interstitial) should not abort an otherwise-healthy run.

@@ -251,13 +251,11 @@ public sealed class SyncDispatcher
             return null;
         }
 
-        // While the resumable backfill is still walking the full history, the connector pages oldest-first from
-        // its own date_created cursor and ignores modified_after — so don't compute a watermark yet. The
-        // incremental watermark only applies once the whole history is in.
-        if (!salesChannel.InitialSalesImportCompleted)
-        {
-            return null;
-        }
+        // NOTE: this watermark is also consulted while the history backfill is still running — the connector
+        // uses it for the per-run "recent orders" pass that keeps current orders live before the oldest-first
+        // walk reaches the present (null → the connector falls back to a fixed seed window on the first run).
+        // It never governs which historical orders the backfill fetches (that is the date_created cursor), so
+        // computing it during backfill is safe.
 
         // Advance the watermark ONLY past fully successful runs. A PartialFailure means the run aborted
         // mid-walk (e.g. a page fetch failed), so the orders it never reached were not imported. If we

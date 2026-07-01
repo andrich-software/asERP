@@ -17,10 +17,17 @@ public class SalesImportRepository : ISalesImportRepository
     private readonly IProductRepository _productRepository;
     private readonly ApplicationDbContext _dbContext;
 
-    // Per-run counter for the per-tenant SalesId. The repository is scoped, so one instance serves a whole
-    // import run: seed the max once, then increment in memory instead of a MAX scan over the growing sales
-    // table for every inserted order.
+    // Per-run counters for the per-tenant SalesId/CustomerId. The repository is scoped, so one instance
+    // serves a whole import run: seed the max once, then increment in memory instead of a MAX scan over the
+    // growing sales/customer table for every inserted row.
     private int? _nextSalesId;
+    private int? _nextCustomerId;
+
+    // Per-run lookup caches. The country set is tiny and static, and product SKUs repeat heavily across a
+    // page of orders — caching turns the per-order (country ×2) and per-line-item (SKU) queries into a
+    // handful of lookups per run. Scoped lifetime keeps them naturally run-local (no cross-run staleness).
+    private readonly Dictionary<string, Country?> _countryCache = new();
+    private readonly Dictionary<string, Guid?> _productIdBySkuCache = new();
 
     public SalesImportRepository(
         ILogger<ProductImportRepository> logger,
@@ -76,7 +83,7 @@ public class SalesImportRepository : ISalesImportRepository
                 // when found, add to CustomerSalesChannel
                 if (customer != null)
                 {
-                    await _customerRepository.AddCustomerToSalesChannelAsync(customer.Id, salesChannel.Id, importSales.RemoteCustomerId);
+                    AddCustomerSalesChannelLink(customer.Id, salesChannel.Id, importSales.RemoteCustomerId);
                     _logger.LogInformation("CustomerSalesChannel added for Customer {0} ", customer.Id);
                 }
             }
@@ -86,6 +93,9 @@ public class SalesImportRepository : ISalesImportRepository
             {
                 var newCustomer = new Customer
                 {
+                    // Assign the per-tenant CustomerId from the in-memory counter (not a MAX scan per row) so
+                    // the order's FK is resolved before the single SaveChanges below inserts the whole graph.
+                    CustomerId = await NextCustomerIdAsync(),
                     Email = importSales.Customer?.Email ?? string.Empty,
                     Firstname = importSales.Customer?.Firstname ?? string.Empty,
                     Lastname = importSales.Customer?.Lastname ?? string.Empty,
@@ -98,17 +108,19 @@ public class SalesImportRepository : ISalesImportRepository
                     DateEnrollment = importSales.Customer?.DateEnrollment ?? DateTime.UtcNow,
                 };
 
-                await _customerRepository.CreateAsync(newCustomer);
+                // Deferred: added to the context now, committed with the order in one SaveChanges below.
+                _dbContext.Customer.Add(newCustomer);
                 _logger.LogInformation("Customer {0} created", importSales.Customer?.Email);
                 customer = newCustomer;
 
-                await _customerRepository.AddCustomerToSalesChannelAsync(newCustomer.Id, salesChannel.Id, importSales.RemoteCustomerId);
+                AddCustomerSalesChannelLink(newCustomer.Id, salesChannel.Id, importSales.RemoteCustomerId);
                 _logger.LogInformation("CustomerSalesChannel added for Customer {0} ", customer.Id);
             }
 
             // A customer must never be "newer" than an order they placed. An existing customer may have been
             // created earlier from a later order (or out of order), leaving DateEnrollment after this order.
-            await FloorCustomerEnrollmentAsync(customer, importSales.DateSalesed);
+            // Mutation only — persisted by the single SaveChanges after the order graph is built.
+            FloorCustomerEnrollment(customer, importSales.DateSalesed);
 
             Guid billingAddressId = Guid.Empty;
             Guid shippingAddressId = Guid.Empty;
@@ -175,7 +187,7 @@ public class SalesImportRepository : ISalesImportRepository
                     CountryId = billingAddressCountry.Id
                 };
 
-                await _customerRepository.AddCustomerAddressAsync(newAddress);
+                _dbContext.CustomerAddress.Add(newAddress);
             }
 
             // Add the shipping address only when it is not already on file, differs from billing, and its
@@ -198,7 +210,7 @@ public class SalesImportRepository : ISalesImportRepository
                     CountryId = shippingAddressCountry.Id,
                 };
 
-                await _customerRepository.AddCustomerAddressAsync(newAddress);
+                _dbContext.CustomerAddress.Add(newAddress);
             }
 
             var newSales = new Sales
@@ -252,13 +264,13 @@ public class SalesImportRepository : ISalesImportRepository
 
                     // A line with no SKU (e.g. a fee or a custom/legacy position) cannot match a product —
                     // treat it like a not-found product rather than dropping the whole order.
-                    var product = string.IsNullOrEmpty(item.Sku)
+                    var productId = string.IsNullOrEmpty(item.Sku)
                         ? null
-                        : await _productRepository.GetBySkuAsync(item.Sku);
+                        : await ResolveProductIdBySkuAsync(item.Sku);
 
-                    if (product != null)
+                    if (productId is { } resolvedProductId)
                     {
-                        newSalesItem.ProductId = product.Id;
+                        newSalesItem.ProductId = resolvedProductId;
                         _logger.LogInformation("Sales {0}: Add Item {1}", importSales.RemoteSalesId, item.Name);
                     }
                     else
@@ -291,7 +303,12 @@ public class SalesImportRepository : ISalesImportRepository
                 }
             };
 
-            await _salesRepository.CreateAsync(newSales);
+            _dbContext.Sales.Add(newSales);
+
+            // Single commit for the whole order graph built above — new customer + sales-channel link +
+            // addresses + sales + items + history + any DateEnrollment floor — in one round-trip, instead of
+            // the 5-6 separate SaveChanges the per-entity repository calls used to issue per order.
+            await _dbContext.SaveChangesAsync();
             _logger.LogInformation("Sales {0}: created", importSales.RemoteSalesId);
 
             if (salesChannel.ImportProducts == false)
@@ -338,10 +355,11 @@ public class SalesImportRepository : ISalesImportRepository
 
             // Heal the enrollment date even for orders already imported: a full re-sweep then corrects any
             // customer whose DateEnrollment ended up after one of their (already-existing) orders.
+            var customerFloored = false;
             var existingCustomer = await _customerRepository.GetByCustomerIdAsync(existingSales.CustomerId);
             if (existingCustomer != null)
             {
-                await FloorCustomerEnrollmentAsync(existingCustomer, importSales.DateSalesed);
+                customerFloored = FloorCustomerEnrollment(existingCustomer, importSales.DateSalesed);
             }
 
             if (existingSales.Status != importSales.Status)
@@ -362,11 +380,17 @@ public class SalesImportRepository : ISalesImportRepository
 
             if (somethingChanged)
             {
+                // Saves all tracked changes for this order, including a floored customer enrollment.
                 await _salesRepository.UpdateAsync(existingSales);
                 _logger.LogInformation("Sales {0}: updated", importSales.RemoteSalesId);
             }
             else
             {
+                // The order itself is unchanged, but a DateEnrollment floor still needs persisting.
+                if (customerFloored)
+                {
+                    await _dbContext.SaveChangesAsync();
+                }
                 _logger.LogInformation("Sales {0}: has no changes", importSales.RemoteSalesId);
             }
         }
@@ -374,7 +398,57 @@ public class SalesImportRepository : ISalesImportRepository
 
     private async Task<Country?> MapCountryFromStringAsync(string countryString)
     {
-        return await _countryRepository.GetCountryByString(countryString);
+        if (string.IsNullOrEmpty(countryString))
+        {
+            return null;
+        }
+
+        // Country is a tiny static table hit twice per order (billing + shipping). Cache per run so repeated
+        // country strings resolve in memory instead of a query each time.
+        if (_countryCache.TryGetValue(countryString, out var cached))
+        {
+            return cached;
+        }
+
+        var country = await _countryRepository.GetCountryByString(countryString);
+        _countryCache[countryString] = country;
+        return country;
+    }
+
+    /// <summary>Next per-tenant CustomerId, seeding the counter from the DB max on first use.</summary>
+    private async Task<int> NextCustomerIdAsync()
+    {
+        _nextCustomerId ??= await _customerRepository.GetMaxCustomerIdAsync() + 1;
+        return _nextCustomerId++.Value;
+    }
+
+    /// <summary>Adds a customer↔sales-channel link to the context (deferred; committed with the order).</summary>
+    private void AddCustomerSalesChannelLink(Guid customerId, Guid salesChannelId, string remoteCustomerId)
+    {
+        _dbContext.CustomerSalesChannel.Add(new CustomerSalesChannel
+        {
+            CustomerId = customerId,
+            SalesChannelId = salesChannelId,
+            RemoteCustomerId = remoteCustomerId,
+        });
+    }
+
+    /// <summary>
+    /// Resolves a line item's SKU to a ProductId, caching per run. Order lines reference the same products
+    /// repeatedly, so caching turns the per-line-item lookup into a handful of queries per run instead of one
+    /// per position. Caches misses (null) too, so an unknown SKU is only queried once.
+    /// </summary>
+    private async Task<Guid?> ResolveProductIdBySkuAsync(string sku)
+    {
+        if (_productIdBySkuCache.TryGetValue(sku, out var cached))
+        {
+            return cached;
+        }
+
+        var product = await _productRepository.GetBySkuAsync(sku);
+        var id = product?.Id;
+        _productIdBySkuCache[sku] = id;
+        return id;
     }
 
     /// <summary>
@@ -382,11 +456,16 @@ public class SalesImportRepository : ISalesImportRepository
     /// customer is never recorded as newer than an order they placed. Only ever moves the date earlier
     /// (converges to the earliest known activity), so it is safe and idempotent across repeated imports.
     /// </summary>
-    private async Task FloorCustomerEnrollmentAsync(Customer customer, DateTime orderDate)
+    /// <summary>
+    /// Mutates the tracked customer's DateEnrollment down to <paramref name="orderDate"/> when the order
+    /// predates it, and returns whether it changed. Does NOT save — the caller persists it as part of the
+    /// order's single SaveChanges (or an explicit save when the order itself is otherwise unchanged).
+    /// </summary>
+    private bool FloorCustomerEnrollment(Customer customer, DateTime orderDate)
     {
         if (orderDate == default)
         {
-            return;
+            return false;
         }
 
         var floor = new DateTimeOffset(DateTime.SpecifyKind(orderDate, DateTimeKind.Utc));
@@ -394,8 +473,10 @@ public class SalesImportRepository : ISalesImportRepository
         {
             _logger.LogInformation("Customer {0}: lowering DateEnrollment from {1} to order date {2}", customer.Id, customer.DateEnrollment, floor);
             customer.DateEnrollment = floor;
-            await _customerRepository.UpdateAsync(customer);
+            return true;
         }
+
+        return false;
     }
 
     /// <summary>Next per-tenant SalesId, seeding the counter from the DB max on first use.</summary>

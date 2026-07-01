@@ -126,6 +126,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new InvoiceItemConfiguration());
         modelBuilder.ApplyConfiguration(new SalesItemConfiguration());
         modelBuilder.ApplyConfiguration(new ProductSalesChannelConfiguration());
+        modelBuilder.ApplyConfiguration(new CustomerSalesChannelConfiguration());
         modelBuilder.ApplyConfiguration(new ShippingProviderRateConfiguration());
         modelBuilder.ApplyConfiguration(new TenantEmailSettingsConfiguration());
         modelBuilder.ApplyConfiguration(new ChannelSyncRunConfiguration());
