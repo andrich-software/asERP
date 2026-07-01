@@ -55,6 +55,14 @@ public class SalesChannel : BaseEntity, IBaseEntity
     /// </summary>
     public DateTime? SalesImportBackfillCursor { get; set; }
 
+    /// <summary>
+    /// Resume point for the customer import: the last fully imported page (1-based, id-ordered). A time-boxed
+    /// run persists its progress here so the next run continues from the following page instead of re-walking
+    /// from the start. Reset to 0 once the whole customer base is in (and <see cref="InitialCustomerImportCompleted"/>
+    /// flips). 0 means "start from the first page".
+    /// </summary>
+    public int CustomerImportPageCursor { get; set; }
+
     /// <summary>Polling interval used by the orchestrator. Defaults to 60s.</summary>
     public int SyncIntervalSeconds { get; set; } = 60;
 

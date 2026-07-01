@@ -66,7 +66,7 @@ public class CustomerImportRepository : ICustomerImportRepository
             // Wenn nach E-Mail gefunden, Verknüpfung mit SalesChannel herstellen
             if (existingCustomer != null)
             {
-                await _customerRepository.AddCustomerToSalesChannelAsync(existingCustomer.Id, salesChannel.Id, importCustomer.RemoteCustomerId);
+                AddCustomerSalesChannelLink(existingCustomer.Id, salesChannel.Id, importCustomer.RemoteCustomerId);
                 _logger.LogInformation($"CustomerSalesChannel hinzugefügt für Kunden {existingCustomer.Id}");
             }
         }
@@ -91,11 +91,11 @@ public class CustomerImportRepository : ICustomerImportRepository
                 DateEnrollment = importCustomer.DateEnrollment != DateTime.MinValue ? importCustomer.DateEnrollment : DateTime.UtcNow
             };
 
-            await _customerRepository.CreateAsync(newCustomer);
+            // Deferred: added to the context now, committed with the link + addresses in one SaveChanges below.
+            _dbContext.Customer.Add(newCustomer);
             _logger.LogInformation($"Kunde {importCustomer.Email} erstellt");
 
-            // Verknüpfung mit SalesChannel herstellen
-            await _customerRepository.AddCustomerToSalesChannelAsync(newCustomer.Id, salesChannel.Id, importCustomer.RemoteCustomerId);
+            AddCustomerSalesChannelLink(newCustomer.Id, salesChannel.Id, importCustomer.RemoteCustomerId);
             _logger.LogInformation($"CustomerSalesChannel hinzugefügt für Kunden {newCustomer.Id}");
 
             existingCustomer = newCustomer;
@@ -121,11 +121,11 @@ public class CustomerImportRepository : ICustomerImportRepository
                 }
             }
 
-            await _customerRepository.UpdateAsync(existingCustomer);
+            // Mutation only — the tracked entity is persisted by the single SaveChanges at the end.
             _logger.LogInformation($"Kunde {existingCustomer.Id} aktualisiert");
         }
 
-        // Adressen verarbeiten
+        // Adressen verarbeiten (deferred adds)
         if (importCustomer.BillingAddress != null)
         {
             await ProcessAddress(existingCustomer, importCustomer.BillingAddress, customerIsNew);
@@ -137,6 +137,10 @@ public class CustomerImportRepository : ICustomerImportRepository
         {
             await ProcessAddress(existingCustomer, importCustomer.ShippingAddress, customerIsNew);
         }
+
+        // Single commit for the whole customer graph (customer + sales-channel link + addresses, new or
+        // updated) — one round-trip per customer instead of the 2-4 the per-entity repository calls issued.
+        await _dbContext.SaveChangesAsync();
     }
 
     private async Task ProcessAddress(Customer customer, SalesChannelImportCustomerAddress address, bool customerIsNew)
@@ -185,8 +189,20 @@ public class CustomerImportRepository : ICustomerImportRepository
             CountryId = country.Id
         };
 
-        await _customerRepository.AddCustomerAddressAsync(newAddress);
+        // Deferred: committed with the customer graph in the single SaveChanges of the caller.
+        _dbContext.CustomerAddress.Add(newAddress);
         _logger.LogInformation($"Neue Adresse für Kunden {customer.Id} hinzugefügt");
+    }
+
+    /// <summary>Adds a customer↔sales-channel link to the context (deferred; committed with the customer).</summary>
+    private void AddCustomerSalesChannelLink(Guid customerId, Guid salesChannelId, string remoteCustomerId)
+    {
+        _dbContext.CustomerSalesChannel.Add(new CustomerSalesChannel
+        {
+            CustomerId = customerId,
+            SalesChannelId = salesChannelId,
+            RemoteCustomerId = remoteCustomerId,
+        });
     }
 
     /// <summary>Next per-tenant CustomerId, seeding the counter from the DB max on first use.</summary>
