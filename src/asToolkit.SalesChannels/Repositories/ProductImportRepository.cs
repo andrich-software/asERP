@@ -55,6 +55,10 @@ public class ProductImportRepository : IProductImportRepository
         try
         {
             await ImportOrUpdateCoreAsync(salesChannelId, importProduct);
+
+            // Everything this product committed is now Unchanged ballast; drop it so DetectChanges stays
+            // cheap for the rest of the catalogue (run row + channel entity stay tracked).
+            _context.TrimCommittedEntries();
         }
         catch (Exception ex)
         {
@@ -291,10 +295,9 @@ public class ProductImportRepository : IProductImportRepository
             }
         }
 
-        if (newValues)
-        {
-            await _productAttributeRepository.SaveChangesAsync();
-        }
+        // New attribute values are flushed together with axes and variants in the single SaveChanges at
+        // the end of this method — all ids are client-generated Guids, so EF orders the inserts correctly
+        // within one transaction and the extra mid-method round-trips are unnecessary.
 
         // Sync the parent's axes: add missing ones, keep existing (axes are never removed on import)
         var axesChanged = false;
@@ -314,11 +317,6 @@ public class ProductImportRepository : IProductImportRepository
                 _productRepository.AddVariantAxis(axis);
                 axesChanged = true;
             }
-        }
-
-        if (axesChanged)
-        {
-            await _productRepository.SaveChangesAsync();
         }
 
         var somethingChanged = false;
@@ -456,7 +454,7 @@ public class ProductImportRepository : IProductImportRepository
             }
         }
 
-        if (somethingChanged)
+        if (somethingChanged || newValues || axesChanged)
         {
             await _productRepository.SaveChangesAsync();
         }

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using asToolkit.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace asToolkit.SalesChannels.Repositories;
@@ -47,6 +48,49 @@ internal static class ImportChangeTrackerExtensions
                         entry.State = EntityState.Unchanged;
                         break;
                 }
+            }
+        }
+        finally
+        {
+            context.ChangeTracker.CascadeDeleteTiming = cascadeDeleteTiming;
+            context.ChangeTracker.DeleteOrphansTiming = deleteOrphansTiming;
+        }
+    }
+
+    /// <summary>
+    /// Detaches all committed (Unchanged) entries after an item's SaveChanges so the tracker stays small
+    /// over a long import run. Without this, every imported order/customer/product graph stays tracked and
+    /// DetectChanges scans an ever-growing set — per-item cost rises linearly until a 15-minute run spends
+    /// most of its time in change tracking. The dispatcher's <see cref="ChannelSyncRun"/> row and the
+    /// <see cref="SalesChannel"/> entity are exempt: both carry mid-run state (progress counts, backfill
+    /// cursors) that later SaveChanges calls in the same run must still flush. Pending (Added/Modified/
+    /// Deleted) entries are left alone — trimming runs on the success path where none should exist, and a
+    /// dirty channel cursor between checkpoints must survive.
+    /// </summary>
+    public static void TrimCommittedEntries(this DbContext context)
+    {
+        // Same deferred-fixup guard as DiscardPendingChanges: detaching a principal while its dependents
+        // are still tracked must not trigger an immediate severed-relationship cascade mid-loop.
+        var cascadeDeleteTiming = context.ChangeTracker.CascadeDeleteTiming;
+        var deleteOrphansTiming = context.ChangeTracker.DeleteOrphansTiming;
+        context.ChangeTracker.CascadeDeleteTiming = CascadeTiming.Never;
+        context.ChangeTracker.DeleteOrphansTiming = CascadeTiming.Never;
+
+        try
+        {
+            foreach (var entry in context.ChangeTracker.Entries().ToList())
+            {
+                if (entry.State != EntityState.Unchanged)
+                {
+                    continue;
+                }
+
+                if (entry.Entity is ChannelSyncRun or SalesChannel)
+                {
+                    continue;
+                }
+
+                entry.State = EntityState.Detached;
             }
         }
         finally

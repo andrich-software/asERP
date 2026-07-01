@@ -26,7 +26,10 @@ public class SalesImportRepository : ISalesImportRepository
     // Per-run lookup caches. The country set is tiny and static, and product SKUs repeat heavily across a
     // page of orders — caching turns the per-order (country ×2) and per-line-item (SKU) queries into a
     // handful of lookups per run. Scoped lifetime keeps them naturally run-local (no cross-run staleness).
-    private readonly Dictionary<string, Country?> _countryCache = new();
+    // Countries are cached as plain id/name pairs, NOT tracked entities: the tracker is trimmed after every
+    // order (TrimCommittedEntries), and re-attaching a detached Country via a navigation would insert a
+    // duplicate. With only CountryId set, EF never needs the entity.
+    private readonly Dictionary<string, (Guid Id, string Name)?> _countryCache = new();
     private readonly Dictionary<string, Guid?> _productIdBySkuCache = new();
 
     public SalesImportRepository(
@@ -56,6 +59,10 @@ public class SalesImportRepository : ISalesImportRepository
         try
         {
             await ImportOrUpdateCoreAsync(salesChannel, importSales);
+
+            // Everything this order committed is now Unchanged ballast; drop it so DetectChanges stays
+            // cheap for the thousands of orders that follow (run row + channel entity stay tracked).
+            _dbContext.TrimCommittedEntries();
         }
         catch
         {
@@ -70,7 +77,7 @@ public class SalesImportRepository : ISalesImportRepository
 
         if (existingSales == null)
         {
-            _logger.LogInformation("Sales {0}: does not exist, create sales...", importSales.RemoteSalesId);
+            _logger.LogDebug("Sales {0}: does not exist, create sales...", importSales.RemoteSalesId);
 
             // try to find customer in sales channel
             var customer = await _customerRepository.GetCustomerByRemoteCustomerIdAsync(salesChannel.Id, importSales.RemoteCustomerId);
@@ -84,7 +91,7 @@ public class SalesImportRepository : ISalesImportRepository
                 if (customer != null)
                 {
                     AddCustomerSalesChannelLink(customer.Id, salesChannel.Id, importSales.RemoteCustomerId);
-                    _logger.LogInformation("CustomerSalesChannel added for Customer {0} ", customer.Id);
+                    _logger.LogDebug("CustomerSalesChannel added for Customer {0} ", customer.Id);
                 }
             }
 
@@ -110,11 +117,11 @@ public class SalesImportRepository : ISalesImportRepository
 
                 // Deferred: added to the context now, committed with the order in one SaveChanges below.
                 _dbContext.Customer.Add(newCustomer);
-                _logger.LogInformation("Customer {0} created", importSales.Customer?.Email);
+                _logger.LogDebug("Customer {0} created", importSales.Customer?.Email);
                 customer = newCustomer;
 
                 AddCustomerSalesChannelLink(newCustomer.Id, salesChannel.Id, importSales.RemoteCustomerId);
-                _logger.LogInformation("CustomerSalesChannel added for Customer {0} ", customer.Id);
+                _logger.LogDebug("CustomerSalesChannel added for Customer {0} ", customer.Id);
             }
 
             // A customer must never be "newer" than an order they placed. An existing customer may have been
@@ -126,8 +133,8 @@ public class SalesImportRepository : ISalesImportRepository
             Guid shippingAddressId = Guid.Empty;
             var customerAddresses = await _customerRepository.GetCustomerAddressByCustomerIdAsync(customer.Id);
 
-            Country? billingAddressCountry = await MapCountryFromStringAsync(importSales.BillingAddress.Country);
-            Country? shippingAddressCountry = await MapCountryFromStringAsync(importSales.ShippingAddress.Country);
+            var billingAddressCountry = await MapCountryFromStringAsync(importSales.BillingAddress.Country);
+            var shippingAddressCountry = await MapCountryFromStringAsync(importSales.ShippingAddress.Country);
 
             // An unresolved country must not drop the whole order. Keep the raw country string on the sales
             // record (below) and skip only the structured CustomerAddress, which needs a Country FK.
@@ -171,7 +178,7 @@ public class SalesImportRepository : ISalesImportRepository
 
             // Add the billing address only when it is not already on file and its country resolved (the FK is
             // required). A missing country is logged above and the order still imports with the raw string.
-            if (billingAddressId == Guid.Empty && billingAddressCountry != null)
+            if (billingAddressId == Guid.Empty && billingAddressCountry is { } billingCountry)
             {
                 var newAddress = new CustomerAddress
                 {
@@ -183,8 +190,7 @@ public class SalesImportRepository : ISalesImportRepository
                     Street = importSales.BillingAddress.Street,
                     City = importSales.BillingAddress.City,
                     Zip = importSales.BillingAddress.Zip,
-                    Country = billingAddressCountry,
-                    CountryId = billingAddressCountry.Id
+                    CountryId = billingCountry.Id
                 };
 
                 _dbContext.CustomerAddress.Add(newAddress);
@@ -193,7 +199,7 @@ public class SalesImportRepository : ISalesImportRepository
             // Add the shipping address only when it is not already on file, differs from billing, and its
             // country resolved. The previous condition was inverted (created only when already present).
             if (shippingAddressId == Guid.Empty
-                && shippingAddressCountry != null
+                && shippingAddressCountry is { } shippingCountry
                 && !AddressesEqual(importSales.BillingAddress, importSales.ShippingAddress))
             {
                 var newAddress = new CustomerAddress
@@ -206,8 +212,7 @@ public class SalesImportRepository : ISalesImportRepository
                     Street = importSales.ShippingAddress.Street,
                     City = importSales.ShippingAddress.City,
                     Zip = importSales.ShippingAddress.Zip,
-                    Country = shippingAddressCountry,
-                    CountryId = shippingAddressCountry.Id,
+                    CountryId = shippingCountry.Id,
                 };
 
                 _dbContext.CustomerAddress.Add(newAddress);
@@ -271,7 +276,7 @@ public class SalesImportRepository : ISalesImportRepository
                     if (productId is { } resolvedProductId)
                     {
                         newSalesItem.ProductId = resolvedProductId;
-                        _logger.LogInformation("Sales {0}: Add Item {1}", importSales.RemoteSalesId, item.Name);
+                        _logger.LogDebug("Sales {0}: Add Item {1}", importSales.RemoteSalesId, item.Name);
                     }
                     else
                     {
@@ -280,7 +285,7 @@ public class SalesImportRepository : ISalesImportRepository
                         newSalesItem.MissingProductSku = item.Sku;
                         newSalesItem.MissingProductEan = item.Ean;
 
-                        _logger.LogInformation("Sales {0}: product with SKU '{1}' not found, importing as missing-product line", importSales.RemoteSalesId, item.Sku);
+                        _logger.LogDebug("Sales {0}: product with SKU '{1}' not found, importing as missing-product line", importSales.RemoteSalesId, item.Sku);
                     }
 
                     newSales.SalesItems.Add(newSalesItem);
@@ -309,7 +314,7 @@ public class SalesImportRepository : ISalesImportRepository
             // addresses + sales + items + history + any DateEnrollment floor — in one round-trip, instead of
             // the 5-6 separate SaveChanges the per-entity repository calls used to issue per order.
             await _dbContext.SaveChangesAsync();
-            _logger.LogInformation("Sales {0}: created", importSales.RemoteSalesId);
+            _logger.LogDebug("Sales {0}: created", importSales.RemoteSalesId);
 
             if (salesChannel.ImportProducts == false)
             {
@@ -350,7 +355,7 @@ public class SalesImportRepository : ISalesImportRepository
         }
         else
         {
-            _logger.LogInformation("Sales {0}: already exists, check for changes", existingSales.RemoteSalesId);
+            _logger.LogDebug("Sales {0}: already exists, check for changes", existingSales.RemoteSalesId);
             bool somethingChanged = false;
 
             // Heal the enrollment date even for orders already imported: a full re-sweep then corrects any
@@ -391,12 +396,12 @@ public class SalesImportRepository : ISalesImportRepository
                 {
                     await _dbContext.SaveChangesAsync();
                 }
-                _logger.LogInformation("Sales {0}: has no changes", importSales.RemoteSalesId);
+                _logger.LogDebug("Sales {0}: has no changes", importSales.RemoteSalesId);
             }
         }
     }
 
-    private async Task<Country?> MapCountryFromStringAsync(string countryString)
+    private async Task<(Guid Id, string Name)?> MapCountryFromStringAsync(string countryString)
     {
         if (string.IsNullOrEmpty(countryString))
         {
@@ -411,8 +416,9 @@ public class SalesImportRepository : ISalesImportRepository
         }
 
         var country = await _countryRepository.GetCountryByString(countryString);
-        _countryCache[countryString] = country;
-        return country;
+        var pair = country is null ? ((Guid Id, string Name)?)null : (country.Id, country.Name);
+        _countryCache[countryString] = pair;
+        return pair;
     }
 
     /// <summary>Next per-tenant CustomerId, seeding the counter from the DB max on first use.</summary>
@@ -471,7 +477,7 @@ public class SalesImportRepository : ISalesImportRepository
         var floor = new DateTimeOffset(DateTime.SpecifyKind(orderDate, DateTimeKind.Utc));
         if (floor < customer.DateEnrollment)
         {
-            _logger.LogInformation("Customer {0}: lowering DateEnrollment from {1} to order date {2}", customer.Id, customer.DateEnrollment, floor);
+            _logger.LogDebug("Customer {0}: lowering DateEnrollment from {1} to order date {2}", customer.Id, customer.DateEnrollment, floor);
             customer.DateEnrollment = floor;
             return true;
         }

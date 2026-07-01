@@ -1,4 +1,4 @@
-using asToolkit.Application.Contracts.Services;
+﻿using asToolkit.Application.Contracts.Services;
 using asToolkit.Domain.Entities;
 using asToolkit.Domain.Enums;
 using asToolkit.Persistence.DatabaseContext;
@@ -129,6 +129,129 @@ public class SalesImportRepositoryTests
         Assert.Equal(2, salesIds.Count);
         // In-memory SalesId counter hands out distinct, consecutive ids.
         Assert.Equal(salesIds[0] + 1, salesIds[1]);
+    }
+
+    [Fact]
+    public async Task Import_ManyOrders_ChangeTrackerStaysBounded_AndChannelStaysTracked()
+    {
+        var options = NewOptions();
+        var tenant = new TestTenantContext();
+        await using var ctx = new ApplicationDbContext(options, tenant);
+
+        var channel = NewChannel();
+        ctx.Product.Add(new Product { Id = Guid.NewGuid(), Sku = "SKU-1", Name = "Test Product" });
+        ctx.SalesChannel.Add(channel);
+        await ctx.SaveChangesAsync();
+
+        var repo = BuildRepository(ctx, tenant);
+        for (var i = 0; i < 30; i++)
+        {
+            await repo.ImportOrUpdateFromSalesChannel(channel, NewImport($"2{i:000}", $"C-{i}", $"buyer{i}@example.de", "SKU-1"));
+
+            // The per-order trim must keep the tracker flat: without it, 30 orders × ~6 entities
+            // would accumulate ~180 tracked entries and DetectChanges cost would grow per order.
+            Assert.True(ctx.ChangeTracker.Entries().Count() < 25,
+                $"Change tracker holds {ctx.ChangeTracker.Entries().Count()} entries after order {i} — trim is not working");
+        }
+
+        // The channel entity carries mid-run cursor state and must survive every trim.
+        Assert.NotEqual(EntityState.Detached, ctx.Entry(channel).State);
+        Assert.Equal(30, await ctx.Sales.IgnoreQueryFilters().CountAsync());
+        Assert.Equal(30, await ctx.Customer.IgnoreQueryFilters().CountAsync());
+    }
+
+    [Fact]
+    public async Task Import_TwoOrdersSameCountry_AfterTrim_DoesNotDuplicateCountry()
+    {
+        var options = NewOptions();
+        var tenant = new TestTenantContext();
+        await using var ctx = new ApplicationDbContext(options, tenant);
+
+        var channel = NewChannel();
+        var country = new Country { Id = Guid.NewGuid(), Name = "Deutschland", CountryCode = "DE" };
+        ctx.Country.Add(country);
+        ctx.Product.Add(new Product { Id = Guid.NewGuid(), Sku = "SKU-1", Name = "Test Product" });
+        ctx.SalesChannel.Add(channel);
+        await ctx.SaveChangesAsync();
+
+        SalesChannelImportSales WithAddress(string remoteSalesId, string remoteCustomerId, string email)
+        {
+            var import = NewImport(remoteSalesId, remoteCustomerId, email, "SKU-1");
+            import.BillingAddress = new SalesChannelImportCustomerAddress
+            {
+                Firstname = "Test",
+                Lastname = "Customer",
+                Street = $"Street {remoteSalesId}",
+                City = "Dresden",
+                Zip = "01067",
+                Country = "DE",
+            };
+            import.ShippingAddress = import.BillingAddress;
+            return import;
+        }
+
+        var repo = BuildRepository(ctx, tenant);
+        // Regression: the second order resolves the country from the per-run cache AFTER the first
+        // order's trim detached the Country entity. If the address graph re-attached the detached
+        // entity (instead of setting only CountryId), EF would insert a duplicate Country row.
+        await repo.ImportOrUpdateFromSalesChannel(channel, WithAddress("3001", "C-A", "a@example.de"));
+        await repo.ImportOrUpdateFromSalesChannel(channel, WithAddress("3002", "C-B", "b@example.de"));
+
+        Assert.Equal(1, await ctx.Country.IgnoreQueryFilters().CountAsync());
+
+        var addresses = await ctx.CustomerAddress.IgnoreQueryFilters().ToListAsync();
+        Assert.Equal(2, addresses.Count);
+        Assert.All(addresses, a => Assert.Equal(country.Id, a.CountryId));
+    }
+
+    [Fact]
+    [Trait("Category", "Benchmark")]
+    public async Task Import_LargeRun_PerOrderCostStaysFlat()
+    {
+        var options = NewOptions();
+        var tenant = new TestTenantContext();
+        await using var ctx = new ApplicationDbContext(options, tenant);
+
+        var channel = NewChannel();
+        ctx.Product.Add(new Product { Id = Guid.NewGuid(), Sku = "SKU-1", Name = "Test Product" });
+        ctx.SalesChannel.Add(channel);
+        await ctx.SaveChangesAsync();
+
+        var repo = BuildRepository(ctx, tenant);
+
+        // Warm-up outside the measurement: JIT + first-query model building would otherwise inflate
+        // the first bucket and mask (or fake) a rising trend.
+        const int warmup = 100;
+        for (var n = 0; n < warmup; n++)
+        {
+            await repo.ImportOrUpdateFromSalesChannel(channel, NewImport($"4{n:0000}", $"C-W{n}", $"warmup{n}@example.de", "SKU-1"));
+        }
+
+        const int total = 600;
+        const int bucketSize = 200;
+        var bucketMillis = new List<double>();
+        var stopwatch = new System.Diagnostics.Stopwatch();
+
+        for (var bucket = 0; bucket < total / bucketSize; bucket++)
+        {
+            stopwatch.Restart();
+            for (var i = 0; i < bucketSize; i++)
+            {
+                var n = bucket * bucketSize + i;
+                await repo.ImportOrUpdateFromSalesChannel(channel, NewImport($"5{n:0000}", $"C-{n}", $"buyer{n}@example.de", "SKU-1"));
+            }
+            stopwatch.Stop();
+            bucketMillis.Add(stopwatch.Elapsed.TotalMilliseconds);
+        }
+
+        Assert.Equal(warmup + total, await ctx.Sales.IgnoreQueryFilters().CountAsync());
+
+        // Without the per-order tracker trim the last bucket runs several times slower than the fastest
+        // (DetectChanges over an ever-growing set — the regression this guards against is quadratic, not
+        // subtle). With the trim, per-order cost is constant; compare against the fastest bucket with
+        // generous headroom so scheduler jitter from parallel test classes cannot fail the run.
+        Assert.True(bucketMillis[^1] < bucketMillis.Min() * 4,
+            $"Per-order cost is rising across the run: buckets [{string.Join(", ", bucketMillis.Select(m => m.ToString("F0")))}] ms");
     }
 
     private static SalesChannel NewChannel() => new()
