@@ -80,83 +80,166 @@ public sealed class WooCommerceConnector : ConnectorBase
         {
             var wc = BuildClient(context);
             var taxRateMap = await BuildTaxRateMapAsync(wc, context.CancellationToken);
-            var remoteProducts = await GetAllProductsAsync(wc, context.CancellationToken);
             var progress = new ProgressThrottle(context);
-            foreach (var remoteProduct in remoteProducts)
-            {
-                var isVariable = remoteProduct.type == "variable";
 
-                // Variable parents occasionally have no own SKU — synthesize a stable one from the
-                // remote id so the parent (and with it all variations) is not dropped. Plain products
-                // without SKU stay skipped as before.
-                var sku = remoteProduct.sku;
-                if (string.IsNullOrEmpty(sku))
+            // Stream the catalogue page by page instead of buffering it whole: memory stays flat, progress
+            // checkpoints move from the first page on, and the next page downloads while this one imports.
+            var seen = new HashSet<string>();
+
+            Task<List<Product>> FetchPageAsync(int p) =>
+                wc.Product.GetAll(new Dictionary<string, string>
                 {
-                    if (!isVariable)
-                    {
-                        _logger.LogDebug("Product {Name} has no SKU, skipping", remoteProduct.name);
-                        continue;
-                    }
+                    ["per_page"] = PageSize.ToString(),
+                    ["page"] = p.ToString(),
+                }).WaitAsync(PageFetchTimeout, context.CancellationToken);
 
-                    sku = $"WOO-{remoteProduct.id}";
-                }
-
+            // Variation lists download with bounded parallelism (HTTP only); the DB import below stays
+            // single-threaded on the shared DbContext.
+            using var variationGate = new SemaphoreSlim(VariationFetchParallelism, VariationFetchParallelism);
+            async Task<List<Variation>> FetchVariationsThrottledAsync(ulong parentId)
+            {
+                await variationGate.WaitAsync(context.CancellationToken);
                 try
                 {
-                    var importProduct = new SalesChannelImportProduct
-                    {
-                        RemoteProductId = remoteProduct.id?.ToString() ?? string.Empty,
-                        Name = remoteProduct.name,
-                        // Variable/grouped products carry no own price (null) — default to 0 instead of
-                        // letting the cast throw and dropping the row as a failed import.
-                        Price = remoteProduct.price ?? 0m,
-                        Sku = sku,
-                        TaxRate = ResolveTaxRate(remoteProduct, taxRateMap),
-                        Description = remoteProduct.description,
-                        IsVariantParent = isVariable,
-                        Images = MapImages(remoteProduct.images),
-                    };
+                    return await GetAllVariationsAsync(wc, parentId, context.CancellationToken);
+                }
+                finally
+                {
+                    variationGate.Release();
+                }
+            }
 
-                    if (isVariable && remoteProduct.id.HasValue)
-                    {
-                        // The axes are the product attributes flagged for variation use
-                        importProduct.VariantAxes = remoteProduct.attributes?
-                            .Where(a => a.variation == true && !string.IsNullOrEmpty(a.name))
-                            .OrderBy(a => a.position ?? 0)
-                            .Select(a => a.name)
-                            .ToList() ?? [];
+            var nextFetch = FetchPageAsync(1);
+            var variationFetches = new Dictionary<ulong, Task<List<Variation>>>();
+            try
+            {
+                for (var page = 1; page <= MaxPages; page++)
+                {
+                    context.CancellationToken.ThrowIfCancellationRequested();
 
-                        var variations = await GetAllVariationsAsync(wc, remoteProduct.id.Value, context.CancellationToken);
-                        importProduct.Variants = variations
-                            .Where(v => v.id.HasValue)
-                            .Select(v => new SalesChannelImportVariant
-                            {
-                                RemoteVariantId = v.id!.Value.ToString(),
-                                Sku = v.sku,
-                                Ean = null,
-                                Price = v.price,
-                                Stock = v.stock_quantity ?? 0,
-                                SortOrder = (int)v.menu_order,
-                                Options = v.attributes?
-                                    .Where(a => !string.IsNullOrEmpty(a.name) && !string.IsNullOrEmpty(a.option))
-                                    .Select(a => new SalesChannelImportVariantOption
-                                    {
-                                        AttributeName = a.name,
-                                        Value = a.option,
-                                    }).ToList() ?? [],
-                            }).ToList();
+                    var batch = await nextFetch;
+                    // Prefetch the next page unless this one already proves the end of the catalogue.
+                    nextFetch = batch is { Count: PageSize } && page < MaxPages ? FetchPageAsync(page + 1) : null;
+
+                    if (batch is null || batch.Count == 0)
+                    {
+                        break;
                     }
 
-                    await _productImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel.Id, importProduct);
-                    processed++;
-                }
-                catch (Exception ex)
-                {
-                    failed++;
-                    _logger.LogError(ex, "WooCommerce product import failed for SKU {Sku}", sku);
-                }
+                    // Guard against an endpoint that ignores `page` and keeps returning the same rows.
+                    var newInBatch = new List<Product>();
+                    foreach (var item in batch)
+                    {
+                        var key = item.id?.ToString() ?? $"__noid_{page}_{newInBatch.Count}";
+                        if (seen.Add(key))
+                        {
+                            newInBatch.Add(item);
+                        }
+                    }
 
-                await progress.MaybeReportAsync(processed, failed);
+                    // Kick off this page's variation downloads up front so they run (bounded) in parallel
+                    // while earlier products of the page are imported.
+                    variationFetches.Clear();
+                    foreach (var p in newInBatch)
+                    {
+                        if (p.type == "variable" && p.id.HasValue)
+                        {
+                            variationFetches[p.id.Value] = FetchVariationsThrottledAsync(p.id.Value);
+                        }
+                    }
+
+                    foreach (var remoteProduct in newInBatch)
+                    {
+                        var isVariable = remoteProduct.type == "variable";
+
+                        // Variable parents occasionally have no own SKU — synthesize a stable one from the
+                        // remote id so the parent (and with it all variations) is not dropped. Plain products
+                        // without SKU stay skipped as before.
+                        var sku = remoteProduct.sku;
+                        if (string.IsNullOrEmpty(sku))
+                        {
+                            if (!isVariable)
+                            {
+                                _logger.LogDebug("Product {Name} has no SKU, skipping", remoteProduct.name);
+                                continue;
+                            }
+
+                            sku = $"WOO-{remoteProduct.id}";
+                        }
+
+                        try
+                        {
+                            var importProduct = new SalesChannelImportProduct
+                            {
+                                RemoteProductId = remoteProduct.id?.ToString() ?? string.Empty,
+                                Name = remoteProduct.name,
+                                // Variable/grouped products carry no own price (null) — default to 0 instead of
+                                // letting the cast throw and dropping the row as a failed import.
+                                Price = remoteProduct.price ?? 0m,
+                                Sku = sku,
+                                TaxRate = ResolveTaxRate(remoteProduct, taxRateMap),
+                                Description = remoteProduct.description,
+                                IsVariantParent = isVariable,
+                                Images = MapImages(remoteProduct.images),
+                            };
+
+                            if (isVariable && remoteProduct.id.HasValue)
+                            {
+                                // The axes are the product attributes flagged for variation use
+                                importProduct.VariantAxes = remoteProduct.attributes?
+                                    .Where(a => a.variation == true && !string.IsNullOrEmpty(a.name))
+                                    .OrderBy(a => a.position ?? 0)
+                                    .Select(a => a.name)
+                                    .ToList() ?? [];
+
+                                var variations = await variationFetches[remoteProduct.id.Value];
+                                importProduct.Variants = variations
+                                    .Where(v => v.id.HasValue)
+                                    .Select(v => new SalesChannelImportVariant
+                                    {
+                                        RemoteVariantId = v.id!.Value.ToString(),
+                                        Sku = v.sku,
+                                        Ean = null,
+                                        Price = v.price,
+                                        Stock = v.stock_quantity ?? 0,
+                                        SortOrder = (int)v.menu_order,
+                                        Options = v.attributes?
+                                            .Where(a => !string.IsNullOrEmpty(a.name) && !string.IsNullOrEmpty(a.option))
+                                            .Select(a => new SalesChannelImportVariantOption
+                                            {
+                                                AttributeName = a.name,
+                                                Value = a.option,
+                                            }).ToList() ?? [],
+                                    }).ToList();
+                            }
+
+                            await _productImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel.Id, importProduct);
+                            processed++;
+                        }
+                        catch (Exception ex)
+                        {
+                            failed++;
+                            _logger.LogError(ex, "WooCommerce product import failed for SKU {Sku}", sku);
+                        }
+
+                        await progress.MaybeReportAsync(processed, failed);
+                    }
+
+                    _logger.LogInformation("WooCommerce product import page {Page}: {Processed} imported, {Failed} failed so far", page, processed, failed);
+
+                    if (newInBatch.Count == 0 || batch.Count < PageSize)
+                    {
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                ObserveAbandoned(nextFetch);
+                foreach (var fetch in variationFetches.Values)
+                {
+                    ObserveAbandoned(fetch);
+                }
             }
         }
         catch (Exception ex)
@@ -258,90 +341,112 @@ public sealed class WooCommerceConnector : ConnectorBase
         var seen = new HashSet<string>();
         var runStart = DateTime.UtcNow;
 
-        for (var page = 1; page <= MaxPages; page++)
+        Task<List<WooOrder>> FetchPageAsync(int p)
         {
-            context.CancellationToken.ThrowIfCancellationRequested();
+            var parameters = new Dictionary<string, string>(baseParameters) { ["page"] = p.ToString() };
+            return GetOrderPageWithRetryAsync(rest, parameters, p, context.CancellationToken);
+        }
 
-            List<WooOrder> batch;
-            try
+        var nextFetch = FetchPageAsync(1);
+        try
+        {
+            for (var page = 1; page <= MaxPages; page++)
             {
-                var parameters = new Dictionary<string, string>(baseParameters) { ["page"] = page.ToString() };
-                batch = await GetOrderPageWithRetryAsync(rest, parameters, page, context.CancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "WooCommerce order backfill page {Page} fetch failed after {Attempts} attempts", page, PageFetchAttempts);
-                fetchFailed = true;
-                break;
-            }
+                context.CancellationToken.ThrowIfCancellationRequested();
 
-            if (batch is null || batch.Count == 0)
-            {
-                reachedEnd = true;
-                break;
-            }
-
-            var newInBatch = 0;
-            foreach (var remoteSales in batch)
-            {
-                // Guard against an endpoint that ignores 'page' and keeps returning the same rows.
-                var key = remoteSales.id?.ToString() ?? $"__noid_{processed}_{failed}";
-                if (!seen.Add(key))
-                {
-                    continue;
-                }
-                newInBatch++;
-
+                List<WooOrder> batch;
                 try
                 {
-                    await _salesImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, MapOrder(remoteSales));
-                    processed++;
-
-                    if (!frozen)
-                    {
-                        var orderedAt = ToUtc(remoteSales.date_created_gmt ?? remoteSales.date_created);
-                        if (cursorAdvance is null || orderedAt > cursorAdvance)
-                        {
-                            cursorAdvance = orderedAt;
-                        }
-                    }
+                    batch = await nextFetch;
                 }
                 catch (Exception ex)
                 {
-                    failed++;
-                    frozen = true;
-                    _logger.LogError(ex, "WooCommerce sales backfill failed for {Id}", remoteSales.id);
+                    nextFetch = null;
+                    _logger.LogError(ex, "WooCommerce order backfill page {Page} fetch failed after {Attempts} attempts", page, PageFetchAttempts);
+                    fetchFailed = true;
+                    break;
+                }
+
+                // Prefetch the next page while this one is processed — unless this page already proves the
+                // end, or the time box will stop the run right after it anyway.
+                nextFetch = batch is { Count: PageSize } && page < MaxPages && DateTime.UtcNow - runStart < MaxBackfillRunDuration
+                    ? FetchPageAsync(page + 1)
+                    : null;
+
+                if (batch is null || batch.Count == 0)
+                {
+                    reachedEnd = true;
+                    break;
+                }
+
+                var newInBatch = 0;
+                foreach (var remoteSales in batch)
+                {
+                    // Guard against an endpoint that ignores 'page' and keeps returning the same rows.
+                    var key = remoteSales.id?.ToString() ?? $"__noid_{processed}_{failed}";
+                    if (!seen.Add(key))
+                    {
+                        continue;
+                    }
+                    newInBatch++;
+
+                    try
+                    {
+                        await _salesImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, MapOrder(remoteSales));
+                        processed++;
+
+                        if (!frozen)
+                        {
+                            var orderedAt = ToUtc(remoteSales.date_created_gmt ?? remoteSales.date_created);
+                            if (cursorAdvance is null || orderedAt > cursorAdvance)
+                            {
+                                cursorAdvance = orderedAt;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        failed++;
+                        frozen = true;
+                        _logger.LogError(ex, "WooCommerce sales backfill failed for {Id}", remoteSales.id);
+                    }
+                }
+
+                // Persist progress after every page (in-memory on the tracked entity; the orchestrator/CloseRun
+                // saves it) so a shutdown-canceled or failed run still resumes from here.
+                if (cursorAdvance is { } adv && adv != context.SalesChannel.SalesImportBackfillCursor)
+                {
+                    context.SalesChannel.SalesImportBackfillCursor = adv;
+                }
+
+                // Flush running counts + the advanced cursor to the DB mid-walk (throttled) so the dashboard
+                // reflects a long backfill's progress instead of sitting at 0 until the whole history is in.
+                await progress.MaybeReportAsync(processed, failed);
+
+                _logger.LogInformation("WooCommerce order backfill page {Page}: {Processed} imported, {Failed} failed, cursor {Cursor:u}", page, processed, failed, cursorAdvance);
+
+                if (batch.Count < PageSize)
+                {
+                    reachedEnd = true;
+                    break;
+                }
+                if (newInBatch == 0)
+                {
+                    break;
+                }
+
+                // Time box the invocation: yield the channel to the customer import and the next run's recent pull
+                // rather than walking the entire multi-day history in one go. reachedEnd stays false, so the next
+                // scheduled run resumes the backfill from the persisted cursor.
+                if (DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
+                {
+                    break;
                 }
             }
-
-            // Persist progress after every page (in-memory on the tracked entity; the orchestrator/CloseRun
-            // saves it) so a shutdown-canceled or failed run still resumes from here.
-            if (cursorAdvance is { } adv && adv != context.SalesChannel.SalesImportBackfillCursor)
-            {
-                context.SalesChannel.SalesImportBackfillCursor = adv;
-            }
-
-            // Flush running counts + the advanced cursor to the DB mid-walk (throttled) so the dashboard
-            // reflects a long backfill's progress instead of sitting at 0 until the whole history is in.
-            await progress.MaybeReportAsync(processed, failed);
-
-            if (batch.Count < PageSize)
-            {
-                reachedEnd = true;
-                break;
-            }
-            if (newInBatch == 0)
-            {
-                break;
-            }
-
-            // Time box the invocation: yield the channel to the customer import and the next run's recent pull
-            // rather than walking the entire multi-day history in one go. reachedEnd stays false, so the next
-            // scheduled run resumes the backfill from the persisted cursor.
-            if (DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
-            {
-                break;
-            }
+        }
+        finally
+        {
+            ObserveAbandoned(nextFetch);
         }
 
         // Only declare the history fully imported when we walked off the end cleanly — no fetch error and no
@@ -393,58 +498,76 @@ public sealed class WooCommerceConnector : ConnectorBase
         }
 
         var seen = new HashSet<string>();
-        for (var page = 1; page <= MaxPages; page++)
+
+        Task<List<WooOrder>> FetchPageAsync(int p)
         {
-            context.CancellationToken.ThrowIfCancellationRequested();
+            var parameters = new Dictionary<string, string>(baseParameters) { ["page"] = p.ToString() };
+            return GetOrderPageWithRetryAsync(rest, parameters, p, context.CancellationToken);
+        }
 
-            List<WooOrder> batch;
-            try
+        var nextFetch = FetchPageAsync(1);
+        try
+        {
+            for (var page = 1; page <= MaxPages; page++)
             {
-                var parameters = new Dictionary<string, string>(baseParameters) { ["page"] = page.ToString() };
-                batch = await GetOrderPageWithRetryAsync(rest, parameters, page, context.CancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "WooCommerce order page {Page} fetch failed after {Attempts} attempts", page, PageFetchAttempts);
-                return processed > 0
-                    ? new SyncResult(processed, failed + 1)
-                    : SyncResult.Failed(ex.Message);
-            }
+                context.CancellationToken.ThrowIfCancellationRequested();
 
-            if (batch is null || batch.Count == 0)
-            {
-                break;
-            }
-
-            var newInBatch = 0;
-            foreach (var remoteSales in batch)
-            {
-                // Guard against an endpoint that ignores 'page' and keeps returning the same rows.
-                var key = remoteSales.id?.ToString() ?? $"__noid_{processed}_{failed}";
-                if (!seen.Add(key))
-                {
-                    continue;
-                }
-                newInBatch++;
-
+                List<WooOrder> batch;
                 try
                 {
-                    await _salesImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, MapOrder(remoteSales));
-                    processed++;
+                    batch = await nextFetch;
                 }
                 catch (Exception ex)
                 {
-                    failed++;
-                    _logger.LogError(ex, "WooCommerce sales import failed for {Id}", remoteSales.id);
+                    nextFetch = null;
+                    _logger.LogError(ex, "WooCommerce order page {Page} fetch failed after {Attempts} attempts", page, PageFetchAttempts);
+                    return processed > 0
+                        ? new SyncResult(processed, failed + 1)
+                        : SyncResult.Failed(ex.Message);
+                }
+
+                // Prefetch the next page while this one is processed, unless this page proves the end.
+                nextFetch = batch is { Count: PageSize } && page < MaxPages ? FetchPageAsync(page + 1) : null;
+
+                if (batch is null || batch.Count == 0)
+                {
+                    break;
+                }
+
+                var newInBatch = 0;
+                foreach (var remoteSales in batch)
+                {
+                    // Guard against an endpoint that ignores 'page' and keeps returning the same rows.
+                    var key = remoteSales.id?.ToString() ?? $"__noid_{processed}_{failed}";
+                    if (!seen.Add(key))
+                    {
+                        continue;
+                    }
+                    newInBatch++;
+
+                    try
+                    {
+                        await _salesImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, MapOrder(remoteSales));
+                        processed++;
+                    }
+                    catch (Exception ex)
+                    {
+                        failed++;
+                        _logger.LogError(ex, "WooCommerce sales import failed for {Id}", remoteSales.id);
+                    }
+                }
+
+                await progress.MaybeReportAsync(processed, failed);
+
+                if (newInBatch == 0 || batch.Count < PageSize)
+                {
+                    break;
                 }
             }
-
-            await progress.MaybeReportAsync(processed, failed);
-
-            if (newInBatch == 0 || batch.Count < PageSize)
-            {
-                break;
-            }
+        }
+        finally
+        {
+            ObserveAbandoned(nextFetch);
         }
 
         return new SyncResult(processed, failed);
@@ -685,102 +808,122 @@ public sealed class WooCommerceConnector : ConnectorBase
         var reachedEnd = false;
         var frozen = false;
 
-        for (var page = startPage; page <= MaxPages; page++)
+        Task<List<Customer>> FetchPageAsync(int p) =>
+            wc.Customer.GetAll(new Dictionary<string, string>
+            {
+                ["per_page"] = PageSize.ToString(),
+                ["page"] = p.ToString(),
+                ["orderby"] = "id",
+                ["order"] = "asc",
+            }).WaitAsync(PageFetchTimeout, context.CancellationToken);
+
+        var nextFetch = FetchPageAsync(startPage);
+        try
         {
-            // WooCommerceNET's HTTP calls do not observe the token, so check between pages: a server
-            // shutdown then ends the walk promptly and the dispatcher closes the run as canceled rather
-            // than leaving it orphaned at "Running". Already-imported pages stay persisted.
-            context.CancellationToken.ThrowIfCancellationRequested();
-
-            List<Customer> batch;
-            try
+            for (var page = startPage; page <= MaxPages; page++)
             {
-                batch = await wc.Customer.GetAll(new Dictionary<string, string>
-                {
-                    ["per_page"] = PageSize.ToString(),
-                    ["page"] = page.ToString(),
-                    ["orderby"] = "id",
-                    ["order"] = "asc",
-                }).WaitAsync(PageFetchTimeout, context.CancellationToken);
-            }
-            catch (Exception ex)
-            {
-                // Stop on a page-fetch failure but keep what we have: report a partial result when some
-                // customers were imported, a hard failure only when the very first page never returned.
-                _logger.LogError(ex, "WooCommerce customer page {Page} fetch failed", page);
-                return processed > 0
-                    ? new SyncResult(processed, failed + 1)
-                    : SyncResult.Failed(ex.Message);
-            }
+                // WooCommerceNET's HTTP calls do not observe the token, so check between pages: a server
+                // shutdown then ends the walk promptly and the dispatcher closes the run as canceled rather
+                // than leaving it orphaned at "Running". Already-imported pages stay persisted.
+                context.CancellationToken.ThrowIfCancellationRequested();
 
-            if (batch is null || batch.Count == 0)
-            {
-                reachedEnd = true;
-                break;
-            }
-
-            var newInBatch = 0;
-            foreach (var remoteCustomer in batch)
-            {
-                // Guard against an endpoint that ignores `page` and keeps returning the same rows.
-                var key = remoteCustomer.id?.ToString() ?? $"__noid_{processed}_{failed}";
-                if (!seen.Add(key))
-                {
-                    continue;
-                }
-                newInBatch++;
-
+                List<Customer> batch;
                 try
                 {
-                    await _customerImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, new SalesChannelImportCustomer
-                    {
-                        RemoteCustomerId = remoteCustomer.id?.ToString() ?? string.Empty,
-                        Firstname = remoteCustomer.first_name,
-                        Lastname = remoteCustomer.last_name,
-                        CompanyName = remoteCustomer.billing?.company,
-                        Email = remoteCustomer.email,
-                        Phone = remoteCustomer.billing?.phone,
-                        CustomerStatus = CustomerStatus.Active,
-                        // Persisted into a PostgreSQL 'timestamp with time zone', which Npgsql only
-                        // accepts at UTC offset 0. WooCommerce's date_created carries the shop's local
-                        // offset, so use the GMT field and force UTC kind — otherwise the very first
-                        // insert throws and the shared DbContext stays poisoned for the whole run.
-                        DateEnrollment = ToUtc(remoteCustomer.date_created_gmt ?? remoteCustomer.date_created),
-                        BillingAddress = MapAddress(remoteCustomer.billing),
-                        ShippingAddress = MapAddress(remoteCustomer.shipping),
-                    });
-                    processed++;
+                    batch = await nextFetch;
                 }
                 catch (Exception ex)
                 {
-                    failed++;
-                    frozen = true;   // a failed customer freezes the cursor so the next run retries this page
-                    _logger.LogError(ex, "WooCommerce customer import failed for {Id}", remoteCustomer.id);
+                    nextFetch = null;
+                    // Stop on a page-fetch failure but keep what we have: report a partial result when some
+                    // customers were imported, a hard failure only when the very first page never returned.
+                    _logger.LogError(ex, "WooCommerce customer page {Page} fetch failed", page);
+                    return processed > 0
+                        ? new SyncResult(processed, failed + 1)
+                        : SyncResult.Failed(ex.Message);
+                }
+
+                // Prefetch the next page while this one is processed — unless this page already proves the
+                // end, or the time box will stop the run right after it anyway.
+                nextFetch = batch is { Count: PageSize } && page < MaxPages && DateTime.UtcNow - runStart < MaxBackfillRunDuration
+                    ? FetchPageAsync(page + 1)
+                    : null;
+
+                if (batch is null || batch.Count == 0)
+                {
+                    reachedEnd = true;
+                    break;
+                }
+
+                var newInBatch = 0;
+                foreach (var remoteCustomer in batch)
+                {
+                    // Guard against an endpoint that ignores `page` and keeps returning the same rows.
+                    var key = remoteCustomer.id?.ToString() ?? $"__noid_{processed}_{failed}";
+                    if (!seen.Add(key))
+                    {
+                        continue;
+                    }
+                    newInBatch++;
+
+                    try
+                    {
+                        await _customerImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, new SalesChannelImportCustomer
+                        {
+                            RemoteCustomerId = remoteCustomer.id?.ToString() ?? string.Empty,
+                            Firstname = remoteCustomer.first_name,
+                            Lastname = remoteCustomer.last_name,
+                            CompanyName = remoteCustomer.billing?.company,
+                            Email = remoteCustomer.email,
+                            Phone = remoteCustomer.billing?.phone,
+                            CustomerStatus = CustomerStatus.Active,
+                            // Persisted into a PostgreSQL 'timestamp with time zone', which Npgsql only
+                            // accepts at UTC offset 0. WooCommerce's date_created carries the shop's local
+                            // offset, so use the GMT field and force UTC kind — otherwise the very first
+                            // insert throws and the shared DbContext stays poisoned for the whole run.
+                            DateEnrollment = ToUtc(remoteCustomer.date_created_gmt ?? remoteCustomer.date_created),
+                            BillingAddress = MapAddress(remoteCustomer.billing),
+                            ShippingAddress = MapAddress(remoteCustomer.shipping),
+                        });
+                        processed++;
+                    }
+                    catch (Exception ex)
+                    {
+                        failed++;
+                        frozen = true;   // a failed customer freezes the cursor so the next run retries this page
+                        _logger.LogError(ex, "WooCommerce customer import failed for {Id}", remoteCustomer.id);
+                    }
+                }
+
+                await progress.MaybeReportAsync(processed, failed);
+
+                _logger.LogInformation("WooCommerce customer import page {Page}: {Processed} imported, {Failed} failed so far", page, processed, failed);
+
+                // Advance the resume cursor only past a fully clean page (in-memory on the tracked entity; the
+                // orchestrator saves it), so a failed customer is retried next run rather than skipped.
+                if (!frozen)
+                {
+                    context.SalesChannel.CustomerImportPageCursor = page;
+                }
+
+                // No new rows (endpoint repeated a page) or a short page → we have reached the end.
+                if (newInBatch == 0 || batch.Count < PageSize)
+                {
+                    reachedEnd = true;
+                    break;
+                }
+
+                // Time box the invocation: yield the channel to the order import instead of walking the whole
+                // customer base in one run. The cursor above lets the next run resume from the following page.
+                if (DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
+                {
+                    break;
                 }
             }
-
-            await progress.MaybeReportAsync(processed, failed);
-
-            // Advance the resume cursor only past a fully clean page (in-memory on the tracked entity; the
-            // orchestrator saves it), so a failed customer is retried next run rather than skipped.
-            if (!frozen)
-            {
-                context.SalesChannel.CustomerImportPageCursor = page;
-            }
-
-            // No new rows (endpoint repeated a page) or a short page → we have reached the end.
-            if (newInBatch == 0 || batch.Count < PageSize)
-            {
-                reachedEnd = true;
-                break;
-            }
-
-            // Time box the invocation: yield the channel to the order import instead of walking the whole
-            // customer base in one run. The cursor above lets the next run resume from the following page.
-            if (DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
-            {
-                break;
-            }
+        }
+        finally
+        {
+            ObserveAbandoned(nextFetch);
         }
 
         // Only declare the customer base fully imported when we walked off the end with nothing left behind.
@@ -888,13 +1031,18 @@ public sealed class WooCommerceConnector : ConnectorBase
     private const int PageFetchAttempts = 3;
     private static readonly TimeSpan PageRetryDelay = TimeSpan.FromSeconds(3);
 
+    // Bounded parallelism for per-parent variation list fetches during the product import. HTTP only —
+    // the DB import below stays single-threaded on the shared DbContext.
+    private const int VariationFetchParallelism = 4;
+
     /// <summary>
-    /// WooCommerce returns products in pages (default 10, max 100 per request). <c>GetAll()</c> with no
-    /// parameters only fetches the first page, so a shop with more than one page would import a partial
-    /// catalogue. Page through with the maximum page size until the API stops yielding <em>new</em> rows.
+    /// Marks an abandoned prefetch task's eventual exception as observed. The page-prefetch pipelines
+    /// below start fetching page N+1 while page N is processed; when a loop exits early (short page,
+    /// time box, failure, shutdown) the in-flight fetch is dropped — without this its later failure
+    /// would surface as an UnobservedTaskException instead of being silently discarded.
     /// </summary>
-    private static Task<List<Product>> GetAllProductsAsync(WCObject wc, CancellationToken cancellationToken) =>
-        GetAllPagedAsync(parms => wc.Product.GetAll(parms), p => p.id, cancellationToken);
+    private static void ObserveAbandoned(Task task) =>
+        task?.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
 
     /// <summary>
     /// Fetches all variations of a variable product, paged like the product list. A typical
@@ -919,40 +1067,54 @@ public sealed class WooCommerceConnector : ConnectorBase
         var all = new List<T>();
         var seen = new HashSet<string>();
 
-        for (var page = 1; page <= MaxPages; page++)
-        {
-            // The SDK's HTTP calls ignore the token; check between pages so a shutdown ends the walk.
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var batch = await fetchPage(new Dictionary<string, string>
+        Task<List<T>> Fetch(int p) =>
+            fetchPage(new Dictionary<string, string>
             {
                 ["per_page"] = PageSize.ToString(),
-                ["page"] = page.ToString(),
+                ["page"] = p.ToString(),
             }).WaitAsync(PageFetchTimeout, cancellationToken);
 
-            if (batch is null || batch.Count == 0)
+        var nextFetch = Fetch(1);
+        try
+        {
+            for (var page = 1; page <= MaxPages; page++)
             {
-                break;
-            }
+                // The SDK's HTTP calls ignore the token; check between pages so a shutdown ends the walk.
+                cancellationToken.ThrowIfCancellationRequested();
 
-            var newInBatch = 0;
-            foreach (var item in batch)
-            {
-                // Fall back to the running index when an item has no id, so distinct id-less rows are
-                // still treated as new rather than collapsing to a single key.
-                var key = idSelector(item)?.ToString() ?? $"__noid_{all.Count}";
-                if (seen.Add(key))
+                var batch = await nextFetch;
+
+                // Prefetch the next page while this one is merged, unless this page proves the end.
+                nextFetch = batch is { Count: PageSize } && page < MaxPages ? Fetch(page + 1) : null;
+
+                if (batch is null || batch.Count == 0)
                 {
-                    all.Add(item);
-                    newInBatch++;
+                    break;
+                }
+
+                var newInBatch = 0;
+                foreach (var item in batch)
+                {
+                    // Fall back to the running index when an item has no id, so distinct id-less rows are
+                    // still treated as new rather than collapsing to a single key.
+                    var key = idSelector(item)?.ToString() ?? $"__noid_{all.Count}";
+                    if (seen.Add(key))
+                    {
+                        all.Add(item);
+                        newInBatch++;
+                    }
+                }
+
+                // No progress (e.g. the endpoint ignored `page` and repeated rows) or a short page → done.
+                if (newInBatch == 0 || batch.Count < PageSize)
+                {
+                    break;
                 }
             }
-
-            // No progress (e.g. the endpoint ignored `page` and repeated rows) or a short page → done.
-            if (newInBatch == 0 || batch.Count < PageSize)
-            {
-                break;
-            }
+        }
+        finally
+        {
+            ObserveAbandoned(nextFetch);
         }
 
         return all;

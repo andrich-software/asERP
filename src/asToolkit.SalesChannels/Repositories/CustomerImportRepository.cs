@@ -45,6 +45,10 @@ public class CustomerImportRepository : ICustomerImportRepository
         try
         {
             await ImportOrUpdateCoreAsync(salesChannel, importCustomer);
+
+            // Everything this customer committed is now Unchanged ballast; drop it so DetectChanges stays
+            // cheap for the thousands of customers that follow (run row + channel entity stay tracked).
+            _dbContext.TrimCommittedEntries();
         }
         catch
         {
@@ -67,7 +71,7 @@ public class CustomerImportRepository : ICustomerImportRepository
             if (existingCustomer != null)
             {
                 AddCustomerSalesChannelLink(existingCustomer.Id, salesChannel.Id, importCustomer.RemoteCustomerId);
-                _logger.LogInformation($"CustomerSalesChannel hinzugefügt für Kunden {existingCustomer.Id}");
+                _logger.LogDebug($"CustomerSalesChannel hinzugefügt für Kunden {existingCustomer.Id}");
             }
         }
 
@@ -93,10 +97,10 @@ public class CustomerImportRepository : ICustomerImportRepository
 
             // Deferred: added to the context now, committed with the link + addresses in one SaveChanges below.
             _dbContext.Customer.Add(newCustomer);
-            _logger.LogInformation($"Kunde {importCustomer.Email} erstellt");
+            _logger.LogDebug($"Kunde {importCustomer.Email} erstellt");
 
             AddCustomerSalesChannelLink(newCustomer.Id, salesChannel.Id, importCustomer.RemoteCustomerId);
-            _logger.LogInformation($"CustomerSalesChannel hinzugefügt für Kunden {newCustomer.Id}");
+            _logger.LogDebug($"CustomerSalesChannel hinzugefügt für Kunden {newCustomer.Id}");
 
             existingCustomer = newCustomer;
         }
@@ -122,7 +126,7 @@ public class CustomerImportRepository : ICustomerImportRepository
             }
 
             // Mutation only — the tracked entity is persisted by the single SaveChanges at the end.
-            _logger.LogInformation($"Kunde {existingCustomer.Id} aktualisiert");
+            _logger.LogDebug($"Kunde {existingCustomer.Id} aktualisiert");
         }
 
         // Adressen verarbeiten (deferred adds)
@@ -191,7 +195,7 @@ public class CustomerImportRepository : ICustomerImportRepository
 
         // Deferred: committed with the customer graph in the single SaveChanges of the caller.
         _dbContext.CustomerAddress.Add(newAddress);
-        _logger.LogInformation($"Neue Adresse für Kunden {customer.Id} hinzugefügt");
+        _logger.LogDebug($"Neue Adresse für Kunden {customer.Id} hinzugefügt");
     }
 
     /// <summary>Adds a customer↔sales-channel link to the context (deferred; committed with the customer).</summary>
