@@ -162,6 +162,7 @@ public sealed class SyncDispatcher
                     ChannelSyncOperation.ImportProducts => await connector.ImportProductsAsync(context),
                     ChannelSyncOperation.ImportSaless => await connector.ImportSalessAsync(context),
                     ChannelSyncOperation.ImportCustomers => await connector.ImportCustomersAsync(context),
+                    ChannelSyncOperation.ImportStock => await connector.ImportStockAsync(context),
                     _ => SyncResult.Failed($"Operation {operation} is not an import"),
                 };
 
@@ -209,28 +210,32 @@ public sealed class SyncDispatcher
             return ExportResult.Fail($"No connector for {salesChannel.Type}");
         }
 
-        var run = await OpenRunAsync(salesChannel, outboxRow.Operation, ChannelSyncTriggerSource.Event, cancellationToken);
+        // Exports do NOT create ChannelSyncRun rows: with per-sale stock pushes an audit row per outbox
+        // row would flood the runs table and the dashboard. The outbox row itself is the audit
+        // (Status/AttemptCount/LastError/CompletedAt); this transient run only carries the correlation id
+        // for the log scope and the context contract — it is never persisted.
+        var run = new ChannelSyncRun
+        {
+            Id = Guid.NewGuid(),
+            TenantId = salesChannel.TenantId,
+            SalesChannelId = salesChannel.Id,
+            Operation = outboxRow.Operation,
+            TriggerSource = ChannelSyncTriggerSource.Event,
+            Status = ChannelSyncRunStatus.Running,
+            StartedAt = DateTime.UtcNow,
+            CorrelationId = Guid.NewGuid(),
+        };
 
         using var logScope = BeginSyncLogScope(salesChannel, outboxRow.Operation, run);
 
         try
         {
             var context = _contextFactory.Create(salesChannel, run, cancellationToken);
-            var result = await DispatchExportAsync(connector, context, outboxRow, cancellationToken);
-
-            await CloseRunAsync(
-                run,
-                result.Success ? ChannelSyncRunStatus.Success : ChannelSyncRunStatus.Failed,
-                result.Success ? 1 : 0,
-                result.Success ? 0 : 1,
-                result.ErrorMessage,
-                cancellationToken);
-
-            return result;
+            return await DispatchExportAsync(connector, context, outboxRow, cancellationToken);
         }
         catch (Exception ex)
         {
-            await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 1, ex.Message, cancellationToken);
+            _logger.LogError(ex, "Export dispatch failed for channel {Channel} outbox {Outbox}", salesChannel.Id, outboxRow.Id);
             return ExportResult.Fail(ex.Message);
         }
     }
@@ -254,13 +259,15 @@ public sealed class SyncDispatcher
         ChannelSyncRun currentRun,
         CancellationToken cancellationToken)
     {
-        if (operation != ChannelSyncOperation.ImportSaless)
+        // Sales and stock imports both run incrementally off a modified_after watermark; the other
+        // operations have their own cursors/flags.
+        if (operation is not (ChannelSyncOperation.ImportSaless or ChannelSyncOperation.ImportStock))
         {
             return null;
         }
 
-        // A manual "Sync saless" is the user's recovery lever: do a full sweep (no watermark) so it backfills
-        // any orders an earlier run missed. Only the scheduled poll stays incremental for efficiency.
+        // A manual sync is the user's recovery lever: do a full sweep (no watermark) so it backfills
+        // anything an earlier run missed. Only the scheduled poll stays incremental for efficiency.
         if (trigger == ChannelSyncTriggerSource.Manual)
         {
             return null;
@@ -282,7 +289,7 @@ public sealed class SyncDispatcher
         var lastSuccessfulStart = await _context.ChannelSyncRun
             .IgnoreQueryFilters()
             .Where(r => r.SalesChannelId == salesChannel.Id
-                        && r.Operation == ChannelSyncOperation.ImportSaless
+                        && r.Operation == operation
                         && r.Id != currentRun.Id
                         && r.Status == ChannelSyncRunStatus.Success)
             .MaxAsync(r => (DateTime?)r.StartedAt, cancellationToken);
@@ -352,6 +359,7 @@ public sealed class SyncDispatcher
         ChannelSyncOperation.ImportProducts => connector.Capabilities.HasFlag(SalesChannelCapabilities.ImportProducts),
         ChannelSyncOperation.ImportSaless => connector.Capabilities.HasFlag(SalesChannelCapabilities.ImportSaless),
         ChannelSyncOperation.ImportCustomers => connector.Capabilities.HasFlag(SalesChannelCapabilities.ImportCustomers),
+        ChannelSyncOperation.ImportStock => connector.Capabilities.HasFlag(SalesChannelCapabilities.ImportStock),
         ChannelSyncOperation.ExportProduct => connector.Capabilities.HasFlag(SalesChannelCapabilities.ExportProducts),
         ChannelSyncOperation.UpdateStock => connector.Capabilities.HasFlag(SalesChannelCapabilities.UpdateStock),
         ChannelSyncOperation.UpdatePrice => connector.Capabilities.HasFlag(SalesChannelCapabilities.UpdatePrice),

@@ -83,15 +83,19 @@ public sealed class Sw6Price
     [JsonPropertyName("currencyId")] public string? CurrencyId { get; set; }
 }
 
+// JSON names target Shopware's `order` entity (orderNumber/orderDateTime/orderCustomer/...) — the C#
+// type keeps the project's Sales naming. An earlier global Order→Sales rename had also renamed the wire
+// names, which silently broke the import (the Admin API knows no `salesDateTime`).
 public sealed class Sw6Sales
 {
     [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
-    [JsonPropertyName("salesNumber")] public string? SalesNumber { get; set; }
-    [JsonPropertyName("salesDateTime")] public DateTime SalesDateTime { get; set; }
+    [JsonPropertyName("orderNumber")] public string? SalesNumber { get; set; }
+    [JsonPropertyName("orderDateTime")] public DateTime SalesDateTime { get; set; }
+    [JsonPropertyName("updatedAt")] public DateTime? UpdatedAt { get; set; }
     [JsonPropertyName("amountTotal")] public decimal AmountTotal { get; set; }
     [JsonPropertyName("amountNet")] public decimal AmountNet { get; set; }
     [JsonPropertyName("shippingTotal")] public decimal ShippingTotal { get; set; }
-    [JsonPropertyName("salesCustomer")] public Sw6SalesCustomer? SalesCustomer { get; set; }
+    [JsonPropertyName("orderCustomer")] public Sw6SalesCustomer? SalesCustomer { get; set; }
     [JsonPropertyName("billingAddress")] public Sw6Address? BillingAddress { get; set; }
     [JsonPropertyName("deliveries")] public List<Sw6Delivery> Deliveries { get; set; } = new();
     [JsonPropertyName("lineItems")] public List<Sw6LineItem> LineItems { get; set; } = new();
@@ -126,11 +130,12 @@ public sealed class Sw6Country
 
 public sealed class Sw6Delivery
 {
-    [JsonPropertyName("shippingSalesAddress")] public Sw6Address? ShippingSalesAddress { get; set; }
+    [JsonPropertyName("shippingOrderAddress")] public Sw6Address? ShippingSalesAddress { get; set; }
 }
 
 public sealed class Sw6LineItem
 {
+    [JsonPropertyName("type")] public string? ItemType { get; set; }
     [JsonPropertyName("label")] public string? Label { get; set; }
     [JsonPropertyName("payload")] public Sw6LineItemPayload? Payload { get; set; }
     [JsonPropertyName("quantity")] public int Quantity { get; set; }

@@ -110,7 +110,7 @@ public sealed class Shopware6Connector : ConnectorBase
                         media = new { associations = new { media = new { } } },
                         cover = new { associations = new { media = new { } } },
                     },
-                    sort = new[] { new { field = "createdAt", sales = "ASC" } },
+                    sort = new[] { new { field = "createdAt", order = "ASC" } },
                 };
                 var url = $"{baseUrl}/api/search/product";
                 var response = await context.HttpClient.PostAsJsonAsync(url, requestBody, context.CancellationToken);
@@ -216,7 +216,7 @@ public sealed class Shopware6Connector : ConnectorBase
                 {
                     options = new { associations = new { group = new { } } },
                 },
-                sort = new[] { new { field = "productNumber", sales = "ASC" } },
+                sort = new[] { new { field = "productNumber", order = "ASC" } },
             };
 
             var url = $"{baseUrl}/api/search/product";
@@ -266,6 +266,13 @@ public sealed class Shopware6Connector : ConnectorBase
         return variants;
     }
 
+    // Mirrors the WooCommerce sales-import structure: a resumable, time-boxed oldest-first backfill via
+    // the immutable orderDateTime (cursor on the channel entity) plus an updatedAt-filtered incremental
+    // pass. During backfill each run first refreshes recent orders so the shop sees current sales within
+    // a cycle, then continues the historical walk from the cursor.
+    private static readonly TimeSpan RecentSalesSeedWindow = TimeSpan.FromDays(14);
+    private static readonly TimeSpan MaxBackfillRunDuration = TimeSpan.FromMinutes(15);
+
     public override async Task<SyncResult> ImportSalessAsync(SalesChannelContext context)
     {
         var salesChannel = context.SalesChannel;
@@ -278,71 +285,280 @@ public sealed class Shopware6Connector : ConnectorBase
             return SyncResult.Failed($"Invalid sales channel URL: {ex.Message}");
         }
 
-        var processed = 0;
-        var failed = 0;
-        var page = 1;
-
+        string baseUrl;
         try
         {
             var (_, accessToken) = await PrepareAsync(context);
             ConfigureBearer(context, accessToken);
-            var baseUrl = salesChannel.Url.TrimEnd('/');
-
-            while (true)
-            {
-                var requestBody = new
-                {
-                    page,
-                    limit = PageSize,
-                    associations = new
-                    {
-                        salesCustomer = new { },
-                        billingAddress = new { associations = new { country = new { } } },
-                        deliveries = new { associations = new { shippingSalesAddress = new { associations = new { country = new { } } } } },
-                        lineItems = new { },
-                        stateMachineState = new { },
-                    },
-                    sort = new[] { new { field = "salesDateTime", sales = "ASC" } },
-                };
-                var url = $"{baseUrl}/api/search/sales";
-                var response = await context.HttpClient.PostAsJsonAsync(url, requestBody, context.CancellationToken);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
-                    _logger.LogError("Shopware6 sales search HTTP {Status}: {Body}", (int)response.StatusCode, body);
-                    failed++;
-                    break;
-                }
-
-                var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
-                var result = JsonSerializer.Deserialize<Sw6SearchResult<Sw6Sales>>(raw);
-                if (result?.Data is null || result.Data.Count == 0) break;
-
-                foreach (var sales in result.Data)
-                {
-                    try
-                    {
-                        var importSales = MapSales(sales);
-                        await _salesImportRepository.ImportOrUpdateFromSalesChannel(salesChannel, importSales);
-                        processed++;
-                    }
-                    catch (Exception ex)
-                    {
-                        failed++;
-                        _logger.LogError(ex, "Shopware6 sales import failed for {Id}", sales.Id);
-                    }
-                }
-
-                if (result.Data.Count < PageSize) break;
-                page++;
-            }
+            baseUrl = salesChannel.Url.TrimEnd('/');
         }
         catch (Exception ex)
         {
             return SyncResult.Failed(ex.Message);
         }
 
+        if (salesChannel.InitialSalesImportCompleted)
+        {
+            return await ImportSalesByUpdatedAsync(context, baseUrl, context.IncrementalSince);
+        }
+
+        var recentSince = context.IncrementalSince ?? DateTime.UtcNow - RecentSalesSeedWindow;
+        var recent = await ImportSalesByUpdatedAsync(context, baseUrl, recentSince);
+        var backfill = await ImportSalesBackfillAsync(context, baseUrl);
+
+        return new SyncResult(
+            recent.ItemsProcessed + backfill.ItemsProcessed,
+            recent.ItemsFailed + backfill.ItemsFailed,
+            backfill.ErrorSummary ?? recent.ErrorSummary);
+    }
+
+    /// <summary>
+    /// Oldest-first backfill over orderDateTime. Instead of deep pagination, every iteration re-queries
+    /// page 1 with the advanced cursor (range filter gte cursor−1s) — the sort key is immutable, so the
+    /// walk is stable, and the persisted cursor lets an interrupted run resume exactly where it stopped.
+    /// The boundary overlap is deduplicated by the seen-set and idempotent upserts.
+    /// </summary>
+    private async Task<SyncResult> ImportSalesBackfillAsync(SalesChannelContext context, string baseUrl)
+    {
+        var salesChannel = context.SalesChannel;
+        var processed = 0;
+        var failed = 0;
+        var cursorAdvance = salesChannel.SalesImportBackfillCursor;
+        var frozen = false;
+        var reachedEnd = false;
+        var fetchFailed = false;
+        var seen = new HashSet<string>();
+        var runStart = DateTime.UtcNow;
+
+        while (true)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            object requestBody = BuildSalesSearchBody(
+                page: 1,
+                rangeField: "orderDateTime",
+                rangeFrom: cursorAdvance?.AddSeconds(-1),
+                sortField: "orderDateTime");
+
+            List<Sw6Sales> batch;
+            try
+            {
+                batch = await FetchSalesPageAsync(context, baseUrl, requestBody);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Shopware6 order backfill page fetch failed");
+                fetchFailed = true;
+                break;
+            }
+
+            if (batch.Count == 0)
+            {
+                reachedEnd = true;
+                break;
+            }
+
+            var newInBatch = 0;
+            foreach (var sales in batch)
+            {
+                if (!seen.Add(sales.Id))
+                {
+                    continue;
+                }
+                newInBatch++;
+
+                try
+                {
+                    await _salesImportRepository.ImportOrUpdateFromSalesChannel(salesChannel, MapSales(sales));
+                    processed++;
+
+                    if (!frozen && (cursorAdvance is null || sales.SalesDateTime > cursorAdvance))
+                    {
+                        cursorAdvance = sales.SalesDateTime;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    frozen = true;   // never advance the cursor past a failed order
+                    _logger.LogError(ex, "Shopware6 sales backfill failed for {Id}", sales.Id);
+                }
+            }
+
+            // Persist progress on the tracked channel entity (the orchestrator saves it after the run).
+            if (cursorAdvance is { } adv && adv != salesChannel.SalesImportBackfillCursor)
+            {
+                salesChannel.SalesImportBackfillCursor = adv;
+            }
+
+            if (context.ReportProgressAsync is not null)
+            {
+                await context.ReportProgressAsync(processed, failed, context.CancellationToken);
+            }
+
+            _logger.LogInformation("Shopware6 order backfill: {Processed} imported, {Failed} failed, cursor {Cursor:u}", processed, failed, cursorAdvance);
+
+            if (batch.Count < PageSize)
+            {
+                reachedEnd = true;
+                break;
+            }
+            // Only boundary re-reads left → the cursor cannot advance any further (e.g. a failure froze
+            // it); stop rather than spinning on the same page.
+            if (newInBatch == 0)
+            {
+                break;
+            }
+            if (DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
+            {
+                break;
+            }
+        }
+
+        if (reachedEnd && !fetchFailed && !frozen)
+        {
+            salesChannel.InitialSalesImportCompleted = true;
+        }
+
+        if (fetchFailed && failed == 0)
+        {
+            return processed > 0
+                ? new SyncResult(processed, 1)
+                : SyncResult.Failed("Shopware6 order backfill page fetch failed");
+        }
+
         return new SyncResult(processed, failed);
+    }
+
+    /// <summary>
+    /// Pulls orders updated at/after <paramref name="updatedSince"/> (null → all orders), paged with a
+    /// stable id sort. Catches both new orders and edits/cancellations of existing ones.
+    /// </summary>
+    private async Task<SyncResult> ImportSalesByUpdatedAsync(SalesChannelContext context, string baseUrl, DateTime? updatedSince)
+    {
+        var salesChannel = context.SalesChannel;
+        var processed = 0;
+        var failed = 0;
+        var seen = new HashSet<string>();
+
+        for (var page = 1; ; page++)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            object requestBody = BuildSalesSearchBody(
+                page,
+                rangeField: updatedSince is null ? null : "updatedAt",
+                rangeFrom: updatedSince,
+                sortField: "id");
+
+            List<Sw6Sales> batch;
+            try
+            {
+                batch = await FetchSalesPageAsync(context, baseUrl, requestBody);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Shopware6 order page {Page} fetch failed", page);
+                return processed > 0
+                    ? new SyncResult(processed, failed + 1)
+                    : SyncResult.Failed(ex.Message);
+            }
+
+            if (batch.Count == 0)
+            {
+                break;
+            }
+
+            var newInBatch = 0;
+            foreach (var sales in batch)
+            {
+                if (!seen.Add(sales.Id))
+                {
+                    continue;
+                }
+                newInBatch++;
+
+                try
+                {
+                    await _salesImportRepository.ImportOrUpdateFromSalesChannel(salesChannel, MapSales(sales));
+                    processed++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    _logger.LogError(ex, "Shopware6 sales import failed for {Id}", sales.Id);
+                }
+            }
+
+            if (context.ReportProgressAsync is not null)
+            {
+                await context.ReportProgressAsync(processed, failed, context.CancellationToken);
+            }
+
+            if (newInBatch == 0 || batch.Count < PageSize)
+            {
+                break;
+            }
+        }
+
+        return new SyncResult(processed, failed);
+    }
+
+    private static object BuildSalesSearchBody(int page, string? rangeField, DateTime? rangeFrom, string sortField)
+    {
+        var filters = new List<object>();
+        if (rangeField is not null && rangeFrom is { } from)
+        {
+            filters.Add(new
+            {
+                type = "range",
+                field = rangeField,
+                parameters = new Dictionary<string, string>
+                {
+                    // Shopware compares ISO-8601 datetimes; UTC with explicit offset avoids shop-TZ drift.
+                    ["gte"] = from.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss+00:00"),
+                },
+            });
+        }
+
+        return new
+        {
+            page,
+            limit = PageSize,
+            filter = filters.ToArray(),
+            associations = new
+            {
+                orderCustomer = new { },
+                billingAddress = new { associations = new { country = new { } } },
+                deliveries = new { associations = new { shippingOrderAddress = new { associations = new { country = new { } } } } },
+                lineItems = new { },
+                stateMachineState = new { },
+            },
+            sort = new[] { new { field = sortField, order = "ASC" } },
+        };
+    }
+
+    private async Task<List<Sw6Sales>> FetchSalesPageAsync(SalesChannelContext context, string baseUrl, object requestBody)
+    {
+        var url = $"{baseUrl}/api/search/order";
+        var response = await context.HttpClient.PostAsJsonAsync(url, requestBody, context.CancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
+            throw new InvalidOperationException($"Shopware6 order search failed with HTTP {(int)response.StatusCode}: {Truncate(body, 300)}");
+        }
+
+        var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
+        var result = JsonSerializer.Deserialize<Sw6SearchResult<Sw6Sales>>(raw);
+        return result?.Data ?? new List<Sw6Sales>();
     }
 
     public override async Task<ExportResult> UpdateStockAsync(SalesChannelContext context, StockUpdatePayload payload)
@@ -479,15 +695,18 @@ public sealed class Shopware6Connector : ConnectorBase
             },
             BillingAddress = billingAddress,
             ShippingAddress = shippingAddress,
-            SalesItems = sales.LineItems.Select(li => new SalesChannelImportSalesItem
-            {
-                Name = li.Label ?? string.Empty,
-                Sku = li.Payload?.ProductNumber ?? string.Empty,
-                Quantity = li.Quantity,
-                Price = li.UnitPrice,
-                Ean = li.Payload?.Ean ?? string.Empty,
-                TaxRate = 19,
-            }).ToList(),
+            SalesItems = sales.LineItems
+                // Promotions/credits come through as separate line-item types without a product.
+                .Where(li => li.ItemType is null or "product")
+                .Select(li => new SalesChannelImportSalesItem
+                {
+                    Name = li.Label ?? string.Empty,
+                    Sku = li.Payload?.ProductNumber ?? string.Empty,
+                    Quantity = li.Quantity,
+                    Price = li.UnitPrice,
+                    Ean = li.Payload?.Ean ?? string.Empty,
+                    TaxRate = 19,
+                }).ToList(),
         };
     }
 

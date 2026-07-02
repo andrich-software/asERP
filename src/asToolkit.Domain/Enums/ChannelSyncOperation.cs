@@ -9,6 +9,9 @@ public enum ChannelSyncOperation
     ImportProducts = 1,
     ImportSaless = 2,
     ImportCustomers = 3,
+
+    /// <summary>Mirror the master shop's stock levels into the channel's linked warehouse.</summary>
+    ImportStock = 4,
     ExportProduct = 10,
     UpdateStock = 11,
     UpdatePrice = 12,

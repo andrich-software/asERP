@@ -2241,6 +2241,12 @@
   <data name="SalesChannelEditPage.Field.ExportSaless.Text" xml:space="preserve">
     <value>Verkäufe exportieren</value>
   </data>
+  <data name="SalesChannelEditPage.Field.ExportStock.Text" xml:space="preserve">
+    <value>Bestand an Kanal übertragen</value>
+  </data>
+  <data name="SalesChannelEditPage.Field.ImportStock.Text" xml:space="preserve">
+    <value>Bestand aus Kanal spiegeln (Bestandsführung im Shop)</value>
+  </data>
   <data name="SalesChannelEditPage.Field.InitialProductImportCompleted.Text" xml:space="preserve">
     <value>Initialer Produktimport abgeschlossen</value>
   </data>

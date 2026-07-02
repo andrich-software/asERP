@@ -21,6 +21,10 @@ public sealed class SalesChannelOrchestrator : BackgroundService
     // Purge expired sync logs roughly once a minute (every 6th 10s tick) — the flush itself runs each tick.
     private const int PurgeEveryTicks = 6;
 
+    // Re-link sales items whose product was missing at import time roughly every 30 minutes. Covers the
+    // "order imported before its product" race without any coupling between the two imports.
+    private const int ReconcileEveryTicks = 180;
+
     // Configurable so tests can drive the loop fast; production uses the 10s default.
     private readonly TimeSpan _tickInterval;
 
@@ -70,6 +74,11 @@ public sealed class SalesChannelOrchestrator : BackgroundService
                 if (++_tick % PurgeEveryTicks == 0)
                 {
                     await PurgeSyncLogsAsync(stoppingToken);
+                }
+
+                if (_tick % ReconcileEveryTicks == 1)
+                {
+                    await ReconcileMissingProductsAsync(stoppingToken);
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -162,6 +171,33 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Drains the outbox immediately after an import that may have enqueued stock pushes, instead of
+    /// waiting up to a full tick — shaving ~10s off the order→stock-push latency. Racing the tick's own
+    /// drain is tolerated: the drainer marks rows InFlight before dispatching and the pushes themselves
+    /// are idempotent (absolute stock values), so a rare double dispatch is harmless.
+    /// </summary>
+    private async Task DrainOutboxAfterImportAsync(IServiceProvider scopedProvider, ChannelSyncOperation operation, CancellationToken cancellationToken)
+    {
+        if (operation is not (ChannelSyncOperation.ImportSaless or ChannelSyncOperation.ImportStock))
+        {
+            return;
+        }
+
+        try
+        {
+            var drainer = scopedProvider.GetRequiredService<OutboxDrainer>();
+            await drainer.DrainOnceAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Post-import outbox drain failed");
+        }
+    }
+
     private async Task DrainSyncLogsAsync(CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
@@ -181,6 +217,69 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         if (purged > 0)
         {
             _logger.LogDebug("Purged {Count} expired sync log entries", purged);
+        }
+    }
+
+    /// <summary>
+    /// Links sales items that were imported before their product existed (the importer keeps the raw SKU
+    /// on <c>MissingProductSku</c>) to the now-imported product. Link only — no retroactive stock
+    /// movements, since the mirrored level already reflects historical sales. Batched so a large backlog
+    /// resolves over a few passes without one long-running sweep.
+    /// </summary>
+    private async Task ReconcileMissingProductsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            var items = await context.SalesItem
+                .IgnoreQueryFilters()
+                .Where(i => i.ProductId == Guid.Empty && i.MissingProductSku != null && i.MissingProductSku != "")
+                .OrderBy(i => i.DateCreated)
+                .Take(500)
+                .ToListAsync(cancellationToken);
+
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            var skus = items.Select(i => i.MissingProductSku!).Distinct().ToList();
+            var products = await context.Product
+                .IgnoreQueryFilters()
+                .Where(p => skus.Contains(p.Sku))
+                .Select(p => new { p.Id, p.Sku, p.TenantId })
+                .ToListAsync(cancellationToken);
+
+            var bySku = products
+                .GroupBy(p => (p.TenantId, p.Sku))
+                .ToDictionary(g => g.Key, g => g.First().Id);
+
+            var linked = 0;
+            foreach (var item in items)
+            {
+                if (bySku.TryGetValue((item.TenantId, item.MissingProductSku!), out var productId))
+                {
+                    item.ProductId = productId;
+                    item.MissingProductSku = string.Empty;
+                    item.MissingProductEan = string.Empty;
+                    linked++;
+                }
+            }
+
+            if (linked > 0)
+            {
+                await context.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Reconciled {Count} sales items to their now-imported products", linked);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Missing-product reconciliation failed");
         }
     }
 
@@ -227,6 +326,12 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             if (channel.ImportCustomers && !channel.InitialCustomerImportCompleted)
             {
                 dueOperations.Add(ChannelSyncOperation.ImportCustomers);
+            }
+            // The stock-master channel's levels are mirrored every interval (incremental via
+            // modified_after — cheap on a steady shop; the first run is the full seed).
+            if (channel.ImportStock)
+            {
+                dueOperations.Add(ChannelSyncOperation.ImportStock);
             }
 
             // Skip operations still running in the background — a long run must not be re-launched every
@@ -332,6 +437,8 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             // Persist cursor/flag progress the connector left on the tracked channel entity (backfill
             // cursor, initial-import flags) — same post-run save the scheduled path does.
             await context.SaveChangesAsync(CancellationToken.None);
+
+            await DrainOutboxAfterImportAsync(scope.ServiceProvider, run.Operation, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -382,6 +489,8 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             // run resumes instead of restarting. CancellationToken.None: this must still save when the
             // import's own token was canceled by a shutdown.
             await context.SaveChangesAsync(CancellationToken.None);
+
+            await DrainOutboxAfterImportAsync(scope.ServiceProvider, operation, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

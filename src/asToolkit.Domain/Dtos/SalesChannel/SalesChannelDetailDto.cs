@@ -21,6 +21,15 @@ public class SalesChannelDetailDto
     public bool ImportSaless { get; set; }
     public bool ExportSaless { get; set; }
 
+    /// <summary>Receive stock pushes whenever the mirrored warehouse stock changes.</summary>
+    public bool ExportStock { get; set; }
+
+    /// <summary>This channel is the stock master — its levels are mirrored into the linked warehouse.</summary>
+    public bool ImportStock { get; set; }
+
+    /// <summary>True when an inbound webhook secret is configured (the secret itself is never exposed).</summary>
+    public bool HasWebhookSecret { get; set; }
+
     /// <summary>
     /// True if the channel has a stored refresh token (OAuth flow has been completed).
     /// The token itself is never exposed in the DTO.

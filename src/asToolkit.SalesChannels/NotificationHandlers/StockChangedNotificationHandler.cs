@@ -20,15 +20,18 @@ public sealed class StockChangedNotificationHandler : INotificationHandler<Stock
 
     public async Task Handle(StockChangedNotification notification, CancellationToken cancellationToken)
     {
-        // Only push stock to channels that (a) have UpdateStock-type capability via ExportProducts,
-        // (b) are linked to the warehouse where stock changed, AND (c) have the product listed.
+        // Only push stock to channels that (a) opted into stock pushes (ExportStock — finer than a full
+        // product export), (b) are linked to the warehouse where stock changed, AND (c) have the product
+        // listed. In the shop-mirror model ALL synced shops set ExportStock=true, including the stock
+        // master: pushing the mirror back to the master is how another channel's sale reaches it (the
+        // forward path), and echoing the master's own mirrored numbers back is an idempotent no-op.
         var channelIds = await _context.ProductSalesChannel
             .IgnoreQueryFilters()
             .Where(psc => psc.ProductId == notification.ProductId
                           && psc.IsListed
                           && psc.SalesChannel != null
                           && psc.SalesChannel.IsEnabled
-                          && psc.SalesChannel.ExportProducts
+                          && psc.SalesChannel.ExportStock
                           && psc.SalesChannel.Warehouses.Any(w => w.Id == notification.WarehouseId))
             .Select(psc => psc.SalesChannelId)
             .Distinct()

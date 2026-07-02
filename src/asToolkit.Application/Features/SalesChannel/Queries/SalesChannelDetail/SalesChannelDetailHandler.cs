@@ -112,6 +112,9 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
             ExportProducts = entity.ExportProducts,
             ExportCustomers = entity.ExportCustomers,
             ExportSaless = entity.ExportSaless,
+            ExportStock = entity.ExportStock,
+            ImportStock = entity.ImportStock,
+            HasWebhookSecret = !string.IsNullOrEmpty(entity.WebhookSecret),
             Warehouses = entity.Warehouses?.Select(w => new WarehouseDetailDto
             {
                 Id = w.Id,

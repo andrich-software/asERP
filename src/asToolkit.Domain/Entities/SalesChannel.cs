@@ -37,6 +37,20 @@ public class SalesChannel : BaseEntity, IBaseEntity
     public bool ExportProducts { get; set; }
     public bool ExportCustomers { get; set; }
     public bool ExportSaless { get; set; }
+
+    /// <summary>
+    /// Push stock levels to this channel whenever the mirrored warehouse stock changes. Finer gate than
+    /// <see cref="ExportProducts"/> — a channel can receive stock updates without full product exports.
+    /// </summary>
+    public bool ExportStock { get; set; }
+
+    /// <summary>
+    /// This channel is the stock master: its stock levels are mirrored into the linked warehouse
+    /// (scheduled pull + webhook nudge). Orders imported FROM the master do not book ledger movements —
+    /// the shop already decremented itself and the mirror follows. Orders from every other channel (and
+    /// POS) book movements against the mirror and are forwarded to the master as stock updates.
+    /// </summary>
+    public bool ImportStock { get; set; }
     public bool InitialProductImportCompleted { get; set; }
     public bool InitialProductExportCompleted { get; set; }
     public bool InitialCustomerImportCompleted { get; set; }
@@ -91,6 +105,14 @@ public class SalesChannel : BaseEntity, IBaseEntity
     /// anonymous ingest path — the encrypted <see cref="TrackingToken"/> cannot be queried directly.
     /// </summary>
     public string? TrackingTokenHash { get; set; }
+
+    /// <summary>
+    /// Shared secret for inbound shop webhooks (encrypted at rest via <c>EncryptedStringConverter</c>).
+    /// WooCommerce signs the raw body with HMAC-SHA256 (<c>X-WC-Webhook-Signature</c>); Shopware sends it
+    /// as a header token. The channel id is part of the webhook URL, so no hash-lookup column is needed —
+    /// the secret is loaded via the channel row and verified in constant time.
+    /// </summary>
+    public string? WebhookSecret { get; set; }
 
     public ICollection<Warehouse> Warehouses { get; set; } = null!;
 }

@@ -1,9 +1,11 @@
 ﻿using asToolkit.Application.Contracts.Persistence;
+using asToolkit.Application.Contracts.Services;
 using asToolkit.Domain.Entities;
 using asToolkit.Domain.Enums;
 using asToolkit.Persistence.DatabaseContext;
 using asToolkit.SalesChannels.Contracts;
 using asToolkit.SalesChannels.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace asToolkit.SalesChannels.Repositories;
@@ -22,6 +24,12 @@ public class SalesImportRepository : ISalesImportRepository
     // channel can run in parallel without handing out duplicate ids.
     private readonly ImportIdAllocator _idAllocator;
 
+    private readonly IStockLedgerService _stockLedger;
+
+    // Per-run cache of the channel's booking warehouse (first linked warehouse). Guid.Empty = channel has
+    // no warehouse → stock booking is skipped for the whole run.
+    private Guid? _bookingWarehouseId;
+
     // Per-run lookup caches. The country set is tiny and static, and product SKUs repeat heavily across a
     // page of orders — caching turns the per-order (country ×2) and per-line-item (SKU) queries into a
     // handful of lookups per run. Scoped lifetime keeps them naturally run-local (no cross-run staleness).
@@ -38,7 +46,8 @@ public class SalesImportRepository : ISalesImportRepository
         ICountryRepository countryRepository,
         IProductRepository productRepository,
         ApplicationDbContext dbContext,
-        ImportIdAllocator idAllocator)
+        ImportIdAllocator idAllocator,
+        IStockLedgerService stockLedger)
     {
         _logger = logger;
         _salesRepository = salesRepository;
@@ -47,6 +56,7 @@ public class SalesImportRepository : ISalesImportRepository
         _productRepository = productRepository;
         _dbContext = dbContext;
         _idAllocator = idAllocator;
+        _stockLedger = stockLedger;
     }
 
     public async Task ImportOrUpdateFromSalesChannel(SalesChannel salesChannel, SalesChannelImportSales importSales)
@@ -319,42 +329,7 @@ public class SalesImportRepository : ISalesImportRepository
             await _dbContext.SaveChangesAsync();
             _logger.LogDebug("Sales {0}: created", importSales.RemoteSalesId);
 
-            if (salesChannel.ImportProducts == false)
-            {
-                _logger.LogInformation("Sales {0}: SalesChannel product import is disabled, updating Stock", importSales.RemoteSalesId);
-
-                foreach (var salesItem in newSales.SalesItems)
-                {
-                    // Missing-product lines have no ProductId — nothing to deduct stock from.
-                    if (salesItem.ProductId == Guid.Empty)
-                    {
-                        continue;
-                    }
-
-                    Product product = await _productRepository.GetWithDetailsAsync(salesItem.ProductId) ?? throw new Exception("SalesImportRepository: Product not found");
-
-                    // Use first warehouse of sales channel for stock update
-                    var warehouse = salesChannel.Warehouses?.FirstOrDefault();
-                    if (warehouse != null)
-                    {
-                        var productStock = product.ProductStocks.FirstOrDefault(w => w.WarehouseId == warehouse.Id);
-                        if (productStock != null)
-                        {
-                            productStock.Stock -= salesItem.Quantity;
-                            await _productRepository.UpdateAsync(product);
-                            _logger.LogInformation("Sales {0}: Stock updated for product {1} in warehouse {2}", importSales.RemoteSalesId, product.Sku, warehouse.Name);
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Sales {0}: No stock found for product {1} in warehouse {2}", importSales.RemoteSalesId, product.Sku, warehouse.Name);
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Sales {0}: SalesChannel has no warehouses configured, cannot update stock for product {1}", importSales.RemoteSalesId, product.Sku);
-                    }
-                }
-            }
+            await BookSaleMovementsAsync(salesChannel, newSales);
         }
         else
         {
@@ -373,8 +348,14 @@ public class SalesImportRepository : ISalesImportRepository
             if (existingSales.Status != importSales.Status)
             {
                 _logger.LogInformation("Sales {0}: Status updated, new status is {1}", importSales.RemoteSalesId, importSales.Status);
+                var becameCancelled = !IsCancelledStatus(existingSales.Status) && IsCancelledStatus(importSales.Status);
                 existingSales.Status = importSales.Status;
                 somethingChanged = true;
+
+                if (becameCancelled)
+                {
+                    await BookCancellationMovementsAsync(salesChannel, existingSales);
+                }
             }
 
             if (existingSales.PaymentStatus != importSales.PaymentStatus)
@@ -402,6 +383,115 @@ public class SalesImportRepository : ISalesImportRepository
                 _logger.LogDebug("Sales {0}: has no changes", importSales.RemoteSalesId);
             }
         }
+    }
+
+    /// <summary>
+    /// Books ledger decrements for a newly imported order. Only in the shop-mirror model's "other
+    /// channel" role: the stock-master channel (<see cref="SalesChannel.ImportStock"/>) already
+    /// decremented itself and the mirror follows it, and the historical backfill must never book
+    /// (those sales are already reflected in the mirrored level). Idempotent per (SalesItemId, Type).
+    /// </summary>
+    private async Task BookSaleMovementsAsync(SalesChannel salesChannel, Sales newSales)
+    {
+        if (salesChannel.ImportStock || !salesChannel.InitialSalesImportCompleted || IsCancelledStatus(newSales.Status))
+        {
+            return;
+        }
+
+        var warehouseId = await ResolveBookingWarehouseIdAsync(salesChannel);
+        if (warehouseId == Guid.Empty)
+        {
+            return;
+        }
+
+        foreach (var salesItem in newSales.SalesItems)
+        {
+            // Missing-product lines have no ProductId — nothing to book.
+            if (salesItem.ProductId == Guid.Empty || salesItem.Quantity == 0)
+            {
+                continue;
+            }
+
+            await _stockLedger.ApplyMovementAsync(new StockMovementRequest(
+                salesItem.ProductId,
+                warehouseId,
+                -salesItem.Quantity,
+                StockMovementType.SaleImport,
+                SalesItemId: salesItem.Id,
+                SalesChannelId: salesChannel.Id,
+                TenantId: salesChannel.TenantId), CancellationToken.None);
+        }
+    }
+
+    /// <summary>
+    /// Books compensating (positive) movements when an order flips to a cancelled-like status — but only
+    /// for lines whose decrement was actually booked (backfilled orders never were), so a cancellation
+    /// can never create phantom stock. Idempotent per (SalesItemId, SaleCancelled).
+    /// </summary>
+    private async Task BookCancellationMovementsAsync(SalesChannel salesChannel, Sales existingSales)
+    {
+        var warehouseId = await ResolveBookingWarehouseIdAsync(salesChannel);
+        if (warehouseId == Guid.Empty)
+        {
+            return;
+        }
+
+        var items = await _dbContext.SalesItem
+            .Where(i => i.SalesId == existingSales.Id && i.ProductId != Guid.Empty)
+            .Select(i => new { i.Id, i.ProductId, i.Quantity })
+            .ToListAsync();
+
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        var itemIds = items.Select(i => i.Id).ToList();
+        var bookedItemIds = await _dbContext.StockMovement
+            .Where(m => m.SalesItemId != null
+                        && itemIds.Contains(m.SalesItemId.Value)
+                        && m.Type == StockMovementType.SaleImport)
+            .Select(m => m.SalesItemId!.Value)
+            .ToListAsync();
+
+        foreach (var item in items.Where(i => bookedItemIds.Contains(i.Id)))
+        {
+            await _stockLedger.ApplyMovementAsync(new StockMovementRequest(
+                item.ProductId,
+                warehouseId,
+                item.Quantity,
+                StockMovementType.SaleCancelled,
+                SalesItemId: item.Id,
+                SalesChannelId: salesChannel.Id,
+                TenantId: salesChannel.TenantId), CancellationToken.None);
+        }
+    }
+
+    private static bool IsCancelledStatus(SalesStatus status) =>
+        status is SalesStatus.Cancelled or SalesStatus.Returned or SalesStatus.Refunded or SalesStatus.Failed;
+
+    /// <summary>First linked warehouse of the channel, resolved once per run (Guid.Empty = none).</summary>
+    private async Task<Guid> ResolveBookingWarehouseIdAsync(SalesChannel salesChannel)
+    {
+        if (_bookingWarehouseId is { } cached)
+        {
+            return cached;
+        }
+
+        var warehouseId = await _dbContext.SalesChannel
+            .IgnoreQueryFilters()
+            .Where(s => s.Id == salesChannel.Id)
+            .SelectMany(s => s.Warehouses)
+            .Select(w => (Guid?)w.Id)
+            .FirstOrDefaultAsync() ?? Guid.Empty;
+
+        if (warehouseId == Guid.Empty)
+        {
+            _logger.LogWarning("SalesChannel {Channel} has no linked warehouse — stock movements are skipped", salesChannel.Id);
+        }
+
+        _bookingWarehouseId = warehouseId;
+        return warehouseId;
     }
 
     private async Task<(Guid Id, string Name)?> MapCountryFromStringAsync(string countryString)

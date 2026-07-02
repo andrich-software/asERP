@@ -22,6 +22,12 @@ public class ChannelSyncRun : BaseEntity, IBaseEntity
     public int ItemsProcessed { get; set; }
     public int ItemsFailed { get; set; }
 
+    /// <summary>
+    /// Total items the run expects to process, when the remote reports it (e.g. WooCommerce's
+    /// <c>X-WP-Total</c> header). Null when unknown — the dashboard then shows counts without a percentage.
+    /// </summary>
+    public int? ItemsTotal { get; set; }
+
     /// <summary>Truncated, single-line error summary. Detailed errors live in app logs.</summary>
     public string? ErrorSummary { get; set; }
 

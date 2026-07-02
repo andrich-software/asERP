@@ -25,6 +25,9 @@ public abstract class ConnectorBase : ISalesChannelConnector
     public virtual Task<SyncResult> ImportCustomersAsync(SalesChannelContext context)
         => Task.FromResult(SyncResult.Empty);
 
+    public virtual Task<SyncResult> ImportStockAsync(SalesChannelContext context)
+        => Task.FromResult(SyncResult.Empty);
+
     public virtual Task<ExportResult> ExportProductAsync(SalesChannelContext context, ProductExportPayload payload)
         => Task.FromResult(ExportResult.Fail($"{Type} does not support ExportProduct"));
 

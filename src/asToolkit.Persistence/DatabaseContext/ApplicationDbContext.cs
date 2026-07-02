@@ -85,6 +85,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<ChannelSyncRun>().ToTable("channel_sync_run");
         modelBuilder.Entity<ChannelSyncLog>().ToTable("channel_sync_log");
         modelBuilder.Entity<ChannelExportOutbox>().ToTable("channel_export_outbox");
+        modelBuilder.Entity<StockMovement>().ToTable("stock_movement");
         modelBuilder.Entity<TenantOAuthAppSettings>().ToTable("tenant_oauth_app_settings");
         modelBuilder.Entity<OAuthState>().ToTable("oauth_state");
         modelBuilder.Entity<RefreshToken>().ToTable("refresh_token");
@@ -111,6 +112,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         // Web-analytics token encrypted at rest with the same key ring. The TrackingTokenHash column
         // stays plaintext — it is a non-reversible SHA-256 used only for the indexed token lookup.
         modelBuilder.Entity<SalesChannel>().Property(e => e.TrackingToken).HasConversion(encryptedConverter!);
+        // Inbound webhook secret encrypted at rest (needed in plaintext to verify HMAC signatures).
+        modelBuilder.Entity<SalesChannel>().Property(e => e.WebhookSecret).HasConversion(encryptedConverter!);
         // OAuth Developer-App ClientSecret encrypted at rest with the same key ring.
         modelBuilder.Entity<TenantOAuthAppSettings>().Property(e => e.ClientSecret).HasConversion(encryptedConverter!);
         modelBuilder.ApplyConfiguration(new TaxClassConfiguration());
@@ -132,6 +135,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new ChannelSyncRunConfiguration());
         modelBuilder.ApplyConfiguration(new ChannelSyncLogConfiguration());
         modelBuilder.ApplyConfiguration(new ChannelExportOutboxConfiguration());
+        // Partial-index predicate with provider-correct identifier quoting (PostgreSQL folds unquoted
+        // identifiers to lowercase; MSSQL brackets; SQLite is case-insensitive and takes it plain).
+        var salesItemFilter = Database.IsNpgsql() ? "\"SalesItemId\" IS NOT NULL"
+            : Database.IsSqlServer() ? "[SalesItemId] IS NOT NULL"
+            : "SalesItemId IS NOT NULL";
+        modelBuilder.ApplyConfiguration(new StockMovementConfiguration(salesItemFilter));
         modelBuilder.ApplyConfiguration(new TenantOAuthAppSettingsConfiguration());
         modelBuilder.ApplyConfiguration(new OAuthStateConfiguration());
         modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
@@ -206,6 +215,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ChannelSyncRun> ChannelSyncRun { get; set; } = null!;
     public DbSet<ChannelSyncLog> ChannelSyncLog { get; set; } = null!;
     public DbSet<ChannelExportOutbox> ChannelExportOutbox { get; set; } = null!;
+    public DbSet<StockMovement> StockMovement { get; set; } = null!;
     public DbSet<TenantOAuthAppSettings> TenantOAuthAppSettings { get; set; } = null!;
     public DbSet<OAuthState> OAuthState { get; set; } = null!;
     public DbSet<RefreshToken> RefreshToken { get; set; } = null!;
