@@ -1,12 +1,12 @@
 ﻿using asToolkit.Client.Core.Exceptions;
 using asToolkit.Client.Core.Models;
 using asToolkit.Client.Features.Dashboard.Models;
-using asToolkit.Client.Features.Saless;
-using asToolkit.Client.Features.Saless.Models;
-using asToolkit.Client.Features.Saless.Services;
 using asToolkit.Client.Features.SalesChannelDashboards.Services;
 using asToolkit.Client.Features.SalesChannels.Models;
 using asToolkit.Client.Features.SalesChannels.Services;
+using asToolkit.Client.Features.Saless;
+using asToolkit.Client.Features.Saless.Models;
+using asToolkit.Client.Features.Saless.Services;
 using asToolkit.Domain.Dtos.WebAnalytics;
 using asToolkit.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -260,9 +260,9 @@ public partial record SalesChannelDashboardModel
     }
 
     /// <summary>
-    /// Triggers a manual import for one operation ("products" | "customers" | "saless"). Runs
-    /// synchronously server-side, so the action buttons are disabled via <see cref="IsSyncBusy"/>
-    /// until it returns; then all feeds refresh.
+    /// Triggers a manual import for one operation ("products" | "customers" | "saless"). The server
+    /// enqueues the run (202) and the orchestrator starts it within ~10s; the refreshed sync-status
+    /// feed then shows it as Queued/Running with live progress checkpoints.
     /// </summary>
     public async ValueTask TriggerSync(string operation, CancellationToken ct = default)
     {

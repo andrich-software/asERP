@@ -129,6 +129,8 @@ public class SyncRunStatusToBrushConverter : IValueConverter
         return status switch
         {
             ChannelSyncRunStatus.Running => foreground ? RunningFg : RunningBg,
+            // Queued shares the Running palette: the user pressed the button and work is on its way.
+            ChannelSyncRunStatus.Queued => foreground ? RunningFg : RunningBg,
             ChannelSyncRunStatus.Success => foreground ? SuccessFg : SuccessBg,
             ChannelSyncRunStatus.PartialFailure => foreground ? PartialFg : PartialBg,
             ChannelSyncRunStatus.Failed => foreground ? FailedFg : FailedBg,

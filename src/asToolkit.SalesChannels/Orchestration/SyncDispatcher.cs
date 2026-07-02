@@ -18,9 +18,11 @@ namespace asToolkit.SalesChannels.Orchestration;
 /// </summary>
 public sealed class SyncDispatcher
 {
-    // Process-wide per-channel locks so concurrent dispatches (manual vs scheduled) for the same channel
-    // serialize. Static because SyncDispatcher is resolved per scope; the channel id is the natural key.
-    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> ChannelLocks = new();
+    // Process-wide per-(channel, operation) locks so concurrent dispatches (manual vs scheduled) of the
+    // SAME operation for the same channel serialize. Different operations of one channel are allowed to
+    // run concurrently — the shared ImportIdAllocator makes their CustomerId/SalesId allocation safe.
+    // Static because SyncDispatcher is resolved per scope.
+    private static readonly ConcurrentDictionary<(Guid ChannelId, ChannelSyncOperation Operation), SemaphoreSlim> ChannelLocks = new();
 
     private readonly ApplicationDbContext _context;
     private readonly ISalesChannelConnectorRegistry _registry;
@@ -80,20 +82,31 @@ public sealed class SyncDispatcher
         return _logger.BeginScope(scope);
     }
 
+    /// <param name="existingRun">
+    /// A pre-created (Queued) run row to adopt instead of opening a new one — the orchestrator's queued-run
+    /// dispatch passes the row the manual trigger inserted. Must be tracked by this scope's context.
+    /// </param>
     public async Task<ChannelSyncRun> RunImportAsync(
         SalesChannel salesChannel,
         ChannelSyncOperation operation,
         ChannelSyncTriggerSource trigger,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ChannelSyncRun? existingRun = null)
     {
-        // Serialize import runs per channel. A manual sync and the scheduled poll (or two scheduled ops) can
-        // otherwise overlap, and because each run allocates SalesIds from its own MAX(SalesId)+1 counter, two
-        // concurrent runs hand out identical ids → duplicate-key violations that then poison the shared
-        // context for the rest of the run. try-acquire (don't block): a scheduled run that loses the race
-        // simply retries on its next tick rather than queueing behind a long manual sweep.
-        var gate = ChannelLocks.GetOrAdd(salesChannel.Id, _ => new SemaphoreSlim(1, 1));
+        // Serialize runs per (channel, operation): a manual sync and the scheduled poll of the same op must
+        // not overlap (cursor state), while different operations of one channel run concurrently. try-acquire
+        // (don't block): a scheduled run that loses the race simply retries on its next tick rather than
+        // queueing behind a long manual sweep. An adopted Queued row stays Queued in that case — the caller
+        // leaves it for the next tick instead of failing it.
+        var gate = ChannelLocks.GetOrAdd((salesChannel.Id, operation), _ => new SemaphoreSlim(1, 1));
         if (!await gate.WaitAsync(0, cancellationToken))
         {
+            if (existingRun is not null)
+            {
+                // Not dispatched — leave the Queued row untouched for the next tick.
+                return existingRun;
+            }
+
             _logger.LogInformation("Skipping {Op} for channel {Channel}: another sync run is already in progress", operation, salesChannel.Id);
             return new ChannelSyncRun
             {
@@ -114,7 +127,9 @@ public sealed class SyncDispatcher
             AlignTenantContext(salesChannel);
 
             var connector = _registry.Resolve(salesChannel.Type);
-            var run = await OpenRunAsync(salesChannel, operation, trigger, cancellationToken);
+            var run = existingRun is not null
+                ? await AdoptRunAsync(existingRun, cancellationToken)
+                : await OpenRunAsync(salesChannel, operation, trigger, cancellationToken);
 
             if (connector is null || !ConnectorSupports(connector, operation))
             {
@@ -273,6 +288,19 @@ public sealed class SyncDispatcher
             .MaxAsync(r => (DateTime?)r.StartedAt, cancellationToken);
 
         return lastSuccessfulStart is null ? null : lastSuccessfulStart.Value - IncrementalOverlap;
+    }
+
+    /// <summary>
+    /// Adopts a pre-created (Queued) run row: stamps the actual start time, flips it to Running and gives
+    /// it a fresh correlation id so its log lines group under this execution, not the enqueue moment.
+    /// </summary>
+    private async Task<ChannelSyncRun> AdoptRunAsync(ChannelSyncRun run, CancellationToken cancellationToken)
+    {
+        run.Status = ChannelSyncRunStatus.Running;
+        run.StartedAt = DateTime.UtcNow;
+        run.CorrelationId = Guid.NewGuid();
+        await _context.SaveChangesAsync(cancellationToken);
+        return run;
     }
 
     private async Task<ChannelSyncRun> OpenRunAsync(

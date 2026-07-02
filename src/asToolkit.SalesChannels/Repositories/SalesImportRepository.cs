@@ -17,11 +17,10 @@ public class SalesImportRepository : ISalesImportRepository
     private readonly IProductRepository _productRepository;
     private readonly ApplicationDbContext _dbContext;
 
-    // Per-run counters for the per-tenant SalesId/CustomerId. The repository is scoped, so one instance
-    // serves a whole import run: seed the max once, then increment in memory instead of a MAX scan over the
-    // growing sales/customer table for every inserted row.
-    private int? _nextSalesId;
-    private int? _nextCustomerId;
+    // Process-wide id allocator for the per-tenant SalesId/CustomerId sequences (seeded from MAX once,
+    // then atomic increments). Shared across all concurrent runs so the sales and customer imports of a
+    // channel can run in parallel without handing out duplicate ids.
+    private readonly ImportIdAllocator _idAllocator;
 
     // Per-run lookup caches. The country set is tiny and static, and product SKUs repeat heavily across a
     // page of orders — caching turns the per-order (country ×2) and per-line-item (SKU) queries into a
@@ -38,7 +37,8 @@ public class SalesImportRepository : ISalesImportRepository
         ICustomerRepository customerRepository,
         ICountryRepository countryRepository,
         IProductRepository productRepository,
-        ApplicationDbContext dbContext)
+        ApplicationDbContext dbContext,
+        ImportIdAllocator idAllocator)
     {
         _logger = logger;
         _salesRepository = salesRepository;
@@ -46,6 +46,7 @@ public class SalesImportRepository : ISalesImportRepository
         _countryRepository = countryRepository;
         _productRepository = productRepository;
         _dbContext = dbContext;
+        _idAllocator = idAllocator;
     }
 
     public async Task ImportOrUpdateFromSalesChannel(SalesChannel salesChannel, SalesChannelImportSales importSales)
@@ -100,9 +101,10 @@ public class SalesImportRepository : ISalesImportRepository
             {
                 var newCustomer = new Customer
                 {
-                    // Assign the per-tenant CustomerId from the in-memory counter (not a MAX scan per row) so
+                    // Assign the per-tenant CustomerId from the shared allocator (not a MAX scan per row) so
                     // the order's FK is resolved before the single SaveChanges below inserts the whole graph.
-                    CustomerId = await NextCustomerIdAsync(),
+                    CustomerId = await _idAllocator.NextAsync(salesChannel.TenantId, ImportIdAllocator.CustomerKind,
+                        async () => await _customerRepository.GetMaxCustomerIdAsync()),
                     Email = importSales.Customer?.Email ?? string.Empty,
                     Firstname = importSales.Customer?.Firstname ?? string.Empty,
                     Lastname = importSales.Customer?.Lastname ?? string.Empty,
@@ -220,7 +222,8 @@ public class SalesImportRepository : ISalesImportRepository
 
             var newSales = new Sales
             {
-                SalesId = await NextSalesIdAsync(),
+                SalesId = await _idAllocator.NextAsync(salesChannel.TenantId, ImportIdAllocator.SalesKind,
+                    async () => await _salesRepository.GetMaxSalesIdAsync()),
                 SalesChannelId = salesChannel.Id,
                 RemoteSalesId = importSales.RemoteSalesId,
                 CustomerId = customer.CustomerId,
@@ -421,13 +424,6 @@ public class SalesImportRepository : ISalesImportRepository
         return pair;
     }
 
-    /// <summary>Next per-tenant CustomerId, seeding the counter from the DB max on first use.</summary>
-    private async Task<int> NextCustomerIdAsync()
-    {
-        _nextCustomerId ??= await _customerRepository.GetMaxCustomerIdAsync() + 1;
-        return _nextCustomerId++.Value;
-    }
-
     /// <summary>Adds a customer↔sales-channel link to the context (deferred; committed with the order).</summary>
     private void AddCustomerSalesChannelLink(Guid customerId, Guid salesChannelId, string remoteCustomerId)
     {
@@ -483,13 +479,6 @@ public class SalesImportRepository : ISalesImportRepository
         }
 
         return false;
-    }
-
-    /// <summary>Next per-tenant SalesId, seeding the counter from the DB max on first use.</summary>
-    private async Task<int> NextSalesIdAsync()
-    {
-        _nextSalesId ??= await _salesRepository.GetMaxSalesIdAsync() + 1;
-        return _nextSalesId++.Value;
     }
 
     private static bool AddressesEqual(SalesChannelImportCustomerAddress a, SalesChannelImportCustomerAddress b)
