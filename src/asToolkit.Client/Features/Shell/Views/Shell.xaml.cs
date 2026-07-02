@@ -977,6 +977,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
     #region Login Overlay
 
+    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Interoperability", "CA1416", Justification = "Browser-specific calls are guarded by #if __WASM__")]
     private void InitializeLoginOverlay()
     {
         LoginEmail.Text = string.Empty;
@@ -1007,6 +1008,12 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             Console.WriteLine($"[Shell] InitializeLoginOverlay error: {ex.Message}");
         }
 
+#if __WASM__
+        // Canvas rendering hides the login form from the browser's password manager, so ask
+        // the Credential Management API for a stored credential instead (Chromium only).
+        _ = PrefillLoginFromBrowserCredentialsAsync();
+#endif
+
         // Runtime config (WASM: /config.json from nginx env var) may pin the server URL —
         // hide the whole server selector and use the configured value.
         if (asToolkit.Client.Core.Configuration.RuntimeConfig.IsServerUrlRestricted)
@@ -1018,6 +1025,35 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
         _ = InitializeServerSelectorAsync();
     }
+
+#if __WASM__
+    [System.Runtime.Versioning.SupportedOSPlatform("browser")]
+    private async Task PrefillLoginFromBrowserCredentialsAsync()
+    {
+        try
+        {
+            var credential = await BrowserCredentialService.TryGetAsync();
+            if (credential == null)
+            {
+                return;
+            }
+
+            // The browser chooser is async — don't clobber a password the user typed meanwhile
+            // (also skips the DEBUG dev-convenience credentials).
+            if (!string.IsNullOrEmpty(LoginPassword.Password))
+            {
+                return;
+            }
+
+            LoginEmail.Text = credential.Email;
+            LoginPassword.Password = credential.Password;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Shell] PrefillLoginFromBrowserCredentialsAsync error: {ex.Message}");
+        }
+    }
+#endif
 
     private async Task InitializeServerSelectorAsync()
     {
@@ -1160,6 +1196,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Interoperability", "CA1416", Justification = "Browser-specific calls are guarded by #if __WASM__")]
     private async void LoginButton_Click(object sender, RoutedEventArgs e)
     {
         var selectedProfile = LoginServerSelector.SelectedItem as ServerProfile;
@@ -1215,6 +1252,12 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
             if (success)
             {
+#if __WASM__
+                // Hand the credentials to the browser's password store (native "save
+                // password?" prompt) — the canvas-rendered form can't trigger it itself.
+                _ = BrowserCredentialService.TryStoreAsync(email, password);
+#endif
+
                 // Remember the server used and its email so it becomes the default next time.
                 if (selectedProfile != null)
                 {
@@ -1297,6 +1340,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         LoginOverlay.Visibility = Visibility.Visible;
     }
 
+    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Interoperability", "CA1416", Justification = "Browser-specific calls are guarded by #if __WASM__")]
     private async void RegisterSubmit_Click(object sender, RoutedEventArgs e)
     {
         var firstname = RegisterFirstname.Text?.Trim();
@@ -1364,6 +1408,11 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
             if (response?.Succeeded == true && !string.IsNullOrEmpty(response.Token))
             {
+#if __WASM__
+                // Same as after login: offer the browser's "save password?" prompt.
+                _ = BrowserCredentialService.TryStoreAsync(email, password);
+#endif
+
                 shellModel.UpdateAuthenticationState(true);
 
                 if (tenantContext.AvailableTenants.Count == 0)

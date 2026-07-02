@@ -9,7 +9,10 @@ public static class SettingsSeeder
     {
         modelBuilder.Entity<Setting>().HasData(
             // JWT Settings
-            new Setting { Id = new Guid("66666666-6666-6666-6666-666666666614"), Key = "Jwt.Key", Value = "CHANGE_TO_YOUR_VERY_SECRET_JWT_SIGNING_KEY" },
+            // Jwt.Key is intentionally NOT seeded here: HasData values are compiled into
+            // migrations and must be deterministic, so a static value would ship the same
+            // publicly known signing key to every installation. SettingsInitializer generates
+            // a per-installation random key at startup instead.
             new Setting { Id = new Guid("66666666-6666-6666-6666-666666666615"), Key = "Jwt.Issuer", Value = "asToolkit.Server" },
             new Setting { Id = new Guid("66666666-6666-6666-6666-666666666616"), Key = "Jwt.Audience", Value = "asToolkit.Client" },
             new Setting { Id = new Guid("66666666-6666-6666-6666-666666666617"), Key = "Jwt.DurationInMinutes", Value = "60" },
