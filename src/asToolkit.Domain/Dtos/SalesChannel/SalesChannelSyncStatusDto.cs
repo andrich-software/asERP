@@ -23,15 +23,33 @@ public class SalesChannelSyncStatusDto
     /// <summary>Export jobs stuck in DeadLetter for this channel.</summary>
     public int DeadLetterCount { get; set; }
 
+    /// <summary>Export jobs waiting in the outbox (the "stock push queue" depth).</summary>
+    public int OutboxPendingCount { get; set; }
+
+    /// <summary>Export jobs currently being dispatched.</summary>
+    public int OutboxInFlightCount { get; set; }
+
+    /// <summary>Age of the oldest waiting export job in seconds — the push-latency health signal. Null when the queue is empty.</summary>
+    public double? OldestPendingOutboxAgeSeconds { get; set; }
+
     /// <summary>True once the order backfill has walked the whole remote history (then orders run incrementally).</summary>
     public bool InitialSalesImportCompleted { get; set; }
 
     /// <summary>How far back the oldest-first order backfill has reached (UTC date_created). Null = not started.</summary>
     public DateTime? SalesImportBackfillCursor { get; set; }
 
+    /// <summary>Stock-ledger movements booked in the last 24 hours (channel's warehouse scope not applied — tenant-wide).</summary>
+    public int StockMovementsLast24h { get; set; }
+
+    /// <summary>Products with a negative mirrored stock level — the "sold without stock" data-quality alarm.</summary>
+    public int NegativeStockCount { get; set; }
+
     public SyncOperationStatusDto Products { get; set; } = new();
     public SyncOperationStatusDto Customers { get; set; } = new();
     public SyncOperationStatusDto Saless { get; set; } = new();
+
+    /// <summary>Stock mirror (only meaningful for the stock-master channel).</summary>
+    public SyncOperationStatusDto Stock { get; set; } = new();
 }
 
 /// <summary>Status of one import operation (products / customers / orders) for a channel.</summary>
@@ -64,6 +82,10 @@ public class SyncOperationStatusDto
 
     public int LastItemsProcessed { get; set; }
     public int LastItemsFailed { get; set; }
+
+    /// <summary>Total items the run expects, when the remote reported it (enables a percentage display).</summary>
+    public int? LastItemsTotal { get; set; }
+
     public string? LastErrorSummary { get; set; }
     public ChannelSyncTriggerSource? LastTriggerSource { get; set; }
 }

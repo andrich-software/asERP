@@ -22,10 +22,22 @@ public record SyncStatusViewData
     public bool HasDeadLetters { get; init; }
     public string DeadLetterText { get; init; } = string.Empty;
 
-    // Rendered as three fixed cards (explicit grid, mirroring the Web-Statistics tab).
+    /// <summary>Export queue depth + oldest waiting age — the stock-push latency health signal.</summary>
+    public string OutboxText { get; init; } = string.Empty;
+    public bool HasOutboxBacklog { get; init; }
+
+    /// <summary>Ledger activity (movements last 24h).</summary>
+    public string StockMovementsText { get; init; } = string.Empty;
+
+    /// <summary>"Sold without mirrored stock" alarm.</summary>
+    public bool HasNegativeStock { get; init; }
+    public string NegativeStockText { get; init; } = string.Empty;
+
+    // Rendered as four fixed cards (explicit grid, mirroring the Web-Statistics tab).
     public SyncOperationCardData Products { get; init; } = new();
     public SyncOperationCardData Customers { get; init; } = new();
     public SyncOperationCardData Saless { get; init; } = new();
+    public SyncOperationCardData Stock { get; init; } = new();
 }
 
 /// <summary>Status of one import operation, pre-formatted for a status card.</summary>
@@ -83,10 +95,35 @@ public static class SyncStatusViewMapper
             DeadLetterCount = dto.DeadLetterCount,
             HasDeadLetters = dto.DeadLetterCount > 0,
             DeadLetterText = string.Format(Culture, l["SyncStatus.DeadLetterFormat"], dto.DeadLetterCount),
+            OutboxText = FormatOutbox(dto, l),
+            HasOutboxBacklog = dto.OutboxPendingCount + dto.OutboxInFlightCount > 0,
+            StockMovementsText = string.Format(Culture, l["SyncStatus.StockMovementsFormat"], dto.StockMovementsLast24h),
+            HasNegativeStock = dto.NegativeStockCount > 0,
+            NegativeStockText = dto.NegativeStockCount > 0
+                ? string.Format(Culture, l["SyncStatus.NegativeStockFormat"], dto.NegativeStockCount)
+                : string.Empty,
             Products = ToCard(dto.Products, "products", l["SyncStatus.OpProducts"], dto.IsEnabled, nowUtc, l),
             Customers = ToCard(dto.Customers, "customers", l["SyncStatus.OpCustomers"], dto.IsEnabled, nowUtc, l),
             Saless = ToCard(dto.Saless, "saless", l["SyncStatus.OpOrders"], dto.IsEnabled, nowUtc, l),
+            Stock = ToCard(dto.Stock, "stock", l["SyncStatus.OpStock"], dto.IsEnabled, nowUtc, l),
         };
+    }
+
+    private static string FormatOutbox(SalesChannelSyncStatusDto dto, IStringLocalizer l)
+    {
+        var backlog = dto.OutboxPendingCount + dto.OutboxInFlightCount;
+        if (backlog == 0)
+        {
+            return l["SyncStatus.OutboxEmpty"];
+        }
+
+        var text = string.Format(Culture, l["SyncStatus.OutboxFormat"], dto.OutboxPendingCount, dto.OutboxInFlightCount);
+        if (dto.OldestPendingOutboxAgeSeconds is { } age)
+        {
+            text += " · " + string.Format(Culture, l["SyncStatus.OutboxOldestFormat"], FormatSpan(TimeSpan.FromSeconds(age)));
+        }
+
+        return text;
     }
 
     public static SyncLogLineViewData ToLogLine(ChannelSyncLogDto dto, IStringLocalizer l)
@@ -132,9 +169,7 @@ public static class SyncStatusViewMapper
             StatusText = StatusText(op, l),
             LastRunText = neverRun ? l["SyncStatus.NeverRun"] : FormatPast(op.LastStartedAt, nowUtc, l),
             LastRunTooltip = op.LastStartedAt?.ToLocalTime().ToString("F", Culture) ?? string.Empty,
-            ItemsText = neverRun
-                ? "—"
-                : string.Format(Culture, l["SyncStatus.ItemsFormat"], op.LastItemsProcessed, op.LastItemsFailed),
+            ItemsText = FormatItems(op, neverRun, nowUtc, l),
             DurationText = FormatDuration(op, nowUtc, l),
             NextRunText = FormatNextRun(op, channelEnabled, nowUtc, l),
             TriggerText = neverRun ? string.Empty : string.Format(Culture, l["SyncStatus.TriggerFormat"], TriggerText(op.LastTriggerSource, l)),
@@ -147,11 +182,44 @@ public static class SyncStatusViewMapper
     {
         null => l["SyncStatus.NeverRun"],
         ChannelSyncRunStatus.Running => l["SyncStatus.Running"],
+        ChannelSyncRunStatus.Queued => l["SyncStatus.Queued"],
         ChannelSyncRunStatus.Success => l["SyncStatus.Success"],
         ChannelSyncRunStatus.PartialFailure => l["SyncStatus.PartialFailure"],
         ChannelSyncRunStatus.Failed => l["SyncStatus.Failed"],
         _ => op.LastStatus.ToString() ?? string.Empty,
     };
+
+    /// <summary>
+    /// "processed / failed", extended with the remote total and percentage when the run reported one,
+    /// and with a live items/s rate while a run is walking — the "is it actually moving?" signal.
+    /// </summary>
+    private static string FormatItems(SyncOperationStatusDto op, bool neverRun, DateTime nowUtc, IStringLocalizer l)
+    {
+        if (neverRun)
+        {
+            return "—";
+        }
+
+        var text = string.Format(Culture, l["SyncStatus.ItemsFormat"], op.LastItemsProcessed, op.LastItemsFailed);
+
+        if (op.LastItemsTotal is { } total && total > 0)
+        {
+            var percent = Math.Clamp(op.LastItemsProcessed * 100.0 / total, 0, 100);
+            text += string.Format(Culture, l["SyncStatus.ItemsTotalFormat"], total, percent);
+        }
+
+        var end = op.IsRunning ? nowUtc : op.LastFinishedAt;
+        if (op.LastStartedAt is { } started && end is { } until && until > started)
+        {
+            var perSecond = op.LastItemsProcessed / Math.Max(1, (until - started).TotalSeconds);
+            if (perSecond >= 0.1)
+            {
+                text += string.Format(Culture, l["SyncStatus.ItemsRateFormat"], perSecond);
+            }
+        }
+
+        return text;
+    }
 
     private static string FormatDuration(SyncOperationStatusDto op, DateTime nowUtc, IStringLocalizer l)
     {
@@ -225,6 +293,7 @@ public static class SyncStatusViewMapper
         ChannelSyncOperation.ImportProducts => l["SyncStatus.OpProducts"],
         ChannelSyncOperation.ImportCustomers => l["SyncStatus.OpCustomers"],
         ChannelSyncOperation.ImportSaless => l["SyncStatus.OpOrders"],
+        ChannelSyncOperation.ImportStock => l["SyncStatus.OpStock"],
         _ => op.ToString(),
     };
 

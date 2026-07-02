@@ -298,6 +298,22 @@ public class SalesChannelsController(
         var deadLetterCount = await dbContext.ChannelExportOutbox
             .CountAsync(o => o.SalesChannelId == id && o.Status == ChannelOutboxStatus.DeadLetter, cancellationToken);
 
+        // Outbox health: queue depth + how long the oldest job has been waiting (the push-latency signal).
+        var outboxPending = await dbContext.ChannelExportOutbox
+            .CountAsync(o => o.SalesChannelId == id && o.Status == ChannelOutboxStatus.Pending, cancellationToken);
+        var outboxInFlight = await dbContext.ChannelExportOutbox
+            .CountAsync(o => o.SalesChannelId == id && o.Status == ChannelOutboxStatus.InFlight, cancellationToken);
+        var oldestPending = await dbContext.ChannelExportOutbox
+            .Where(o => o.SalesChannelId == id && o.Status == ChannelOutboxStatus.Pending)
+            .MinAsync(o => (DateTime?)o.DateCreated, cancellationToken);
+
+        // Stock panel: booking activity + the "sold without mirrored stock" alarm.
+        var movementCutoff = now.AddHours(-24);
+        var stockMovementsLast24h = await dbContext.StockMovement
+            .CountAsync(m => m.DateCreated >= movementCutoff, cancellationToken);
+        var negativeStockCount = await dbContext.ProductStock
+            .CountAsync(ps => ps.Stock < 0, cancellationToken);
+
         var products = await BuildOperationStatusAsync(
             id, ChannelSyncOperation.ImportProducts, channel.ImportProducts,
             channel.InitialProductImportCompleted, willRunOnSchedule: channel.ImportProducts && !channel.InitialProductImportCompleted,
@@ -313,6 +329,11 @@ public class SalesChannelsController(
             initialImportCompleted: false, willRunOnSchedule: channel.ImportSaless,
             nextPoll, cancellationToken);
 
+        var stock = await BuildOperationStatusAsync(
+            id, ChannelSyncOperation.ImportStock, channel.ImportStock,
+            initialImportCompleted: false, willRunOnSchedule: channel.ImportStock,
+            nextPoll, cancellationToken);
+
         return Ok(new SalesChannelSyncStatusDto
         {
             SalesChannelId = id,
@@ -320,11 +341,17 @@ public class SalesChannelsController(
             SyncIntervalSeconds = channel.SyncIntervalSeconds,
             NextScheduledPollAt = nextPoll,
             DeadLetterCount = deadLetterCount,
+            OutboxPendingCount = outboxPending,
+            OutboxInFlightCount = outboxInFlight,
+            OldestPendingOutboxAgeSeconds = oldestPending is { } oldest ? (now - oldest).TotalSeconds : null,
             InitialSalesImportCompleted = channel.InitialSalesImportCompleted,
             SalesImportBackfillCursor = channel.SalesImportBackfillCursor,
+            StockMovementsLast24h = stockMovementsLast24h,
+            NegativeStockCount = negativeStockCount,
             Products = products,
             Customers = customers,
             Saless = saless,
+            Stock = stock,
         });
     }
 
@@ -359,6 +386,7 @@ public class SalesChannelsController(
             IsRunning = isRunning,
             LastItemsProcessed = lastRun?.ItemsProcessed ?? 0,
             LastItemsFailed = lastRun?.ItemsFailed ?? 0,
+            LastItemsTotal = lastRun?.ItemsTotal,
             LastErrorSummary = lastRun?.ErrorSummary,
             LastTriggerSource = lastRun?.TriggerSource,
         };
@@ -366,16 +394,22 @@ public class SalesChannelsController(
 
     /// <summary>
     /// Synchronization log lines for the channel (last 24h). Optional <paramref name="minLevel"/>
-    /// filters by minimum severity (e.g. "Warning"). Newest first. Tenant-isolated via query filter.
+    /// filters by minimum severity (e.g. "Warning"); optional <paramref name="correlationId"/> narrows
+    /// to one run's lines (drill-down from a failed run card). Newest first. Tenant-isolated.
     /// </summary>
     [HttpGet("{id:guid}/sync-logs")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult> GetSyncLogs(Guid id, int take = 200, int offset = 0, string? minLevel = null, CancellationToken cancellationToken = default)
+    public async Task<ActionResult> GetSyncLogs(Guid id, int take = 200, int offset = 0, string? minLevel = null, Guid? correlationId = null, CancellationToken cancellationToken = default)
     {
         var cutoff = DateTime.UtcNow.AddHours(-24);
 
         var query = dbContext.ChannelSyncLog
             .Where(l => l.SalesChannelId == id && l.Timestamp >= cutoff);
+
+        if (correlationId is { } cid)
+        {
+            query = query.Where(l => l.CorrelationId == cid);
+        }
 
         if (!string.IsNullOrWhiteSpace(minLevel) && Enum.TryParse<ChannelSyncLogLevel>(minLevel, ignoreCase: true, out var level))
         {

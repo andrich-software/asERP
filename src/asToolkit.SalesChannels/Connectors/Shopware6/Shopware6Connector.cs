@@ -343,7 +343,11 @@ public sealed class Shopware6Connector : ConnectorBase
             List<Sw6Sales> batch;
             try
             {
-                batch = await FetchSalesPageAsync(context, baseUrl, requestBody);
+                var result = await FetchSalesPageAsync(context, baseUrl, requestBody);
+                batch = result.Data;
+
+                // Remaining history from the cursor onward — lets the dashboard show a percentage.
+                context.SyncRun.ItemsTotal ??= result.Total;
             }
             catch (OperationCanceledException)
             {
@@ -458,7 +462,7 @@ public sealed class Shopware6Connector : ConnectorBase
             List<Sw6Sales> batch;
             try
             {
-                batch = await FetchSalesPageAsync(context, baseUrl, requestBody);
+                batch = (await FetchSalesPageAsync(context, baseUrl, requestBody)).Data;
             }
             catch (OperationCanceledException)
             {
@@ -512,7 +516,7 @@ public sealed class Shopware6Connector : ConnectorBase
         return new SyncResult(processed, failed);
     }
 
-    private static object BuildSalesSearchBody(int page, string? rangeField, DateTime? rangeFrom, string sortField)
+    private static Dictionary<string, object> BuildSalesSearchBody(int page, string? rangeField, DateTime? rangeFrom, string sortField)
     {
         var filters = new List<object>();
         if (rangeField is not null && rangeFrom is { } from)
@@ -529,12 +533,14 @@ public sealed class Shopware6Connector : ConnectorBase
             });
         }
 
-        return new
+        return new Dictionary<string, object>
         {
-            page,
-            limit = PageSize,
-            filter = filters.ToArray(),
-            associations = new
+            ["page"] = page,
+            ["limit"] = PageSize,
+            ["filter"] = filters.ToArray(),
+            // Exact total so the run can report ItemsTotal (dashboard percentage).
+            ["total-count-mode"] = 1,
+            ["associations"] = new
             {
                 orderCustomer = new { },
                 billingAddress = new { associations = new { country = new { } } },
@@ -542,11 +548,11 @@ public sealed class Shopware6Connector : ConnectorBase
                 lineItems = new { },
                 stateMachineState = new { },
             },
-            sort = new[] { new { field = sortField, order = "ASC" } },
+            ["sort"] = new[] { new { field = sortField, order = "ASC" } },
         };
     }
 
-    private async Task<List<Sw6Sales>> FetchSalesPageAsync(SalesChannelContext context, string baseUrl, object requestBody)
+    private async Task<Sw6SearchResult<Sw6Sales>> FetchSalesPageAsync(SalesChannelContext context, string baseUrl, object requestBody)
     {
         var url = $"{baseUrl}/api/search/order";
         var response = await context.HttpClient.PostAsJsonAsync(url, requestBody, context.CancellationToken);
@@ -557,8 +563,7 @@ public sealed class Shopware6Connector : ConnectorBase
         }
 
         var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
-        var result = JsonSerializer.Deserialize<Sw6SearchResult<Sw6Sales>>(raw);
-        return result?.Data ?? new List<Sw6Sales>();
+        return JsonSerializer.Deserialize<Sw6SearchResult<Sw6Sales>>(raw) ?? new Sw6SearchResult<Sw6Sales>();
     }
 
     public override async Task<ExportResult> UpdateStockAsync(SalesChannelContext context, StockUpdatePayload payload)

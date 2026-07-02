@@ -8,13 +8,15 @@ namespace asToolkit.SalesChannels.Orchestration;
 
 /// <summary>
 /// Persists captured sync log lines from the in-memory <see cref="ISalesChannelSyncLogBuffer"/> into
-/// <c>channel_sync_log</c>, and enforces the 24h retention by deleting expired rows. Runs in the
-/// orchestrator's per-tick scope, mirroring <see cref="OutboxDrainer"/>.
+/// <c>channel_sync_log</c>, and enforces the retention (configurable via the
+/// <c>SalesChannel.SyncLogRetentionHours</c> setting, default 24h) by deleting expired rows. Runs in
+/// the orchestrator's per-tick scope, mirroring <see cref="OutboxDrainer"/>.
 /// </summary>
 public sealed class SyncLogDrainer
 {
     private const int BatchSize = 500;
-    private static readonly TimeSpan Retention = TimeSpan.FromHours(24);
+    public const string RetentionSettingKey = "SalesChannel.SyncLogRetentionHours";
+    private static readonly TimeSpan DefaultRetention = TimeSpan.FromHours(24);
 
     private readonly ApplicationDbContext _context;
     private readonly ISalesChannelSyncLogBuffer _buffer;
@@ -78,13 +80,39 @@ public sealed class SyncLogDrainer
         return total;
     }
 
-    /// <summary>Deletes log rows older than the 24h retention window across all tenants.</summary>
+    /// <summary>Deletes log rows older than the retention window across all tenants.</summary>
     public async Task<int> PurgeExpiredAsync(CancellationToken cancellationToken)
     {
-        var cutoff = DateTime.UtcNow - Retention;
+        var cutoff = DateTime.UtcNow - await ResolveRetentionAsync();
         return await _context.ChannelSyncLog
             .IgnoreQueryFilters()
             .Where(x => x.Timestamp < cutoff)
             .ExecuteDeleteAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Retention from the settings table (hours, 1–720), defaulting to 24h when unset/invalid. Read per
+    /// purge (~1/minute) so a changed setting applies without a restart.
+    /// </summary>
+    private async Task<TimeSpan> ResolveRetentionAsync()
+    {
+        try
+        {
+            var raw = await _context.Setting
+                .Where(s => s.Key == RetentionSettingKey)
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync();
+
+            if (int.TryParse(raw, out var hours) && hours is >= 1 and <= 720)
+            {
+                return TimeSpan.FromHours(hours);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not read {Key}; using default retention", RetentionSettingKey);
+        }
+
+        return DefaultRetention;
     }
 }
