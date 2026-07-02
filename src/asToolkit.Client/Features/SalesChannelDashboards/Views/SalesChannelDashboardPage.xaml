@@ -702,12 +702,39 @@
                                     IsEnabled="{Binding DataContext.IsSyncBusy, ElementName=RootGrid, Converter={StaticResource InverseBooleanConverter}}" />
                           </StackPanel>
                         </StackPanel>
+                        <!-- Export outbox health (stock-push queue) -->
+                        <StackPanel Spacing="4">
+                          <TextBlock x:Uid="SalesChannelDashboard.Sync.OutboxLabel"
+                                     Style="{StaticResource LabelMedium}"
+                                     Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                          <TextBlock Text="{Binding Data.OutboxText}"
+                                     Style="{StaticResource BodyMedium}"
+                                     Foreground="{ThemeResource OnSurfaceBrush}" />
+                        </StackPanel>
+                        <!-- Stock ledger activity + negative-stock alarm -->
+                        <StackPanel Spacing="4">
+                          <TextBlock x:Uid="SalesChannelDashboard.Sync.StockLabel"
+                                     Style="{StaticResource LabelMedium}"
+                                     Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                          <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="{Binding Data.StockMovementsText}"
+                                       VerticalAlignment="Center"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}" />
+                            <TextBlock Text="{Binding Data.NegativeStockText}"
+                                       VerticalAlignment="Center"
+                                       Visibility="{Binding Data.HasNegativeStock, Converter={StaticResource BoolToVisibilityConverter}}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{StaticResource NegativeChangeBrush}" />
+                          </StackPanel>
+                        </StackPanel>
                       </StackPanel>
                     </Border>
 
-                    <!-- Per-operation status cards (Products / Customers / Orders) -->
+                    <!-- Per-operation status cards (Products / Customers / Orders / Stock) -->
                     <Grid ColumnSpacing="12">
                       <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
@@ -723,6 +750,10 @@
                       <ContentControl Grid.Column="2" HorizontalContentAlignment="Stretch"
                                       VerticalAlignment="Top"
                                       Content="{Binding Data.Saless}"
+                                      ContentTemplate="{StaticResource SyncOperationCardTemplate}" />
+                      <ContentControl Grid.Column="3" HorizontalContentAlignment="Stretch"
+                                      VerticalAlignment="Top"
+                                      Content="{Binding Data.Stock}"
                                       ContentTemplate="{StaticResource SyncOperationCardTemplate}" />
                     </Grid>
                   </StackPanel>

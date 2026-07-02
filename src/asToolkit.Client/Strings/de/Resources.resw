@@ -4502,6 +4502,39 @@
   <data name="SyncStatus.ItemsFormat" xml:space="preserve">
     <value>{0} verarbeitet · {1} fehlgeschlagen</value>
   </data>
+  <data name="SyncStatus.ItemsTotalFormat" xml:space="preserve">
+    <value> von {0} ({1:F0} %)</value>
+  </data>
+  <data name="SyncStatus.ItemsRateFormat" xml:space="preserve">
+    <value> · {0:F1}/s</value>
+  </data>
+  <data name="SyncStatus.Queued" xml:space="preserve">
+    <value>Wartet</value>
+  </data>
+  <data name="SyncStatus.OpStock" xml:space="preserve">
+    <value>Bestand</value>
+  </data>
+  <data name="SyncStatus.OutboxEmpty" xml:space="preserve">
+    <value>leer</value>
+  </data>
+  <data name="SyncStatus.OutboxFormat" xml:space="preserve">
+    <value>{0} wartend · {1} in Arbeit</value>
+  </data>
+  <data name="SyncStatus.OutboxOldestFormat" xml:space="preserve">
+    <value>älteste wartet {0}</value>
+  </data>
+  <data name="SyncStatus.StockMovementsFormat" xml:space="preserve">
+    <value>{0} Buchungen (24 h)</value>
+  </data>
+  <data name="SyncStatus.NegativeStockFormat" xml:space="preserve">
+    <value>{0} Produkte im Minus!</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.OutboxLabel.Text" xml:space="preserve">
+    <value>Export-Warteschlange</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.StockLabel.Text" xml:space="preserve">
+    <value>Bestands-Ledger</value>
+  </data>
   <data name="SyncStatus.DurationFormat" xml:space="preserve">
     <value>Dauer: {0}</value>
   </data>

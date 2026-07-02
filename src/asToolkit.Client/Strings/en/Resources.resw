@@ -4503,6 +4503,39 @@
   <data name="SyncStatus.ItemsFormat" xml:space="preserve">
     <value>{0} processed · {1} failed</value>
   </data>
+  <data name="SyncStatus.ItemsTotalFormat" xml:space="preserve">
+    <value> of {0} ({1:F0}%)</value>
+  </data>
+  <data name="SyncStatus.ItemsRateFormat" xml:space="preserve">
+    <value> · {0:F1}/s</value>
+  </data>
+  <data name="SyncStatus.Queued" xml:space="preserve">
+    <value>Queued</value>
+  </data>
+  <data name="SyncStatus.OpStock" xml:space="preserve">
+    <value>Stock</value>
+  </data>
+  <data name="SyncStatus.OutboxEmpty" xml:space="preserve">
+    <value>empty</value>
+  </data>
+  <data name="SyncStatus.OutboxFormat" xml:space="preserve">
+    <value>{0} pending · {1} in flight</value>
+  </data>
+  <data name="SyncStatus.OutboxOldestFormat" xml:space="preserve">
+    <value>oldest waiting {0}</value>
+  </data>
+  <data name="SyncStatus.StockMovementsFormat" xml:space="preserve">
+    <value>{0} movements (24h)</value>
+  </data>
+  <data name="SyncStatus.NegativeStockFormat" xml:space="preserve">
+    <value>{0} products negative!</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.OutboxLabel.Text" xml:space="preserve">
+    <value>Export queue</value>
+  </data>
+  <data name="SalesChannelDashboard.Sync.StockLabel.Text" xml:space="preserve">
+    <value>Stock ledger</value>
+  </data>
   <data name="SyncStatus.DurationFormat" xml:space="preserve">
     <value>Duration: {0}</value>
   </data>
