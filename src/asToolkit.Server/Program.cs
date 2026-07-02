@@ -1,4 +1,4 @@
-#nullable disable
+﻿#nullable disable
 
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
@@ -290,6 +290,7 @@ builder.Services.AddScoped<ITenantRepository, TenantRepository>();
 builder.Services.AddScoped<IUserTenantRepository, UserTenantRepository>();
 builder.Services.AddScoped<ITenantPermissionService, TenantPermissionService>();
 builder.Services.AddScoped<ICustomerDedupeService, CustomerDedupeService>();
+builder.Services.AddScoped<IStockLedgerService, StockLedgerService>();
 builder.Services.AddScoped<IOAuthAppSettingsService, OAuthAppSettingsService>();
 builder.Services.AddScoped<ITenantOAuthAppSettingsRepository, TenantOAuthAppSettingsRepository>();
 builder.Services.AddScoped<IOAuthStateRepository, OAuthStateRepository>();

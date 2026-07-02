@@ -55,6 +55,8 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private bool _exportProducts;
     private bool _exportCustomers;
     private bool _exportSaless;
+    private bool _exportStock;
+    private bool _importStock;
 
     // Initial Status
     private bool _initialProductImportCompleted;
@@ -387,6 +389,18 @@ public class SalesChannelEditModel : AsyncInitializableModel
         set => SetProperty(ref _exportSaless, value);
     }
 
+    public bool ExportStock
+    {
+        get => _exportStock;
+        set => SetProperty(ref _exportStock, value);
+    }
+
+    public bool ImportStock
+    {
+        get => _importStock;
+        set => SetProperty(ref _importStock, value);
+    }
+
     #endregion
 
     #region Initial Status
@@ -518,6 +532,8 @@ public class SalesChannelEditModel : AsyncInitializableModel
             ExportProducts = salesChannel.ExportProducts;
             ExportCustomers = salesChannel.ExportCustomers;
             ExportSaless = salesChannel.ExportSaless;
+            ExportStock = salesChannel.ExportStock;
+            ImportStock = salesChannel.ImportStock;
 
             // Note: InitialProductImportCompleted and InitialProductExportCompleted
             // are not returned by the API in DetailDto, so we keep them as default (false).
@@ -662,6 +678,8 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 ExportProducts = ExportProducts,
                 ExportCustomers = ExportCustomers,
                 ExportSaless = ExportSaless,
+                ExportStock = ExportStock,
+                ImportStock = ImportStock,
                 InitialProductImportCompleted = InitialProductImportCompleted,
                 InitialProductExportCompleted = InitialProductExportCompleted,
                 InitialCustomerImportCompleted = InitialCustomerImportCompleted,

@@ -19,6 +19,7 @@ public interface ISalesChannelConnector
     Task<SyncResult> ImportProductsAsync(SalesChannelContext context);
     Task<SyncResult> ImportSalessAsync(SalesChannelContext context);
     Task<SyncResult> ImportCustomersAsync(SalesChannelContext context);
+    Task<SyncResult> ImportStockAsync(SalesChannelContext context);
 
     Task<ExportResult> ExportProductAsync(SalesChannelContext context, ProductExportPayload payload);
     Task<ExportResult> UpdateStockAsync(SalesChannelContext context, StockUpdatePayload payload);

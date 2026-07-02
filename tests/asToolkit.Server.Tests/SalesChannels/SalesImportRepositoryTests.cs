@@ -29,7 +29,18 @@ public class SalesImportRepositoryTests
             new CountryRepository(ctx, tenant),
             new ProductRepository(ctx, tenant),
             ctx,
-            new ImportIdAllocator());
+            new ImportIdAllocator(),
+            new asToolkit.Persistence.Services.StockLedgerService(ctx, new NullMediator(), NullLogger<asToolkit.Persistence.Services.StockLedgerService>.Instance));
+
+    private sealed class NullMediator : asToolkit.Application.Mediator.IMediator
+    {
+        public Task<TResponse> Send<TResponse>(asToolkit.Application.Mediator.IRequest<TResponse> request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
+            where TNotification : asToolkit.Application.Mediator.INotification
+            => Task.CompletedTask;
+    }
 
     private static SalesChannelImportSales NewImport(string remoteSalesId, string remoteCustomerId, string email, string sku) => new()
     {

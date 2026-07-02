@@ -21,6 +21,12 @@ public class SalesChannelInputDto : ISalesChannelInputModel
     public bool ExportCustomers { get; set; }
     public bool ImportSaless { get; set; }
     public bool ExportSaless { get; set; }
+
+    /// <summary>Receive stock pushes whenever the mirrored warehouse stock changes.</summary>
+    public bool ExportStock { get; set; }
+
+    /// <summary>This channel is the stock master — its levels are mirrored into the linked warehouse.</summary>
+    public bool ImportStock { get; set; }
     public bool InitialProductImportCompleted { get; set; }
     public bool InitialProductExportCompleted { get; set; }
     public bool InitialCustomerImportCompleted { get; set; }

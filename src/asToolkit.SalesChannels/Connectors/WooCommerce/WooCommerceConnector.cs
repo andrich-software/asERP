@@ -24,17 +24,20 @@ public sealed class WooCommerceConnector : ConnectorBase
     private readonly IProductImportRepository _productImportRepository;
     private readonly ISalesImportRepository _salesImportRepository;
     private readonly ICustomerImportRepository _customerImportRepository;
+    private readonly IStockImportRepository _stockImportRepository;
     private readonly ILogger<WooCommerceConnector> _logger;
 
     public WooCommerceConnector(
         IProductImportRepository productImportRepository,
         ISalesImportRepository salesImportRepository,
         ICustomerImportRepository customerImportRepository,
+        IStockImportRepository stockImportRepository,
         ILogger<WooCommerceConnector> logger)
     {
         _productImportRepository = productImportRepository;
         _salesImportRepository = salesImportRepository;
         _customerImportRepository = customerImportRepository;
+        _stockImportRepository = stockImportRepository;
         _logger = logger;
     }
 
@@ -44,6 +47,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         SalesChannelCapabilities.ImportProducts |
         SalesChannelCapabilities.ImportSaless |
         SalesChannelCapabilities.ImportCustomers |
+        SalesChannelCapabilities.ImportStock |
         SalesChannelCapabilities.UpdateStock |
         SalesChannelCapabilities.UpdatePrice;
 
@@ -932,6 +936,196 @@ public sealed class WooCommerceConnector : ConnectorBase
         {
             context.SalesChannel.InitialCustomerImportCompleted = true;
             context.SalesChannel.CustomerImportPageCursor = 0;
+        }
+
+        return new SyncResult(processed, failed);
+    }
+
+    /// <summary>
+    /// Mirrors the shop's stock levels into the channel's linked warehouse (the shop stays the stock
+    /// master). Scheduled runs are incremental via <c>modified_after</c> — a steady shop only returns the
+    /// products whose stock actually moved; the first run (no watermark) and a manual trigger sweep the
+    /// whole catalogue. Variable products fetch their variations (bounded parallel) since stock lives on
+    /// the variation. Products without managed stock (null quantity) are skipped.
+    /// </summary>
+    public override async Task<SyncResult> ImportStockAsync(SalesChannelContext context)
+    {
+        try
+        {
+            SalesChannelUrlValidator.Validate(context.SalesChannel.Url);
+        }
+        catch (ArgumentException ex)
+        {
+            return SyncResult.Failed($"Invalid sales channel URL: {ex.Message}");
+        }
+
+        var processed = 0;
+        var failed = 0;
+        var skipped = 0;
+
+        WCObject wc;
+        try
+        {
+            wc = BuildClient(context);
+        }
+        catch (Exception ex)
+        {
+            return SyncResult.Failed(ex.Message);
+        }
+
+        var baseParameters = new Dictionary<string, string>
+        {
+            ["per_page"] = PageSize.ToString(),
+        };
+
+        if (context.IncrementalSince is { } since)
+        {
+            baseParameters["modified_after"] = since.ToString("yyyy-MM-ddTHH:mm:ss");
+            baseParameters["dates_are_gmt"] = "true";
+        }
+
+        Task<List<Product>> FetchPageAsync(int p)
+        {
+            var parameters = new Dictionary<string, string>(baseParameters) { ["page"] = p.ToString() };
+            return wc.Product.GetAll(parameters).WaitAsync(PageFetchTimeout, context.CancellationToken);
+        }
+
+        using var variationGate = new SemaphoreSlim(VariationFetchParallelism, VariationFetchParallelism);
+        async Task<List<Variation>> FetchVariationsThrottledAsync(ulong parentId)
+        {
+            await variationGate.WaitAsync(context.CancellationToken);
+            try
+            {
+                return await GetAllVariationsAsync(wc, parentId, context.CancellationToken);
+            }
+            finally
+            {
+                variationGate.Release();
+            }
+        }
+
+        async Task ApplyAsync(string remoteProductId, string sku, double quantity)
+        {
+            try
+            {
+                var outcome = await _stockImportRepository.ApplyRemoteStockAsync(
+                    context.SalesChannel, remoteProductId, sku, quantity, context.CancellationToken);
+
+                switch (outcome)
+                {
+                    case StockImportOutcome.Applied:
+                    case StockImportOutcome.Unchanged:
+                        processed++;
+                        break;
+                    case StockImportOutcome.NoWarehouse:
+                        // Without a warehouse nothing in this run can be mirrored; count once as failed.
+                        throw new InvalidOperationException("Channel has no linked warehouse for the stock mirror");
+                    default:
+                        skipped++;
+                        break;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                _logger.LogError(ex, "Stock mirror failed for remote product {RemoteId}", remoteProductId);
+            }
+        }
+
+        var progress = new ProgressThrottle(context);
+        var seen = new HashSet<string>();
+        var nextFetch = FetchPageAsync(1);
+        try
+        {
+            for (var page = 1; page <= MaxPages; page++)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                var batch = await nextFetch;
+                nextFetch = batch is { Count: PageSize } && page < MaxPages ? FetchPageAsync(page + 1) : null;
+
+                if (batch is null || batch.Count == 0)
+                {
+                    break;
+                }
+
+                var newInBatch = new List<Product>();
+                foreach (var item in batch)
+                {
+                    var key = item.id?.ToString() ?? $"__noid_{page}_{newInBatch.Count}";
+                    if (seen.Add(key))
+                    {
+                        newInBatch.Add(item);
+                    }
+                }
+
+                // Variation stock lives on the variations — start their downloads up front (bounded).
+                var variationFetches = new Dictionary<ulong, Task<List<Variation>>>();
+                foreach (var p in newInBatch)
+                {
+                    if (p.type == "variable" && p.id.HasValue)
+                    {
+                        variationFetches[p.id.Value] = FetchVariationsThrottledAsync(p.id.Value);
+                    }
+                }
+
+                try
+                {
+                    foreach (var remoteProduct in newInBatch)
+                    {
+                        if (remoteProduct.type == "variable" && remoteProduct.id.HasValue)
+                        {
+                            foreach (var variation in await variationFetches[remoteProduct.id.Value])
+                            {
+                                if (variation.id.HasValue && variation.stock_quantity is { } vQty)
+                                {
+                                    await ApplyAsync(variation.id.Value.ToString(), variation.sku, (double)vQty);
+                                }
+                            }
+                        }
+                        else if (remoteProduct.id.HasValue && remoteProduct.stock_quantity is { } qty)
+                        {
+                            await ApplyAsync(remoteProduct.id.Value.ToString(), remoteProduct.sku, (double)qty);
+                        }
+                    }
+                }
+                finally
+                {
+                    foreach (var fetch in variationFetches.Values)
+                    {
+                        ObserveAbandoned(fetch);
+                    }
+                }
+
+                await progress.MaybeReportAsync(processed, failed);
+                _logger.LogInformation("Stock mirror page {Page}: {Processed} mirrored, {Skipped} unlinked, {Failed} failed so far", page, processed, skipped, failed);
+
+                if (newInBatch.Count == 0 || batch.Count < PageSize)
+                {
+                    break;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "WooCommerce stock mirror aborted");
+            return processed > 0 ? new SyncResult(processed, failed + 1) : SyncResult.Failed(ex.Message);
+        }
+        finally
+        {
+            ObserveAbandoned(nextFetch);
         }
 
         return new SyncResult(processed, failed);

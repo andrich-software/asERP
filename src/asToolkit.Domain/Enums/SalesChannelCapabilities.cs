@@ -19,4 +19,7 @@ public enum SalesChannelCapabilities
     DelistProducts = 1 << 7,
     OAuth = 1 << 8,
     RequiresMarketplaceId = 1 << 9,
+
+    /// <summary>Can mirror the shop's stock levels into a local warehouse (stock-master channels).</summary>
+    ImportStock = 1 << 10,
 }

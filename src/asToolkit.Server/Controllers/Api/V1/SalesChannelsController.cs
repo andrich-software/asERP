@@ -505,6 +505,36 @@ public class SalesChannelsController(
         });
     }
 
+    /// <summary>
+    /// Generates (or rotates) the channel's inbound webhook secret. Returns the plaintext secret ONCE —
+    /// configure it in the shop (WooCommerce webhook "Secret" field; Shopware Flow-Builder webhook
+    /// header <c>X-Webhook-Token</c>) together with the delivery URL
+    /// <c>/api/v1/webhooks/saleschannels/{id}/{event}</c>. Rotating invalidates the previous secret.
+    /// </summary>
+    [HttpPost("{id:guid}/webhook-secret")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> RotateWebhookSecret(Guid id, CancellationToken cancellationToken)
+    {
+        var channel = await FindTenantChannelAsync(id, cancellationToken);
+        if (channel is null)
+        {
+            return NotFound();
+        }
+
+        var secret = TrackingTokenHasher.GenerateToken();
+        channel.WebhookSecret = secret;                         // encrypted at rest by the value converter
+        channel.DateModified = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new
+        {
+            salesChannelId = id,
+            secret,
+            webhookUrlTemplate = $"/api/v1/webhooks/saleschannels/{id}/{{event}}",
+        });
+    }
+
     /// <summary>Disables web-analytics tracking for the channel (keeps the stored token).</summary>
     [HttpDelete("{id:guid}/tracking")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -527,11 +557,12 @@ public class SalesChannelsController(
     private static bool IsImportOperation(ChannelSyncOperation operation) => operation
         is ChannelSyncOperation.ImportProducts
         or ChannelSyncOperation.ImportSaless
-        or ChannelSyncOperation.ImportCustomers;
+        or ChannelSyncOperation.ImportCustomers
+        or ChannelSyncOperation.ImportStock;
 
     /// <summary>
     /// Resolves the {operation} route token to an import operation. Accepts both the short tokens
-    /// the client sends ("products" | "saless" | "customers") and the full enum names
+    /// the client sends ("products" | "saless" | "customers" | "stock") and the full enum names
     /// (e.g. "ImportProducts"), so the advertised contract and the enum both work.
     /// </summary>
     private static bool TryResolveImportOperation(string? operation, out ChannelSyncOperation op)
@@ -541,6 +572,7 @@ public class SalesChannelsController(
             case "products": op = ChannelSyncOperation.ImportProducts; return true;
             case "saless": op = ChannelSyncOperation.ImportSaless; return true;
             case "customers": op = ChannelSyncOperation.ImportCustomers; return true;
+            case "stock": op = ChannelSyncOperation.ImportStock; return true;
         }
 
         return Enum.TryParse(operation, ignoreCase: true, out op) && IsImportOperation(op);
