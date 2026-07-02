@@ -6,13 +6,13 @@ using asToolkit.Application.Features.SalesChannel.Commands.SalesChannelDelete;
 using asToolkit.Application.Features.SalesChannel.Commands.SalesChannelUpdate;
 using asToolkit.Application.Features.SalesChannel.Queries.SalesChannelDetail;
 using asToolkit.Application.Features.SalesChannel.Queries.SalesChannelList;
+using asToolkit.Application.Mediator;
 using asToolkit.Domain.Dtos.SalesChannel;
 using asToolkit.Domain.Dtos.WebAnalytics;
 using asToolkit.Domain.Entities;
 using asToolkit.Domain.Enums;
 using asToolkit.Domain.Services;
 using asToolkit.Domain.Wrapper;
-using asToolkit.Application.Mediator;
 using asToolkit.Persistence.DatabaseContext;
 using asToolkit.SalesChannels.Abstractions;
 using asToolkit.SalesChannels.Orchestration;
@@ -30,7 +30,6 @@ namespace asToolkit.Server.Controllers.Api.V1;
 public class SalesChannelsController(
     IMediator mediator,
     ISalesChannelRepository salesChannelRepository,
-    SyncDispatcher syncDispatcher,
     SalesChannelContextFactory contextFactory,
     ISalesChannelConnectorRegistry connectorRegistry,
     ITenantContext tenantContext,
@@ -125,15 +124,18 @@ public class SalesChannelsController(
     }
 
     /// <summary>
-    /// Trigger an import for a single channel + operation. Runs through the same dispatcher the
-    /// orchestrator uses, so it lands in the same ChannelSyncRun audit table.
+    /// Trigger an import for a single channel + operation. Enqueues a durable
+    /// <see cref="ChannelSyncRunStatus.Queued"/> run and returns immediately with 202 + the run id — the
+    /// orchestrator picks it up on its next tick (≤10s). A 15-minute backfill chunk must not run inside
+    /// (and time out) an HTTP request; the UI polls the run via GET sync-runs/{runId} instead.
     /// </summary>
     [HttpPost("{id:guid}/sync/{operation}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> ManualSync(Guid id, string operation, CancellationToken cancellationToken)
     {
-        var salesChannel = await salesChannelRepository.GetByIdAsync(id);
+        var salesChannel = await FindTenantChannelAsync(id, cancellationToken);
         if (salesChannel is null)
         {
             return NotFound();
@@ -144,8 +146,32 @@ public class SalesChannelsController(
             return BadRequest(new { Error = $"Operation '{operation}' is not a valid import (products|saless|customers)" });
         }
 
-        var run = await syncDispatcher.RunImportAsync(salesChannel, op, ChannelSyncTriggerSource.Manual, cancellationToken);
-        return Ok(new SalesChannelSyncResultDto
+        // Coalesce: if the same operation is already waiting, return that run instead of stacking
+        // duplicates — pressing the button twice must not queue two identical full sweeps.
+        var pending = await dbContext.ChannelSyncRun
+            .FirstOrDefaultAsync(r => r.SalesChannelId == id
+                                      && r.Operation == op
+                                      && r.Status == ChannelSyncRunStatus.Queued, cancellationToken);
+
+        var run = pending;
+        if (run is null)
+        {
+            run = new ChannelSyncRun
+            {
+                Id = Guid.NewGuid(),
+                TenantId = salesChannel.TenantId,
+                SalesChannelId = salesChannel.Id,
+                Operation = op,
+                TriggerSource = ChannelSyncTriggerSource.Manual,
+                Status = ChannelSyncRunStatus.Queued,
+                StartedAt = DateTime.UtcNow,
+                CorrelationId = Guid.NewGuid(),
+            };
+            dbContext.ChannelSyncRun.Add(run);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return Accepted(new SalesChannelSyncResultDto
         {
             RunId = run.Id,
             Status = run.Status,
@@ -153,6 +179,33 @@ public class SalesChannelsController(
             ItemsFailed = run.ItemsFailed,
             ErrorSummary = run.ErrorSummary,
         });
+    }
+
+    /// <summary>Single sync run by id — polled by the client after a manual trigger (202).</summary>
+    [HttpGet("{id:guid}/sync-runs/{runId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> GetSyncRun(Guid id, Guid runId, CancellationToken cancellationToken)
+    {
+        var run = await dbContext.ChannelSyncRun
+            .Where(r => r.SalesChannelId == id && r.Id == runId)
+            .Select(r => new ChannelSyncRunDto
+            {
+                Id = r.Id,
+                SalesChannelId = r.SalesChannelId,
+                Operation = r.Operation,
+                TriggerSource = r.TriggerSource,
+                Status = r.Status,
+                StartedAt = r.StartedAt,
+                FinishedAt = r.FinishedAt,
+                ItemsProcessed = r.ItemsProcessed,
+                ItemsFailed = r.ItemsFailed,
+                ErrorSummary = r.ErrorSummary,
+                CorrelationId = r.CorrelationId,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return run is null ? NotFound() : Ok(run);
     }
 
     /// <summary>Test the channel's credentials/connectivity without doing any import.</summary>
@@ -290,7 +343,8 @@ public class SalesChannelsController(
             .OrderByDescending(r => r.StartedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var isRunning = lastRun is { Status: ChannelSyncRunStatus.Running, FinishedAt: null };
+        // Queued counts as "running" for the UI: the trigger was accepted and work starts on the next tick.
+        var isRunning = lastRun is { FinishedAt: null, Status: ChannelSyncRunStatus.Running or ChannelSyncRunStatus.Queued };
 
         return new SyncOperationStatusDto
         {

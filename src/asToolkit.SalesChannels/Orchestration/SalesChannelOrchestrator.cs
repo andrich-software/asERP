@@ -32,11 +32,12 @@ public sealed class SalesChannelOrchestrator : BackgroundService
     private readonly ILogger<SalesChannelOrchestrator> _logger;
     private int _tick;
 
-    // Per-channel imports run as detached background tasks so a long run (e.g. a multi-hour order backfill)
-    // never blocks the tick loop — which must keep draining sync logs and the outbox while the import walks.
-    // Keyed by channel id; an entry's presence means "an import for this channel is in flight", which gates
-    // re-launching the same channel each tick. Entries self-remove on completion.
-    private readonly ConcurrentDictionary<Guid, Task> _inFlight = new();
+    // Imports run as detached background tasks so a long run (e.g. a multi-hour order backfill) never
+    // blocks the tick loop — which must keep draining sync logs and the outbox while the import walks.
+    // Keyed by (channel, operation): a channel's product, sales and customer imports run concurrently
+    // (each on its own DI scope; the shared ImportIdAllocator keeps id sequences unique), while the same
+    // operation is never launched twice. Entries self-remove on completion.
+    private readonly ConcurrentDictionary<(Guid ChannelId, ChannelSyncOperation Operation), Task> _inFlight = new();
 
     public SalesChannelOrchestrator(IServiceScopeFactory scopeFactory, ILogger<SalesChannelOrchestrator> logger)
         : this(scopeFactory, logger, DefaultTickInterval)
@@ -62,6 +63,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             try
             {
                 await DrainOutboxAsync(stoppingToken);
+                await DispatchQueuedRunsAsync(stoppingToken);
                 await PollImportsAsync(stoppingToken);
                 await DrainSyncLogsAsync(stoppingToken);
 
@@ -210,10 +212,28 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Skip channels whose previous import is still running in the background — a long run must not
-            // be re-launched (and re-stamped) every tick. The dispatcher's per-channel lock is a second
-            // guard, but gating here also avoids needlessly bumping LastSyncStartedAt.
-            if (_inFlight.ContainsKey(channel.Id))
+            // Which operations are due for this channel. Products and customers are full pulls gated to
+            // run until their initial import completes once (the connectors flip the flags; clearing a
+            // flag re-enables the scheduled run). Sales runs every interval (incremental or backfill chunk).
+            var dueOperations = new List<ChannelSyncOperation>();
+            if (channel.ImportProducts && !channel.InitialProductImportCompleted)
+            {
+                dueOperations.Add(ChannelSyncOperation.ImportProducts);
+            }
+            if (channel.ImportSaless)
+            {
+                dueOperations.Add(ChannelSyncOperation.ImportSaless);
+            }
+            if (channel.ImportCustomers && !channel.InitialCustomerImportCompleted)
+            {
+                dueOperations.Add(ChannelSyncOperation.ImportCustomers);
+            }
+
+            // Skip operations still running in the background — a long run must not be re-launched every
+            // tick. The dispatcher's per-(channel, op) lock is a second guard, but gating here also avoids
+            // needlessly bumping LastSyncStartedAt.
+            dueOperations.RemoveAll(op => _inFlight.ContainsKey((channel.Id, op)));
+            if (dueOperations.Count == 0)
             {
                 continue;
             }
@@ -223,23 +243,114 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             channel.LastSyncStartedAt = now;
             await context.SaveChangesAsync(cancellationToken);
 
-            // Launch the channel's imports on their own DI scope and do NOT await — the tick loop has to stay
-            // free so DrainSyncLogsAsync / DrainOutboxAsync keep running while this import walks its pages.
-            var channelId = channel.Id;
-            var task = RunChannelImportsAsync(channelId, cancellationToken);
-            _inFlight[channelId] = task;
-            _ = task.ContinueWith(_ => _inFlight.TryRemove(channelId, out var _removed), TaskScheduler.Default);
+            // Launch each due operation on its own DI scope and do NOT await — the tick loop has to stay
+            // free so DrainSyncLogsAsync / DrainOutboxAsync keep running while the imports walk their pages,
+            // and a 15-minute order backfill must not block the channel's customer import.
+            foreach (var operation in dueOperations)
+            {
+                LaunchDetached((channel.Id, operation), RunChannelOperationAsync(channel.Id, operation, cancellationToken));
+            }
+        }
+    }
+
+    /// <summary>Registers a detached import task under its in-flight key; the entry self-removes on completion.</summary>
+    private void LaunchDetached((Guid ChannelId, ChannelSyncOperation Operation) key, Task task)
+    {
+        _inFlight[key] = task;
+        _ = task.ContinueWith(_ => _inFlight.TryRemove(key, out var _removed), TaskScheduler.Default);
+    }
+
+    /// <summary>
+    /// Dispatches manually enqueued runs (<see cref="ChannelSyncRunStatus.Queued"/>), oldest first. The
+    /// queue is the ChannelSyncRun table itself, so pending triggers survive restarts. A run whose
+    /// (channel, operation) is already in flight stays Queued and is retried next tick.
+    /// </summary>
+    private async Task DispatchQueuedRunsAsync(CancellationToken cancellationToken)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var queued = await context.ChannelSyncRun
+            .IgnoreQueryFilters()
+            .Where(r => r.Status == ChannelSyncRunStatus.Queued)
+            .OrderBy(r => r.DateCreated)
+            .Select(r => new { r.Id, r.SalesChannelId, r.Operation })
+            .ToListAsync(cancellationToken);
+
+        foreach (var queuedRun in queued)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var key = (queuedRun.SalesChannelId, queuedRun.Operation);
+            if (_inFlight.ContainsKey(key))
+            {
+                continue;
+            }
+
+            LaunchDetached(key, RunQueuedRunAsync(queuedRun.Id, cancellationToken));
         }
     }
 
     /// <summary>
-    /// Runs a single channel's due imports (products → sales → customers) on a dedicated DI scope. Detached
-    /// from the tick loop, so it owns its own <see cref="ApplicationDbContext"/> (the tick scope is disposed
-    /// each tick and DbContext is not thread-safe). Within a channel the operations stay sequential — the
-    /// dispatcher's per-channel lock and the per-run SalesId allocation both require that — but different
-    /// channels now run concurrently.
+    /// Executes one queued manual run on a dedicated DI scope: loads the run + channel, hands the run row
+    /// to the dispatcher for adoption, and persists any cursor progress the connector left on the channel.
     /// </summary>
-    private async Task RunChannelImportsAsync(Guid channelId, CancellationToken cancellationToken)
+    private async Task RunQueuedRunAsync(Guid runId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var dispatcher = scope.ServiceProvider.GetRequiredService<SyncDispatcher>();
+
+            var run = await context.ChannelSyncRun
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(r => r.Id == runId && r.Status == ChannelSyncRunStatus.Queued, cancellationToken);
+
+            if (run is null)
+            {
+                return;
+            }
+
+            var channel = await context.SalesChannel
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(s => s.Id == run.SalesChannelId, cancellationToken);
+
+            if (channel is null || !channel.IsEnabled)
+            {
+                run.Status = ChannelSyncRunStatus.Failed;
+                run.FinishedAt = DateTime.UtcNow;
+                run.ErrorSummary = channel is null
+                    ? "Sales channel no longer exists."
+                    : "Sales channel is disabled.";
+                await context.SaveChangesAsync(CancellationToken.None);
+                return;
+            }
+
+            await dispatcher.RunImportAsync(channel, run.Operation, run.TriggerSource, cancellationToken, existingRun: run);
+
+            // Persist cursor/flag progress the connector left on the tracked channel entity (backfill
+            // cursor, initial-import flags) — same post-run save the scheduled path does.
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Expected on shutdown — the dispatcher already closed an adopted run as canceled; a still-
+            // Queued row simply gets picked up again after the restart.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Queued sync run {RunId} failed to dispatch", runId);
+        }
+    }
+
+    /// <summary>
+    /// Runs one scheduled import operation for a channel on a dedicated DI scope. Detached from the tick
+    /// loop, so it owns its own <see cref="ApplicationDbContext"/> (the tick scope is disposed each tick
+    /// and DbContext is not thread-safe). Each operation loads its own channel instance and mutates only
+    /// its own cursor/flag columns, so concurrent operations of one channel never clobber each other.
+    /// </summary>
+    private async Task RunChannelOperationAsync(Guid channelId, ChannelSyncOperation operation, CancellationToken cancellationToken)
     {
         try
         {
@@ -256,41 +367,21 @@ public sealed class SalesChannelOrchestrator : BackgroundService
                 return;
             }
 
-            // The product import is a full, non-incremental catalogue pull. Run it on a schedule
-            // only until it has completed once; otherwise it would re-import the entire catalogue
-            // every interval and hammer the remote shop (observed: back-to-back full imports +
-            // timeouts). Manual "Sync products" still works any time and bypasses this gate;
-            // clearing InitialProductImportCompleted re-enables a scheduled full import.
-            if (channel.ImportProducts && !channel.InitialProductImportCompleted)
-            {
-                var run = await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportProducts, ChannelSyncTriggerSource.Scheduler, cancellationToken);
-                if (run.Status is ChannelSyncRunStatus.Success or ChannelSyncRunStatus.PartialFailure)
-                {
-                    channel.InitialProductImportCompleted = true;
-                    await context.SaveChangesAsync(cancellationToken);
-                }
-            }
-            if (channel.ImportSaless)
-            {
-                await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportSaless, ChannelSyncTriggerSource.Scheduler, cancellationToken);
+            var run = await dispatcher.RunImportAsync(channel, operation, ChannelSyncTriggerSource.Scheduler, cancellationToken);
 
-                // The sales import advances its resumable backfill cursor on the channel entity as it pages
-                // (and flips InitialSalesImportCompleted once the whole history is in). Persist that progress
-                // — even after a partial or shutdown-canceled run — so the next run resumes from the cursor
-                // instead of restarting. CancellationToken.None: this must still save when the import's own
-                // token was canceled by a shutdown.
-                await context.SaveChangesAsync(CancellationToken.None);
-            }
-            // The customer import is a full pull, walked in time-boxed, resumable chunks (like the sales
-            // backfill). The connector advances CustomerImportPageCursor per page and flips
-            // InitialCustomerImportCompleted once the whole base is in — so run it while that flag is unset
-            // and just persist the progress it made, even after a partial or shutdown-canceled chunk.
-            // CancellationToken.None: this must still save when the poll's own token was canceled by shutdown.
-            if (channel.ImportCustomers && !channel.InitialCustomerImportCompleted)
+            // The product import is a full, non-incremental catalogue pull: once it has completed, flip the
+            // gate so the scheduler stops re-importing the whole catalogue every interval. Sales/customer
+            // imports maintain their own flags/cursors on the channel entity inside the connector.
+            if (operation == ChannelSyncOperation.ImportProducts
+                && run.Status is ChannelSyncRunStatus.Success or ChannelSyncRunStatus.PartialFailure)
             {
-                await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportCustomers, ChannelSyncTriggerSource.Scheduler, cancellationToken);
-                await context.SaveChangesAsync(CancellationToken.None);
+                channel.InitialProductImportCompleted = true;
             }
+
+            // Persist cursor/flag progress — even after a partial or shutdown-canceled run — so the next
+            // run resumes instead of restarting. CancellationToken.None: this must still save when the
+            // import's own token was canceled by a shutdown.
+            await context.SaveChangesAsync(CancellationToken.None);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -298,7 +389,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Background import failed for channel {ChannelId}", channelId);
+            _logger.LogError(ex, "Background {Operation} import failed for channel {ChannelId}", operation, channelId);
         }
     }
 }

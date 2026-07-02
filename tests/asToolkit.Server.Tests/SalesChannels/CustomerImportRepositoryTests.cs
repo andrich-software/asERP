@@ -1,4 +1,4 @@
-using asToolkit.Application.Contracts.Services;
+﻿using asToolkit.Application.Contracts.Services;
 using asToolkit.Domain.Entities;
 using asToolkit.Domain.Enums;
 using asToolkit.Persistence.DatabaseContext;
@@ -26,7 +26,8 @@ public class CustomerImportRepositoryTests
             NullLogger<CustomerImportRepository>.Instance,
             ctx,
             new CustomerRepository(ctx, tenant),
-            new CountryRepository(ctx, tenant));
+            new CountryRepository(ctx, tenant),
+            new ImportIdAllocator());
 
     private static SalesChannelImportCustomer NewImport(string remoteId, string email) => new()
     {

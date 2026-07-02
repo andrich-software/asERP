@@ -28,7 +28,8 @@ public class SalesImportRepositoryTests
             new CustomerRepository(ctx, tenant),
             new CountryRepository(ctx, tenant),
             new ProductRepository(ctx, tenant),
-            ctx);
+            ctx,
+            new ImportIdAllocator());
 
     private static SalesChannelImportSales NewImport(string remoteSalesId, string remoteCustomerId, string email, string sku) => new()
     {
@@ -206,7 +207,7 @@ public class SalesImportRepositoryTests
 
     [Fact]
     [Trait("Category", "Benchmark")]
-    public async Task Import_LargeRun_PerOrderCostStaysFlat()
+    public async Task Import_LargeRun_TrackerStaysBounded_SoPerOrderCostStaysFlat()
     {
         var options = NewOptions();
         var tenant = new TestTenantContext();
@@ -219,18 +220,14 @@ public class SalesImportRepositoryTests
 
         var repo = BuildRepository(ctx, tenant);
 
-        // Warm-up outside the measurement: JIT + first-query model building would otherwise inflate
-        // the first bucket and mask (or fake) a rising trend.
-        const int warmup = 100;
-        for (var n = 0; n < warmup; n++)
-        {
-            await repo.ImportOrUpdateFromSalesChannel(channel, NewImport($"4{n:0000}", $"C-W{n}", $"warmup{n}@example.de", "SKU-1"));
-        }
-
+        // The flat-cost property is asserted via its mechanical cause — a bounded change tracker —
+        // rather than wall-clock timing, which is unreliably noisy when the whole suite runs in
+        // parallel. Bucket timings are still printed for humans watching a local run.
         const int total = 600;
         const int bucketSize = 200;
         var bucketMillis = new List<double>();
         var stopwatch = new System.Diagnostics.Stopwatch();
+        var maxTracked = 0;
 
         for (var bucket = 0; bucket < total / bucketSize; bucket++)
         {
@@ -239,19 +236,20 @@ public class SalesImportRepositoryTests
             {
                 var n = bucket * bucketSize + i;
                 await repo.ImportOrUpdateFromSalesChannel(channel, NewImport($"5{n:0000}", $"C-{n}", $"buyer{n}@example.de", "SKU-1"));
+                maxTracked = Math.Max(maxTracked, ctx.ChangeTracker.Entries().Count());
             }
             stopwatch.Stop();
             bucketMillis.Add(stopwatch.Elapsed.TotalMilliseconds);
         }
 
-        Assert.Equal(warmup + total, await ctx.Sales.IgnoreQueryFilters().CountAsync());
+        Console.WriteLine($"Import buckets ({bucketSize} orders each): [{string.Join(", ", bucketMillis.Select(m => m.ToString("F0")))}] ms; max tracked entries: {maxTracked}");
 
-        // Without the per-order tracker trim the last bucket runs several times slower than the fastest
-        // (DetectChanges over an ever-growing set — the regression this guards against is quadratic, not
-        // subtle). With the trim, per-order cost is constant; compare against the fastest bucket with
-        // generous headroom so scheduler jitter from parallel test classes cannot fail the run.
-        Assert.True(bucketMillis[^1] < bucketMillis.Min() * 4,
-            $"Per-order cost is rising across the run: buckets [{string.Join(", ", bucketMillis.Select(m => m.ToString("F0")))}] ms");
+        Assert.Equal(total, await ctx.Sales.IgnoreQueryFilters().CountAsync());
+
+        // Without the per-order trim, 600 orders × ~6 entities would leave ~3600 tracked entries and
+        // DetectChanges cost would grow quadratically across the run. The bound proves it stays flat.
+        Assert.True(maxTracked < 25,
+            $"Change tracker grew to {maxTracked} entries during the run — per-order trim is not working");
     }
 
     private static SalesChannel NewChannel() => new()

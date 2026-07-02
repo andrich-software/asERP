@@ -2,6 +2,7 @@
 using asToolkit.Client.Core.Exceptions;
 using asToolkit.Client.Features.SalesChannels.Services;
 using asToolkit.Domain.Dtos.SalesChannel;
+using asToolkit.Domain.Enums;
 
 namespace asToolkit.Client.Features.SalesChannels.Models;
 
@@ -144,10 +145,15 @@ public partial record SalesChannelDetailModel
         await IsBusy.SetAsync(true);
         try
         {
+            // The server enqueues the run (202 + runId) and the orchestrator picks it up within ~10s —
+            // the request no longer waits for the import itself. Progress shows up in the runs/logs
+            // feeds and the dashboard's sync-status tab.
             var result = await action(CancellationToken.None);
             var summary = result is null
                 ? "no result"
-                : $"{result.Status} — processed {result.ItemsProcessed}, failed {result.ItemsFailed}";
+                : result.Status == ChannelSyncRunStatus.Queued
+                    ? "queued — starts within a few seconds"
+                    : $"{result.Status} — processed {result.ItemsProcessed}, failed {result.ItemsFailed}";
             await StatusMessage.SetAsync($"{label}: {summary}");
         }
         catch (ApiException ex)

@@ -28,6 +28,8 @@ public static class SalesChannelServiceRegistration
         services.AddScoped<ISalesImportRepository, SalesImportRepository>();
         services.AddScoped<ICustomerImportRepository, CustomerImportRepository>();
         services.AddScoped<IProductImageImportService, ProductImageImportService>();
+        // Singleton: one CustomerId/SalesId sequence per (tenant, kind) across all concurrent import runs.
+        services.AddSingleton<ImportIdAllocator>();
         // Auth helpers are singletons because they hold per-channel access-token caches; they
         // resolve the scoped IOAuthAppSettingsService internally via IServiceScopeFactory.
         services.AddSingleton<EbayAuthHelper>();

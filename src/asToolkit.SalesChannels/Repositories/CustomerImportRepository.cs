@@ -15,24 +15,26 @@ public class CustomerImportRepository : ICustomerImportRepository
     private readonly ICustomerRepository _customerRepository;
     private readonly ICountryRepository _countryRepository;
 
-    // Per-run caches. The repository is scoped, so one instance serves a whole import run and these reset
-    // on the next run. They turn per-customer DB round-trips into one-off lookups:
-    //  - _countryCache:   all countries loaded once instead of a SELECT per address.
-    //  - _nextCustomerId: the per-tenant CustomerId max read once, then incremented in memory, instead of
-    //                     a MAX scan over the growing customer table for every inserted row.
+    // Per-run country cache (repository is scoped): all countries loaded once instead of a SELECT per
+    // address. Only ids/names are consumed, so entries surviving a tracker trim are harmless.
     private Dictionary<string, Country>? _countryCache;
-    private int? _nextCustomerId;
+
+    // Process-wide id allocator for the per-tenant CustomerId sequence — shared with the sales import so
+    // both can run concurrently for the same channel without handing out duplicate ids.
+    private readonly ImportIdAllocator _idAllocator;
 
     public CustomerImportRepository(
         ILogger<CustomerImportRepository> logger,
         ApplicationDbContext dbContext,
         ICustomerRepository customerRepository,
-        ICountryRepository countryRepository)
+        ICountryRepository countryRepository,
+        ImportIdAllocator idAllocator)
     {
         _logger = logger;
         _dbContext = dbContext;
         _customerRepository = customerRepository;
         _countryRepository = countryRepository;
+        _idAllocator = idAllocator;
     }
 
     public async Task ImportOrUpdateFromSalesChannel(SalesChannel salesChannel, SalesChannelImportCustomer importCustomer)
@@ -81,8 +83,9 @@ public class CustomerImportRepository : ICustomerImportRepository
         {
             var newCustomer = new Customer
             {
-                // Assign CustomerId from the per-run counter (seeded once) so CreateAsync skips its MAX scan.
-                CustomerId = await NextCustomerIdAsync(),
+                // Assign CustomerId from the shared allocator (seeded once per process) — no MAX scan per row.
+                CustomerId = await _idAllocator.NextAsync(salesChannel.TenantId, ImportIdAllocator.CustomerKind,
+                    async () => await _customerRepository.GetMaxCustomerIdAsync()),
                 Email = importCustomer.Email ?? string.Empty,
                 Firstname = importCustomer.Firstname ?? string.Empty,
                 Lastname = importCustomer.Lastname ?? string.Empty,
@@ -207,13 +210,6 @@ public class CustomerImportRepository : ICustomerImportRepository
             SalesChannelId = salesChannelId,
             RemoteCustomerId = remoteCustomerId,
         });
-    }
-
-    /// <summary>Next per-tenant CustomerId, seeding the counter from the DB max on first use.</summary>
-    private async Task<int> NextCustomerIdAsync()
-    {
-        _nextCustomerId ??= await _customerRepository.GetMaxCustomerIdAsync() + 1;
-        return _nextCustomerId++.Value;
     }
 
     /// <summary>Resolves a country by name or ISO code from an all-countries cache loaded once per run.</summary>
