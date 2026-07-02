@@ -21,6 +21,13 @@ namespace asToolkit.Persistence.Repositories
             _logger = logger;
         }
 
+        /// <summary>
+        /// The Jwt.Key value older migrations seeded via HasData. Databases created before the
+        /// seed row was removed still carry it — and since it is publicly known from the
+        /// open-source repo, anyone could forge valid JWTs against such an installation.
+        /// </summary>
+        private const string LegacyJwtKeyPlaceholder = "CHANGE_TO_YOUR_VERY_SECRET_JWT_SIGNING_KEY";
+
         public async Task EnsureRequiredSettingsExistAsync()
         {
             _logger.LogInformation("Checking for required settings...");
@@ -54,6 +61,30 @@ namespace asToolkit.Persistence.Repositories
             {
                 _logger.LogInformation("All required settings are present");
             }
+
+            await ReplaceLegacyJwtKeyPlaceholderAsync(existingSettings);
+        }
+
+        /// <summary>
+        /// Self-heals installations whose Jwt.Key still holds the legacy seeded placeholder by
+        /// replacing it with a freshly generated random key. Access tokens signed with the old
+        /// key become invalid immediately, but clients re-authenticate silently via their
+        /// (database-backed, non-JWT) refresh tokens.
+        /// </summary>
+        private async Task ReplaceLegacyJwtKeyPlaceholderAsync(List<Setting> existingSettings)
+        {
+            var jwtKeySetting = existingSettings.FirstOrDefault(s => s.Key == "Jwt.Key");
+            if (jwtKeySetting == null || jwtKeySetting.Value != LegacyJwtKeyPlaceholder)
+            {
+                return;
+            }
+
+            _logger.LogWarning("Jwt.Key still holds the publicly known seed placeholder — replacing it with a generated random key");
+
+            jwtKeySetting.Value = GenerateJwtSecretKey();
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Jwt.Key was rotated to a per-installation random key");
         }
 
         private static List<Setting> GetRequiredSettings()

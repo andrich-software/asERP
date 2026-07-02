@@ -199,6 +199,11 @@ public partial class App : Application
                                 // Best-effort server-side revoke before Uno clears the cache.
                                 try { await authService.LogoutAsync(cancellationToken); }
                                 catch { /* Refresh-token revocation is best-effort. */ }
+#if __WASM__
+                                // After logout the browser must not silently hand the saved
+                                // password back — require the account chooser again.
+                                await BrowserCredentialService.TryPreventSilentAccessAsync();
+#endif
                                 return true;
                             })
                     )
