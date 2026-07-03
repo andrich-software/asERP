@@ -1,13 +1,12 @@
-﻿#nullable disable
+#nullable disable
 
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Mvc;
+using System.Threading.RateLimiting;
+using asToolkit.Analytics;
 using asToolkit.Application;
-using asToolkit.Application.Models.Grafana;
-using asToolkit.Domain.Enums;
-using asToolkit.Server.Infrastructure.JsonConverters;
 using asToolkit.Application.Contracts.Persistence;
 using asToolkit.Application.Contracts.Services;
+using asToolkit.Application.Models.Grafana;
+using asToolkit.Domain.Enums;
 using asToolkit.Identity;
 using asToolkit.Identity.Services;
 using asToolkit.Infrastructure;
@@ -16,22 +15,24 @@ using asToolkit.Persistence.Configurations.Options;
 using asToolkit.Persistence.DatabaseContext;
 using asToolkit.Persistence.Repositories;
 using asToolkit.Persistence.Services;
-using asToolkit.Server.Services;
-using asToolkit.Analytics;
 using asToolkit.SalesChannels;
 using asToolkit.SalesChannels.Logging;
-using asToolkit.Server.Infrastructure.Logging;
-using Microsoft.Extensions.DependencyInjection;
 using asToolkit.Server;
+using asToolkit.Server.Infrastructure.JsonConverters;
+using asToolkit.Server.Infrastructure.Logging;
 using asToolkit.Server.ServiceRegistrations;
+using asToolkit.Server.Services;
+using asToolkit.Shipping;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
-using System.Threading.RateLimiting;
 using Serilog;
 using Serilog.Sinks.Grafana.Loki;
 
@@ -236,6 +237,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddPersistenceServices();
     builder.Services.AddSalesChannelServices();
+    builder.Services.AddShippingServices();
     builder.Services.AddAnalyticsServices();
 }
 else
@@ -244,6 +246,9 @@ else
     // its dependencies — but the orchestrator hosted service must NOT run (would chase tenants
     // across the test InMemory DB). Skip background services only.
     builder.Services.AddSalesChannelServices(includeBackgroundServices: false);
+    // Shipping: carrier connectors + label service resolve, but the shipping orchestrator
+    // (outbox drainer + tracking poller) must not tick against the test InMemory DB.
+    builder.Services.AddShippingServices(includeBackgroundServices: false);
     // Analytics: register the query/ingest/resolver graph so controllers resolve, but skip the
     // ClickHouse hosted services (schema bootstrapper + batch writer) — tests have no ClickHouse.
     builder.Services.AddAnalyticsServices(includeBackgroundServices: false);
@@ -286,6 +291,9 @@ builder.Services.AddScoped<IManufacturerRepository, ManufacturerRepository>();
 builder.Services.AddScoped<ITaxClassRepository, TaxClassRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IGoodsReceiptRepository, GoodsReceiptRepository>();
+builder.Services.AddScoped<IShippingProviderRepository, ShippingProviderRepository>();
+builder.Services.AddScoped<IShippingProviderRateRepository, ShippingProviderRateRepository>();
+builder.Services.AddScoped<IShippingRepository, ShippingRepository>();
 builder.Services.AddScoped<ITenantRepository, TenantRepository>();
 builder.Services.AddScoped<IUserTenantRepository, UserTenantRepository>();
 builder.Services.AddScoped<ITenantPermissionService, TenantPermissionService>();

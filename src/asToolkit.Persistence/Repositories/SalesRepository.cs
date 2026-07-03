@@ -1,4 +1,4 @@
-﻿using asToolkit.Application.Contracts.Persistence;
+using asToolkit.Application.Contracts.Persistence;
 using asToolkit.Application.Contracts.Services;
 using asToolkit.Domain.Entities;
 using asToolkit.Domain.Enums;
@@ -50,6 +50,13 @@ public class SalesRepository : GenericRepository<Sales>, ISalesRepository
             .Where(oh => oh.SalesId == salesId)
             .OrderByDescending(oh => oh.DateCreated)
             .ToListAsync();
+    }
+
+    public async Task AddSalesHistoryAsync(SalesHistory entry)
+    {
+        entry.TenantId ??= TenantContext.GetCurrentTenantId();
+        await Context.SalesHistory.AddAsync(entry);
+        await Context.SaveChangesAsync();
     }
 
     public async Task<int> GetNextSalesIdAsync()

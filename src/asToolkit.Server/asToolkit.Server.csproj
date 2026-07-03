@@ -72,5 +72,6 @@
 <ProjectReference Include="../asToolkit.Persistence.PostgreSQL/asToolkit.Persistence.PostgreSQL.csproj" />
         <ProjectReference Include="../asToolkit.Persistence.SQLite/asToolkit.Persistence.SQLite.csproj" />
         <ProjectReference Include="../asToolkit.SalesChannels/asToolkit.SalesChannels.csproj" />
+        <ProjectReference Include="../asToolkit.Shipping/asToolkit.Shipping.csproj" />
     </ItemGroup>
 </Project>

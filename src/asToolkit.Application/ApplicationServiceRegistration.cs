@@ -1,9 +1,11 @@
-﻿using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 using asToolkit.Application.Contracts.Identity;
+using asToolkit.Application.Contracts.Services;
+using asToolkit.Application.Features.Shipping.Services;
 using asToolkit.Application.Mediator;
 using asToolkit.Application.Services.Identity;
 using FluentValidation;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace asToolkit.Application;
 
@@ -16,6 +18,7 @@ public static class ApplicationServiceRegistration
 
         // Register services
         services.AddScoped<IUserTenantService, UserTenantService>();
+        services.AddScoped<IShippingStatusUpdater, ShippingStatusUpdater>();
 
         // Register FluentValidation validators
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());

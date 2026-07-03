@@ -1,13 +1,13 @@
-﻿using asToolkit.Application.Services;
+using asToolkit.Application.Contracts.Services;
+using asToolkit.Application.Services;
 using asToolkit.Domain.Entities;
 using asToolkit.Domain.Entities.Common;
 using asToolkit.Identity.Configurations;
 using asToolkit.Persistence.Configurations;
 using asToolkit.Persistence.Seeders;
 using asToolkit.Persistence.ValueConverters;
-using asToolkit.Application.Contracts.Services;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -77,6 +77,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<Shipping>().ToTable("shipping");
         modelBuilder.Entity<ShippingProvider>().ToTable("shipping_provider");
         modelBuilder.Entity<ShippingProviderRate>().ToTable("shipping_provider_rate");
+        modelBuilder.Entity<ShippingProviderRateCountry>().ToTable("shipping_provider_rate_country");
+        modelBuilder.Entity<ShippingLabelOutbox>().ToTable("shipping_label_outbox");
         modelBuilder.Entity<TaxClass>().ToTable("tax_class");
         modelBuilder.Entity<Tenant>().ToTable("tenant");
         modelBuilder.Entity<TenantEmailSettings>().ToTable("tenant_email_settings");
@@ -116,6 +118,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<SalesChannel>().Property(e => e.WebhookSecret).HasConversion(encryptedConverter!);
         // OAuth Developer-App ClientSecret encrypted at rest with the same key ring.
         modelBuilder.Entity<TenantOAuthAppSettings>().Property(e => e.ClientSecret).HasConversion(encryptedConverter!);
+        // Shipping-carrier credentials encrypted at rest with the same key ring.
+        modelBuilder.Entity<ShippingProvider>().Property(e => e.Password).HasConversion(encryptedConverter);
+        modelBuilder.Entity<ShippingProvider>().Property(e => e.ApiKey).HasConversion(encryptedConverter!);
+        modelBuilder.Entity<ShippingProvider>().Property(e => e.ApiSecret).HasConversion(encryptedConverter!);
         modelBuilder.ApplyConfiguration(new TaxClassConfiguration());
         modelBuilder.ApplyConfiguration(new GoodsReceiptConfiguration());
         modelBuilder.ApplyConfiguration(new InvoiceConfiguration());
@@ -130,7 +136,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new SalesItemConfiguration());
         modelBuilder.ApplyConfiguration(new ProductSalesChannelConfiguration());
         modelBuilder.ApplyConfiguration(new CustomerSalesChannelConfiguration());
+        modelBuilder.ApplyConfiguration(new ShippingProviderConfiguration());
         modelBuilder.ApplyConfiguration(new ShippingProviderRateConfiguration());
+        modelBuilder.ApplyConfiguration(new ShippingProviderRateCountryConfiguration());
+        modelBuilder.ApplyConfiguration(new ShippingConfiguration());
+        modelBuilder.ApplyConfiguration(new ShippingLabelOutboxConfiguration());
         modelBuilder.ApplyConfiguration(new TenantEmailSettingsConfiguration());
         modelBuilder.ApplyConfiguration(new ChannelSyncRunConfiguration());
         modelBuilder.ApplyConfiguration(new ChannelSyncLogConfiguration());
@@ -205,6 +215,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Shipping> Shipping { get; set; } = null!;
     public DbSet<ShippingProvider> ShippingProvider { get; set; } = null!;
     public DbSet<ShippingProviderRate> ShippingProviderRate { get; set; } = null!;
+    public DbSet<ShippingProviderRateCountry> ShippingProviderRateCountry { get; set; } = null!;
+    public DbSet<ShippingLabelOutbox> ShippingLabelOutbox { get; set; } = null!;
     public DbSet<TaxClass> TaxClass { get; set; } = null!;
     public DbSet<Warehouse> Warehouse { get; set; } = null!;
     public DbSet<Manufacturer> Manufacturer { get; set; } = null!;
