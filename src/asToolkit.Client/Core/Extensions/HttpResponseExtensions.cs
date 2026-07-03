@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using asToolkit.Client.Core.Exceptions;
 using asToolkit.Client.Core.Json;
 using asToolkit.Client.Core.Models;
@@ -39,6 +40,16 @@ public static class HttpResponseExtensions
         CancellationToken ct)
     {
         var messages = new List<string>();
+
+        // Infrastructure-level failures: the reverse proxy / gateway is up but the backend
+        // (e.g. the cloud server) is down, restarting or unreachable. These responses carry a
+        // proxy HTML page, not our JSON error contract, so surface a clear, actionable message
+        // instead of leaking a raw "status code 502 (BadGateway)" to the user.
+        if (IsServerUnavailable(response.StatusCode))
+        {
+            messages.Add("The server is currently unavailable. Please try again in a few moments.");
+            return messages;
+        }
 
         try
         {
@@ -92,4 +103,13 @@ public static class HttpResponseExtensions
             ? messages
             : new List<string> { $"Request failed with status code {(int)response.StatusCode} ({response.StatusCode})" };
     }
+
+    /// <summary>
+    /// True for status codes that indicate the backend is unreachable behind a gateway/proxy
+    /// (server down, restarting or overloaded) rather than a request the app can correct.
+    /// </summary>
+    private static bool IsServerUnavailable(HttpStatusCode statusCode) => statusCode is
+        HttpStatusCode.BadGateway or          // 502
+        HttpStatusCode.ServiceUnavailable or  // 503
+        HttpStatusCode.GatewayTimeout;        // 504
 }
