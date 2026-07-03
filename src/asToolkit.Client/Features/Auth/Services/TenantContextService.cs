@@ -95,9 +95,19 @@ public class TenantContextService : ITenantContextService
 
     public async Task ClearAsync()
     {
+        // Logout paths can call this repeatedly (Uno's token-cache Cleared event re-raises
+        // LoggedOut). Only the transition INTO the cleared state may fire the event —
+        // re-firing on an already-empty context feeds an infinite logout/refresh loop.
+        var hadState = _currentTenant != null || _availableTenants.Count > 0;
+
         _availableTenants.Clear();
         _currentTenant = null;
         await _tokenStorage.SetCurrentTenantIdAsync(null);
+
+        if (!hadState)
+        {
+            return;
+        }
 
         _logger.LogInformation("Cleared tenant context");
 

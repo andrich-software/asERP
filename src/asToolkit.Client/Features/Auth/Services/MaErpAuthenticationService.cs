@@ -130,8 +130,32 @@ public class MaErpAuthenticationService : IMaErpAuthenticationService
         return registerResponse;
     }
 
-    public async Task<LoginResponseDto?> RefreshTokenAsync(CancellationToken cancellationToken = default)
+    // Single-flight guard: refresh tokens are one-time-use (the server rotates them).
+    // Two concurrent refresh calls would send the same token twice; the second gets 401
+    // and wipes the freshly renewed session. All concurrent callers share one request.
+    private readonly object _refreshSync = new();
+    private Task<LoginResponseDto?>? _refreshInFlight;
+
+    public Task<LoginResponseDto?> RefreshTokenAsync(CancellationToken cancellationToken = default)
     {
+        lock (_refreshSync)
+        {
+            if (_refreshInFlight is not { IsCompleted: false })
+            {
+                _refreshInFlight = RefreshTokenCoreAsync();
+            }
+
+            // WaitAsync scopes the caller's cancellation to its own await without
+            // cancelling the shared in-flight request.
+            return _refreshInFlight.WaitAsync(cancellationToken);
+        }
+    }
+
+    private async Task<LoginResponseDto?> RefreshTokenCoreAsync()
+    {
+        // The shared flight must not be tied to any single caller's token.
+        var cancellationToken = CancellationToken.None;
+
         _logger.LogInformation("Refreshing JWT token via refresh-token");
 
         var serverUrl = await _tokenStorage.GetServerUrlAsync();
@@ -149,11 +173,26 @@ public class MaErpAuthenticationService : IMaErpAuthenticationService
         // Anonymous endpoint: send only the refresh token. Crucially, we do NOT attach the
         // (likely-expired) Bearer token here — that's the bug the new flow fixes.
         var requestBody = new RefreshTokenRequestDto { RefreshToken = refreshToken };
-        var response = await httpClient.PostAsJsonAsync(
-            "/api/v1/auth/refresh-token",
-            requestBody,
-            AppJsonSerializerContext.Default.RefreshTokenRequestDto,
-            cancellationToken);
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await httpClient.PostAsJsonAsync(
+                "/api/v1/auth/refresh-token",
+                requestBody,
+                AppJsonSerializerContext.Default.RefreshTokenRequestDto,
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            // The stored server is unreachable (offline, moved, or wrong URL). This is a
+            // transient connectivity problem, NOT a rejected token — so we deliberately keep
+            // the stored credentials: once the server is reachable again the user stays logged
+            // in. For now we return null so silent re-auth fails softly and the login overlay
+            // is shown, instead of an unhandled exception crashing startup.
+            _logger.LogWarning(ex, "Token refresh failed: could not reach server {ServerUrl}", serverUrl);
+            return null;
+        }
 
         if (!response.IsSuccessStatusCode)
         {
@@ -229,7 +268,36 @@ public class MaErpAuthenticationService : IMaErpAuthenticationService
         await _tokenStorage.ClearTokenAsync();
     }
 
+    // Validation result cache: Uno's navigation auth guard validates on every navigation
+    // (and other callers pile on). One round-trip per token per window is plenty — without
+    // this, event-driven re-checks can hammer /auth/validate dozens of times per second.
+    private static readonly TimeSpan ValidationCacheWindow = TimeSpan.FromSeconds(30);
+    private readonly object _validationCacheSync = new();
+    private (string Token, bool IsValid, DateTimeOffset At)? _lastValidation;
+
     public async Task<bool> ValidateTokenAsync(string token, CancellationToken cancellationToken = default)
+    {
+        lock (_validationCacheSync)
+        {
+            if (_lastValidation is { } cached
+                && cached.Token == token
+                && DateTimeOffset.UtcNow - cached.At < ValidationCacheWindow)
+            {
+                return cached.IsValid;
+            }
+        }
+
+        var isValid = await ValidateTokenCoreAsync(token, cancellationToken);
+
+        lock (_validationCacheSync)
+        {
+            _lastValidation = (token, isValid, DateTimeOffset.UtcNow);
+        }
+
+        return isValid;
+    }
+
+    private async Task<bool> ValidateTokenCoreAsync(string token, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Validating authentication token");
 
@@ -258,18 +326,30 @@ public class MaErpAuthenticationService : IMaErpAuthenticationService
                 return true;
             }
 
-            _logger.LogWarning("Token validation failed with status code: {StatusCode}", response.StatusCode);
-            return false;
+            if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
+            {
+                _logger.LogWarning("Token rejected by server with status code: {StatusCode}", response.StatusCode);
+                return false;
+            }
+
+            // 404 = the validate endpoint does not exist on this (older) server version;
+            // 5xx = server trouble. Neither says anything about the token itself — treat the
+            // session as valid instead of tearing it down (and burning the one-time refresh
+            // token) over an unrelated response. Genuinely dead tokens still surface as 401s
+            // on real requests and are handled by the AuthenticationHandler retry path.
+            _logger.LogWarning("Token validation inconclusive ({StatusCode}) — keeping current session", response.StatusCode);
+            return true;
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogWarning(ex, "Token validation failed: Server connection error");
-            return false;
+            // Connectivity problem, not a rejected token — keep the session.
+            _logger.LogWarning(ex, "Token validation inconclusive: server connection error — keeping current session");
+            return true;
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogWarning(ex, "Token validation failed: Request timeout or cancellation");
-            return false;
+            _logger.LogWarning(ex, "Token validation inconclusive: request timeout or cancellation — keeping current session");
+            return true;
         }
         catch (Exception ex)
         {

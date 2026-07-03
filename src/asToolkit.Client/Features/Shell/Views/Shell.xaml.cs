@@ -1,13 +1,7 @@
-﻿using asToolkit.Client.Core.Exceptions;
-using Windows.ApplicationModel.Resources;
 using asToolkit.Client.Features.Account.Models;
 using asToolkit.Client.Features.Shell.Models;
 using asToolkit.Client.Features.Auth.Services;
-using asToolkit.Client.Features.Auth.Models;
-using asToolkit.Client.Features.Auth.Views;
 using Microsoft.UI.Xaml.Controls;
-using asToolkit.Client.Features.Tenants.Services;
-using asToolkit.Domain.Dtos.Auth;
 using asToolkit.Domain.Dtos.Tenant;
 using asToolkit.Client.Features.Dashboard.Models;
 using asToolkit.Client.Features.Statistics.Models;
@@ -22,7 +16,6 @@ using asToolkit.Client.Features.Search;
 using asToolkit.Client.Features.Search.Services;
 using asToolkit.Domain.Dtos.Search;
 using asToolkit.Client.Features.SalesChannels.Models;
-using asToolkit.Client.Features.SalesChannels.Services;
 using asToolkit.Client.Features.SalesChannelDashboards.Models;
 using asToolkit.Client.Features.Superadmin.Models;
 using asToolkit.Domain.Enums;
@@ -50,13 +43,17 @@ public sealed partial class Shell : UserControl, IContentControlProvider
     // Cached reference to avoid service lookup on every pointer move
     private ISessionManager? _sessionManager;
 
-    // Dynamic SalesChannel sidebar items (buttons inside SalesChannelSubItemsContainer)
-    private readonly List<Button> _dynamicSalesChannelItems = new();
-    private readonly SemaphoreSlim _salesChannelRefreshLock = new(1, 1);
-
     public Shell()
     {
         this.InitializeComponent();
+
+        // Auth overlays live in their own UserControls; the Shell only switches their
+        // visibility and reacts to the events below (see the Auth Overlays region).
+        LoginOverlay.LoginSucceeded += OnAuthOverlaySucceededAsync;
+        LoginOverlay.RegistrationRequested += OnRegistrationRequested;
+        RegistrationOverlay.RegistrationSucceeded += OnAuthOverlaySucceededAsync;
+        RegistrationOverlay.BackToLoginRequested += OnBackToLoginRequested;
+        FirstTenantOverlay.TenantCreated += OnFirstTenantCreatedAsync;
 
         SetUnauthenticatedVisibility();
 
@@ -121,7 +118,19 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
         _activeNavButton = null;
 
-        if (!string.IsNullOrEmpty(tag) && _sidebarTagMap!.TryGetValue(tag, out var btn))
+        if (string.IsNullOrEmpty(tag))
+        {
+            return;
+        }
+
+        // Static nav items come from the tag map; dynamic sales-channel items are
+        // realized by the ItemsRepeater and looked up in its visual children.
+        if (!_sidebarTagMap!.TryGetValue(tag, out Button? btn) && tag.StartsWith("SalesChannel_"))
+        {
+            btn = FindDynamicSalesChannelButton(tag);
+        }
+
+        if (btn != null)
         {
             if (Application.Current.Resources["PrimaryContainerBrush"] is Brush highlight)
             {
@@ -129,6 +138,21 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             }
             _activeNavButton = btn;
         }
+    }
+
+    private Button? FindDynamicSalesChannelButton(string tag)
+    {
+        var count = VisualTreeHelper.GetChildrenCount(SalesChannelSubItemsRepeater);
+        for (var i = 0; i < count; i++)
+        {
+            if (VisualTreeHelper.GetChild(SalesChannelSubItemsRepeater, i) is Button btn &&
+                btn.Tag is string btnTag && btnTag == tag)
+            {
+                return btn;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -327,18 +351,12 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
     private void SetUnauthenticatedVisibility()
     {
-        InitializeLoginOverlay();
+        LoginOverlay.Reset();
         LoginOverlay.Visibility = Visibility.Visible;
         RegistrationOverlay.Visibility = Visibility.Collapsed;
         FirstTenantOverlay.Visibility = Visibility.Collapsed;
 
-        FirstTenantName.Text = string.Empty;
-        FirstTenantDescription.Text = string.Empty;
-        FirstTenantSaveButton.IsEnabled = false;
-        FirstTenantErrorBanner.Visibility = Visibility.Collapsed;
-        FirstTenantErrorText.Text = string.Empty;
-        FirstTenantProgress.Visibility = Visibility.Collapsed;
-        FirstTenantProgress.IsActive = false;
+        FirstTenantOverlay.Reset();
 
         Sidebar.Visibility = Visibility.Collapsed;
         ContentHeader.Visibility = Visibility.Collapsed;
@@ -354,7 +372,10 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         TabItemSettings.Visibility = Visibility.Collapsed;
         TabItemLogout.Visibility = Visibility.Collapsed;
 
-        ClearDynamicSalesChannelItems();
+        // Use the DataContext set in OnShellLoaded instead of resolving from DI: this runs
+        // in the constructor too, where resolving would construct the ShellModel singleton
+        // earlier than before. Before OnShellLoaded there is nothing to clear anyway.
+        (TabBarNav.DataContext as ShellModel)?.ClearSalesChannels();
         UpdateSidebarSelection(null);
     }
 
@@ -364,13 +385,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         RegistrationOverlay.Visibility = Visibility.Collapsed;
         FirstTenantOverlay.Visibility = Visibility.Visible;
 
-        FirstTenantName.Text = string.Empty;
-        FirstTenantDescription.Text = string.Empty;
-        FirstTenantSaveButton.IsEnabled = false;
-        FirstTenantErrorBanner.Visibility = Visibility.Collapsed;
-        FirstTenantErrorText.Text = string.Empty;
-        FirstTenantProgress.Visibility = Visibility.Collapsed;
-        FirstTenantProgress.IsActive = false;
+        FirstTenantOverlay.Reset();
 
         Sidebar.Visibility = Visibility.Collapsed;
         ContentHeader.Visibility = Visibility.Collapsed;
@@ -401,6 +416,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                 {
                     var shellModel = app.Host.Services.GetRequiredService<ShellModel>();
                     TabBarNav.DataContext = shellModel;
+                    SalesChannelSubItemsRepeater.DataContext = shellModel;
                     shellModel.PropertyChanged += OnShellModelPropertyChanged;
 
                     await shellModel.InitializeAuthenticationState();
@@ -870,6 +886,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         }
     }
 
+
     #region Dynamic SalesChannel Sidebar
 
     private void OnSalesChannelsChanged(object? sender, EventArgs e)
@@ -877,671 +894,113 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         RunOnUiThread(RefreshSalesChannelSidebar);
     }
 
+    /// <summary>
+    /// Reloads the dynamic sales-channel nav items. The data lives on the ShellModel
+    /// (bound by the ItemsRepeater in Shell.xaml); this only triggers the refresh.
+    /// Must be called on the UI thread (all callers marshal via RunOnUiThread).
+    /// </summary>
     private async Task RefreshSalesChannelSidebar()
     {
-        if (!await _salesChannelRefreshLock.WaitAsync(0)) return;
+        var shellModel = GetShellModel();
+        if (shellModel == null) return;
 
-        try
-        {
-            ClearDynamicSalesChannelItems();
-
-            var app = Application.Current as App;
-            var salesChannelService = app?.Host?.Services?.GetService<ISalesChannelService>();
-            if (salesChannelService == null) return;
-
-            var parameters = new Core.Models.QueryParameters { PageSize = 100 };
-            var response = await salesChannelService.GetSalesChannelsAsync(parameters);
-
-            ClearDynamicSalesChannelItems();
-
-            if (response.Data.Count == 0) return;
-
-            if (_sidebarTagMap == null) InitializeSidebarTagMap();
-
-            var items = new List<Button>();
-
-            foreach (var sc in response.Data)
-            {
-                var tag = $"SalesChannel_{sc.Id}_{(int)sc.SalesChannelType}_{sc.Name}";
-                var glyph = sc.SalesChannelType switch
-                {
-                    SalesChannelType.PointOfSale => "\uE7BF",
-                    SalesChannelType.Shopware6 => "\uE774",
-                    SalesChannelType.WooCommerce => "\uE774",
-                    SalesChannelType.eBay => "\uE774",
-                    SalesChannelType.Amazon => "\uE774",
-                    _ => "\uE774"
-                };
-
-                var btn = new Button
-                {
-                    Tag = tag,
-                    Style = (Style)this.Resources["SidebarNavItemStyle"],
-                    Margin = new Thickness(24, 1, 8, 1),
-                    Height = 30,
-                    Content = new StackPanel
-                    {
-                        Orientation = Orientation.Horizontal,
-                        Spacing = 10,
-                        Children =
-                        {
-                            new FontIcon { Glyph = glyph, FontSize = 14 },
-                            new TextBlock
-                            {
-                                Text = sc.Name,
-                                Style = (Style)Application.Current.Resources["BodySmall"],
-                                VerticalAlignment = VerticalAlignment.Center,
-                                TextTrimming = TextTrimming.CharacterEllipsis
-                            }
-                        }
-                    }
-                };
-                btn.Click += OnNavItemClick;
-
-                items.Add(btn);
-                _sidebarTagMap![tag] = btn;
-            }
-
-            foreach (var btn in items)
-            {
-                SalesChannelSubItemsContainer.Children.Add(btn);
-            }
-            _dynamicSalesChannelItems.AddRange(items);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Shell] RefreshSalesChannelSidebar error: {ex.Message}");
-        }
-        finally
-        {
-            _salesChannelRefreshLock.Release();
-        }
+        await shellModel.RefreshSalesChannelsAsync();
     }
 
-    private void ClearDynamicSalesChannelItems()
-    {
-        SalesChannelSubItemsContainer.Children.Clear();
-        _dynamicSalesChannelItems.Clear();
-
-        if (_sidebarTagMap != null)
-        {
-            var dynamicKeys = _sidebarTagMap.Keys.Where(k => k.StartsWith("SalesChannel_")).ToList();
-            foreach (var key in dynamicKeys)
-            {
-                _sidebarTagMap.Remove(key);
-            }
-        }
-    }
+    private static ShellModel? GetShellModel()
+        => (Application.Current as App)?.Host?.Services?.GetService<ShellModel>();
 
     #endregion
 
-    #region Login Overlay
+    #region Auth Overlays
 
-    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Interoperability", "CA1416", Justification = "Browser-specific calls are guarded by #if __WASM__")]
-    private void InitializeLoginOverlay()
+    /// <summary>
+    /// The register link on the login overlay was clicked — show the registration overlay
+    /// for the server currently selected on the login overlay.
+    /// </summary>
+    private void OnRegistrationRequested(object? sender, EventArgs e)
     {
-        LoginEmail.Text = string.Empty;
-        LoginPassword.Password = string.Empty;
-        LoginErrorBanner.Visibility = Visibility.Collapsed;
-        LoginErrorText.Text = string.Empty;
-        LoginProgress.Visibility = Visibility.Collapsed;
-        LoginProgress.IsActive = false;
-        LoginButton.IsEnabled = true;
-        LoginServerPanel.Visibility = Visibility.Visible;
-        LoginServerStatus.Visibility = Visibility.Collapsed;
-        RegisterLink.Visibility = Visibility.Collapsed;
-
-        // Dev convenience credentials (per-server last-used email overrides the email below
-        // via the selector's SelectionChanged once a server has been used).
-        try
-        {
-            var app = Application.Current as App;
-            var hostEnvironment = app?.Host?.Services?.GetService<IHostEnvironment>();
-            if (hostEnvironment?.IsDevelopment() == true)
-            {
-                LoginEmail.Text = "admin@localhost.com";
-                LoginPassword.Password = "P@ssword1";
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Shell] InitializeLoginOverlay error: {ex.Message}");
-        }
-
-#if __WASM__
-        // Canvas rendering hides the login form from the browser's password manager, so ask
-        // the Credential Management API for a stored credential instead (Chromium only).
-        _ = PrefillLoginFromBrowserCredentialsAsync();
-#endif
-
-        // Runtime config (WASM: /config.json from nginx env var) may pin the server URL —
-        // hide the whole server selector and use the configured value.
-        if (asToolkit.Client.Core.Configuration.RuntimeConfig.IsServerUrlRestricted)
-        {
-            LoginServerPanel.Visibility = Visibility.Collapsed;
-            _ = RefreshRegistrationLinkAsync(asToolkit.Client.Core.Configuration.RuntimeConfig.RestrictServerUrl!);
-            return;
-        }
-
-        _ = InitializeServerSelectorAsync();
-    }
-
-#if __WASM__
-    [System.Runtime.Versioning.SupportedOSPlatform("browser")]
-    private async Task PrefillLoginFromBrowserCredentialsAsync()
-    {
-        try
-        {
-            var credential = await BrowserCredentialService.TryGetAsync();
-            if (credential == null)
-            {
-                return;
-            }
-
-            // The browser chooser is async — don't clobber a password the user typed meanwhile
-            // (also skips the DEBUG dev-convenience credentials).
-            if (!string.IsNullOrEmpty(LoginPassword.Password))
-            {
-                return;
-            }
-
-            LoginEmail.Text = credential.Email;
-            LoginPassword.Password = credential.Password;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Shell] PrefillLoginFromBrowserCredentialsAsync error: {ex.Message}");
-        }
-    }
-#endif
-
-    private async Task InitializeServerSelectorAsync()
-    {
-        try
-        {
-            var app = Application.Current as App;
-            var store = app?.Host?.Services?.GetService<IServerProfileStore>();
-            if (store == null) return;
-
-            var servers = await store.GetAllAsync();
-            var lastUsed = await store.GetLastUsedAsync();
-
-            LoginServerSelector.ItemsSource = servers;
-            // Setting SelectedItem raises SelectionChanged, which applies the email prefill,
-            // status badge and registration-link refresh for the chosen server.
-            LoginServerSelector.SelectedItem =
-                servers.FirstOrDefault(s => s.Id == lastUsed.Id) ?? servers.FirstOrDefault();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Shell] InitializeServerSelectorAsync error: {ex.Message}");
-        }
-    }
-
-    private void LoginServerSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (LoginServerSelector.SelectedItem is not ServerProfile profile)
-        {
-            return;
-        }
-
-        // Auto-fill the last email used for this server (don't clear an existing entry otherwise).
-        if (!string.IsNullOrWhiteSpace(profile.LastUsedEmail))
-        {
-            LoginEmail.Text = profile.LastUsedEmail;
-        }
-
-        _ = RefreshServerStatusAsync(profile.Url);
-        _ = RefreshRegistrationLinkAsync(profile.Url);
-    }
-
-    private async Task RefreshServerStatusAsync(string serverUrl)
-    {
-        try
-        {
-            LoginServerStatus.Visibility = Visibility.Visible;
-            LoginServerStatus.Text = Localize("ServerDialog.StatusChecking", "prüfe …");
-
-            var app = Application.Current as App;
-            var serverInfo = app?.Host?.Services?.GetService<IServerInfoService>();
-            if (serverInfo == null)
-            {
-                LoginServerStatus.Visibility = Visibility.Collapsed;
-                return;
-            }
-
-            var info = await serverInfo.GetServerInfoAsync(serverUrl);
-            LoginServerStatus.Text = info != null
-                ? string.Format(Localize("ServerDialog.StatusConnectedFormat", "asToolkit v{0} · verbunden"), info.Version)
-                : Localize("ServerDialog.StatusOffline", "offline");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Shell] RefreshServerStatusAsync error: {ex.Message}");
-            LoginServerStatus.Text = Localize("ServerDialog.StatusOffline", "offline");
-        }
-    }
-
-    private async void ManageServers_Click(object sender, RoutedEventArgs e)
-    {
-        var app = Application.Current as App;
-        var store = app?.Host?.Services?.GetService<IServerProfileStore>();
-        var serverInfo = app?.Host?.Services?.GetService<IServerInfoService>();
-        if (store == null || serverInfo == null || this.XamlRoot == null)
-        {
-            return;
-        }
-
-        var currentId = (LoginServerSelector.SelectedItem as ServerProfile)?.Id;
-
-        var dialog = new ServerManagementDialog(store, serverInfo, this.XamlRoot);
-        await dialog.ShowAsync();
-
-        // Reload the selector after management; keep the current selection if it still exists.
-        var servers = await store.GetAllAsync();
-        LoginServerSelector.ItemsSource = servers;
-        LoginServerSelector.SelectedItem =
-            servers.FirstOrDefault(s => s.Id == currentId) ?? servers.FirstOrDefault();
-    }
-
-    private static string Localize(string key, string fallback)
-    {
-        try
-        {
-            var value = Windows.ApplicationModel.Resources.ResourceLoader
-                .GetForViewIndependentUse().GetString(key);
-            return string.IsNullOrEmpty(value) ? fallback : value;
-        }
-        catch
-        {
-            return fallback;
-        }
-    }
-
-    private async Task RefreshRegistrationLinkAsync(string serverUrl)
-    {
-        try
-        {
-            // Skip half-typed URLs like "https://" — Uri.TryCreate would
-            // accept them but the request is guaranteed to fail.
-            if (!Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri) ||
-                string.IsNullOrWhiteSpace(uri.Host))
-            {
-                RegisterLink.Visibility = Visibility.Collapsed;
-                return;
-            }
-
-            var app = Application.Current as App;
-            var serverInfoService = app?.Host?.Services?.GetService<IServerInfoService>();
-            if (serverInfoService == null) return;
-
-            var info = await serverInfoService.GetServerInfoAsync(serverUrl);
-            RegisterLink.Visibility = info?.RegistrationEnabled == true
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Shell] RefreshRegistrationLinkAsync error: {ex.Message}");
-            RegisterLink.Visibility = Visibility.Collapsed;
-        }
-    }
-
-    private void LoginInput_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
-    {
-        if (e.Key == Windows.System.VirtualKey.Enter)
-        {
-            e.Handled = true;
-            LoginButton_Click(LoginButton, new RoutedEventArgs());
-        }
-    }
-
-    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Interoperability", "CA1416", Justification = "Browser-specific calls are guarded by #if __WASM__")]
-    private async void LoginButton_Click(object sender, RoutedEventArgs e)
-    {
-        var selectedProfile = LoginServerSelector.SelectedItem as ServerProfile;
-        var serverUrl = asToolkit.Client.Core.Configuration.RuntimeConfig.IsServerUrlRestricted
-            ? asToolkit.Client.Core.Configuration.RuntimeConfig.RestrictServerUrl!
-            : selectedProfile?.Url;
-        var email = LoginEmail.Text?.Trim();
-        var password = LoginPassword.Password;
-
-        if (string.IsNullOrWhiteSpace(serverUrl) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
-        {
-            LoginErrorText.Text = "Please fill in all fields";
-            LoginErrorBanner.Visibility = Visibility.Visible;
-            return;
-        }
-
-        serverUrl = ServerUrlUtil.Normalize(serverUrl);
-
-        // If the user typed the URL and clicked Login without leaving the
-        // field first, LostFocus may not have fired — refresh the registration
-        // link visibility now (fire-and-forget; do not block login).
-        _ = RefreshRegistrationLinkAsync(serverUrl);
-
-        LoginButton.IsEnabled = false;
-        LoginProgress.Visibility = Visibility.Visible;
-        LoginProgress.IsActive = true;
-        LoginErrorBanner.Visibility = Visibility.Collapsed;
-
-        try
-        {
-            var app = Application.Current as App;
-            if (app?.Host?.Services == null)
-            {
-                throw new InvalidOperationException("Services not available");
-            }
-
-            var auth = app.Host.Services.GetRequiredService<IAuthenticationService>();
-            var tenantContext = app.Host.Services.GetRequiredService<ITenantContextService>();
-            var shellModel = app.Host.Services.GetRequiredService<ShellModel>();
-            var tokenStorage = app.Host.Services.GetRequiredService<ITokenStorageService>();
-
-            var rememberMe = LoginRememberMe.IsChecked == true;
-
-            var credentials = new Dictionary<string, string>
-            {
-                ["Email"] = email,
-                ["Password"] = password,
-                ["ServerUrl"] = serverUrl,
-                ["RememberMe"] = rememberMe.ToString()
-            };
-
-            var success = await auth.LoginAsync(dispatcher: null, credentials);
-
-            if (success)
-            {
-#if __WASM__
-                // Hand the credentials to the browser's password store (native "save
-                // password?" prompt) — the canvas-rendered form can't trigger it itself.
-                _ = BrowserCredentialService.TryStoreAsync(email, password);
-#endif
-
-                // Remember the server used and its email so it becomes the default next time.
-                if (selectedProfile != null)
-                {
-                    var profileStore = app.Host.Services.GetService<IServerProfileStore>();
-                    if (profileStore != null)
-                    {
-                        await profileStore.SetLastUsedAsync(selectedProfile.Id, email);
-                    }
-                }
-
-                shellModel.UpdateAuthenticationState(true);
-
-                if (tenantContext.AvailableTenants.Count == 0)
-                {
-                    shellModel.UpdateNoTenantsState(true);
-                }
-                else
-                {
-                    var navigator = Splash.Navigator() ?? app.Host.Services.GetService<INavigator>();
-
-                    if (navigator != null)
-                    {
-                        await navigator.NavigateViewModelAsync<DashboardModel>(this, qualifier: Qualifiers.ClearBackStack);
-                    }
-                }
-            }
-            else
-            {
-                LoginErrorText.Text = "Login failed. Please check your credentials and server URL.";
-                LoginErrorBanner.Visibility = Visibility.Visible;
-            }
-        }
-        catch (ApiException ex)
-        {
-            LoginErrorText.Text = ex.CombinedMessage;
-            LoginErrorBanner.Visibility = Visibility.Visible;
-        }
-        catch (Exception ex)
-        {
-            LoginErrorText.Text = $"An error occurred: {ex.Message}";
-            LoginErrorBanner.Visibility = Visibility.Visible;
-        }
-        finally
-        {
-            LoginProgress.Visibility = Visibility.Collapsed;
-            LoginProgress.IsActive = false;
-            LoginButton.IsEnabled = true;
-        }
-    }
-
-    #endregion
-
-    #region Registration Overlay
-
-    private void RegisterLink_Click(Microsoft.UI.Xaml.Documents.Hyperlink sender, Microsoft.UI.Xaml.Documents.HyperlinkClickEventArgs args)
-    {
-        ResetRegistrationOverlay();
+        RegistrationOverlay.Reset();
+        RegistrationOverlay.ServerUrl = LoginOverlay.SelectedServerUrl;
         LoginOverlay.Visibility = Visibility.Collapsed;
         RegistrationOverlay.Visibility = Visibility.Visible;
     }
 
-    private void ResetRegistrationOverlay()
-    {
-        RegisterFirstname.Text = string.Empty;
-        RegisterLastname.Text = string.Empty;
-        RegisterEmail.Text = string.Empty;
-        RegisterPassword.Password = string.Empty;
-        RegisterPasswordConfirm.Password = string.Empty;
-        RegisterErrorBanner.Visibility = Visibility.Collapsed;
-        RegisterErrorText.Text = string.Empty;
-        RegisterProgress.Visibility = Visibility.Collapsed;
-        RegisterProgress.IsActive = false;
-        RegisterSubmitButton.IsEnabled = true;
-        RegisterCancelButton.IsEnabled = true;
-    }
-
-    private void RegisterCancel_Click(object sender, RoutedEventArgs e)
+    private void OnBackToLoginRequested(object? sender, EventArgs e)
     {
         RegistrationOverlay.Visibility = Visibility.Collapsed;
         LoginOverlay.Visibility = Visibility.Visible;
     }
 
-    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Interoperability", "CA1416", Justification = "Browser-specific calls are guarded by #if __WASM__")]
-    private async void RegisterSubmit_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Shared post-success flow for login and registration: mark the session as
+    /// authenticated, then either show the first-tenant overlay (no tenants yet) or
+    /// navigate to the dashboard with a cleared back stack.
+    /// </summary>
+    private async Task OnAuthOverlaySucceededAsync()
     {
-        var firstname = RegisterFirstname.Text?.Trim();
-        var lastname = RegisterLastname.Text?.Trim();
-        var email = RegisterEmail.Text?.Trim();
-        var password = RegisterPassword.Password;
-        var passwordConfirm = RegisterPasswordConfirm.Password;
-
-        if (string.IsNullOrWhiteSpace(firstname) || string.IsNullOrWhiteSpace(lastname) ||
-            string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        var app = Application.Current as App;
+        if (app?.Host?.Services == null)
         {
-            RegisterErrorText.Text = "Bitte füllen Sie alle Felder aus.";
-            RegisterErrorBanner.Visibility = Visibility.Visible;
-            return;
+            throw new InvalidOperationException("Services not available");
         }
 
-        if (password != passwordConfirm)
+        var tenantContext = app.Host.Services.GetRequiredService<ITenantContextService>();
+        var shellModel = app.Host.Services.GetRequiredService<ShellModel>();
+
+        shellModel.UpdateAuthenticationState(true);
+
+        if (tenantContext.AvailableTenants.Count == 0)
         {
-            RegisterErrorText.Text = "Die Passwörter stimmen nicht überein.";
-            RegisterErrorBanner.Visibility = Visibility.Visible;
-            return;
+            shellModel.UpdateNoTenantsState(true);
         }
-
-        var serverUrl = asToolkit.Client.Core.Configuration.RuntimeConfig.IsServerUrlRestricted
-            ? asToolkit.Client.Core.Configuration.RuntimeConfig.RestrictServerUrl!
-            : (LoginServerSelector.SelectedItem as ServerProfile)?.Url;
-
-        if (string.IsNullOrWhiteSpace(serverUrl))
+        else
         {
-            RegisterErrorText.Text = "Server-URL fehlt.";
-            RegisterErrorBanner.Visibility = Visibility.Visible;
-            return;
-        }
-
-        serverUrl = ServerUrlUtil.Normalize(serverUrl);
-
-        RegisterSubmitButton.IsEnabled = false;
-        RegisterCancelButton.IsEnabled = false;
-        RegisterProgress.Visibility = Visibility.Visible;
-        RegisterProgress.IsActive = true;
-        RegisterErrorBanner.Visibility = Visibility.Collapsed;
-
-        try
-        {
-            var app = Application.Current as App;
-            if (app?.Host?.Services == null)
-            {
-                throw new InvalidOperationException("Services not available");
-            }
-
-            var maErpAuth = app.Host.Services.GetRequiredService<IMaErpAuthenticationService>();
-            var tenantContext = app.Host.Services.GetRequiredService<ITenantContextService>();
-            var shellModel = app.Host.Services.GetRequiredService<ShellModel>();
-
-            var request = new RegisterRequestDto
-            {
-                Firstname = firstname,
-                Lastname = lastname,
-                Email = email,
-                Username = email,
-                Password = password
-            };
-
-            var response = await maErpAuth.RegisterAsync(serverUrl, request);
-
-            if (response?.Succeeded == true && !string.IsNullOrEmpty(response.Token))
-            {
-#if __WASM__
-                // Same as after login: offer the browser's "save password?" prompt.
-                _ = BrowserCredentialService.TryStoreAsync(email, password);
-#endif
-
-                shellModel.UpdateAuthenticationState(true);
-
-                if (tenantContext.AvailableTenants.Count == 0)
-                {
-                    shellModel.UpdateNoTenantsState(true);
-                }
-                else
-                {
-                    var navigator = Splash.Navigator() ?? app.Host.Services.GetService<INavigator>();
-                    if (navigator != null)
-                    {
-                        await navigator.NavigateViewModelAsync<DashboardModel>(this, qualifier: Qualifiers.ClearBackStack);
-                    }
-                }
-            }
-            else
-            {
-                RegisterErrorText.Text = response?.Message ?? "Registrierung fehlgeschlagen.";
-                RegisterErrorBanner.Visibility = Visibility.Visible;
-            }
-        }
-        catch (ApiException ex)
-        {
-            RegisterErrorText.Text = ex.CombinedMessage;
-            RegisterErrorBanner.Visibility = Visibility.Visible;
-        }
-        catch (Exception ex)
-        {
-            RegisterErrorText.Text = ex.Message;
-            RegisterErrorBanner.Visibility = Visibility.Visible;
-        }
-        finally
-        {
-            RegisterProgress.Visibility = Visibility.Collapsed;
-            RegisterProgress.IsActive = false;
-            RegisterSubmitButton.IsEnabled = true;
-            RegisterCancelButton.IsEnabled = true;
-        }
-    }
-
-    #endregion
-
-    #region First Tenant Creation
-
-    private void FirstTenantName_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        FirstTenantSaveButton.IsEnabled = !string.IsNullOrWhiteSpace(FirstTenantName.Text);
-    }
-
-    private async void FirstTenantCancel_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var app = Application.Current as App;
-            if (app?.Host?.Services != null)
-            {
-                var auth = app.Host.Services.GetRequiredService<IAuthenticationService>();
-                await auth.LogoutAsync(CancellationToken.None);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[Shell] FirstTenantCancel_Click error: {ex.Message}");
-        }
-    }
-
-    private async void FirstTenantSave_Click(object sender, RoutedEventArgs e)
-    {
-        var tenantName = FirstTenantName.Text?.Trim();
-        if (string.IsNullOrWhiteSpace(tenantName)) return;
-
-        FirstTenantSaveButton.IsEnabled = false;
-        FirstTenantCancelButton.IsEnabled = false;
-        FirstTenantProgress.Visibility = Visibility.Visible;
-        FirstTenantProgress.IsActive = true;
-        FirstTenantErrorBanner.Visibility = Visibility.Collapsed;
-
-        try
-        {
-            var app = Application.Current as App;
-            if (app?.Host?.Services == null)
-            {
-                throw new InvalidOperationException("Services not available");
-            }
-
-            var tenantService = app.Host.Services.GetRequiredService<ITenantService>();
-            var tenantContext = app.Host.Services.GetRequiredService<ITenantContextService>();
-            var shellModel = app.Host.Services.GetRequiredService<ShellModel>();
-
-            var input = new TenantInputDto
-            {
-                Name = tenantName,
-                Description = FirstTenantDescription.Text?.Trim() ?? string.Empty
-            };
-
-            var newTenantId = await tenantService.CreateTenantAsync(input);
-
-            await tenantContext.RefreshTokenAndTenantsAsync();
-
-            if (newTenantId != Guid.Empty)
-            {
-                await tenantContext.SetCurrentTenantAsync(newTenantId);
-            }
-
-            shellModel.UpdateNoTenantsState(false);
-
             var navigator = Splash.Navigator() ?? app.Host.Services.GetService<INavigator>();
 
             if (navigator != null)
             {
-                await navigator.NavigateViewModelAsync<DashboardModel>(this, qualifier: Qualifiers.ClearBackStack);
+                await NavigateToDashboardAsync(navigator);
             }
         }
-        catch (ApiException ex)
+    }
+
+    /// <summary>
+    /// The first tenant was created — leave the no-tenants state and go to the dashboard.
+    /// </summary>
+    private async Task OnFirstTenantCreatedAsync()
+    {
+        var app = Application.Current as App;
+        if (app?.Host?.Services == null)
         {
-            FirstTenantErrorText.Text = ex.CombinedMessage;
-            FirstTenantErrorBanner.Visibility = Visibility.Visible;
+            throw new InvalidOperationException("Services not available");
         }
-        catch (Exception ex)
+
+        var shellModel = app.Host.Services.GetRequiredService<ShellModel>();
+        shellModel.UpdateNoTenantsState(false);
+
+        var navigator = Splash.Navigator() ?? app.Host.Services.GetService<INavigator>();
+
+        if (navigator != null)
         {
-            FirstTenantErrorText.Text = ex.Message;
-            FirstTenantErrorBanner.Visibility = Visibility.Visible;
+            await NavigateToDashboardAsync(navigator);
         }
-        finally
+    }
+
+    /// <summary>
+    /// Post-auth dashboard navigation. The ClearBackStack-qualified request can be
+    /// swallowed while the auth flow is still settling — fall back to the plain
+    /// navigation the sidebar click uses (which is known to work) if it was not handled.
+    /// </summary>
+    private async Task NavigateToDashboardAsync(INavigator navigator)
+    {
+        var response = await navigator.NavigateViewModelAsync<DashboardModel>(this, qualifier: Qualifiers.ClearBackStack);
+        Console.WriteLine($"[Shell] Post-auth dashboard navigation (ClearBackStack): {(response is null ? "unhandled" : "ok")}");
+
+        if (response is null)
         {
-            FirstTenantProgress.Visibility = Visibility.Collapsed;
-            FirstTenantProgress.IsActive = false;
-            FirstTenantSaveButton.IsEnabled = !string.IsNullOrWhiteSpace(FirstTenantName.Text);
-            FirstTenantCancelButton.IsEnabled = true;
+            response = await navigator.NavigateViewModelAsync<DashboardModel>(this);
+            Console.WriteLine($"[Shell] Post-auth dashboard navigation fallback: {(response is null ? "unhandled" : "ok")}");
         }
     }
 

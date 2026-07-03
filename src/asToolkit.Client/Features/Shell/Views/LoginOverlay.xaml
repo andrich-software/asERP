@@ -1,0 +1,169 @@
+<UserControl x:Class="asToolkit.Client.Features.Shell.Views.LoginOverlay"
+     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+     mc:Ignorable="d"
+     d:DesignHeight="800"
+     d:DesignWidth="1280">
+
+  <Grid Background="{ThemeResource SurfaceVariantBrush}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch">
+      <Grid Padding="24"
+            MinHeight="600">
+        <StackPanel Spacing="20"
+                    MaxWidth="440"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+
+          <!-- Brand + Welcome Header -->
+          <StackPanel Spacing="12"
+                      HorizontalAlignment="Center"
+                      Margin="0,0,0,4">
+            <Image Source="ms-appx:///Assets/Icons/icon.svg"
+                   Width="48"
+                   Height="48"
+                   Stretch="Uniform"
+                   HorizontalAlignment="Center" />
+            <TextBlock x:Uid="Shell.Login.Title"
+                       Style="{StaticResource HeadlineMedium}"
+                       Foreground="{ThemeResource OnBackgroundBrush}"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center" />
+            <TextBlock x:Uid="Shell.Login.Subtitle"
+                       Style="{StaticResource BodyMedium}"
+                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+
+          <!-- Error Message Banner -->
+          <Border x:Name="LoginErrorBanner"
+                  Background="{ThemeResource ErrorContainerBrush}"
+                  CornerRadius="8"
+                  Padding="14,12"
+                  Visibility="Collapsed">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <FontIcon Grid.Column="0"
+                        Glyph="&#xE783;"
+                        FontSize="18"
+                        Foreground="{ThemeResource OnErrorContainerBrush}"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center" />
+              <TextBlock x:Name="LoginErrorText"
+                         Grid.Column="1"
+                         Style="{StaticResource BodySmall}"
+                         Foreground="{ThemeResource OnErrorContainerBrush}"
+                         TextWrapping="Wrap"
+                         VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+
+          <!-- Login Form Card -->
+          <Border Background="{ThemeResource SurfaceBrush}"
+                  CornerRadius="12"
+                  Translation="0,0,8">
+            <Border.Shadow>
+              <ThemeShadow />
+            </Border.Shadow>
+            <StackPanel Padding="28,24,28,24"
+                        Spacing="18">
+              <TextBlock x:Uid="Shell.Login.FormTitle"
+                         Style="{StaticResource TitleMedium}"
+                         Foreground="{ThemeResource OnSurfaceBrush}"
+                         Margin="0,0,0,2" />
+
+              <StackPanel x:Name="LoginServerPanel"
+                          Spacing="4">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <ComboBox x:Name="LoginServerSelector"
+                            x:Uid="Shell.Login.ServerSelector"
+                            Grid.Column="0"
+                            HorizontalAlignment="Stretch"
+                            DisplayMemberPath="Name"
+                            AutomationProperties.Name="Server"
+                            SelectionChanged="LoginServerSelector_SelectionChanged" />
+                  <Button x:Name="ManageServersButton"
+                          Grid.Column="1"
+                          Margin="8,0,0,0"
+                          VerticalAlignment="Bottom"
+                          Height="40"
+                          AutomationProperties.Name="Server verwalten"
+                          ToolTipService.ToolTip="Server verwalten"
+                          Click="ManageServers_Click">
+                    <FontIcon Glyph="&#xE713;"
+                              FontSize="16" />
+                  </Button>
+                </Grid>
+                <TextBlock x:Name="LoginServerStatus"
+                           Style="{StaticResource BodySmall}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                           Margin="2,0,0,0"
+                           Visibility="Collapsed" />
+              </StackPanel>
+
+              <TextBox x:Name="LoginEmail"
+                       x:Uid="Shell.Login.Email"
+                       InputScope="EmailSmtpAddress"
+                       AutomationProperties.Name="Email"
+                       AutomationProperties.AutomationId="login-email"
+                       KeyDown="LoginInput_KeyDown" />
+
+              <PasswordBox x:Name="LoginPassword"
+                           x:Uid="Shell.Login.Password"
+                           AutomationProperties.Name="Password"
+                           AutomationProperties.AutomationId="login-password"
+                           KeyDown="LoginInput_KeyDown" />
+
+              <Grid Margin="0,2,0,0">
+                <CheckBox x:Name="LoginRememberMe"
+                          x:Uid="Shell.Login.RememberMe"
+                          IsChecked="False"
+                          HorizontalAlignment="Left" />
+              </Grid>
+
+              <Button x:Name="LoginButton"
+                      x:Uid="Shell.Login.LoginButton"
+                      Style="{StaticResource FilledButtonStyle}"
+                      HorizontalAlignment="Stretch"
+                      Height="40"
+                      Margin="0,4,0,0"
+                      Click="LoginButton_Click" />
+
+              <ProgressRing x:Name="LoginProgress"
+                            IsActive="False"
+                            Width="22"
+                            Height="22"
+                            Visibility="Collapsed"
+                            HorizontalAlignment="Center" />
+            </StackPanel>
+          </Border>
+
+          <!-- Register Link -->
+          <TextBlock x:Name="RegisterLink"
+                     Visibility="Collapsed"
+                     HorizontalAlignment="Center"
+                     Style="{StaticResource BodySmall}"
+                     Foreground="{ThemeResource OnSurfaceVariantBrush}">
+            <Hyperlink Click="RegisterLink_Click">
+              <Run x:Uid="Shell.Login.RegisterLink" />
+            </Hyperlink>
+          </TextBlock>
+
+        </StackPanel>
+      </Grid>
+    </ScrollViewer>
+  </Grid>
+</UserControl>
