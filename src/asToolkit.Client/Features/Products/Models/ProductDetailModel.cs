@@ -42,10 +42,18 @@ public partial record ProductDetailModel
     });
 
     /// <summary>
-    /// Read-only gallery: the product's images with their thumbnail bytes loaded via the
-    /// authed client (first in the order is the primary image).
+    /// Gate for the lazy images feed; flipped once when the images tab is first selected.
     /// </summary>
-    public IListFeed<ProductImageRow> Images => ListFeed.Async(async ct =>
+    public IState<bool> ImagesTabRequested => State<bool>.Value(this, () => false);
+
+    /// <summary>
+    /// Read-only gallery: the product's images with their thumbnail bytes loaded via the
+    /// authed client (first in the order is the primary image). Stays dormant until
+    /// <see cref="RequestImagesTab"/> flips the gate (lazy per-tab feed).
+    /// </summary>
+    public IListFeed<ProductImageRow> Images => ImagesTabRequested
+        .Where(requested => requested)
+        .SelectAsync(async (_, ct) =>
     {
         var images = await _productService.GetProductImagesAsync(_productId, ct);
         var rows = new List<ProductImageRow>();
@@ -73,7 +81,14 @@ public partial record ProductDetailModel
         }
 
         return (IImmutableList<ProductImageRow>)rows.ToImmutableList();
-    });
+    })
+        .AsListFeed();
+
+    /// <summary>
+    /// Start loading the images feed; called from the page when the images tab is first selected.
+    /// </summary>
+    public async ValueTask RequestImagesTab(CancellationToken ct = default)
+        => await ImagesTabRequested.UpdateAsync(_ => true, ct);
 
     /// <summary>
     /// Navigate to edit product page.

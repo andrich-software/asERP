@@ -489,10 +489,10 @@
   <data name="CustomerListPage.Header.EnrollmentDate.Text" xml:space="preserve">
     <value>Registrierungsdatum</value>
   </data>
-  <data name="CustomerListPage.NoCustomers.Text" xml:space="preserve">
+  <data name="CustomerListPage.NoCustomers.Message" xml:space="preserve">
     <value>Keine Kunden gefunden</value>
   </data>
-  <data name="CustomerListPage.LoadError.Text" xml:space="preserve">
+  <data name="CustomerListPage.LoadError.Message" xml:space="preserve">
     <value>Kunden konnten nicht geladen werden</value>
   </data>
   <data name="CustomerListPage.PreviousPage.ToolTip" xml:space="preserve">
@@ -613,10 +613,10 @@
   <data name="SalesListPage.Header.DateSalesed.Text" xml:space="preserve">
     <value>Bestelldatum</value>
   </data>
-  <data name="SalesListPage.NoSaless.Text" xml:space="preserve">
+  <data name="SalesListPage.NoSaless.Message" xml:space="preserve">
     <value>Keine Verkäufe gefunden</value>
   </data>
-  <data name="SalesListPage.LoadError.Text" xml:space="preserve">
+  <data name="SalesListPage.LoadError.Message" xml:space="preserve">
     <value>Verkäufe konnten nicht geladen werden</value>
   </data>
   <data name="SalesListPage.PreviousPage.ToolTip" xml:space="preserve">
@@ -666,10 +666,10 @@
   <data name="ProductListPage.Header.Msrp.Text" xml:space="preserve">
     <value>UVP</value>
   </data>
-  <data name="ProductListPage.NoProducts.Text" xml:space="preserve">
+  <data name="ProductListPage.NoProducts.Message" xml:space="preserve">
     <value>Keine Produkte gefunden</value>
   </data>
-  <data name="ProductListPage.LoadError.Text" xml:space="preserve">
+  <data name="ProductListPage.LoadError.Message" xml:space="preserve">
     <value>Produkte konnten nicht geladen werden</value>
   </data>
   <data name="ProductListPage.EmptyNoChannelTitle" xml:space="preserve">
@@ -749,10 +749,10 @@
   <data name="InvoiceListPage.Header.InvoiceDate.Text" xml:space="preserve">
     <value>Rechnungsdatum</value>
   </data>
-  <data name="InvoiceListPage.NoInvoices.Text" xml:space="preserve">
+  <data name="InvoiceListPage.NoInvoices.Message" xml:space="preserve">
     <value>Keine Rechnungen gefunden</value>
   </data>
-  <data name="InvoiceListPage.LoadError.Text" xml:space="preserve">
+  <data name="InvoiceListPage.LoadError.Message" xml:space="preserve">
     <value>Rechnungen konnten nicht geladen werden</value>
   </data>
   <data name="InvoiceListPage.PreviousPage.ToolTip" xml:space="preserve">
@@ -793,10 +793,10 @@
   <data name="ManufacturerListPage.Header.Country.Text" xml:space="preserve">
     <value>Land</value>
   </data>
-  <data name="ManufacturerListPage.NoManufacturers.Text" xml:space="preserve">
+  <data name="ManufacturerListPage.NoManufacturers.Message" xml:space="preserve">
     <value>Keine Hersteller gefunden</value>
   </data>
-  <data name="ManufacturerListPage.LoadError.Text" xml:space="preserve">
+  <data name="ManufacturerListPage.LoadError.Message" xml:space="preserve">
     <value>Hersteller konnten nicht geladen werden</value>
   </data>
   <data name="ManufacturerListPage.PreviousPage.ToolTip" xml:space="preserve">
@@ -973,10 +973,10 @@
   <data name="WarehouseListPage.Header.Name.Text" xml:space="preserve">
     <value>Name</value>
   </data>
-  <data name="WarehouseListPage.NoWarehouses.Text" xml:space="preserve">
+  <data name="WarehouseListPage.NoWarehouses.Message" xml:space="preserve">
     <value>Keine Lager gefunden</value>
   </data>
-  <data name="WarehouseListPage.LoadError.Text" xml:space="preserve">
+  <data name="WarehouseListPage.LoadError.Message" xml:space="preserve">
     <value>Lager konnten nicht geladen werden</value>
   </data>
   <data name="WarehouseListPage.PreviousPage.ToolTip" xml:space="preserve">
@@ -1010,16 +1010,16 @@
   </data>
 
   <!-- Customer Detail Page - Sections -->
-  <data name="CustomerDetailPage.Section.ContactInformation.Text" xml:space="preserve">
+  <data name="CustomerDetailPage.Section.ContactInformation.Header" xml:space="preserve">
     <value>Kontaktinformationen</value>
   </data>
-  <data name="CustomerDetailPage.Section.BusinessData.Text" xml:space="preserve">
+  <data name="CustomerDetailPage.Section.BusinessData.Header" xml:space="preserve">
     <value>Geschäftsdaten</value>
   </data>
   <data name="CustomerDetailPage.Section.Addresses.Text" xml:space="preserve">
     <value>Adressen</value>
   </data>
-  <data name="CustomerDetailPage.Section.Notes.Text" xml:space="preserve">
+  <data name="CustomerDetailPage.Section.Notes.Header" xml:space="preserve">
     <value>Notizen</value>
   </data>
   <data name="CustomerDetailPage.Section.Saless.Text" xml:space="preserve">
@@ -1037,7 +1037,7 @@
   <data name="CustomerDetailPage.SalesHeader.DateSalesed.Text" xml:space="preserve">
     <value>Bestelldatum</value>
   </data>
-  <data name="CustomerDetailPage.NoSaless.Text" xml:space="preserve">
+  <data name="CustomerDetailPage.NoSaless.Message" xml:space="preserve">
     <value>Keine Bestellungen vorhanden</value>
   </data>
   <data name="CustomerDetailPage.SalessLoadError.Text" xml:space="preserve">
@@ -1087,10 +1087,10 @@
   </data>
 
   <!-- Customer Detail Page - Empty States -->
-  <data name="CustomerDetailPage.NoAddresses.Text" xml:space="preserve">
+  <data name="CustomerDetailPage.NoAddresses.Message" xml:space="preserve">
     <value>Keine Adressen vorhanden</value>
   </data>
-  <data name="CustomerDetailPage.NoNotes.Text" xml:space="preserve">
+  <data name="CustomerDetailPage.NoNotes.Message" xml:space="preserve">
     <value>Keine Notizen vorhanden</value>
   </data>
 
@@ -1112,24 +1112,24 @@
   <data name="CustomerEditPage.TitleEdit" xml:space="preserve">
     <value>Kunde bearbeiten</value>
   </data>
-  <data name="CustomerEditPage.AppBarButton.Cancel.Label" xml:space="preserve">
+  <data name="CustomerEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
     <value>Abbrechen</value>
   </data>
-  <data name="CustomerEditPage.AppBarButton.Save.Label" xml:space="preserve">
+  <data name="CustomerEditPage.HeaderAction.Save.Content" xml:space="preserve">
     <value>Speichern</value>
   </data>
 
   <!-- Customer Edit Page - Sections -->
-  <data name="CustomerEditPage.Section.PersonalInformation.Text" xml:space="preserve">
+  <data name="CustomerEditPage.Section.PersonalInformation.Header" xml:space="preserve">
     <value>Persönliche Daten</value>
   </data>
-  <data name="CustomerEditPage.Section.ContactInformation.Text" xml:space="preserve">
+  <data name="CustomerEditPage.Section.ContactInformation.Header" xml:space="preserve">
     <value>Kontaktinformationen</value>
   </data>
-  <data name="CustomerEditPage.Section.BusinessData.Text" xml:space="preserve">
+  <data name="CustomerEditPage.Section.BusinessData.Header" xml:space="preserve">
     <value>Geschäftsdaten</value>
   </data>
-  <data name="CustomerEditPage.Section.Notes.Text" xml:space="preserve">
+  <data name="CustomerEditPage.Section.Notes.Header" xml:space="preserve">
     <value>Notizen</value>
   </data>
 
@@ -1206,7 +1206,7 @@
   </data>
 
   <!-- Customer Edit Page - Addresses Section -->
-  <data name="CustomerEditPage.Section.Addresses.Text" xml:space="preserve">
+  <data name="CustomerEditPage.Section.Addresses.Header" xml:space="preserve">
     <value>Adressen</value>
   </data>
   <data name="CustomerEditPage.Button.AddAddress.Content" xml:space="preserve">
@@ -1215,10 +1215,10 @@
   <data name="CustomerEditPage.Button.AddAddress.Text.Text" xml:space="preserve">
     <value>Hinzufügen</value>
   </data>
-  <data name="CustomerEditPage.NoAddresses.Text" xml:space="preserve">
+  <data name="CustomerEditPage.NoAddresses.Title" xml:space="preserve">
     <value>Keine Adressen vorhanden</value>
   </data>
-  <data name="CustomerEditPage.NoAddresses.Hint.Text" xml:space="preserve">
+  <data name="CustomerEditPage.NoAddresses.Message" xml:space="preserve">
     <value>Klicken Sie auf "Hinzufügen" um eine neue Adresse anzulegen</value>
   </data>
   <data name="CustomerEditPage.Badge.DeliveryAddress.Text" xml:space="preserve">
@@ -1315,10 +1315,10 @@
   <data name="AiModelListPage.Header.NCtx.Text" xml:space="preserve">
     <value>Kontext</value>
   </data>
-  <data name="AiModelListPage.NoAiModels.Text" xml:space="preserve">
+  <data name="AiModelListPage.NoAiModels.Message" xml:space="preserve">
     <value>Keine KI-Modelle gefunden</value>
   </data>
-  <data name="AiModelListPage.LoadError.Text" xml:space="preserve">
+  <data name="AiModelListPage.LoadError.Message" xml:space="preserve">
     <value>KI-Modelle konnten nicht geladen werden</value>
   </data>
   <data name="AiModelListPage.PreviousPage.ToolTip" xml:space="preserve">
@@ -1500,10 +1500,10 @@
   <data name="AiPromptListPage.Header.DateModified.Text" xml:space="preserve">
     <value>Geändert</value>
   </data>
-  <data name="AiPromptListPage.NoAiPrompts.Text" xml:space="preserve">
+  <data name="AiPromptListPage.NoAiPrompts.Message" xml:space="preserve">
     <value>Keine KI-Prompts gefunden</value>
   </data>
-  <data name="AiPromptListPage.LoadError.Text" xml:space="preserve">
+  <data name="AiPromptListPage.LoadError.Message" xml:space="preserve">
     <value>KI-Prompts konnten nicht geladen werden</value>
   </data>
   <data name="AiPromptListPage.PreviousPage.ToolTip" xml:space="preserve">
@@ -1629,10 +1629,10 @@
   <data name="TaxClassListPage.Header.TaxRate.Text" xml:space="preserve">
     <value>Steuersatz</value>
   </data>
-  <data name="TaxClassListPage.NoTaxClasses.Text" xml:space="preserve">
+  <data name="TaxClassListPage.NoTaxClasses.Message" xml:space="preserve">
     <value>Keine Steuerklassen gefunden</value>
   </data>
-  <data name="TaxClassListPage.LoadError.Text" xml:space="preserve">
+  <data name="TaxClassListPage.LoadError.Message" xml:space="preserve">
     <value>Steuerklassen konnten nicht geladen werden</value>
   </data>
   <data name="TaxClassListPage.PreviousPage.ToolTip" xml:space="preserve">
@@ -1752,10 +1752,10 @@
   <data name="ProductAttributeListPage.Header.ValueCount.Text" xml:space="preserve">
     <value>Werte</value>
   </data>
-  <data name="ProductAttributeListPage.NoProductAttributes.Text" xml:space="preserve">
+  <data name="ProductAttributeListPage.NoProductAttributes.Message" xml:space="preserve">
     <value>Keine Produkt-Attribute gefunden</value>
   </data>
-  <data name="ProductAttributeListPage.LoadError.Text" xml:space="preserve">
+  <data name="ProductAttributeListPage.LoadError.Message" xml:space="preserve">
     <value>Produkt-Attribute konnten nicht geladen werden</value>
   </data>
   <data name="ProductAttributeListPage.PreviousPage.ToolTip" xml:space="preserve">
@@ -1979,10 +1979,10 @@
   <data name="SalesChannelListPage.Header.DateCreated.Text" xml:space="preserve">
     <value>Erstellt am</value>
   </data>
-  <data name="SalesChannelListPage.NoSalesChannels.Text" xml:space="preserve">
+  <data name="SalesChannelListPage.NoSalesChannels.Message" xml:space="preserve">
     <value>Keine Vertriebskanäle gefunden</value>
   </data>
-  <data name="SalesChannelListPage.LoadError.Text" xml:space="preserve">
+  <data name="SalesChannelListPage.LoadError.Message" xml:space="preserve">
     <value>Vertriebskanäle konnten nicht geladen werden</value>
   </data>
   <data name="SalesChannelListPage.PreviousPage.ToolTip" xml:space="preserve">
@@ -2472,31 +2472,31 @@
   </data>
 
   <!-- Product Detail Page - Sections -->
-  <data name="ProductDetailPage.Section.Identifiers.Text" xml:space="preserve">
+  <data name="ProductDetailPage.Section.Identifiers.Header" xml:space="preserve">
     <value>Produktidentifikatoren</value>
   </data>
-  <data name="ProductDetailPage.Section.Images.Text" xml:space="preserve">
+  <data name="ProductDetailPage.Section.Images.Header" xml:space="preserve">
     <value>Bilder</value>
   </data>
-  <data name="ProductDetailPage.Section.Pricing.Text" xml:space="preserve">
+  <data name="ProductDetailPage.Section.Pricing.Header" xml:space="preserve">
     <value>Preise</value>
   </data>
-  <data name="ProductDetailPage.Section.Dimensions.Text" xml:space="preserve">
+  <data name="ProductDetailPage.Section.Dimensions.Header" xml:space="preserve">
     <value>Abmessungen und Gewicht</value>
   </data>
-  <data name="ProductDetailPage.Section.Description.Text" xml:space="preserve">
+  <data name="ProductDetailPage.Section.Description.Header" xml:space="preserve">
     <value>Beschreibung</value>
   </data>
-  <data name="ProductDetailPage.Section.OptimizedDescription.Text" xml:space="preserve">
+  <data name="ProductDetailPage.Section.OptimizedDescription.Header" xml:space="preserve">
     <value>Optimierte Beschreibung</value>
   </data>
-  <data name="ProductDetailPage.Section.Manufacturer.Text" xml:space="preserve">
+  <data name="ProductDetailPage.Section.Manufacturer.Header" xml:space="preserve">
     <value>Hersteller</value>
   </data>
   <data name="ProductDetailPage.Section.Variants.Text" xml:space="preserve">
     <value>Varianten</value>
   </data>
-  <data name="ProductDetailPage.Section.VariantOptions.Text" xml:space="preserve">
+  <data name="ProductDetailPage.Section.VariantOptions.Header" xml:space="preserve">
     <value>Variantenmerkmale</value>
   </data>
   <data name="ProductDetailPage.VariantColOptions.Text" xml:space="preserve">
@@ -2553,7 +2553,7 @@
   </data>
 
   <!-- Product Detail Page - Empty States -->
-  <data name="ProductDetailPage.NoDescription.Text" xml:space="preserve">
+  <data name="ProductDetailPage.NoDescription.Message" xml:space="preserve">
     <value>Keine Beschreibung vorhanden</value>
   </data>
 
@@ -2579,7 +2579,7 @@
   <data name="ProductEditPage.VariantOfLabel.Text" xml:space="preserve">
     <value>Variante von</value>
   </data>
-  <data name="ProductEditPage.Section.Variants.Text" xml:space="preserve">
+  <data name="ProductEditPage.Section.Variants.Header" xml:space="preserve">
     <value>Varianten</value>
   </data>
   <data name="ProductEditPage.SaveFirstHint.Text" xml:space="preserve">
@@ -2600,7 +2600,7 @@
   <data name="ProductEditPage.RemoveAxisButton.ToolTip" xml:space="preserve">
     <value>Achse entfernen</value>
   </data>
-  <data name="ProductEditPage.Section.Images.Text" xml:space="preserve">
+  <data name="ProductEditPage.Section.Images.Header" xml:space="preserve">
     <value>Bilder</value>
   </data>
   <data name="ProductEditPage.ImagesSaveFirstHint.Text" xml:space="preserve">
@@ -2639,30 +2639,30 @@
   <data name="ProductEditPage.VariantColPrice.Text" xml:space="preserve">
     <value>Preis</value>
   </data>
-  <data name="ProductEditPage.AppBarButton.Cancel.Label" xml:space="preserve">
+  <data name="ProductEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
     <value>Abbrechen</value>
   </data>
-  <data name="ProductEditPage.AppBarButton.Save.Label" xml:space="preserve">
+  <data name="ProductEditPage.HeaderAction.Save.Content" xml:space="preserve">
     <value>Speichern</value>
   </data>
 
   <!-- Product Edit Page - Sections -->
-  <data name="ProductEditPage.Section.BasicInformation.Text" xml:space="preserve">
+  <data name="ProductEditPage.Section.BasicInformation.Header" xml:space="preserve">
     <value>Grundinformationen</value>
   </data>
-  <data name="ProductEditPage.Section.Pricing.Text" xml:space="preserve">
+  <data name="ProductEditPage.Section.Pricing.Header" xml:space="preserve">
     <value>Preise</value>
   </data>
-  <data name="ProductEditPage.Section.Dimensions.Text" xml:space="preserve">
+  <data name="ProductEditPage.Section.Dimensions.Header" xml:space="preserve">
     <value>Abmessungen</value>
   </data>
-  <data name="ProductEditPage.Section.Relationships.Text" xml:space="preserve">
+  <data name="ProductEditPage.Section.Relationships.Header" xml:space="preserve">
     <value>Zuordnungen</value>
   </data>
-  <data name="ProductEditPage.Section.Description.Text" xml:space="preserve">
+  <data name="ProductEditPage.Section.Description.Header" xml:space="preserve">
     <value>Beschreibung</value>
   </data>
-  <data name="ProductEditPage.Section.OptimizedContent.Text" xml:space="preserve">
+  <data name="ProductEditPage.Section.OptimizedContent.Header" xml:space="preserve">
     <value>Optimierte Inhalte</value>
   </data>
 
@@ -2919,28 +2919,28 @@
   </data>
 
   <!-- Sales Detail Page - Sections -->
-  <data name="SalesDetailPage.Section.FinancialInformation.Text" xml:space="preserve">
+  <data name="SalesDetailPage.Section.FinancialInformation.Header" xml:space="preserve">
     <value>Finanzinformationen</value>
   </data>
-  <data name="SalesDetailPage.Section.PaymentInformation.Text" xml:space="preserve">
+  <data name="SalesDetailPage.Section.PaymentInformation.Header" xml:space="preserve">
     <value>Zahlungsinformationen</value>
   </data>
-  <data name="SalesDetailPage.Section.ShippingInformation.Text" xml:space="preserve">
+  <data name="SalesDetailPage.Section.ShippingInformation.Header" xml:space="preserve">
     <value>Versandinformationen</value>
   </data>
-  <data name="SalesDetailPage.Section.InvoiceAddress.Text" xml:space="preserve">
+  <data name="SalesDetailPage.Section.InvoiceAddress.Header" xml:space="preserve">
     <value>Rechnungsadresse</value>
   </data>
-  <data name="SalesDetailPage.Section.DeliveryAddress.Text" xml:space="preserve">
+  <data name="SalesDetailPage.Section.DeliveryAddress.Header" xml:space="preserve">
     <value>Lieferadresse</value>
   </data>
   <data name="SalesDetailPage.Section.SalesItems.Text" xml:space="preserve">
     <value>Bestellpositionen</value>
   </data>
-  <data name="SalesDetailPage.Section.SalesHistory.Text" xml:space="preserve">
+  <data name="SalesDetailPage.Section.SalesHistory.Header" xml:space="preserve">
     <value>Bestellverlauf</value>
   </data>
-  <data name="SalesDetailPage.Section.Notes.Text" xml:space="preserve">
+  <data name="SalesDetailPage.Section.Notes.Header" xml:space="preserve">
     <value>Notizen</value>
   </data>
 
@@ -2994,10 +2994,10 @@
   </data>
 
   <!-- Sales Detail Page - Empty States -->
-  <data name="SalesDetailPage.NoItems.Text" xml:space="preserve">
+  <data name="SalesDetailPage.NoItems.Message" xml:space="preserve">
     <value>Keine Positionen in diesem Verkauf</value>
   </data>
-  <data name="SalesDetailPage.NoNotes.Text" xml:space="preserve">
+  <data name="SalesDetailPage.NoNotes.Message" xml:space="preserve">
     <value>Keine Notizen vorhanden</value>
   </data>
 
@@ -3090,33 +3090,33 @@
   <data name="SalesEditPage.AppBarButton.Back.Label" xml:space="preserve">
     <value>Zurück</value>
   </data>
-  <data name="SalesEditPage.AppBarButton.Cancel.Label" xml:space="preserve">
+  <data name="SalesEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
     <value>Abbrechen</value>
   </data>
-  <data name="SalesEditPage.AppBarButton.Save.Label" xml:space="preserve">
+  <data name="SalesEditPage.HeaderAction.Save.Content" xml:space="preserve">
     <value>Speichern</value>
   </data>
 
   <!-- Sales Edit Page - Sections -->
-  <data name="SalesEditPage.Section.SalesInformation.Text" xml:space="preserve">
+  <data name="SalesEditPage.Section.SalesInformation.Header" xml:space="preserve">
     <value>Bestellinformationen</value>
   </data>
-  <data name="SalesEditPage.Section.StatusInformation.Text" xml:space="preserve">
+  <data name="SalesEditPage.Section.StatusInformation.Header" xml:space="preserve">
     <value>Status</value>
   </data>
-  <data name="SalesEditPage.Section.FinancialInformation.Text" xml:space="preserve">
+  <data name="SalesEditPage.Section.FinancialInformation.Header" xml:space="preserve">
     <value>Finanzinformationen</value>
   </data>
-  <data name="SalesEditPage.Section.PaymentInformation.Text" xml:space="preserve">
+  <data name="SalesEditPage.Section.PaymentInformation.Header" xml:space="preserve">
     <value>Zahlungsinformationen</value>
   </data>
-  <data name="SalesEditPage.Section.DeliveryAddress.Text" xml:space="preserve">
+  <data name="SalesEditPage.Section.DeliveryAddress.Header" xml:space="preserve">
     <value>Lieferadresse</value>
   </data>
-  <data name="SalesEditPage.Section.InvoiceAddress.Text" xml:space="preserve">
+  <data name="SalesEditPage.Section.InvoiceAddress.Header" xml:space="preserve">
     <value>Rechnungsadresse</value>
   </data>
-  <data name="SalesEditPage.Section.Notes.Text" xml:space="preserve">
+  <data name="SalesEditPage.Section.Notes.Header" xml:space="preserve">
     <value>Notizen</value>
   </data>
 
@@ -3375,10 +3375,10 @@
   <data name="TenantListPage.Header.DateCreated.Text" xml:space="preserve">
     <value>Erstellt</value>
   </data>
-  <data name="TenantListPage.NoTenants.Text" xml:space="preserve">
+  <data name="TenantListPage.NoTenants.Message" xml:space="preserve">
     <value>Keine Mandanten gefunden</value>
   </data>
-  <data name="TenantListPage.LoadError.Text" xml:space="preserve">
+  <data name="TenantListPage.LoadError.Message" xml:space="preserve">
     <value>Mandanten konnten nicht geladen werden</value>
   </data>
   <data name="TenantListPage.PreviousPage.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
@@ -3709,10 +3709,10 @@
   <data name="SuperadminTenantListPage.Header.DateCreated.Text" xml:space="preserve">
     <value>Erstellt</value>
   </data>
-  <data name="SuperadminTenantListPage.NoTenants.Text" xml:space="preserve">
+  <data name="SuperadminTenantListPage.NoTenants.Message" xml:space="preserve">
     <value>Keine Mandanten gefunden</value>
   </data>
-  <data name="SuperadminTenantListPage.LoadError.Text" xml:space="preserve">
+  <data name="SuperadminTenantListPage.LoadError.Message" xml:space="preserve">
     <value>Fehler beim Laden der Mandanten</value>
   </data>
   <data name="SuperadminTenantListPage.PreviousPage.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
@@ -4579,5 +4579,65 @@
   </data>
   <data name="SyncStatus.TriggerScheduler" xml:space="preserve">
     <value>Zeitplan</value>
+  </data>
+  <data name="Common.NotAvailable" xml:space="preserve">
+    <value>Nicht verfügbar</value>
+  </data>
+  <data name="SalesDetailPage.EmptyHistory.Message" xml:space="preserve">
+    <value>Kein Verlauf vorhanden</value>
+  </data>
+  <data name="SalesDetailPage.Field.Phone.Text" xml:space="preserve">
+    <value>Telefon</value>
+  </data>
+  <data name="SalesDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="SalesDetailPage.TabAddresses.Content" xml:space="preserve">
+    <value>Adressen</value>
+  </data>
+  <data name="SalesDetailPage.TabHistory.Content" xml:space="preserve">
+    <value>Verlauf</value>
+  </data>
+  <data name="SalesDetailPage.TabItems.Content" xml:space="preserve">
+    <value>Positionen</value>
+  </data>
+  <data name="SalesDetailPage.TabOverview.Content" xml:space="preserve">
+    <value>Übersicht</value>
+  </data>
+  <data name="CustomerDetailPage.HeaderAction.Delete.Content" xml:space="preserve">
+    <value>Löschen</value>
+  </data>
+  <data name="CustomerDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="CustomerDetailPage.TabAddresses.Content" xml:space="preserve">
+    <value>Adressen</value>
+  </data>
+  <data name="CustomerDetailPage.TabOverview.Content" xml:space="preserve">
+    <value>Übersicht</value>
+  </data>
+  <data name="CustomerDetailPage.TabSaless.Content" xml:space="preserve">
+    <value>Bestellungen</value>
+  </data>
+  <data name="ProductDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="ProductDetailPage.NoImages.Message" xml:space="preserve">
+    <value>Keine Bilder vorhanden</value>
+  </data>
+  <data name="ProductDetailPage.NoVariants.Message" xml:space="preserve">
+    <value>Keine Varianten vorhanden</value>
+  </data>
+  <data name="ProductDetailPage.TabDescription.Content" xml:space="preserve">
+    <value>Beschreibung</value>
+  </data>
+  <data name="ProductDetailPage.TabImages.Content" xml:space="preserve">
+    <value>Bilder</value>
+  </data>
+  <data name="ProductDetailPage.TabOverview.Content" xml:space="preserve">
+    <value>Übersicht</value>
+  </data>
+  <data name="ProductDetailPage.TabVariants.Content" xml:space="preserve">
+    <value>Varianten</value>
   </data>
 </root>

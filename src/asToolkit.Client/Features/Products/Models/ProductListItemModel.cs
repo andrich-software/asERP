@@ -1,19 +1,24 @@
-﻿using asToolkit.Domain.Dtos.Manufacturer;
+﻿using asToolkit.Client.Core.Media;
+using asToolkit.Domain.Dtos.Manufacturer;
 using asToolkit.Domain.Dtos.Product;
 using asToolkit.Domain.Enums;
 
 namespace asToolkit.Client.Features.Products.Models;
 
 /// <summary>
-/// List-row wrapper around <see cref="ProductListDto"/> that adds the primary image's
-/// thumbnail bytes. It re-exposes the DTO's display fields under the same names so the
-/// existing row bindings (Sku, Name, …) keep working unchanged.
+/// List-row wrapper around <see cref="ProductListDto"/>. It re-exposes the DTO's display
+/// fields under the same names so the existing row bindings (Sku, Name, …) keep working
+/// unchanged, and exposes a <see cref="ThumbnailRequest"/> consumed lazily per realized
+/// row by <see cref="ThumbnailLoader"/>.
 /// </summary>
 public class ProductListItemModel
 {
     public ProductListItemModel(ProductListDto dto)
     {
         Dto = dto;
+        ThumbnailRequest = dto.PrimaryImageId.HasValue
+            ? new ThumbnailRequest(dto.Id, dto.PrimaryImageId.Value)
+            : null;
     }
 
     public ProductListDto Dto { get; }
@@ -28,6 +33,6 @@ public class ProductListItemModel
     public decimal Msrp => Dto.Msrp;
     public Guid? PrimaryImageId => Dto.PrimaryImageId;
 
-    /// <summary>Thumbnail bytes of the primary image, materialized in XAML by BytesToImageSourceConverter.</summary>
-    public byte[]? ThumbnailBytes { get; set; }
+    /// <summary>Lazy-load handle for the primary image thumbnail; null when the product has no image.</summary>
+    public ThumbnailRequest? ThumbnailRequest { get; }
 }

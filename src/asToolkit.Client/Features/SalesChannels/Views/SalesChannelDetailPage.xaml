@@ -1,10 +1,11 @@
-﻿<Page x:Class="asToolkit.Client.Features.SalesChannels.Views.SalesChannelDetailPage"
+<Page x:Class="asToolkit.Client.Features.SalesChannels.Views.SalesChannelDetailPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:local="using:asToolkit.Client.Features.SalesChannels.Views"
       xmlns:models="using:asToolkit.Client.Features.SalesChannels.Models"
       xmlns:mvux="using:Uno.Extensions.Reactive.UI"
       xmlns:utu="using:Uno.Toolkit.UI"
+      xmlns:controls="using:asToolkit.Client.Controls"
       Background="{ThemeResource BackgroundBrush}">
 
   <Grid utu:SafeArea.Insets="VisibleBounds">
@@ -287,14 +288,10 @@
                                      Style="{StaticResource BodyMedium}"
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
-                          <Border Grid.Column="1"
+                          <controls:StatusBadge Grid.Column="1"
                                   CornerRadius="12"
                                   Padding="10,4"
-                                  Background="{Binding Data.ImportProducts, Converter={StaticResource BoolToSyncStatusBackgroundConverter}}">
-                            <TextBlock Text="{Binding Data.ImportProducts, Converter={StaticResource BoolToSyncStatusTextConverter}}"
-                                       Style="{StaticResource LabelSmall}"
-                                       Foreground="{Binding Data.ImportProducts, Converter={StaticResource BoolToSyncStatusForegroundConverter}}" />
-                          </Border>
+                                  Status="{Binding Data.ImportProducts}" />
                         </Grid>
 
                         <!-- Import Customers -->
@@ -308,14 +305,10 @@
                                      Style="{StaticResource BodyMedium}"
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
-                          <Border Grid.Column="1"
+                          <controls:StatusBadge Grid.Column="1"
                                   CornerRadius="12"
                                   Padding="10,4"
-                                  Background="{Binding Data.ImportCustomers, Converter={StaticResource BoolToSyncStatusBackgroundConverter}}">
-                            <TextBlock Text="{Binding Data.ImportCustomers, Converter={StaticResource BoolToSyncStatusTextConverter}}"
-                                       Style="{StaticResource LabelSmall}"
-                                       Foreground="{Binding Data.ImportCustomers, Converter={StaticResource BoolToSyncStatusForegroundConverter}}" />
-                          </Border>
+                                  Status="{Binding Data.ImportCustomers}" />
                         </Grid>
 
                         <!-- Import Saless -->
@@ -329,14 +322,10 @@
                                      Style="{StaticResource BodyMedium}"
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
-                          <Border Grid.Column="1"
+                          <controls:StatusBadge Grid.Column="1"
                                   CornerRadius="12"
                                   Padding="10,4"
-                                  Background="{Binding Data.ImportSaless, Converter={StaticResource BoolToSyncStatusBackgroundConverter}}">
-                            <TextBlock Text="{Binding Data.ImportSaless, Converter={StaticResource BoolToSyncStatusTextConverter}}"
-                                       Style="{StaticResource LabelSmall}"
-                                       Foreground="{Binding Data.ImportSaless, Converter={StaticResource BoolToSyncStatusForegroundConverter}}" />
-                          </Border>
+                                  Status="{Binding Data.ImportSaless}" />
                         </Grid>
                       </StackPanel>
                     </StackPanel>
@@ -381,14 +370,10 @@
                                      Style="{StaticResource BodyMedium}"
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
-                          <Border Grid.Column="1"
+                          <controls:StatusBadge Grid.Column="1"
                                   CornerRadius="12"
                                   Padding="10,4"
-                                  Background="{Binding Data.ExportProducts, Converter={StaticResource BoolToSyncStatusBackgroundConverter}}">
-                            <TextBlock Text="{Binding Data.ExportProducts, Converter={StaticResource BoolToSyncStatusTextConverter}}"
-                                       Style="{StaticResource LabelSmall}"
-                                       Foreground="{Binding Data.ExportProducts, Converter={StaticResource BoolToSyncStatusForegroundConverter}}" />
-                          </Border>
+                                  Status="{Binding Data.ExportProducts}" />
                         </Grid>
 
                         <!-- Export Customers -->
@@ -402,14 +387,10 @@
                                      Style="{StaticResource BodyMedium}"
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
-                          <Border Grid.Column="1"
+                          <controls:StatusBadge Grid.Column="1"
                                   CornerRadius="12"
                                   Padding="10,4"
-                                  Background="{Binding Data.ExportCustomers, Converter={StaticResource BoolToSyncStatusBackgroundConverter}}">
-                            <TextBlock Text="{Binding Data.ExportCustomers, Converter={StaticResource BoolToSyncStatusTextConverter}}"
-                                       Style="{StaticResource LabelSmall}"
-                                       Foreground="{Binding Data.ExportCustomers, Converter={StaticResource BoolToSyncStatusForegroundConverter}}" />
-                          </Border>
+                                  Status="{Binding Data.ExportCustomers}" />
                         </Grid>
 
                         <!-- Export Saless -->
@@ -423,14 +404,10 @@
                                      Style="{StaticResource BodyMedium}"
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
-                          <Border Grid.Column="1"
+                          <controls:StatusBadge Grid.Column="1"
                                   CornerRadius="12"
                                   Padding="10,4"
-                                  Background="{Binding Data.ExportSaless, Converter={StaticResource BoolToSyncStatusBackgroundConverter}}">
-                            <TextBlock Text="{Binding Data.ExportSaless, Converter={StaticResource BoolToSyncStatusTextConverter}}"
-                                       Style="{StaticResource LabelSmall}"
-                                       Foreground="{Binding Data.ExportSaless, Converter={StaticResource BoolToSyncStatusForegroundConverter}}" />
-                          </Border>
+                                  Status="{Binding Data.ExportSaless}" />
                         </Grid>
                       </StackPanel>
                     </StackPanel>

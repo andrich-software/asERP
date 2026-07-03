@@ -47,11 +47,18 @@ public partial record CustomerDetailModel
     });
 
     /// <summary>
-    /// Feed that loads the saless placed by this customer.
-    /// Depends on the customer feed to resolve the numeric customer number.
+    /// Gate for the lazy sales feed; flipped once when the sales tab is first selected.
     /// </summary>
-    public IListFeed<SalesListDto> Saless => Customer
-        .SelectAsync(async (customer, ct) =>
+    public IState<bool> SalesTabRequested => State<bool>.Value(this, () => false);
+
+    /// <summary>
+    /// Feed that loads the saless placed by this customer.
+    /// Depends on the customer feed to resolve the numeric customer number and stays
+    /// dormant until <see cref="RequestSalesTab"/> flips the gate (lazy per-tab feed).
+    /// </summary>
+    public IListFeed<SalesListDto> Saless => Feed.Combine(Customer, SalesTabRequested)
+        .Where(t => t.Item2)
+        .SelectAsync(async (t, ct) =>
         {
             var parameters = new QueryParameters
             {
@@ -60,10 +67,16 @@ public partial record CustomerDetailModel
                 SalesBy = "DateSalesed Descending"
             };
 
-            var response = await _salesService.GetSalessByCustomerAsync(customer.CustomerId, parameters, ct);
+            var response = await _salesService.GetSalessByCustomerAsync(t.Item1.CustomerId, parameters, ct);
             return response.Data.ToImmutableList();
         })
         .AsListFeed();
+
+    /// <summary>
+    /// Start loading the sales feed; called from the page when the sales tab is first selected.
+    /// </summary>
+    public async ValueTask RequestSalesTab(CancellationToken ct = default)
+        => await SalesTabRequested.UpdateAsync(_ => true, ct);
 
     /// <summary>
     /// Navigate to the detail page of a sales placed by this customer.
