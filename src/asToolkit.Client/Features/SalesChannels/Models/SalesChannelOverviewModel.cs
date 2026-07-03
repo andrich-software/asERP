@@ -144,6 +144,7 @@ public partial record SalesChannelOverviewModel
         SalesChannelType.PointOfSale => "POS",
         SalesChannelType.Shopware6 => "Shopware 6",
         SalesChannelType.WooCommerce => "WooCommerce",
+        SalesChannelType.WooCommerceDatabase => "WooCommerce (DB)",
         SalesChannelType.eBay => "eBay",
         SalesChannelType.Amazon => "Amazon",
         _ => type.ToString()
@@ -249,6 +250,7 @@ public partial record SalesChannelOverviewItem(
         SalesChannelType.PointOfSale => new SolidColorBrush(Color.FromArgb(0xFF, 0x63, 0x66, 0xF1)),
         SalesChannelType.Shopware6 => new SolidColorBrush(Color.FromArgb(0xFF, 0x02, 0x84, 0xC7)),
         SalesChannelType.WooCommerce => new SolidColorBrush(Color.FromArgb(0xFF, 0x7C, 0x3A, 0xED)),
+        SalesChannelType.WooCommerceDatabase => new SolidColorBrush(Color.FromArgb(0xFF, 0x7C, 0x3A, 0xED)),
         SalesChannelType.eBay => new SolidColorBrush(Color.FromArgb(0xFF, 0xEA, 0xB3, 0x08)),
         SalesChannelType.Amazon => new SolidColorBrush(Color.FromArgb(0xFF, 0xF9, 0x73, 0x16)),
         _ => new SolidColorBrush(Color.FromArgb(0xFF, 0x64, 0x74, 0x8B))

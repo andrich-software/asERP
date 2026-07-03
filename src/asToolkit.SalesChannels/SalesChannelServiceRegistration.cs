@@ -5,6 +5,7 @@ using asToolkit.SalesChannels.Connectors.Ebay;
 using asToolkit.SalesChannels.Connectors.Pos;
 using asToolkit.SalesChannels.Connectors.Shopware6;
 using asToolkit.SalesChannels.Connectors.WooCommerce;
+using asToolkit.SalesChannels.Connectors.WooCommerceDatabase;
 using asToolkit.SalesChannels.Contracts;
 using asToolkit.SalesChannels.Logging;
 using asToolkit.SalesChannels.Models.Amazon;
@@ -60,6 +61,7 @@ public static class SalesChannelServiceRegistration
         services.AddScoped<ISalesChannelConnector, PosConnector>();
         services.AddScoped<ISalesChannelConnector, Shopware6Connector>();
         services.AddScoped<ISalesChannelConnector, WooCommerceConnector>();
+        services.AddScoped<ISalesChannelConnector, WooCommerceDatabaseConnector>();
         services.AddScoped<ISalesChannelConnector, EbayConnector>();
         services.AddScoped<ISalesChannelConnector, AmazonConnector>();
 

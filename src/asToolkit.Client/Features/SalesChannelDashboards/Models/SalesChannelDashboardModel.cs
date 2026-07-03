@@ -35,7 +35,7 @@ public partial record SalesChannelDashboardModel
     /// Web analytics is only offered for the channel types that ship a tracking plugin (WooCommerce,
     /// Shopware 6). Used to show/hide the "Web-Statistiken" tab.
     /// </summary>
-    public bool ShowWebStatistics => _salesChannelType is SalesChannelType.WooCommerce or SalesChannelType.Shopware6;
+    public bool ShowWebStatistics => _salesChannelType is SalesChannelType.WooCommerce or SalesChannelType.WooCommerceDatabase or SalesChannelType.Shopware6;
 
     public SalesChannelDashboardModel(
         ISalesChannelStatisticsService statisticsService,

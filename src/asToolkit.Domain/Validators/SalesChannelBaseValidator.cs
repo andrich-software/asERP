@@ -51,8 +51,11 @@ public class SalesChannelBaseValidator<T> : AbstractValidator<T> where T : ISale
 
     private static bool RequiresUrl(SalesChannelType type)
     {
+        // WooCommerceDatabase talks to MySQL directly, but still needs the shop's base URL
+        // to build the public product-image download links.
         return type is SalesChannelType.Shopware6
-            or SalesChannelType.WooCommerce;
+            or SalesChannelType.WooCommerce
+            or SalesChannelType.WooCommerceDatabase;
     }
 
     private static bool RequiresCredentials(SalesChannelType type)

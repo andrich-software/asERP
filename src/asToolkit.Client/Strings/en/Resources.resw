@@ -2217,6 +2217,39 @@
   <data name="SalesChannelEditPage.ConnConsumerSecretPlaceholder" xml:space="preserve">
     <value>cs_…</value>
   </data>
+  <data name="SalesChannelEditPage.ConnDbUserLabel" xml:space="preserve">
+    <value>Database user</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnDbUserPlaceholder" xml:space="preserve">
+    <value>MySQL user name</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnDbPasswordLabel" xml:space="preserve">
+    <value>Database password</value>
+  </data>
+  <data name="SalesChannelEditPage.DbHost.Header" xml:space="preserve">
+    <value>Database host</value>
+  </data>
+  <data name="SalesChannelEditPage.DbHost.PlaceholderText" xml:space="preserve">
+    <value>e.g. db.your-shop.com</value>
+  </data>
+  <data name="SalesChannelEditPage.DbPort.Header" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="SalesChannelEditPage.DbPort.PlaceholderText" xml:space="preserve">
+    <value>3306</value>
+  </data>
+  <data name="SalesChannelEditPage.DbName.Header" xml:space="preserve">
+    <value>Database name</value>
+  </data>
+  <data name="SalesChannelEditPage.DbName.PlaceholderText" xml:space="preserve">
+    <value>e.g. wordpress</value>
+  </data>
+  <data name="SalesChannelEditPage.DbTablePrefix.Header" xml:space="preserve">
+    <value>Table prefix</value>
+  </data>
+  <data name="SalesChannelEditPage.DbTablePrefix.PlaceholderText" xml:space="preserve">
+    <value>wp_</value>
+  </data>
   <data name="SalesChannelEditPage.ConnSecretKeepPlaceholder" xml:space="preserve">
     <value>•••••••• – leave blank to keep</value>
   </data>
@@ -2277,6 +2310,9 @@
   <data name="SalesChannelEditPage.ConnHintWoo" xml:space="preserve">
     <value>WooCommerce: For the URL, enter your shop's base address (e.g. https://your-shop.com) — without /wp-json or /api. In WooCommerce, go to WooCommerce → Settings → Advanced → REST API and create an API key with read/write permissions. Enter the returned Consumer Key (ck_…) as the Consumer Key and the Consumer Secret (cs_…) as the Consumer Secret. When editing later, you can leave the Consumer Secret field blank to keep the stored secret.</value>
   </data>
+  <data name="SalesChannelEditPage.ConnHintWooDb" xml:space="preserve">
+    <value>WooCommerce (database): Reads and writes the shop's MySQL database directly — much faster than the REST API. Enter your shop's base address as the URL (used to download product images), plus the host, port and name of the WordPress database and the table prefix from wp-config.php (default: wp_). The MySQL user needs read and write access to the shop database, and the database must be reachable from the asToolkit server (e.g. via a firewall rule or SSH tunnel).</value>
+  </data>
   <data name="SalesChannelEditPage.Error.SaveFailed" xml:space="preserve">
     <value>Failed to save sales channel: {0}</value>
   </data>
@@ -2308,6 +2344,9 @@
   </data>
   <data name="SalesChannelType.WooCommerce" xml:space="preserve">
     <value>WooCommerce</value>
+  </data>
+  <data name="SalesChannelType.WooCommerceDatabase" xml:space="preserve">
+    <value>WooCommerce (Database)</value>
   </data>
   <data name="SalesChannelType.eBay" xml:space="preserve">
     <value>eBay</value>

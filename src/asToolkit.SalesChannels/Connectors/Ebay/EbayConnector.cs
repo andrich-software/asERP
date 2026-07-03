@@ -1,4 +1,5 @@
-﻿#nullable disable
+#nullable disable
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -14,19 +15,24 @@ using Microsoft.Extensions.Logging;
 namespace asToolkit.SalesChannels.Connectors.Ebay;
 
 /// <summary>
-/// eBay Sell-API connector. Migrates the legacy <c>EbayProductImportTask</c>,
-/// <c>EbaySalesImportTask</c> and <c>EbayCustomerImportTask</c> behind the connector contract.
-/// Customers are derived from saless (eBay does not expose a customer list endpoint), so
-/// <see cref="ImportCustomersAsync"/> walks the same fulfillment endpoint as
-/// <see cref="ImportSalessAsync"/> and just keeps buyers.
+/// eBay Sell-API connector (Inventory + Fulfillment APIs).
 ///
-/// Export operations (publish offer, update stock/price, mark sales shipped) are not yet
-/// implemented — they land in PR 12 when the outbox drainer is wired up.
+/// Imports: inventory items (incl. variation groups and photos) via the Inventory API; orders and
+/// buyers via the Fulfillment API's <c>getOrders</c>. Customers are derived from orders — eBay does
+/// not expose a customer list endpoint — so <see cref="ImportCustomersAsync"/> walks the same order
+/// pages and keeps the buyers.
+///
+/// Exports: <see cref="ExportProductAsync"/> pushes the inventory item and creates/publishes an
+/// offer when the channel's <see cref="EbayChannelConfig"/> carries the seller's business policies;
+/// stock and price updates go through <c>bulkUpdatePriceQuantity</c> (the granular endpoint — a
+/// <c>createOrReplaceInventoryItem</c>/<c>updateOffer</c> PUT would REPLACE the whole resource and
+/// wipe every field not sent). <see cref="UpdateSalesAsync"/> confirms shipment via
+/// <c>createShippingFulfillment</c>; <see cref="DelistProductAsync"/> withdraws the offer.
 /// </summary>
 public sealed class EbayConnector : ConnectorBase
 {
     private const int InventoryPageSize = 100;
-    private const int SalesPageSize = 50;
+    private const int OrdersPageSize = 100;
 
     private readonly EbayAuthHelper _authHelper;
     private readonly IProductImportRepository _productImportRepository;
@@ -57,8 +63,11 @@ public sealed class EbayConnector : ConnectorBase
         SalesChannelCapabilities.ImportProducts |
         SalesChannelCapabilities.ImportSaless |
         SalesChannelCapabilities.ImportCustomers |
+        SalesChannelCapabilities.ExportProducts |
         SalesChannelCapabilities.UpdateStock |
         SalesChannelCapabilities.UpdatePrice |
+        SalesChannelCapabilities.UpdateSaless |
+        SalesChannelCapabilities.DelistProducts |
         SalesChannelCapabilities.OAuth;
 
     public override async Task<ConnectionTestResult> TestConnectionAsync(SalesChannelContext context)
@@ -105,6 +114,8 @@ public sealed class EbayConnector : ConnectorBase
 
             do
             {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
                 var requestUrl = $"{salesChannel.Url}/sell/inventory/v1/inventory_item?limit={InventoryPageSize}&offset={offset}";
                 var response = await context.HttpClient.GetAsync(requestUrl, context.CancellationToken);
                 if (!response.IsSuccessStatusCode)
@@ -117,14 +128,14 @@ public sealed class EbayConnector : ConnectorBase
 
                 var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
                 var inventoryItems = JsonSerializer.Deserialize<EbayInventoryItemResponse>(raw);
-                if (inventoryItems is null) break;
+                if (inventoryItems?.InventoryItems is null || inventoryItems.InventoryItems.Length == 0) break;
                 total = inventoryItems.Total;
 
                 foreach (var item in inventoryItems.InventoryItems)
                 {
                     try
                     {
-                        var offerUrl = $"{salesChannel.Url}/sell/inventory/v1/offer?sku={item.Sku}";
+                        var offerUrl = $"{salesChannel.Url}/sell/inventory/v1/offer?sku={Uri.EscapeDataString(item.Sku)}";
                         var offerResponse = await context.HttpClient.GetAsync(offerUrl, context.CancellationToken);
                         if (!offerResponse.IsSuccessStatusCode)
                         {
@@ -140,9 +151,6 @@ public sealed class EbayConnector : ConnectorBase
                         }
 
                         var offer = offers.Offers[0];
-                        var description = item.Product.Description ?? string.Empty;
-                        if (description.Length > 4000) description = description.Substring(0, 4000);
-
                         var importProduct = new SalesChannelImportProduct
                         {
                             RemoteProductId = item.Sku,
@@ -151,7 +159,8 @@ public sealed class EbayConnector : ConnectorBase
                             Ean = item.Product.Ean is { Length: > 0 } ? item.Product.Ean[0] : string.Empty,
                             Price = offer.PricingSummary.Price.Value,
                             TaxRate = 19,
-                            Description = description,
+                            Description = Truncate(item.Product.Description ?? string.Empty, 4000),
+                            Images = MapImages(item.Product.ImageUrls),
                         };
 
                         await _productImportRepository.ImportOrUpdateFromSalesChannel(salesChannel.Id, importProduct);
@@ -171,6 +180,11 @@ public sealed class EbayConnector : ConnectorBase
                         failed++;
                         _logger.LogError(ex, "eBay product import failed for SKU {Sku}", item.Sku);
                     }
+                }
+
+                if (context.ReportProgressAsync is not null)
+                {
+                    await context.ReportProgressAsync(processed, failed, context.CancellationToken);
                 }
 
                 offset += InventoryPageSize;
@@ -206,18 +220,16 @@ public sealed class EbayConnector : ConnectorBase
                         .Where(n => !string.IsNullOrEmpty(n))
                         .ToList() ?? [];
 
-                    var groupDescription = group.Description ?? string.Empty;
-                    if (groupDescription.Length > 4000) groupDescription = groupDescription.Substring(0, 4000);
-
                     var parentImport = new SalesChannelImportProduct
                     {
                         RemoteProductId = group.InventoryItemGroupKey,
                         Name = group.Title ?? group.InventoryItemGroupKey,
                         Sku = group.InventoryItemGroupKey,
                         TaxRate = 19,
-                        Description = groupDescription,
+                        Description = Truncate(group.Description ?? string.Empty, 4000),
                         IsVariantParent = true,
                         VariantAxes = axisNames,
+                        Images = MapImages(group.ImageUrls),
                         Variants = group.VariantSkus
                             .Where(sku => itemsBySku.ContainsKey(sku))
                             .Select((sku, index) =>
@@ -258,6 +270,10 @@ public sealed class EbayConnector : ConnectorBase
                 }
             }
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return SyncResult.Failed(ex.Message);
@@ -286,53 +302,33 @@ public sealed class EbayConnector : ConnectorBase
 
         var processed = 0;
         var failed = 0;
-        var offset = 0;
 
         try
         {
             var accessToken = await _authHelper.GetAccessTokenAsync(salesChannel);
             ConfigureBearer(context, accessToken);
 
-            while (true)
+            await WalkOrdersAsync(context, async order =>
             {
-                var url = $"{salesChannel.Url}/sell/fulfillment/v1/sales?limit={SalesPageSize}&offset={offset}";
-                var response = await context.HttpClient.GetAsync(url, context.CancellationToken);
-                if (!response.IsSuccessStatusCode)
+                try
                 {
-                    var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
-                    _logger.LogError("eBay saless list HTTP {Status}: {Body}", (int)response.StatusCode, body);
+                    await _salesImportRepository.ImportOrUpdateFromSalesChannel(salesChannel, MapSales(order));
+                    processed++;
+                }
+                catch (Exception ex)
+                {
                     failed++;
-                    break;
+                    _logger.LogError(ex, "eBay sales import failed for order {Id}", order.OrderId);
                 }
-
-                var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
-                var salessResponse = JsonSerializer.Deserialize<EbaySalesResponse>(raw);
-                if (salessResponse is null || salessResponse.Total == 0 || salessResponse.LineItems is null || salessResponse.LineItems.Length == 0)
-                {
-                    break;
-                }
-
-                foreach (var lineItem in salessResponse.LineItems)
-                {
-                    try
-                    {
-                        var importSales = MapSales(salessResponse, lineItem);
-                        await _salesImportRepository.ImportOrUpdateFromSalesChannel(salesChannel, importSales);
-                        processed++;
-                    }
-                    catch (Exception ex)
-                    {
-                        failed++;
-                        _logger.LogError(ex, "eBay sales import failed for line item {Id}", lineItem.LineItemId);
-                    }
-                }
-
-                offset += SalesPageSize;
-            }
+            }, () => (processed, failed));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            return SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1) : SyncResult.Failed(ex.Message);
         }
 
         return new SyncResult(processed, failed);
@@ -352,55 +348,237 @@ public sealed class EbayConnector : ConnectorBase
 
         var processed = 0;
         var failed = 0;
-        var offset = 0;
+        var seenBuyers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         try
         {
             var accessToken = await _authHelper.GetAccessTokenAsync(salesChannel);
             ConfigureBearer(context, accessToken);
 
-            while (true)
+            await WalkOrdersAsync(context, async order =>
             {
-                var url = $"{salesChannel.Url}/sell/fulfillment/v1/sales?limit={SalesPageSize}&offset={offset}";
-                var response = await context.HttpClient.GetAsync(url, context.CancellationToken);
-                if (!response.IsSuccessStatusCode)
+                var username = order.Buyer?.Username;
+                if (string.IsNullOrEmpty(username) || !seenBuyers.Add(username))
+                {
+                    return;
+                }
+
+                try
+                {
+                    await _customerImportRepository.ImportOrUpdateFromSalesChannel(salesChannel, MapCustomer(order));
+                    processed++;
+                }
+                catch (Exception ex)
                 {
                     failed++;
-                    break;
+                    _logger.LogError(ex, "eBay customer import failed for buyer {Buyer}", username);
                 }
-
-                var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
-                var salessResponse = JsonSerializer.Deserialize<EbaySalesResponse>(raw);
-                if (salessResponse is null || salessResponse.Total == 0 || salessResponse.LineItems is null || salessResponse.LineItems.Length == 0)
-                {
-                    break;
-                }
-
-                var buyer = salessResponse.Buyer;
-                if (buyer?.TaxAddress is not null)
-                {
-                    try
-                    {
-                        var importCustomer = MapCustomer(salessResponse);
-                        await _customerImportRepository.ImportOrUpdateFromSalesChannel(salesChannel, importCustomer);
-                        processed++;
-                    }
-                    catch (Exception ex)
-                    {
-                        failed++;
-                        _logger.LogError(ex, "eBay customer import failed");
-                    }
-                }
-
-                offset += SalesPageSize;
-            }
+            }, () => (processed, failed));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            return SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1) : SyncResult.Failed(ex.Message);
         }
 
         return new SyncResult(processed, failed);
+    }
+
+    /// <summary>
+    /// Walks the Fulfillment API's order pages (offset paging over <c>total</c>) and invokes
+    /// <paramref name="handleOrderAsync"/> per order. Scheduled runs pull incrementally via the
+    /// <c>lastmodifieddate</c> filter from <see cref="SalesChannelContext.IncrementalSince"/>
+    /// (manual runs come with a null watermark → full sweep, capped by eBay's 90-day order
+    /// retention). A seen-set guards against an endpoint repeating pages.
+    /// </summary>
+    private async Task WalkOrdersAsync(
+        SalesChannelContext context,
+        Func<EbayOrder, Task> handleOrderAsync,
+        Func<(int Processed, int Failed)> counts)
+    {
+        var salesChannel = context.SalesChannel;
+        var offset = 0;
+        var seen = new HashSet<string>();
+
+        var filter = context.IncrementalSince is { } since
+            ? $"&filter=lastmodifieddate:%5B{since.ToUniversalTime():yyyy-MM-ddTHH:mm:ss.fff}Z..%5D"
+            : string.Empty;
+
+        while (true)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            var url = $"{salesChannel.Url}/sell/fulfillment/v1/order?limit={OrdersPageSize}&offset={offset}{filter}";
+            var response = await context.HttpClient.GetAsync(url, context.CancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
+                throw new InvalidOperationException($"eBay getOrders failed with HTTP {(int)response.StatusCode}: {Truncate(body, 300)}");
+            }
+
+            var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
+            var page = JsonSerializer.Deserialize<EbayOrdersResponse>(raw);
+            if (page?.Orders is null || page.Orders.Length == 0)
+            {
+                break;
+            }
+
+            context.SyncRun.ItemsTotal ??= page.Total;
+
+            var newInPage = 0;
+            foreach (var order in page.Orders)
+            {
+                if (string.IsNullOrEmpty(order.OrderId) || !seen.Add(order.OrderId))
+                {
+                    continue;
+                }
+                newInPage++;
+
+                await handleOrderAsync(order);
+            }
+
+            if (context.ReportProgressAsync is not null)
+            {
+                var (processed, failedCount) = counts();
+                await context.ReportProgressAsync(processed, failedCount, context.CancellationToken);
+            }
+
+            offset += OrdersPageSize;
+
+            // Short page, endpoint repeating rows, or walked past the reported total → done.
+            if (page.Orders.Length < OrdersPageSize || newInPage == 0 || (page.Total > 0 && offset >= page.Total))
+            {
+                break;
+            }
+        }
+    }
+
+    public override async Task<ExportResult> ExportProductAsync(SalesChannelContext context, ProductExportPayload payload)
+    {
+        if (string.IsNullOrEmpty(payload.Sku))
+        {
+            return ExportResult.Fail("eBay requires a SKU to export a product");
+        }
+
+        var config = EbayChannelConfig.FromSalesChannel(context.SalesChannel);
+
+        try
+        {
+            var accessToken = await _authHelper.GetAccessTokenAsync(context.SalesChannel);
+            ConfigureBearer(context, accessToken);
+
+            // 1. Push the inventory item. createOrReplaceInventoryItem is a full replace, which is
+            //    exactly right here: asToolkit is the source of truth for exported products.
+            var itemUrl = $"{context.SalesChannel.Url}/sell/inventory/v1/inventory_item/{Uri.EscapeDataString(payload.Sku)}";
+            var itemBody = new Dictionary<string, object>
+            {
+                ["product"] = BuildInventoryProduct(payload),
+                ["availability"] = new { shipToLocationAvailability = new { quantity = payload.Stock } },
+                ["condition"] = "NEW",
+            };
+            var itemRequest = new HttpRequestMessage(HttpMethod.Put, itemUrl) { Content = JsonContent.Create(itemBody) };
+            itemRequest.Content.Headers.ContentLanguage.Add(config.ContentLanguage);
+            var itemResponse = await context.HttpClient.SendAsync(itemRequest, context.CancellationToken);
+            if (!itemResponse.IsSuccessStatusCode)
+            {
+                var body = await itemResponse.Content.ReadAsStringAsync(context.CancellationToken);
+                return ExportResult.Fail($"createOrReplaceInventoryItem HTTP {(int)itemResponse.StatusCode}: {Truncate(body, 300)}");
+            }
+
+            // 2. Offer: update the existing one, or create + publish a new listing when the
+            //    channel is configured for it.
+            var offerId = payload.ExternalListingId;
+            if (string.IsNullOrEmpty(offerId))
+            {
+                offerId = await FindOfferIdBySkuAsync(context, payload.Sku);
+            }
+
+            if (!string.IsNullOrEmpty(offerId))
+            {
+                // Listing already exists — sync price + quantity via the granular bulk endpoint.
+                var update = await BulkUpdatePriceQuantityAsync(
+                    context, payload.Sku, payload.Stock, offerId, payload.Price, payload.Currency);
+                return update.Success
+                    ? ExportResult.Ok(payload.Sku, offerId)
+                    : update;
+            }
+
+            var categoryId = ResolveCategoryId(payload.MetadataJson, config);
+            var missing = config.MissingOfferSettings();
+            if (missing is not null || string.IsNullOrEmpty(categoryId))
+            {
+                var missingAll = string.IsNullOrEmpty(categoryId)
+                    ? missing is null ? "categoryId" : $"{missing}, categoryId"
+                    : missing;
+                return ExportResult.Fail(
+                    $"Inventory item {payload.Sku} pushed, but no offer exists and the channel configuration " +
+                    $"is missing: {missingAll}. Configure them in the eBay channel's additional settings to publish listings.");
+            }
+
+            var offerBody = new Dictionary<string, object>
+            {
+                ["sku"] = payload.Sku,
+                ["marketplaceId"] = config.MarketplaceId,
+                ["format"] = "FIXED_PRICE",
+                ["availableQuantity"] = payload.Stock,
+                ["categoryId"] = categoryId,
+                ["merchantLocationKey"] = config.MerchantLocationKey,
+                ["listingDescription"] = Truncate(payload.Description ?? payload.Name, 4000),
+                ["listingPolicies"] = new
+                {
+                    fulfillmentPolicyId = config.FulfillmentPolicyId,
+                    paymentPolicyId = config.PaymentPolicyId,
+                    returnPolicyId = config.ReturnPolicyId,
+                },
+                ["pricingSummary"] = new
+                {
+                    price = new
+                    {
+                        currency = payload.Currency ?? "EUR",
+                        value = payload.Price.ToString(CultureInfo.InvariantCulture),
+                    },
+                },
+            };
+
+            var createRequest = new HttpRequestMessage(
+                HttpMethod.Post, $"{context.SalesChannel.Url}/sell/inventory/v1/offer")
+            {
+                Content = JsonContent.Create(offerBody),
+            };
+            createRequest.Content.Headers.ContentLanguage.Add(config.ContentLanguage);
+            var createResponse = await context.HttpClient.SendAsync(createRequest, context.CancellationToken);
+            if (!createResponse.IsSuccessStatusCode)
+            {
+                var body = await createResponse.Content.ReadAsStringAsync(context.CancellationToken);
+                return ExportResult.Fail($"createOffer HTTP {(int)createResponse.StatusCode}: {Truncate(body, 300)}");
+            }
+
+            var created = await createResponse.Content.ReadFromJsonAsync<EbayOffer>(cancellationToken: context.CancellationToken);
+            offerId = created?.OfferId;
+            if (string.IsNullOrEmpty(offerId))
+            {
+                return ExportResult.Fail("createOffer succeeded but returned no offerId");
+            }
+
+            var publishResponse = await context.HttpClient.PostAsync(
+                $"{context.SalesChannel.Url}/sell/inventory/v1/offer/{Uri.EscapeDataString(offerId)}/publish",
+                content: null,
+                context.CancellationToken);
+            if (!publishResponse.IsSuccessStatusCode)
+            {
+                var body = await publishResponse.Content.ReadAsStringAsync(context.CancellationToken);
+                return ExportResult.Fail($"Offer {offerId} created but publish failed with HTTP {(int)publishResponse.StatusCode}: {Truncate(body, 300)}");
+            }
+
+            return ExportResult.Ok(payload.Sku, offerId);
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
     }
 
     public override async Task<ExportResult> UpdateStockAsync(SalesChannelContext context, StockUpdatePayload payload)
@@ -415,19 +593,7 @@ public sealed class EbayConnector : ConnectorBase
             var accessToken = await _authHelper.GetAccessTokenAsync(context.SalesChannel);
             ConfigureBearer(context, accessToken);
 
-            var url = $"{context.SalesChannel.Url}/sell/inventory/v1/inventory_item/{Uri.EscapeDataString(payload.Sku)}";
-            var body = new
-            {
-                availability = new
-                {
-                    shipToLocationAvailability = new { quantity = payload.Quantity },
-                },
-            };
-            var request = new HttpRequestMessage(HttpMethod.Put, url) { Content = JsonContent.Create(body) };
-            var response = await context.HttpClient.SendAsync(request, context.CancellationToken);
-            return response.IsSuccessStatusCode
-                ? ExportResult.Ok(payload.Sku)
-                : ExportResult.Fail($"HTTP {(int)response.StatusCode}");
+            return await BulkUpdatePriceQuantityAsync(context, payload.Sku, payload.Quantity, offerId: null, price: null, currency: null);
         }
         catch (Exception ex)
         {
@@ -437,9 +603,9 @@ public sealed class EbayConnector : ConnectorBase
 
     public override async Task<ExportResult> UpdatePriceAsync(SalesChannelContext context, PriceUpdatePayload payload)
     {
-        if (string.IsNullOrEmpty(payload.ExternalListingId))
+        if (string.IsNullOrEmpty(payload.Sku))
         {
-            return ExportResult.Fail("eBay offerId (ExternalListingId) is required for price updates");
+            return ExportResult.Fail("eBay SKU is required for price updates");
         }
 
         try
@@ -447,28 +613,255 @@ public sealed class EbayConnector : ConnectorBase
             var accessToken = await _authHelper.GetAccessTokenAsync(context.SalesChannel);
             ConfigureBearer(context, accessToken);
 
-            var url = $"{context.SalesChannel.Url}/sell/inventory/v1/offer/{Uri.EscapeDataString(payload.ExternalListingId)}";
-            var body = new
+            // Price lives on the offer; resolve the offer id from the payload or by SKU lookup.
+            var offerId = payload.ExternalListingId;
+            if (string.IsNullOrEmpty(offerId))
             {
-                pricingSummary = new
-                {
-                    price = new
-                    {
-                        currency = payload.Currency ?? "EUR",
-                        value = payload.Price.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    },
-                },
-            };
-            var request = new HttpRequestMessage(HttpMethod.Put, url) { Content = JsonContent.Create(body) };
-            var response = await context.HttpClient.SendAsync(request, context.CancellationToken);
-            return response.IsSuccessStatusCode
-                ? ExportResult.Ok(payload.RemoteProductId, payload.ExternalListingId)
-                : ExportResult.Fail($"HTTP {(int)response.StatusCode}");
+                offerId = await FindOfferIdBySkuAsync(context, payload.Sku);
+            }
+            if (string.IsNullOrEmpty(offerId))
+            {
+                return ExportResult.Fail($"No eBay offer found for SKU {payload.Sku} — export the product first");
+            }
+
+            var result = await BulkUpdatePriceQuantityAsync(context, payload.Sku, quantity: null, offerId, payload.Price, payload.Currency);
+            return result.Success
+                ? ExportResult.Ok(payload.RemoteProductId, offerId)
+                : result;
         }
         catch (Exception ex)
         {
             return ExportResult.Fail(ex.Message);
         }
+    }
+
+    public override async Task<ExportResult> UpdateSalesAsync(SalesChannelContext context, SalesUpdatePayload payload)
+    {
+        if (string.IsNullOrEmpty(payload.RemoteSalesId))
+        {
+            return ExportResult.Fail("eBay order id (RemoteSalesId) is required for order updates");
+        }
+
+        // Only a shipment is propagated to eBay. Cancellations/refunds need buyer-driven flows
+        // in eBay's own tooling; every other local status change is a no-op by design.
+        if (!Enum.TryParse<SalesStatus>(payload.Status, out var status)
+            || status is not (SalesStatus.Completed or SalesStatus.PartiallyDelivered))
+        {
+            return ExportResult.Ok(payload.RemoteSalesId);
+        }
+
+        try
+        {
+            var accessToken = await _authHelper.GetAccessTokenAsync(context.SalesChannel);
+            ConfigureBearer(context, accessToken);
+
+            var orderUrl = $"{context.SalesChannel.Url}/sell/fulfillment/v1/order/{Uri.EscapeDataString(payload.RemoteSalesId)}";
+            var orderResponse = await context.HttpClient.GetAsync(orderUrl, context.CancellationToken);
+            if (!orderResponse.IsSuccessStatusCode)
+            {
+                return ExportResult.Fail($"getOrder HTTP {(int)orderResponse.StatusCode}");
+            }
+
+            var order = JsonSerializer.Deserialize<EbayOrder>(
+                await orderResponse.Content.ReadAsStringAsync(context.CancellationToken));
+            if (order?.LineItems is null || order.LineItems.Length == 0)
+            {
+                return ExportResult.Fail($"eBay order {payload.RemoteSalesId} has no line items to fulfill");
+            }
+            if (string.Equals(order.OrderFulfillmentStatus, "FULFILLED", StringComparison.OrdinalIgnoreCase))
+            {
+                return ExportResult.Ok(payload.RemoteSalesId);
+            }
+
+            var body = new Dictionary<string, object>
+            {
+                ["lineItems"] = order.LineItems
+                    .Select(li => new { lineItemId = li.LineItemId, quantity = li.Quantity })
+                    .ToArray(),
+                ["shippedDate"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+            };
+            // eBay requires tracking number and carrier together or not at all.
+            if (!string.IsNullOrEmpty(payload.TrackingNumber) && !string.IsNullOrEmpty(payload.ShippingProvider))
+            {
+                body["trackingNumber"] = payload.TrackingNumber;
+                body["shippingCarrierCode"] = payload.ShippingProvider;
+            }
+
+            var response = await context.HttpClient.PostAsync(
+                $"{orderUrl}/shipping_fulfillment",
+                JsonContent.Create(body),
+                context.CancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(context.CancellationToken);
+                return ExportResult.Fail($"createShippingFulfillment HTTP {(int)response.StatusCode}: {Truncate(responseBody, 300)}");
+            }
+
+            return ExportResult.Ok(payload.RemoteSalesId);
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
+    }
+
+    public override async Task<ExportResult> DelistProductAsync(SalesChannelContext context, DelistPayload payload)
+    {
+        try
+        {
+            var accessToken = await _authHelper.GetAccessTokenAsync(context.SalesChannel);
+            ConfigureBearer(context, accessToken);
+
+            var offerId = payload.ExternalListingId;
+            if (string.IsNullOrEmpty(offerId) && !string.IsNullOrEmpty(payload.Sku))
+            {
+                offerId = await FindOfferIdBySkuAsync(context, payload.Sku);
+            }
+            if (string.IsNullOrEmpty(offerId))
+            {
+                // Nothing listed on eBay for this product — delist is already satisfied.
+                return ExportResult.Ok(payload.RemoteProductId);
+            }
+
+            var response = await context.HttpClient.PostAsync(
+                $"{context.SalesChannel.Url}/sell/inventory/v1/offer/{Uri.EscapeDataString(offerId)}/withdraw",
+                content: null,
+                context.CancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
+                return ExportResult.Fail($"withdrawOffer HTTP {(int)response.StatusCode}: {Truncate(body, 300)}");
+            }
+
+            return ExportResult.Ok(payload.RemoteProductId, offerId);
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Granular price/quantity sync via <c>bulkUpdatePriceQuantity</c>. Unlike the resource PUTs
+    /// (<c>createOrReplaceInventoryItem</c> / <c>updateOffer</c>), this endpoint only touches the
+    /// fields sent — a stock update cannot wipe the listing's title/description/aspects. The HTTP
+    /// call returns 200 even when individual entries fail, so the per-entry status is checked too.
+    /// </summary>
+    private static async Task<ExportResult> BulkUpdatePriceQuantityAsync(
+        SalesChannelContext context,
+        string sku,
+        int? quantity,
+        string offerId,
+        decimal? price,
+        string currency)
+    {
+        var request = new Dictionary<string, object> { ["sku"] = sku };
+        if (quantity.HasValue)
+        {
+            request["shipToLocationAvailability"] = new { quantity = quantity.Value };
+        }
+        if (price.HasValue && !string.IsNullOrEmpty(offerId))
+        {
+            request["offers"] = new object[]
+            {
+                new
+                {
+                    offerId,
+                    price = new
+                    {
+                        currency = currency ?? "EUR",
+                        value = price.Value.ToString(CultureInfo.InvariantCulture),
+                    },
+                },
+            };
+        }
+
+        var response = await context.HttpClient.PostAsync(
+            $"{context.SalesChannel.Url}/sell/inventory/v1/bulk_update_price_quantity",
+            JsonContent.Create(new { requests = new[] { request } }),
+            context.CancellationToken);
+
+        var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return ExportResult.Fail($"bulkUpdatePriceQuantity HTTP {(int)response.StatusCode}: {Truncate(raw, 300)}");
+        }
+
+        var result = JsonSerializer.Deserialize<EbayBulkPriceQuantityResponse>(raw);
+        var entry = result?.Responses?.FirstOrDefault();
+        if (entry is not null && entry.StatusCode is < 200 or >= 300)
+        {
+            return ExportResult.Fail($"bulkUpdatePriceQuantity entry for {sku} failed with status {entry.StatusCode}: {Truncate(raw, 300)}");
+        }
+
+        return ExportResult.Ok(sku, offerId);
+    }
+
+    private static async Task<string> FindOfferIdBySkuAsync(SalesChannelContext context, string sku)
+    {
+        var response = await context.HttpClient.GetAsync(
+            $"{context.SalesChannel.Url}/sell/inventory/v1/offer?sku={Uri.EscapeDataString(sku)}",
+            context.CancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var offers = JsonSerializer.Deserialize<EbayOfferResponse>(
+            await response.Content.ReadAsStringAsync(context.CancellationToken));
+        return offers?.Offers is { Length: > 0 } ? offers.Offers[0].OfferId : null;
+    }
+
+    /// <summary>Product payload for createOrReplaceInventoryItem; eBay caps titles at 80 chars.</summary>
+    private static Dictionary<string, object> BuildInventoryProduct(ProductExportPayload payload)
+    {
+        var product = new Dictionary<string, object>
+        {
+            ["title"] = Truncate(payload.Name, 80),
+        };
+        if (!string.IsNullOrEmpty(payload.Description))
+        {
+            product["description"] = Truncate(payload.Description, 4000);
+        }
+        if (!string.IsNullOrEmpty(payload.Brand))
+        {
+            product["brand"] = payload.Brand;
+        }
+        if (!string.IsNullOrEmpty(payload.Mpn))
+        {
+            product["mpn"] = payload.Mpn;
+        }
+        var ean = payload.Ean ?? payload.Gtin;
+        if (!string.IsNullOrEmpty(ean))
+        {
+            product["ean"] = new[] { ean };
+        }
+        return product;
+    }
+
+    /// <summary>Product-level category override from ProductSalesChannel.MetadataJson, else the channel default.</summary>
+    private static string ResolveCategoryId(string metadataJson, EbayChannelConfig config)
+    {
+        if (!string.IsNullOrEmpty(metadataJson))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(metadataJson);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object
+                    && doc.RootElement.TryGetProperty("categoryId", out var category)
+                    && category.ValueKind == JsonValueKind.String
+                    && !string.IsNullOrEmpty(category.GetString()))
+                {
+                    return category.GetString();
+                }
+            }
+            catch (JsonException)
+            {
+                // Malformed metadata never blocks the export — fall through to the channel default.
+            }
+        }
+
+        return config.CategoryId;
     }
 
     private static void ConfigureBearer(SalesChannelContext context, string accessToken)
@@ -478,161 +871,203 @@ public sealed class EbayConnector : ConnectorBase
         context.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
-    private static SalesChannelImportSales MapSales(EbaySalesResponse o, EbayLineItem line)
+    private static SalesChannelImportSales MapSales(EbayOrder order)
     {
+        var shipTo = GetShipTo(order);
+        // Name/email/phone live on the registration contact; the shipTo contact is the fallback.
+        var contact = order.Buyer?.BuyerRegistrationAddress ?? shipTo;
+        var (firstname, lastname) = SplitFullName(contact?.FullName);
+
+        var billingAddress = MapAddress(contact, firstname, lastname);
+        var shippingAddress = MapShippingAddress(shipTo, billingAddress);
+
         var sales = new SalesChannelImportSales
         {
-            RemoteSalesId = line.LineItemId,
-            RemoteCustomerId = o.Buyer?.Username ?? string.Empty,
-            DateSalesed = o.CreationDate,
-            Subtotal = o.PricingSummary?.Subtotal?.Value ?? 0m,
-            Total = o.PricingSummary?.Total?.Value ?? line.LineItemCost.Value,
-            TotalTax = o.PricingSummary?.TotalTaxAmount?.Value ?? 0m,
-            ShippingCost = CalculateShippingCost(o),
-            Status = MapSalesStatus(o.SalesFulfillmentStatus),
-            PaymentStatus = MapPaymentStatus(o.SalesPaymentStatus),
+            RemoteSalesId = order.OrderId,
+            RemoteCustomerId = order.Buyer?.Username ?? string.Empty,
+            DateSalesed = ToUtc(order.CreationDate),
+            Subtotal = order.PricingSummary?.PriceSubtotal?.Value ?? 0m,
+            ShippingCost = order.PricingSummary?.DeliveryCost?.Value ?? 0m,
+            TotalTax = order.PricingSummary?.Tax?.Value ?? 0m,
+            Total = order.PricingSummary?.Total?.Value ?? 0m,
+            Status = MapSalesStatus(order),
+            PaymentStatus = MapPaymentStatus(order.OrderPaymentStatus),
             PaymentMethod = "eBay",
             PaymentProvider = "eBay",
-            CustomerNote = string.Empty,
-            SalesItems = new List<SalesChannelImportSalesItem>(),
-            Customer = new SalesChannelImportCustomer(),
-        };
-
-        var buyer = o.Buyer;
-        if (buyer?.TaxAddress is not null)
-        {
-            sales.Customer = new SalesChannelImportCustomer
+            CustomerNote = order.BuyerCheckoutNotes ?? string.Empty,
+            Customer = new SalesChannelImportCustomer
             {
-                Email = buyer.TaxAddress.Email ?? string.Empty,
-                RemoteCustomerId = buyer.Username ?? string.Empty,
-                Firstname = buyer.TaxAddress.FirstName ?? string.Empty,
-                Lastname = buyer.TaxAddress.LastName ?? string.Empty,
-                Phone = buyer.TaxAddress.Phone ?? string.Empty,
+                RemoteCustomerId = order.Buyer?.Username ?? string.Empty,
+                Email = contact?.Email ?? string.Empty,
+                Firstname = firstname,
+                Lastname = lastname,
+                CompanyName = contact?.CompanyName ?? string.Empty,
+                Phone = contact?.PrimaryPhone?.PhoneNumber ?? string.Empty,
                 CustomerStatus = CustomerStatus.Active,
-                DateEnrollment = DateTime.UtcNow,
-            };
-
-            var billingAddress = new SalesChannelImportCustomerAddress
-            {
-                Firstname = buyer.TaxAddress.FirstName ?? string.Empty,
-                Lastname = buyer.TaxAddress.LastName ?? string.Empty,
-                Street = buyer.TaxAddress.AddressLine1 ?? string.Empty,
-                City = buyer.TaxAddress.City ?? string.Empty,
-                Zip = buyer.TaxAddress.PostalCode ?? string.Empty,
-                Country = buyer.TaxAddress.CountryCode ?? string.Empty,
-            };
-            sales.Customer.BillingAddress = billingAddress;
-            sales.BillingAddress = billingAddress;
-
-            var shipTo = GetShippingAddress(o);
-            if (shipTo is not null)
-            {
-                var shippingAddress = new SalesChannelImportCustomerAddress
+                DateEnrollment = ToUtc(order.CreationDate),
+                BillingAddress = billingAddress,
+                ShippingAddress = shippingAddress,
+            },
+            BillingAddress = billingAddress,
+            ShippingAddress = shippingAddress,
+            SalesItems = (order.LineItems ?? [])
+                .Select(line => new SalesChannelImportSalesItem
                 {
-                    Firstname = shipTo.FirstName ?? string.Empty,
-                    Lastname = shipTo.LastName ?? string.Empty,
-                    Street = shipTo.AddressLine1 ?? string.Empty,
-                    City = shipTo.City ?? string.Empty,
-                    Zip = shipTo.PostalCode ?? string.Empty,
-                    Country = shipTo.CountryCode ?? string.Empty,
-                };
-                sales.Customer.ShippingAddress = shippingAddress;
-                sales.ShippingAddress = shippingAddress;
-            }
-            else
-            {
-                sales.Customer.ShippingAddress = billingAddress;
-                sales.ShippingAddress = billingAddress;
-            }
-        }
-
-        sales.SalesItems.Add(new SalesChannelImportSalesItem
-        {
-            Name = line.Title ?? string.Empty,
-            Sku = line.Sku ?? string.Empty,
-            Quantity = line.Quantity,
-            Price = line.LineItemCost.Value / Math.Max(1, line.Quantity),
-            TaxRate = 19,
-        });
+                    Name = line.Title ?? string.Empty,
+                    Sku = line.Sku ?? string.Empty,
+                    Quantity = line.Quantity,
+                    Price = line.Quantity > 0 ? (line.LineItemCost?.Value ?? 0m) / line.Quantity : line.LineItemCost?.Value ?? 0m,
+                    TaxRate = ComputeLineTaxRate(line),
+                }).ToList(),
+        };
 
         return sales;
     }
 
-    private static SalesChannelImportCustomer MapCustomer(EbaySalesResponse o)
+    private static SalesChannelImportCustomer MapCustomer(EbayOrder order)
     {
-        var buyer = o.Buyer;
-        var importCustomer = new SalesChannelImportCustomer
+        var shipTo = GetShipTo(order);
+        var contact = order.Buyer?.BuyerRegistrationAddress ?? shipTo;
+        var (firstname, lastname) = SplitFullName(contact?.FullName);
+
+        var billingAddress = MapAddress(contact, firstname, lastname);
+        var shippingAddress = MapShippingAddress(shipTo, billingAddress);
+
+        return new SalesChannelImportCustomer
         {
-            RemoteCustomerId = buyer.Username ?? string.Empty,
-            Email = buyer.TaxAddress.Email ?? string.Empty,
-            Firstname = buyer.TaxAddress.FirstName ?? string.Empty,
-            Lastname = buyer.TaxAddress.LastName ?? string.Empty,
-            Phone = buyer.TaxAddress.Phone ?? string.Empty,
+            RemoteCustomerId = order.Buyer?.Username ?? string.Empty,
+            Email = contact?.Email ?? string.Empty,
+            Firstname = firstname,
+            Lastname = lastname,
+            CompanyName = contact?.CompanyName ?? string.Empty,
+            Phone = contact?.PrimaryPhone?.PhoneNumber ?? string.Empty,
             CustomerStatus = CustomerStatus.Active,
-            DateEnrollment = DateTime.UtcNow,
-            BillingAddress = new SalesChannelImportCustomerAddress
-            {
-                Firstname = buyer.TaxAddress.FirstName ?? string.Empty,
-                Lastname = buyer.TaxAddress.LastName ?? string.Empty,
-                Street = buyer.TaxAddress.AddressLine1 ?? string.Empty,
-                City = buyer.TaxAddress.City ?? string.Empty,
-                Zip = buyer.TaxAddress.PostalCode ?? string.Empty,
-                Country = buyer.TaxAddress.CountryCode ?? string.Empty,
-            },
+            DateEnrollment = ToUtc(order.CreationDate),
+            BillingAddress = billingAddress,
+            ShippingAddress = shippingAddress,
         };
+    }
 
-        var shipTo = GetShippingAddress(o);
-        importCustomer.ShippingAddress = shipTo is null
-            ? importCustomer.BillingAddress
-            : new SalesChannelImportCustomerAddress
+    private static SalesChannelImportCustomerAddress MapAddress(EbayOrderContact contact, string firstname, string lastname)
+    {
+        var address = contact?.ContactAddress;
+        var street = address?.AddressLine1 ?? string.Empty;
+        if (!string.IsNullOrEmpty(address?.AddressLine2))
+        {
+            street = string.IsNullOrEmpty(street) ? address.AddressLine2 : $"{street} {address.AddressLine2}";
+        }
+
+        return new SalesChannelImportCustomerAddress
+        {
+            Firstname = firstname,
+            Lastname = lastname,
+            CompanyName = contact?.CompanyName ?? string.Empty,
+            Street = street,
+            City = address?.City ?? string.Empty,
+            Zip = address?.PostalCode ?? string.Empty,
+            Country = address?.CountryCode ?? string.Empty,
+            Phone = contact?.PrimaryPhone?.PhoneNumber ?? string.Empty,
+        };
+    }
+
+    private static SalesChannelImportCustomerAddress MapShippingAddress(
+        EbayOrderContact shipTo,
+        SalesChannelImportCustomerAddress fallback)
+    {
+        if (shipTo is null)
+        {
+            return fallback;
+        }
+
+        var (firstname, lastname) = SplitFullName(shipTo.FullName);
+        return MapAddress(shipTo, firstname, lastname);
+    }
+
+    private static EbayOrderContact GetShipTo(EbayOrder order)
+    {
+        var instructions = order.FulfillmentStartInstructions;
+        return instructions is { Length: > 0 } ? instructions[0].ShippingStep?.ShipTo : null;
+    }
+
+    /// <summary>eBay only carries a single fullName; the last token becomes the last name.</summary>
+    private static (string Firstname, string Lastname) SplitFullName(string fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            return (string.Empty, string.Empty);
+        }
+
+        var parts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 1
+            ? (string.Empty, parts[0])
+            : (string.Join(' ', parts[..^1]), parts[^1]);
+    }
+
+    // eBay exposes a line's tax as a money amount, not a rate — derive the percentage from the
+    // line cost. 0 when untaxed (typical for DE marketplace orders where eBay remits the VAT).
+    private static double ComputeLineTaxRate(EbayLineItem line)
+    {
+        var cost = line.LineItemCost?.Value ?? 0m;
+        var tax = line.Taxes?.Sum(t => t.Amount?.Value ?? 0m) ?? 0m;
+        if (cost <= 0m || tax <= 0m)
+        {
+            return 0;
+        }
+
+        return (double)Math.Round(tax / cost * 100m, 0);
+    }
+
+    private static List<SalesChannelImportImage> MapImages(string[] imageUrls)
+    {
+        if (imageUrls is null || imageUrls.Length == 0)
+        {
+            return [];
+        }
+
+        // eBay has no separate media id — the EPS URL itself is the stable remote key.
+        return imageUrls
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Select((url, index) => new SalesChannelImportImage
             {
-                Firstname = shipTo.FirstName ?? string.Empty,
-                Lastname = shipTo.LastName ?? string.Empty,
-                Street = shipTo.AddressLine1 ?? string.Empty,
-                City = shipTo.City ?? string.Empty,
-                Zip = shipTo.PostalCode ?? string.Empty,
-                Country = shipTo.CountryCode ?? string.Empty,
-            };
-
-        return importCustomer;
+                RemoteImageId = url,
+                Url = url,
+                SortOrder = index,
+            })
+            .ToList();
     }
 
-    private static EbayAddress GetShippingAddress(EbaySalesResponse o)
+    private static DateTime ToUtc(DateTime value) =>
+        value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+
+    private static SalesStatus MapSalesStatus(EbayOrder order)
     {
-        var instructions = o.FulfillmentStartInstructions;
-        if (instructions is { Length: > 0 } && instructions[0].ShippingStep is not null)
+        if (string.Equals(order.CancelStatus?.CancelState, "CANCELED", StringComparison.OrdinalIgnoreCase))
         {
-            return instructions[0].ShippingStep.ShipTo;
+            return SalesStatus.Cancelled;
         }
-        return null;
-    }
 
-    private static decimal CalculateShippingCost(EbaySalesResponse o)
-    {
-        if (o.PricingSummary?.Total is null || o.PricingSummary.Subtotal is null)
+        return order.OrderFulfillmentStatus?.ToUpperInvariant() switch
         {
-            return 0m;
-        }
-        var total = o.PricingSummary.Total.Value;
-        var subtotal = o.PricingSummary.Subtotal.Value;
-        var tax = o.PricingSummary.TotalTaxAmount?.Value ?? 0m;
-        return Math.Max(0, total - subtotal - tax);
+            "NOT_STARTED" => SalesStatus.Pending,
+            "IN_PROGRESS" => SalesStatus.Processing,
+            "FULFILLED" => SalesStatus.Completed,
+            _ => SalesStatus.Unknown,
+        };
     }
 
-    private static SalesStatus MapSalesStatus(string ebayStatus) => ebayStatus?.ToLower() switch
+    private static PaymentStatus MapPaymentStatus(string status) => status?.ToUpperInvariant() switch
     {
-        "not_started" => SalesStatus.Pending,
-        "in_progress" => SalesStatus.Processing,
-        "fulfilled" => SalesStatus.Completed,
-        "failed" => SalesStatus.Failed,
-        _ => SalesStatus.Unknown,
-    };
-
-    private static PaymentStatus MapPaymentStatus(string status) => status?.ToLower() switch
-    {
-        "paid" => PaymentStatus.CompletelyPaid,
-        "partially_paid" => PaymentStatus.PartiallyPaid,
-        "not_paid" => PaymentStatus.Invoiced,
+        "PAID" => PaymentStatus.CompletelyPaid,
+        "PENDING" => PaymentStatus.Invoiced,
+        "PARTIALLY_REFUNDED" => PaymentStatus.ReCrediting,
+        "FULLY_REFUNDED" => PaymentStatus.ReCrediting,
+        "FAILED" => PaymentStatus.Unknown,
         _ => PaymentStatus.Unknown,
     };
+
+    private static string Truncate(string value, int max)
+    {
+        if (string.IsNullOrEmpty(value)) return value ?? string.Empty;
+        return value.Length <= max ? value : value[..max];
+    }
 }

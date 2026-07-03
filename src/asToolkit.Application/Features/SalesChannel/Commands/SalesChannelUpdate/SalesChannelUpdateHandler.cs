@@ -73,6 +73,13 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
             {
                 existingSalesChannel.Password = request.Password;
             }
+            // Null means "keep the stored connector config" (older clients don't send the field);
+            // an empty string deliberately clears it.
+            if (request.AdditionalConfigJson is not null)
+            {
+                existingSalesChannel.AdditionalConfigJson =
+                    string.IsNullOrWhiteSpace(request.AdditionalConfigJson) ? null : request.AdditionalConfigJson;
+            }
             existingSalesChannel.ImportProducts = request.ImportProducts;
             existingSalesChannel.ImportCustomers = request.ImportCustomers;
             existingSalesChannel.ImportSaless = request.ImportSaless;
