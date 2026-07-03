@@ -2,49 +2,51 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using asToolkit.Persistence.DatabaseContext;
 
 #nullable disable
 
-namespace asToolkit.Persistence.MSSQL.Migrations
+namespace asToolkit.Persistence.PostgreSQL.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260703205746_NullifyLegacySalesItemShippingId")]
+    partial class NullifyLegacySalesItemShippingId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "10.0.9")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
+                        .HasDatabaseName("RoleNameIndex");
 
                     b.ToTable("role", (string)null);
 
@@ -52,14 +54,14 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = "cac43a6e-f7bb-4448-baaf-1add431ccbbf",
-                            ConcurrencyStamp = "155c8811-b525-4506-9bb5-db9a1c4f7ebc",
+                            ConcurrencyStamp = "bee76d34-4982-40b1-a233-538f8609c9ab",
                             Name = "User",
                             NormalizedName = "USER"
                         },
                         new
                         {
                             Id = "abc43a7e-f7bb-4447-baaf-1add431ddbdf",
-                            ConcurrencyStamp = "4df72fa1-9290-449a-bc42-0754bc1ca637",
+                            ConcurrencyStamp = "011cafbd-7dc3-4ab9-b61a-3b924e844be4",
                             Name = "Superadmin",
                             NormalizedName = "SUPERADMIN"
                         });
@@ -69,19 +71,19 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("RoleId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -94,19 +96,19 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -118,17 +120,17 @@ namespace asToolkit.Persistence.MSSQL.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.HasKey("LoginProvider", "ProviderKey");
 
@@ -140,10 +142,10 @@ namespace asToolkit.Persistence.MSSQL.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("RoleId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.HasKey("UserId", "RoleId");
 
@@ -167,16 +169,16 @@ namespace asToolkit.Persistence.MSSQL.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Value")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
@@ -186,10 +188,10 @@ namespace asToolkit.Persistence.MSSQL.Migrations
             modelBuilder.Entity("SalesChannelWarehouses", b =>
                 {
                     b.Property<Guid>("SalesChannelsId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("WarehousesId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("SalesChannelsId", "WarehousesId");
 
@@ -202,42 +204,42 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("AiModelType")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("ApiKey")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ApiPassword")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ApiUrl")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ApiUsername")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<long>("NCtx")
                         .HasColumnType("bigint");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -248,27 +250,27 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("AiModelId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Identifier")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("PromptText")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -280,71 +282,71 @@ namespace asToolkit.Persistence.MSSQL.Migrations
             modelBuilder.Entity("asToolkit.Domain.Entities.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("DefaultTenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Firstname")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Lastname")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.HasKey("Id");
 
@@ -355,8 +357,7 @@ namespace asToolkit.Persistence.MSSQL.Migrations
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
-                        .HasDatabaseName("UserNameIndex")
-                        .HasFilter("[NormalizedUserName] IS NOT NULL");
+                        .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("user", (string)null);
 
@@ -365,9 +366,9 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         {
                             Id = "8e445865-a24d-4543-a6c6-9443d048cdb9",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "5d6f8b6b-6328-4087-952c-11fdd69ff001",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 187, DateTimeKind.Utc).AddTicks(2899),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 187, DateTimeKind.Utc).AddTicks(2902),
+                            ConcurrencyStamp = "86a62128-6636-4a60-802a-a66d71a3ff50",
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 44, 962, DateTimeKind.Utc).AddTicks(4025),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 44, 962, DateTimeKind.Utc).AddTicks(4028),
                             Email = "admin@localhost.com",
                             EmailConfirmed = true,
                             Firstname = "System",
@@ -375,9 +376,9 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@LOCALHOST.COM",
                             NormalizedUserName = "ADMIN@LOCALHOST.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEJhkT3eGOeMjYIaTDTSDFR/LhlsAbyNlPcOHyetSo+LupPoTP2Ay+H62S8NbYe5+TQ==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEAhCScJjOVJmQbySJu58eNeWkDY1K6WaMja+awlYJY8sjK9wZHrLd3HeKix3CE1ROw==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "a1deda5d-ab57-4cf9-86f2-43b1fd07ddd0",
+                            SecurityStamp = "b9e564d0-1dc0-42d1-812c-e0d7b78b0f23",
                             TwoFactorEnabled = false,
                             UserName = "admin@localhost.com"
                         });
@@ -387,53 +388,53 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("AggregateId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("AggregateType")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("AttemptCount")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("IdempotencyKey")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("LastError")
                         .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<DateTime>("NextAttemptAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Operation")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("PayloadJson")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("SalesChannelId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Status")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -449,40 +450,40 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("CorrelationId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Exception")
                         .HasMaxLength(8000)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("character varying(8000)");
 
                     b.Property<int>("Level")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("character varying(4000)");
 
                     b.Property<int>("Operation")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("SalesChannelId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -500,50 +501,50 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("CorrelationId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ErrorSummary")
                         .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<DateTime?>("FinishedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("ItemsFailed")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("ItemsProcessed")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("ItemsTotal")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("Operation")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("SalesChannelId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("StartedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Status")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("TriggerSource")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -559,25 +560,25 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("CountryCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -588,960 +589,960 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             CountryCode = "DE",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(3438),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(3440),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(8479),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(8480),
                             Name = "Germany"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000002"),
                             CountryCode = "AT",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4039),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4040),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9072),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9072),
                             Name = "Austria"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000003"),
                             CountryCode = "CH",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4052),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4052),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9074),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9074),
                             Name = "Switzerland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000004"),
                             CountryCode = "AD",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4054),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4054),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9076),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9076),
                             Name = "Andorra"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000005"),
                             CountryCode = "AF",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4055),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4056),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9077),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9077),
                             Name = "Afghanistan"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000006"),
                             CountryCode = "AG",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4057),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4057),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9079),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9079),
                             Name = "Antigua and Barbuda"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000007"),
                             CountryCode = "AL",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4059),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4059),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9086),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9086),
                             Name = "Albania"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000008"),
                             CountryCode = "AM",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4060),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4060),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9087),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9088),
                             Name = "Armenia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000009"),
                             CountryCode = "AO",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4064),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4064),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9089),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9089),
                             Name = "Angola"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000010"),
                             CountryCode = "AX",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4066),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4066),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9091),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9091),
                             Name = "Åland Islands"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000011"),
                             CountryCode = "AR",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4067),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4068),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9092),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9092),
                             Name = "Argentina"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000012"),
                             CountryCode = "AT",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4069),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4069),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9102),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9102),
                             Name = "Antarctica"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000013"),
                             CountryCode = "AU",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4070),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4070),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9103),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9104),
                             Name = "Australia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000014"),
                             CountryCode = "AZ",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4072),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4072),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9105),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9105),
                             Name = "Azerbaijan"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000015"),
                             CountryCode = "BA",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4073),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4073),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9108),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9108),
                             Name = "Bosnia and Herzegovina"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000016"),
                             CountryCode = "BB",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4075),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4075),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9110),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9110),
                             Name = "Barbados"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000017"),
                             CountryCode = "BE",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4078),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4078),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9111),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9111),
                             Name = "Belgium"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000018"),
                             CountryCode = "BG",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4079),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4079),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9113),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9113),
                             Name = "Bulgaria"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000019"),
                             CountryCode = "BL",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4088),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4089),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9114),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9114),
                             Name = "Saint Barthélemy"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000020"),
                             CountryCode = "BO",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4090),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4091),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9116),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9116),
                             Name = "Bolivia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000021"),
                             CountryCode = "BR",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4093),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4093),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9117),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9117),
                             Name = "Brazil"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000022"),
                             CountryCode = "BS",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4094),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4094),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9119),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9119),
                             Name = "Bahamas"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000023"),
                             CountryCode = "BY",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4096),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4096),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9121),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9121),
                             Name = "Belarus"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000024"),
                             CountryCode = "BZ",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4097),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4097),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9123),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9123),
                             Name = "Belize"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000025"),
                             CountryCode = "CA",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4100),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4100),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9124),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9124),
                             Name = "Canada"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000026"),
                             CountryCode = "CH",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4101),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4102),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9126),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9126),
                             Name = "Cocos (Keeling) Islands"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000027"),
                             CountryCode = "CI",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4113),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4113),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9140),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9140),
                             Name = "Ivory Coast"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000028"),
                             CountryCode = "CL",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4116),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4116),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9149),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9150),
                             Name = "Chile"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000029"),
                             CountryCode = "CN",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4117),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4117),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9152),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9152),
                             Name = "China"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000030"),
                             CountryCode = "CO",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4119),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4119),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9153),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9153),
                             Name = "Colombia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000031"),
                             CountryCode = "CR",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4120),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4120),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9156),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9156),
                             Name = "Costa Rica"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000032"),
                             CountryCode = "CU",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4122),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4122),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9158),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9158),
                             Name = "Cuba"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000033"),
                             CountryCode = "CY",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4124),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4124),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9159),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9159),
                             Name = "Cyprus"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000034"),
                             CountryCode = "CZ",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4126),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4126),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9160),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9161),
                             Name = "Czech Republic"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000035"),
                             CountryCode = "DO",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4134),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4134),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9162),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9162),
                             Name = "Dominican Republic"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000036"),
                             CountryCode = "DK",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4137),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4137),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9163),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9163),
                             Name = "Denmark"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000037"),
                             CountryCode = "DZ",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4138),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4138),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9165),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9165),
                             Name = "Algeria"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000038"),
                             CountryCode = "EC",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4139),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4140),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9166),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9166),
                             Name = "Ecuador"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000039"),
                             CountryCode = "EE",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4141),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4141),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9169),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9169),
                             Name = "Estonia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000040"),
                             CountryCode = "EG",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4142),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4143),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9170),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9171),
                             Name = "Egypt"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000041"),
                             CountryCode = "ER",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4145),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4145),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9172),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9172),
                             Name = "Eritrea"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000042"),
                             CountryCode = "ES",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4146),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4147),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9173),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9173),
                             Name = "Spain"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000043"),
                             CountryCode = "ET",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4148),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4148),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9175),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9175),
                             Name = "Ethiopia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000044"),
                             CountryCode = "FI",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4149),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4150),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9183),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9183),
                             Name = "Finland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000045"),
                             CountryCode = "FR",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4151),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4151),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9185),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9185),
                             Name = "France"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000046"),
                             CountryCode = "GB",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4152),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4152),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9187),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9187),
                             Name = "United Kingdom"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000047"),
                             CountryCode = "GE",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4154),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4154),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9189),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9190),
                             Name = "Georgia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000048"),
                             CountryCode = "GF",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4155),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4156),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9191),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9191),
                             Name = "French Guiana"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000049"),
                             CountryCode = "GH",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4158),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4158),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9192),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9193),
                             Name = "Ghana"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000050"),
                             CountryCode = "GL",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4159),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4160),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9194),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9194),
                             Name = "Greenland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000051"),
                             CountryCode = "GP",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4167),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4167),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9195),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9196),
                             Name = "Guadeloupe"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000052"),
                             CountryCode = "GR",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4169),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4170),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9197),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9197),
                             Name = "Greece"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000053"),
                             CountryCode = "GT",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4171),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4171),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9198),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9198),
                             Name = "Guatemala"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000054"),
                             CountryCode = "GY",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4172),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4173),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9200),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9200),
                             Name = "Guyana"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000055"),
                             CountryCode = "HN",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4174),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4174),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9202),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9202),
                             Name = "Honduras"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000056"),
                             CountryCode = "HR",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4175),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4176),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9204),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9204),
                             Name = "Croatia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000057"),
                             CountryCode = "HT",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4178),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4178),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9205),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9205),
                             Name = "Haiti"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000058"),
                             CountryCode = "HU",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4180),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4180),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9206),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9207),
                             Name = "Hungary"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000059"),
                             CountryCode = "ID",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4181),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4181),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9208),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9208),
                             Name = "Indonesia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000060"),
                             CountryCode = "IE",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4183),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4183),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9216),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9216),
                             Name = "Ireland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000061"),
                             CountryCode = "IN",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4184),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4184),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9218),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9219),
                             Name = "India"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000062"),
                             CountryCode = "IR",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4185),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4186),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9220),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9220),
                             Name = "Iran"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000063"),
                             CountryCode = "IS",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4187),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4187),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9222),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9223),
                             Name = "Iceland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000064"),
                             CountryCode = "IT",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4188),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4188),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9224),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9224),
                             Name = "Italy"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000065"),
                             CountryCode = "JM",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4191),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4191),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9225),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9226),
                             Name = "Jamaica"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000066"),
                             CountryCode = "JP",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4192),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4193),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9227),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9227),
                             Name = "Japan"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000067"),
                             CountryCode = "KE",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4200),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4201),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9228),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9228),
                             Name = "Kenya"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000068"),
                             CountryCode = "KG",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4203),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4203),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9230),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9230),
                             Name = "Kyrgyzstan"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000069"),
                             CountryCode = "KR",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4204),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4204),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9231),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9231),
                             Name = "South Korea"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000070"),
                             CountryCode = "KW",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4206),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4206),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9233),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9233),
                             Name = "Kuwait"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000071"),
                             CountryCode = "KZ",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4207),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4207),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9235),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9235),
                             Name = "Kazakhstan"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000072"),
                             CountryCode = "LU",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4208),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4209),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9236),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9237),
                             Name = "Luxembourg"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000073"),
                             CountryCode = "LT",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4211),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4211),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9238),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9238),
                             Name = "Lithuania"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000074"),
                             CountryCode = "LV",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4212),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4213),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9239),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9239),
                             Name = "Latvia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000075"),
                             CountryCode = "MA",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4214),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4214),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9240),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9241),
                             Name = "Morocco"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000076"),
                             CountryCode = "MC",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4215),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4216),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9249),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9249),
                             Name = "Monaco"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000077"),
                             CountryCode = "MD",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4217),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4217),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9251),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9252),
                             Name = "Moldova"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000078"),
                             CountryCode = "MF",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4218),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4218),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9253),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9253),
                             Name = "Saint Martin"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000079"),
                             CountryCode = "MG",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4229),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4229),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9256),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9256),
                             Name = "Madagascar"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000080"),
                             CountryCode = "MQ",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4230),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4231),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9258),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9258),
                             Name = "Martinique"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000081"),
                             CountryCode = "MT",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4233),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4233),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9259),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9259),
                             Name = "Malta"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000082"),
                             CountryCode = "MX",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4235),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4235),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9260),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9261),
                             Name = "Mexico"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000083"),
                             CountryCode = "MY",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4243),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4244),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9268),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9268),
                             Name = "Malaysia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000084"),
                             CountryCode = "NG",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4245),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4245),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9270),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9270),
                             Name = "Nigeria"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000085"),
                             CountryCode = "NI",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4247),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4247),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9271),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9271),
                             Name = "Nicaragua"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000086"),
                             CountryCode = "NL",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4248),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4249),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9272),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9273),
                             Name = "Netherlands"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000087"),
                             CountryCode = "NO",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4250),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4250),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9275),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9275),
                             Name = "Norway"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000088"),
                             CountryCode = "NZ",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4251),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4251),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9276),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9276),
                             Name = "New Zealand"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000089"),
                             CountryCode = "OM",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4254),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4254),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9278),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9278),
                             Name = "Oman"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000090"),
                             CountryCode = "PA",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4255),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4256),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9279),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9279),
                             Name = "Panama"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000091"),
                             CountryCode = "PE",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4257),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4257),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9280),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9280),
                             Name = "Peru"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000092"),
                             CountryCode = "PL",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4258),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4258),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9288),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9289),
                             Name = "Poland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000093"),
                             CountryCode = "PM",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4260),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4260),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9291),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9291),
                             Name = "Saint Pierre and Miquelon"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000094"),
                             CountryCode = "PR",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4261),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4261),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9293),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9293),
                             Name = "Puerto Rico"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000095"),
                             CountryCode = "PT",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4262),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4263),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9295),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9295),
                             Name = "Portugal"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000096"),
                             CountryCode = "PY",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4264),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4264),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9297),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9297),
                             Name = "Paraguay"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000097"),
                             CountryCode = "QA",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4266),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4267),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9298),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9298),
                             Name = "Qatar"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000098"),
                             CountryCode = "RO",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4268),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4268),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9299),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9300),
                             Name = "Romania"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000099"),
                             CountryCode = "RS",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4276),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4277),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9301),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9301),
                             Name = "Serbia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000100"),
                             CountryCode = "RU",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4279),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4280),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9302),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9302),
                             Name = "Russia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000101"),
                             CountryCode = "SA",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4281),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4281),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9304),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9304),
                             Name = "Saudi Arabia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000102"),
                             CountryCode = "SE",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4283),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4283),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9305),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9306),
                             Name = "Sweden"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000103"),
                             CountryCode = "SG",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4284),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4285),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9308),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9308),
                             Name = "Singapore"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000104"),
                             CountryCode = "SI",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4286),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4286),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9310),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9310),
                             Name = "Slovenia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000105"),
                             CountryCode = "SK",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4289),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4289),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9311),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9312),
                             Name = "Slovakia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000106"),
                             CountryCode = "SN",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4291),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4291),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9313),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9313),
                             Name = "Senegal"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000107"),
                             CountryCode = "SR",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4292),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4292),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9314),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9314),
                             Name = "Suriname"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000108"),
                             CountryCode = "SV",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4294),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4295),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9316),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9316),
                             Name = "El Salvador"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000109"),
                             CountryCode = "TR",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4296),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4296),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9317),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9317),
                             Name = "Turkey"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000110"),
                             CountryCode = "TT",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4297),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4297),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9319),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9319),
                             Name = "Trinidad and Tobago"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000111"),
                             CountryCode = "UA",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4299),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4299),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9321),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9321),
                             Name = "Ukraine"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000112"),
                             CountryCode = "US",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4300),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4300),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9323),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9323),
                             Name = "United States"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000113"),
                             CountryCode = "UY",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4303),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4303),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9324),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9324),
                             Name = "Uruguay"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000114"),
                             CountryCode = "VE",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4304),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4304),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9326),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9326),
                             Name = "Venezuela"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000115"),
                             CountryCode = "VI",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4306),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4306),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9327),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9327),
                             Name = "Virgin Islands"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000116"),
                             CountryCode = "VN",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4307),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4307),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9328),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9329),
                             Name = "Vietnam"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000117"),
                             CountryCode = "YE",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4308),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4308),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9330),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9330),
                             Name = "Yemen"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000118"),
                             CountryCode = "ZA",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4310),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4310),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9331),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9331),
                             Name = "South Africa"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000119"),
                             CountryCode = "ZM",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4311),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4311),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9334),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9334),
                             Name = "Zambia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000120"),
                             CountryCode = "ZW",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4312),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(4313),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9335),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 6, DateTimeKind.Utc).AddTicks(9335),
                             Name = "Zimbabwe"
                         });
                 });
@@ -1550,57 +1551,57 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("CompanyName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("CustomerId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("CustomerStatus")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("DateEnrollment")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Firstname")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Lastname")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Note")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Phone")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("VatNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Website")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -1611,56 +1612,56 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("City")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("CompanyName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("CountryId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("CustomerId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("DefaultDeliveryAddress")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("DefaultInvoiceAddress")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Firstname")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("HouseNr")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Lastname")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Street")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Zip")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -1675,26 +1676,26 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("CustomerId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("RemoteCustomerId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("SalesChannelId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -1709,29 +1710,29 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Notes")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Quantity")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("ReceiptDate")
                         .HasColumnType("date");
@@ -1739,13 +1740,13 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                     b.Property<string>("Supplier")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("WarehouseId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -1764,127 +1765,127 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DeliveryAddressCity")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressCompanyName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressCountry")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressFirstName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressLastName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressPhone")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressStreet")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressZip")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressCity")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressCompanyName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressCountry")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressFirstName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressLastName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressPhone")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressStreet")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressZip")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("InvoiceDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("InvoiceNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("InvoiceStatus")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("PaymentStatus")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("PaymentTransactionId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("SalesId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("ShippingCost")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<decimal>("Subtotal")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("Total")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<decimal>("TotalTax")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.HasKey("Id");
 
@@ -1899,63 +1900,63 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("EAN")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("InvoiceId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<double>("Quantity")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<string>("SKU")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("SalesItemId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("TaxAmount")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<double>("TaxRate")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("TotalPrice")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<string>("Unit")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.HasKey("Id");
 
@@ -1970,59 +1971,59 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("City")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("Country")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("Logo")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("State")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("Street")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Website")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("ZipCode")
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 
@@ -2034,8 +2035,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                             Id = new Guid("55555555-5555-5555-5555-555555555555"),
                             City = "Berlin",
                             Country = "Deutschland",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 234, DateTimeKind.Utc).AddTicks(3155),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 234, DateTimeKind.Utc).AddTicks(3155),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 7, DateTimeKind.Utc).AddTicks(8101),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 7, DateTimeKind.Utc).AddTicks(8101),
                             Email = "info@beispiel-hersteller.de",
                             Name = "Beispiel Hersteller GmbH",
                             Phone = "+49 30 12345678",
@@ -2051,42 +2052,42 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ConsumedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedByUserId")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Nonce")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<int>("Provider")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("SalesChannelId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("StateToken")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -2102,90 +2103,90 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Asin")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Brand")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("Depth")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DescriptionOptimized")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Ean")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Gtin")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<decimal>("Height")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<Guid?>("ManufacturerId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Mpn")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<decimal>("Msrp")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("NameOptimized")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("ParentProductId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<int>("ProductType")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Sku")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("TaxClassId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("UseOptimized")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("VariantSortOrder")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Weight")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<decimal>("Width")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.HasKey("Id");
 
@@ -2200,8 +2201,7 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                     b.HasIndex("TaxClassId");
 
                     b.HasIndex("TenantId", "Sku")
-                        .IsUnique()
-                        .HasFilter("[TenantId] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("product", (string)null);
                 });
@@ -2210,30 +2210,29 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<int>("SortOrder")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId", "Name")
-                        .IsUnique()
-                        .HasFilter("[TenantId] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("product_attribute", (string)null);
                 });
@@ -2242,35 +2241,34 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ProductAttributeId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("SortOrder")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ProductAttributeId");
 
                     b.HasIndex("TenantId", "ProductAttributeId", "Value")
-                        .IsUnique()
-                        .HasFilter("[TenantId] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("product_attribute_value", (string)null);
                 });
@@ -2279,61 +2277,61 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("AltText")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("character varying(512)");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<long>("FileSizeBytes")
                         .HasColumnType("bigint");
 
                     b.Property<int>("Height")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("OriginalFileName")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("character varying(512)");
 
                     b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("RelativePath")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("RemoteImageId")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("character varying(512)");
 
                     b.Property<Guid?>("SalesChannelId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("SortOrder")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ThumbnailPath")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<int>("Width")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -2348,82 +2346,82 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Currency")
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("character varying(3)");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ExternalListingId")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<int>("FulfillmentChannel")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsListed")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LastErrorMessage")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<string>("LastExportHash")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTime?>("LastSyncedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal?>("MaxPrice")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<string>("MetadataJson")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<decimal?>("MinPrice")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<decimal>("MinimumProfit")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<int>("MinimumProfitUnit")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("RemoteProductId")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<int>("RepricingType")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("SalesChannelId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("StockBuffer")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("SyncStatus")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -2432,8 +2430,7 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                     b.HasIndex("SalesChannelId");
 
                     b.HasIndex("TenantId", "ProductId", "SalesChannelId")
-                        .IsUnique()
-                        .HasFilter("[TenantId] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("product_saleschannel", (string)null);
                 });
@@ -2442,34 +2439,34 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<double>("Stock")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<double>("StockMax")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<double>("StockMin")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<double>("StorageLocation")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("WarehouseId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -2484,25 +2481,25 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ParentProductId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("ProductAttributeId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("SortOrder")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -2518,22 +2515,22 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ProductAttributeValueId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -2549,38 +2546,38 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("Family")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsPersistent")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("ReplacedByTokenId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("RevokedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("character varying(64)");
 
                     b.HasKey("Id");
 
@@ -2600,147 +2597,147 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
                     b.Property<string>("CustomerNote")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateSalesed")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DeliveryAddressCity")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressCompanyName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressCountry")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressFirstName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressLastName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressPhone")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressStreet")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DeliveryAddressZip")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InternalNote")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressCity")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressCompanyName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressCountry")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressFirstName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressLastName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressPhone")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressStreet")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("InvoiceAddressZip")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("InvoiceSent")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("PaymentProvider")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("PaymentStatus")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("PaymentTransactionId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("RemoteSalesId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("SalesChannelId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("SalesConfirmationSent")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("SalesId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("ShippingCost")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<bool>("ShippingInformationSent")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("Status")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Subtotal")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("Total")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<decimal>("TotalTax")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.HasKey("Id");
 
@@ -2749,8 +2746,7 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                     b.HasIndex("SalesChannelId", "RemoteSalesId");
 
                     b.HasIndex("SalesId", "TenantId")
-                        .IsUnique()
-                        .HasFilter("[TenantId] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("sales", (string)null);
                 });
@@ -2759,120 +2755,120 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("AccessToken")
                         .HasMaxLength(8192)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("character varying(8192)");
 
                     b.Property<string>("AdditionalConfigJson")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("CustomerImportPageCursor")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("ExportCustomers")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("ExportProducts")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("ExportSaless")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("ExportStock")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("ImportCustomers")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("ImportProducts")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("ImportSaless")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("ImportStock")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("InitialCustomerImportCompleted")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("InitialProductExportCompleted")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("InitialProductImportCompleted")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("InitialSalesImportCompleted")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("LastSyncStartedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("MarketplaceId")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Password")
                         .IsRequired()
                         .HasMaxLength(4096)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("character varying(4096)");
 
                     b.Property<string>("RefreshToken")
                         .HasMaxLength(8192)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("character varying(8192)");
 
                     b.Property<DateTime?>("SalesImportBackfillCursor")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("SyncIntervalSeconds")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("TokenExpiresAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("TrackingEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("TrackingToken")
                         .HasMaxLength(4096)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("character varying(4096)");
 
                     b.Property<string>("TrackingTokenHash")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("character varying(64)");
 
                     b.Property<int>("Type")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Url")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Username")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("WebhookSecret")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -2885,8 +2881,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         {
                             Id = new Guid("88888888-8888-8888-8888-888888888888"),
                             CustomerImportPageCursor = 0,
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 247, DateTimeKind.Utc).AddTicks(4915),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 247, DateTimeKind.Utc).AddTicks(4917),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 19, DateTimeKind.Utc).AddTicks(258),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 19, DateTimeKind.Utc).AddTicks(260),
                             ExportCustomers = false,
                             ExportProducts = false,
                             ExportSaless = false,
@@ -2915,47 +2911,47 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsSystemGenerated")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<int?>("PaymentStatusNew")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("PaymentStatusOld")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("SalesId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int?>("SalesStatusNew")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("SalesStatusOld")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("ShippingStatusNew")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ShippingStatusOld")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -2968,47 +2964,47 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("MissingProductEan")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("MissingProductSku")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<double>("Quantity")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<Guid>("SalesId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("ShippingId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<double>("TaxRate")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -3021,23 +3017,23 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("SalesItemId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("SerialNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -3050,24 +3046,24 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsEncrypted")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Key")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Value")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -3077,8 +3073,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666615"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(4554),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(4556),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3279),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3282),
                             IsEncrypted = false,
                             Key = "Jwt.Issuer",
                             Value = "asToolkit.Server"
@@ -3086,8 +3082,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666616"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5025),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5026),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3759),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3760),
                             IsEncrypted = false,
                             Key = "Jwt.Audience",
                             Value = "asToolkit.Client"
@@ -3095,8 +3091,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666617"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5028),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5029),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3763),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3763),
                             IsEncrypted = false,
                             Key = "Jwt.DurationInMinutes",
                             Value = "60"
@@ -3104,8 +3100,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666618"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5031),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5032),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3764),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3765),
                             IsEncrypted = false,
                             Key = "Jwt.RefreshTokenExpireDays",
                             Value = "7"
@@ -3113,8 +3109,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666619"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5041),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5041),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3766),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3766),
                             IsEncrypted = false,
                             Key = "Email.ProviderType",
                             Value = "Smtp"
@@ -3122,8 +3118,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666624"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5043),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5043),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3768),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3768),
                             IsEncrypted = false,
                             Key = "Email.SmtpHost",
                             Value = ""
@@ -3131,8 +3127,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666625"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5044),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5044),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3769),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3769),
                             IsEncrypted = false,
                             Key = "Email.SmtpPort",
                             Value = "587"
@@ -3140,8 +3136,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666626"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5045),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5046),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3770),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3770),
                             IsEncrypted = false,
                             Key = "Email.SmtpUsername",
                             Value = ""
@@ -3149,8 +3145,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666627"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5047),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5047),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3775),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3775),
                             IsEncrypted = false,
                             Key = "Email.SmtpPassword",
                             Value = ""
@@ -3158,8 +3154,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666628"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5049),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5049),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3776),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3776),
                             IsEncrypted = false,
                             Key = "Email.SmtpEnableSsl",
                             Value = "true"
@@ -3167,8 +3163,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666629"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5050),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5050),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3777),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3778),
                             IsEncrypted = false,
                             Key = "Email.M365TenantId",
                             Value = ""
@@ -3176,8 +3172,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666630"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5051),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5051),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3779),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3779),
                             IsEncrypted = false,
                             Key = "Email.M365ClientId",
                             Value = ""
@@ -3185,8 +3181,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666631"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5054),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5054),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3780),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3780),
                             IsEncrypted = false,
                             Key = "Email.M365ClientSecret",
                             Value = ""
@@ -3194,8 +3190,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666632"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5056),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5056),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3781),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3781),
                             IsEncrypted = false,
                             Key = "Email.M365SenderAddress",
                             Value = ""
@@ -3203,8 +3199,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666620"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5057),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5057),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3783),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3783),
                             IsEncrypted = false,
                             Key = "Email.FromAddress",
                             Value = "no-reply@martin-andrich.de"
@@ -3212,8 +3208,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666621"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5058),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5058),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3784),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3784),
                             IsEncrypted = false,
                             Key = "Email.FromName",
                             Value = "asToolkit"
@@ -3221,8 +3217,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666633"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5072),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5072),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3787),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3787),
                             IsEncrypted = false,
                             Key = "Email.ReplyToAddress",
                             Value = ""
@@ -3230,8 +3226,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666634"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5073),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5074),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3788),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3788),
                             IsEncrypted = false,
                             Key = "Email.ReplyToName",
                             Value = ""
@@ -3239,8 +3235,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666622"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5075),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5075),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3789),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3790),
                             IsEncrypted = false,
                             Key = "Telemetry.Endpoint",
                             Value = "http://localhost:4317"
@@ -3248,8 +3244,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666623"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5076),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 269, DateTimeKind.Utc).AddTicks(5076),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3791),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 42, DateTimeKind.Utc).AddTicks(3791),
                             IsEncrypted = false,
                             Key = "Telemetry.ServiceName",
                             Value = "asToolkit.Server"
@@ -3260,84 +3256,84 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("CarrierShipmentId")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DeliveredAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal?>("HeightCm")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<byte[]>("LabelData")
-                        .HasColumnType("varbinary(max)");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("LabelFormat")
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("LastCarrierStatusRaw")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("character varying(512)");
 
                     b.Property<DateTime?>("LastTrackedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal?>("LengthCm")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<Guid>("SalesId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ShippedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("ShippingCost")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<Guid>("ShippingProviderId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("ShippingProviderRateId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Status")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<double>("TaxRate")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("TrackingNumber")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("TrackingUrl")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("character varying(512)");
 
                     b.Property<decimal?>("WeightKg")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<decimal?>("WidthCm")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.HasKey("Id");
 
@@ -3358,43 +3354,43 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("AttemptCount")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("IdempotencyKey")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("LastError")
                         .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<DateTime>("NextAttemptAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ShippingId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("ShippingProviderId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Status")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -3410,67 +3406,66 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("AccountNumber")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("AdditionalConfigJson")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ApiKey")
                         .HasMaxLength(4096)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("character varying(4096)");
 
                     b.Property<string>("ApiSecret")
                         .HasMaxLength(4096)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("character varying(4096)");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("LastTrackingPollStartedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Password")
                         .IsRequired()
                         .HasMaxLength(4096)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("character varying(4096)");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("TrackingPollIntervalSeconds")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("Type")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<bool>("UseSandbox")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Name", "TenantId")
-                        .IsUnique()
-                        .HasFilter("[TenantId] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("shipping_provider", (string)null);
                 });
@@ -3479,50 +3474,49 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("MaxHeight")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<decimal>("MaxLength")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<decimal>("MaxWeight")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<decimal>("MaxWidth")
                         .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<decimal>("Price")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<Guid>("ShippingProviderId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ShippingProviderId", "Name", "TenantId")
-                        .IsUnique()
-                        .HasFilter("[TenantId] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("shipping_provider_rate", (string)null);
                 });
@@ -3531,22 +3525,22 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("CountryId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ShippingProviderRateId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -3562,44 +3556,44 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Note")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<double>("QuantityDelta")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<Guid?>("SalesChannelId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("SalesItemId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Type")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("WarehouseId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("SalesItemId", "Type")
                         .IsUnique()
-                        .HasFilter("[SalesItemId] IS NOT NULL");
+                        .HasFilter("\"SalesItemId\" IS NOT NULL");
 
                     b.HasIndex("ProductId", "WarehouseId", "DateCreated");
 
@@ -3610,19 +3604,19 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<double>("TaxRate")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -3632,24 +3626,24 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777771"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 249, DateTimeKind.Utc).AddTicks(748),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 249, DateTimeKind.Utc).AddTicks(749),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 20, DateTimeKind.Utc).AddTicks(6733),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 20, DateTimeKind.Utc).AddTicks(6735),
                             TaxRate = 19.0,
                             TenantId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
                         },
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777772"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 249, DateTimeKind.Utc).AddTicks(950),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 249, DateTimeKind.Utc).AddTicks(950),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 20, DateTimeKind.Utc).AddTicks(6937),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 20, DateTimeKind.Utc).AddTicks(6938),
                             TaxRate = 7.0,
                             TenantId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
                         },
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777773"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 249, DateTimeKind.Utc).AddTicks(953),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 249, DateTimeKind.Utc).AddTicks(953),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 20, DateTimeKind.Utc).AddTicks(6940),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 20, DateTimeKind.Utc).AddTicks(6940),
                             TaxRate = 0.0,
                             TenantId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
                         });
@@ -3659,67 +3653,67 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("City")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("CompanyName")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("ContactEmail")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Country")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("Iban")
                         .HasMaxLength(34)
-                        .HasColumnType("nvarchar(34)");
+                        .HasColumnType("character varying(34)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("PostalCode")
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("State")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Street")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Street2")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Website")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
 
@@ -3730,8 +3724,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             ContactEmail = "admin@example.com",
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 225, DateTimeKind.Utc).AddTicks(6832),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 225, DateTimeKind.Utc).AddTicks(6834),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 0, DateTimeKind.Utc).AddTicks(9606),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 0, DateTimeKind.Utc).AddTicks(9611),
                             Description = "Default tenant for initial setup",
                             Name = "Default Tenant"
                         });
@@ -3741,72 +3735,72 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("FromAddress")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("FromName")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("M365ClientId")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("M365ClientSecret")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("M365SenderAddress")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("M365TenantId")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<int>("ProviderType")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("ReplyToAddress")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("ReplyToName")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<bool?>("SmtpEnableSsl")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("SmtpHost")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("SmtpPassword")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<int?>("SmtpPort")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("SmtpUsername")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -3819,45 +3813,45 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ClientId")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("ClientSecret")
                         .HasMaxLength(4096)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("character varying(4096)");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("Provider")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("RedirectUri")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("RuName")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("Scopes")
                         .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<bool?>("UseSandbox")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -3870,33 +3864,33 @@ namespace asToolkit.Persistence.MSSQL.Migrations
             modelBuilder.Entity("asToolkit.Domain.Entities.UserTenant", b =>
                 {
                     b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDefault")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("RoleManageTenant")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
                     b.Property<bool>("RoleManageUser")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
                     b.HasKey("UserId", "TenantId");
@@ -3910,9 +3904,9 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         {
                             UserId = "8e445865-a24d-4543-a6c6-9443d048cdb9",
                             TenantId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 231, DateTimeKind.Utc).AddTicks(4121),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 231, DateTimeKind.Utc).AddTicks(4242),
-                            Id = new Guid("0bdb7627-3f8b-4150-9513-289bf153c75c"),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 5, DateTimeKind.Utc).AddTicks(33),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 5, DateTimeKind.Utc).AddTicks(149),
+                            Id = new Guid("dcd90797-2f07-4f7d-83fc-28d08e873c33"),
                             IsDefault = true,
                             RoleManageTenant = true,
                             RoleManageUser = true
@@ -3923,21 +3917,21 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateModified")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -3947,8 +3941,8 @@ namespace asToolkit.Persistence.MSSQL.Migrations
                         new
                         {
                             Id = new Guid("33333333-3333-3333-3333-333333333333"),
-                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(7042),
-                            DateModified = new DateTime(2026, 7, 3, 20, 57, 18, 233, DateTimeKind.Utc).AddTicks(7043),
+                            DateCreated = new DateTime(2026, 7, 3, 20, 57, 45, 7, DateTimeKind.Utc).AddTicks(2035),
+                            DateModified = new DateTime(2026, 7, 3, 20, 57, 45, 7, DateTimeKind.Utc).AddTicks(2035),
                             Name = "Hauptlager",
                             TenantId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
                         });
