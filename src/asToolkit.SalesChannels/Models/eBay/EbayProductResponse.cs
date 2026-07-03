@@ -43,6 +43,9 @@ public class EbayInventoryItemGroup
     [JsonPropertyName("variantSKUs")]
     public string[] VariantSkus { get; set; }
 
+    [JsonPropertyName("imageUrls")]
+    public string[] ImageUrls { get; set; }
+
     [JsonPropertyName("variesBy")]
     public EbayVariesBy VariesBy { get; set; }
 }
@@ -138,6 +141,28 @@ public class EbayOfferPricingSummary
 {
     [JsonPropertyName("price")]
     public EbayAmount Price { get; set; }
+}
+
+/// <summary>
+/// Response of <c>bulkUpdatePriceQuantity</c>. The HTTP call answers 200 even when individual
+/// entries fail — each entry carries its own status code.
+/// </summary>
+public class EbayBulkPriceQuantityResponse
+{
+    [JsonPropertyName("responses")]
+    public EbayBulkPriceQuantityEntry[] Responses { get; set; }
+}
+
+public class EbayBulkPriceQuantityEntry
+{
+    [JsonPropertyName("statusCode")]
+    public int StatusCode { get; set; }
+
+    [JsonPropertyName("sku")]
+    public string Sku { get; set; }
+
+    [JsonPropertyName("offerId")]
+    public string OfferId { get; set; }
 }
 
 public class EbayListingPolicies

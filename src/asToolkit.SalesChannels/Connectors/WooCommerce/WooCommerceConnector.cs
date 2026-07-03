@@ -1324,53 +1324,6 @@ public sealed class WooCommerceConnector : ConnectorBase
     // so a hung request (seen when a CDN stops responding) would block the orchestrator indefinitely.
     private static readonly TimeSpan PageFetchTimeout = TimeSpan.FromSeconds(60);
 
-    // How often a long import flushes its running item counts (and any advanced cursor) to the audit row
-    // via context.ReportProgressAsync. Frequent enough that the Sync-Status dashboard moves visibly,
-    // sparse enough that a fast-paging import does not hammer the DB with a write per page.
-    private static readonly TimeSpan CheckpointInterval = TimeSpan.FromSeconds(10);
-
-    /// <summary>
-    /// Throttles mid-run progress checkpoints. Connectors call <see cref="MaybeReportAsync"/> after each
-    /// page; it forwards to <see cref="SalesChannelContext.ReportProgressAsync"/> at most once per
-    /// <see cref="CheckpointInterval"/>. Single-threaded per run (pages are walked sequentially), so the
-    /// non-locked last-write timestamp is safe. When one run spans several passes (e.g. the sales import's
-    /// recent + backfill passes, each counting from 0), <see cref="AddCompletedPass"/> rolls a finished
-    /// pass's totals into the base so the reported count keeps climbing instead of resetting between passes.
-    /// </summary>
-    private sealed class ProgressThrottle
-    {
-        private readonly SalesChannelContext _context;
-        private DateTime _lastReport = DateTime.UtcNow;
-        private int _baseProcessed;
-        private int _baseFailed;
-
-        public ProgressThrottle(SalesChannelContext context) => _context = context;
-
-        /// <summary>Folds a completed pass's totals into the running base for subsequent passes.</summary>
-        public void AddCompletedPass(int processed, int failed)
-        {
-            _baseProcessed += processed;
-            _baseFailed += failed;
-        }
-
-        public async Task MaybeReportAsync(int processed, int failed)
-        {
-            if (_context.ReportProgressAsync is null)
-            {
-                return;
-            }
-
-            var now = DateTime.UtcNow;
-            if (now - _lastReport < CheckpointInterval)
-            {
-                return;
-            }
-
-            _lastReport = now;
-            await _context.ReportProgressAsync(_baseProcessed + processed, _baseFailed + failed, _context.CancellationToken);
-        }
-    }
-
     private static WCObject BuildClient(SalesChannelContext context) => new(BuildRestApi(context));
 
     private static RestAPI BuildRestApi(SalesChannelContext context)

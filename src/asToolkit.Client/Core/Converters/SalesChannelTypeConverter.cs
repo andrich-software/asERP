@@ -17,6 +17,7 @@ public class SalesChannelTypeToTextConverter : IValueConverter
                 SalesChannelType.PointOfSale => GetLocalizedString("SalesChannelType.PointOfSale"),
                 SalesChannelType.Shopware6 => GetLocalizedString("SalesChannelType.Shopware6"),
                 SalesChannelType.WooCommerce => GetLocalizedString("SalesChannelType.WooCommerce"),
+                SalesChannelType.WooCommerceDatabase => GetLocalizedString("SalesChannelType.WooCommerceDatabase"),
                 SalesChannelType.eBay => GetLocalizedString("SalesChannelType.eBay"),
                 SalesChannelType.Amazon => GetLocalizedString("SalesChannelType.Amazon"),
                 _ => type.ToString()
@@ -51,6 +52,7 @@ public class SalesChannelTypeToTextConverter : IValueConverter
             "SalesChannelType.PointOfSale" => "Point of Sale",
             "SalesChannelType.Shopware6" => "Shopware 6",
             "SalesChannelType.WooCommerce" => "WooCommerce",
+            "SalesChannelType.WooCommerceDatabase" => "WooCommerce (Database)",
             "SalesChannelType.eBay" => "eBay",
             "SalesChannelType.Amazon" => "Amazon",
             _ => resourceKey

@@ -15,6 +15,13 @@ public class SalesChannelInputDto : ISalesChannelInputModel
 
     public string Password { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Free-form connector configuration (schema owned by the connector — e.g. MySQL host/database/
+    /// table prefix for WooCommerceDatabase). Must not contain secrets; those belong in Password.
+    /// Null means "keep the stored value unchanged" on update.
+    /// </summary>
+    public string? AdditionalConfigJson { get; set; }
+
     public bool ImportProducts { get; set; }
     public bool ExportProducts { get; set; }
     public bool ImportCustomers { get; set; }

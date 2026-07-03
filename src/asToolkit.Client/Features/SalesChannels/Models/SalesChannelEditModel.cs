@@ -46,6 +46,12 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private string _username = string.Empty;
     private string _password = string.Empty;
 
+    // MySQL settings (WooCommerceDatabase) — persisted as connector-owned AdditionalConfigJson.
+    private string _dbHost = string.Empty;
+    private string _dbPort = "3306";
+    private string _dbName = string.Empty;
+    private string _dbTablePrefix = "wp_";
+
     // Import Settings
     private bool _importProducts;
     private bool _importCustomers;
@@ -139,6 +145,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
         new(SalesChannelType.PointOfSale, "SalesChannelType.PointOfSale"),
         new(SalesChannelType.Shopware6, "SalesChannelType.Shopware6"),
         new(SalesChannelType.WooCommerce, "SalesChannelType.WooCommerce"),
+        new(SalesChannelType.WooCommerceDatabase, "SalesChannelType.WooCommerceDatabase"),
         new(SalesChannelType.eBay, "SalesChannelType.eBay"),
         new(SalesChannelType.Amazon, "SalesChannelType.Amazon")
     };
@@ -166,6 +173,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 OnPropertyChanged(nameof(ShowOAuthSaveFirstHint));
                 OnPropertyChanged(nameof(ConnectionStatusLabel));
                 OnPropertyChanged(nameof(ShowUrlField));
+                OnPropertyChanged(nameof(ShowDatabaseSettings));
                 OnPropertyChanged(nameof(ShowImportExportSettings));
                 OnPropertyChanged(nameof(CanSave));
 
@@ -242,12 +250,17 @@ public class SalesChannelEditModel : AsyncInitializableModel
     }
 
     /// <summary>
-    /// Shows URL field only for Shopware6 and WooCommerce.
-    /// eBay, Amazon and PointOfSale do not require URL.
+    /// Shows URL field only for Shopware6 and the WooCommerce types.
+    /// eBay, Amazon and PointOfSale do not require URL. The database-backed WooCommerce type still
+    /// needs the shop's base URL to build product-image download links.
     /// </summary>
     public bool ShowUrlField => SalesChannelType is
         SalesChannelType.Shopware6 or
-        SalesChannelType.WooCommerce;
+        SalesChannelType.WooCommerce or
+        SalesChannelType.WooCommerceDatabase;
+
+    /// <summary>Shows the MySQL connection block (host/port/database/table prefix).</summary>
+    public bool ShowDatabaseSettings => IsWooCommerceDb;
 
     /// <summary>
     /// Shows import/export settings for all types except PointOfSale.
@@ -265,8 +278,11 @@ public class SalesChannelEditModel : AsyncInitializableModel
 
     #region Type-Specific Connection Labels
 
-    /// <summary>True for WooCommerce, which labels its credentials Consumer Key / Consumer Secret.</summary>
+    /// <summary>True for WooCommerce (REST), which labels its credentials Consumer Key / Consumer Secret.</summary>
     private bool IsWooCommerce => SalesChannelType == SalesChannelType.WooCommerce;
+
+    /// <summary>True for WooCommerce (database), which labels its credentials as MySQL user/password.</summary>
+    private bool IsWooCommerceDb => SalesChannelType == SalesChannelType.WooCommerceDatabase;
 
     // NOTE: these resolve via IStringLocalizer. Resource keys must be SINGLE-DOT (2-segment),
     // PascalCase — e.g. "SalesChannelEditPage.ConnUrlLabel" — matching the proven pattern used
@@ -277,24 +293,30 @@ public class SalesChannelEditModel : AsyncInitializableModel
 
     public string UrlLabel => _localizer["SalesChannelEditPage.ConnUrlLabel"];
 
-    /// <summary>Placeholder for the URL field — WooCommerce expects the shop base URL, not an API path.</summary>
-    public string UrlPlaceholder => IsWooCommerce
+    /// <summary>Placeholder for the URL field — both WooCommerce types expect the shop base URL, not an API path.</summary>
+    public string UrlPlaceholder => IsWooCommerce || IsWooCommerceDb
         ? _localizer["SalesChannelEditPage.ConnUrlPlaceholderWoo"]
         : _localizer["SalesChannelEditPage.ConnUrlPlaceholder"];
 
-    /// <summary>Username field header — "Consumer Key" for WooCommerce, "Username" otherwise.</summary>
+    /// <summary>Username field header — "Consumer Key" for WooCommerce, "Database user" for the DB variant, "Username" otherwise.</summary>
     public string UsernameLabel => IsWooCommerce
         ? _localizer["SalesChannelEditPage.ConnConsumerKeyLabel"]
-        : _localizer["SalesChannelEditPage.ConnUsernameLabel"];
+        : IsWooCommerceDb
+            ? _localizer["SalesChannelEditPage.ConnDbUserLabel"]
+            : _localizer["SalesChannelEditPage.ConnUsernameLabel"];
 
     public string UsernamePlaceholder => IsWooCommerce
         ? _localizer["SalesChannelEditPage.ConnConsumerKeyPlaceholder"]
-        : _localizer["SalesChannelEditPage.ConnUsernamePlaceholder"];
+        : IsWooCommerceDb
+            ? _localizer["SalesChannelEditPage.ConnDbUserPlaceholder"]
+            : _localizer["SalesChannelEditPage.ConnUsernamePlaceholder"];
 
-    /// <summary>Password field header — "Consumer Secret" for WooCommerce, "Password / API Key" otherwise.</summary>
+    /// <summary>Password field header — "Consumer Secret" for WooCommerce, "Database password" for the DB variant, "Password / API Key" otherwise.</summary>
     public string PasswordLabel => IsWooCommerce
         ? _localizer["SalesChannelEditPage.ConnConsumerSecretLabel"]
-        : _localizer["SalesChannelEditPage.ConnPasswordLabel"];
+        : IsWooCommerceDb
+            ? _localizer["SalesChannelEditPage.ConnDbPasswordLabel"]
+            : _localizer["SalesChannelEditPage.ConnPasswordLabel"];
 
     public string PasswordPlaceholder
     {
@@ -318,10 +340,12 @@ public class SalesChannelEditModel : AsyncInitializableModel
     /// <summary>Caption under the secret field explaining that an empty value keeps the stored secret.</summary>
     public string PasswordKeepHint => _localizer["SalesChannelEditPage.ConnSecretKeepHint"];
 
-    /// <summary>Bottom-of-page connection hint — WooCommerce gets a tailored explanation.</summary>
+    /// <summary>Bottom-of-page connection hint — the WooCommerce types get tailored explanations.</summary>
     public string ConnectionHintText => IsWooCommerce
         ? _localizer["SalesChannelEditPage.ConnHintWoo"]
-        : _localizer["SalesChannelEditPage.ConnHintDefault"];
+        : IsWooCommerceDb
+            ? _localizer["SalesChannelEditPage.ConnHintWooDb"]
+            : _localizer["SalesChannelEditPage.ConnHintDefault"];
 
     #endregion
 
@@ -344,6 +368,74 @@ public class SalesChannelEditModel : AsyncInitializableModel
         get => _password;
         set => SetProperty(ref _password, value);
     }
+
+    #endregion
+
+    #region Database Settings (WooCommerceDatabase)
+
+    public string DbHost
+    {
+        get => _dbHost;
+        set => SetProperty(ref _dbHost, value);
+    }
+
+    public string DbPort
+    {
+        get => _dbPort;
+        set => SetProperty(ref _dbPort, value);
+    }
+
+    public string DbName
+    {
+        get => _dbName;
+        set => SetProperty(ref _dbName, value);
+    }
+
+    public string DbTablePrefix
+    {
+        get => _dbTablePrefix;
+        set => SetProperty(ref _dbTablePrefix, value);
+    }
+
+    /// <summary>Serializes the MySQL settings into the connector-owned config JSON.</summary>
+    private string BuildDatabaseConfigJson()
+    {
+        var config = new System.Text.Json.Nodes.JsonObject
+        {
+            ["host"] = DbHost.Trim(),
+            ["port"] = int.TryParse(DbPort, out var port) ? port : 3306,
+            ["database"] = DbName.Trim(),
+            ["tablePrefix"] = string.IsNullOrWhiteSpace(DbTablePrefix) ? "wp_" : DbTablePrefix.Trim(),
+        };
+        return config.ToJsonString();
+    }
+
+    private void LoadDatabaseConfigFromJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return;
+        }
+
+        try
+        {
+            if (System.Text.Json.Nodes.JsonNode.Parse(json) is not System.Text.Json.Nodes.JsonObject config)
+            {
+                return;
+            }
+            DbHost = config["host"]?.GetValue<string>() ?? string.Empty;
+            DbPort = config["port"]?.GetValue<int>().ToString() ?? "3306";
+            DbName = config["database"]?.GetValue<string>() ?? string.Empty;
+            DbTablePrefix = config["tablePrefix"]?.GetValue<string>() ?? "wp_";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Malformed stored config — leave the defaults; the user re-enters the values.
+        }
+    }
+
+    private bool IsDbPortValid => string.IsNullOrWhiteSpace(DbPort) ||
+        (int.TryParse(DbPort, out var port) && port is > 0 and <= 65535);
 
     #endregion
 
@@ -494,6 +586,16 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 // Developer-App credentials live in TenantOAuthAppSettings or system Settings.
                 SalesChannelType.eBay or SalesChannelType.Amazon => true,
 
+                // WooCommerceDatabase additionally needs the MySQL host + database name; the URL
+                // stays required because the product images are downloaded from the shop over HTTP.
+                SalesChannelType.WooCommerceDatabase =>
+                    !string.IsNullOrWhiteSpace(Url) &&
+                    !string.IsNullOrWhiteSpace(Username) &&
+                    !string.IsNullOrWhiteSpace(DbHost) &&
+                    !string.IsNullOrWhiteSpace(DbName) &&
+                    IsDbPortValid &&
+                    (IsEditMode || !string.IsNullOrWhiteSpace(Password)),
+
                 // Shopware6, WooCommerce: Name, URL, Username required.
                 // Password is only required when creating — on edit the stored secret is kept
                 // unless the user types a new one (it is never returned to the client to prefill).
@@ -521,6 +623,9 @@ public class SalesChannelEditModel : AsyncInitializableModel
             Url = salesChannel.Url ?? string.Empty;
             Username = salesChannel.Username ?? string.Empty;
             // Password is not returned from API for security reasons, keep empty
+
+            // MySQL settings (only meaningful for WooCommerceDatabase; harmless otherwise)
+            LoadDatabaseConfigFromJson(salesChannel.AdditionalConfigJson);
 
             // Import Settings
             ImportProducts = salesChannel.ImportProducts;
@@ -662,6 +767,12 @@ public class SalesChannelEditModel : AsyncInitializableModel
         {
             Url = NormalizeWooCommerceUrl(Url);
         }
+        // The database variant keeps the plain shop base URL (image downloads) — only ensure a
+        // scheme and drop a pasted REST API path.
+        else if (IsWooCommerceDb)
+        {
+            Url = NormalizeShopBaseUrl(Url);
+        }
 
         try
         {
@@ -672,6 +783,9 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 Url = Url,
                 Username = Username,
                 Password = Password,
+                // Null keeps a channel's stored connector config untouched; only the DB variant
+                // owns its config from this form.
+                AdditionalConfigJson = IsWooCommerceDb ? BuildDatabaseConfigJson() : null,
                 ImportProducts = ImportProducts,
                 ImportCustomers = ImportCustomers,
                 ImportSaless = ImportSaless,
@@ -834,13 +948,40 @@ public class SalesChannelEditModel : AsyncInitializableModel
         return normalized + WooCommerceApiPath;
     }
 
+    /// <summary>
+    /// Normalizes a user-entered shop URL for the database-backed WooCommerce type: prepends
+    /// <c>https://</c> when no scheme is given, trims a trailing slash and strips a pasted
+    /// <c>/wp-json/wc/v3</c> path — the connector needs the plain base URL for image links.
+    /// </summary>
+    internal static string NormalizeShopBaseUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return url;
+        }
+
+        var normalized = url.Trim();
+        if (!normalized.Contains("://", StringComparison.Ordinal))
+        {
+            normalized = "https://" + normalized;
+        }
+
+        normalized = normalized.TrimEnd('/');
+        if (normalized.EndsWith(WooCommerceApiPath, StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[..^WooCommerceApiPath.Length];
+        }
+        return normalized;
+    }
+
     /// <inheritdoc />
     protected override void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         base.OnPropertyChanged(propertyName);
 
         // Update CanSave when relevant fields change
-        if (propertyName is nameof(Name) or nameof(Url) or nameof(Username) or nameof(Password))
+        if (propertyName is nameof(Name) or nameof(Url) or nameof(Username) or nameof(Password)
+            or nameof(DbHost) or nameof(DbPort) or nameof(DbName))
         {
             base.OnPropertyChanged(nameof(CanSave));
         }

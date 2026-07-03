@@ -14,6 +14,9 @@ public class SalesChannelDetailDto
 
     public string Password { get; set; } = string.Empty;
 
+    /// <summary>Free-form connector configuration (never contains secrets — see input DTO).</summary>
+    public string? AdditionalConfigJson { get; set; }
+
     public bool ImportProducts { get; set; }
     public bool ExportProducts { get; set; }
     public bool ImportCustomers { get; set; }

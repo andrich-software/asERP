@@ -115,6 +115,7 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
             Url = command.Url,
             Username = command.Username,
             Password = command.Password,
+            AdditionalConfigJson = command.AdditionalConfigJson,
             ImportProducts = command.ImportProducts,
             ImportCustomers = command.ImportCustomers,
             ImportSaless = command.ImportSaless,

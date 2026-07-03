@@ -2217,6 +2217,39 @@
   <data name="SalesChannelEditPage.ConnConsumerSecretPlaceholder" xml:space="preserve">
     <value>cs_…</value>
   </data>
+  <data name="SalesChannelEditPage.ConnDbUserLabel" xml:space="preserve">
+    <value>Datenbank-Benutzer</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnDbUserPlaceholder" xml:space="preserve">
+    <value>MySQL-Benutzername</value>
+  </data>
+  <data name="SalesChannelEditPage.ConnDbPasswordLabel" xml:space="preserve">
+    <value>Datenbank-Passwort</value>
+  </data>
+  <data name="SalesChannelEditPage.DbHost.Header" xml:space="preserve">
+    <value>Datenbank-Host</value>
+  </data>
+  <data name="SalesChannelEditPage.DbHost.PlaceholderText" xml:space="preserve">
+    <value>z. B. db.ihr-shop.de</value>
+  </data>
+  <data name="SalesChannelEditPage.DbPort.Header" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="SalesChannelEditPage.DbPort.PlaceholderText" xml:space="preserve">
+    <value>3306</value>
+  </data>
+  <data name="SalesChannelEditPage.DbName.Header" xml:space="preserve">
+    <value>Datenbankname</value>
+  </data>
+  <data name="SalesChannelEditPage.DbName.PlaceholderText" xml:space="preserve">
+    <value>z. B. wordpress</value>
+  </data>
+  <data name="SalesChannelEditPage.DbTablePrefix.Header" xml:space="preserve">
+    <value>Tabellen-Präfix</value>
+  </data>
+  <data name="SalesChannelEditPage.DbTablePrefix.PlaceholderText" xml:space="preserve">
+    <value>wp_</value>
+  </data>
   <data name="SalesChannelEditPage.ConnSecretKeepPlaceholder" xml:space="preserve">
     <value>•••••••• – leer lassen, um beizubehalten</value>
   </data>
@@ -2277,6 +2310,9 @@
   <data name="SalesChannelEditPage.ConnHintWoo" xml:space="preserve">
     <value>WooCommerce: Tragen Sie unter URL die Basis-Adresse Ihres Shops ein (z. B. https://ihr-shop.de) – ohne /wp-json oder /api. Erstellen Sie in WooCommerce unter WooCommerce → Einstellungen → Erweitert → REST-API einen API-Schlüssel mit Lese-/Schreibrechten. Den erhaltenen Consumer Key (ck_…) tragen Sie als Consumer Key ein, das Consumer Secret (cs_…) als Consumer Secret. Beim späteren Bearbeiten können Sie das Consumer-Secret-Feld leer lassen, um das gespeicherte Secret beizubehalten.</value>
   </data>
+  <data name="SalesChannelEditPage.ConnHintWooDb" xml:space="preserve">
+    <value>WooCommerce (Datenbank): Liest und schreibt direkt in die MySQL-Datenbank des Shops – deutlich schneller als die REST-API. Tragen Sie unter URL die Basis-Adresse Ihres Shops ein (für den Download der Produktbilder), dazu Host, Port und Name der WordPress-Datenbank sowie das Tabellen-Präfix aus der wp-config.php (Standard: wp_). Der MySQL-Benutzer benötigt Lese- und Schreibrechte auf die Shop-Datenbank; die Datenbank muss vom asToolkit-Server aus erreichbar sein (z. B. per Firewall-Freigabe oder SSH-Tunnel).</value>
+  </data>
   <data name="SalesChannelEditPage.Error.SaveFailed" xml:space="preserve">
     <value>Vertriebskanal konnte nicht gespeichert werden: {0}</value>
   </data>
@@ -2308,6 +2344,9 @@
   </data>
   <data name="SalesChannelType.WooCommerce" xml:space="preserve">
     <value>WooCommerce</value>
+  </data>
+  <data name="SalesChannelType.WooCommerceDatabase" xml:space="preserve">
+    <value>WooCommerce (Datenbank)</value>
   </data>
   <data name="SalesChannelType.eBay" xml:space="preserve">
     <value>eBay</value>

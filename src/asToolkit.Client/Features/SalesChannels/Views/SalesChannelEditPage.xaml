@@ -275,7 +275,41 @@
                            IsEnabled="{Binding IsNotLoading}"
                            Visibility="{Binding ShowUrlField, Converter={StaticResource BoolToVisibilityConverter}}" />
 
-                  <!-- Username — labelled "Consumer Key" for WooCommerce. -->
+                  <!-- MySQL connection block — only for WooCommerce (database). -->
+                  <StackPanel Spacing="16"
+                              Visibility="{Binding ShowDatabaseSettings, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid ColumnSpacing="12">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <TextBox x:Uid="SalesChannelEditPage.DbHost"
+                               Grid.Column="0"
+                               Text="{Binding DbHost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                               IsEnabled="{Binding IsNotLoading}" />
+                      <TextBox x:Uid="SalesChannelEditPage.DbPort"
+                               Grid.Column="1"
+                               Text="{Binding DbPort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                               InputScope="Number"
+                               IsEnabled="{Binding IsNotLoading}" />
+                    </Grid>
+                    <Grid ColumnSpacing="12">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <TextBox x:Uid="SalesChannelEditPage.DbName"
+                               Grid.Column="0"
+                               Text="{Binding DbName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                               IsEnabled="{Binding IsNotLoading}" />
+                      <TextBox x:Uid="SalesChannelEditPage.DbTablePrefix"
+                               Grid.Column="1"
+                               Text="{Binding DbTablePrefix, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                               IsEnabled="{Binding IsNotLoading}" />
+                    </Grid>
+                  </StackPanel>
+
+                  <!-- Username — labelled "Consumer Key" for WooCommerce, "Database user" for the DB variant. -->
                   <TextBox Header="{Binding UsernameLabel}"
                            PlaceholderText="{Binding UsernamePlaceholder}"
                            Text="{Binding Username, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"

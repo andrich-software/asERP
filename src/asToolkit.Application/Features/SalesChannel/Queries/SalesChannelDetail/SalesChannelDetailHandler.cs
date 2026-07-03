@@ -104,6 +104,7 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
             Username = entity.Username,
             // Password is intentionally never returned in detail DTOs (write-only on the wire).
             Password = string.Empty,
+            AdditionalConfigJson = entity.AdditionalConfigJson,
             HasRefreshToken = !string.IsNullOrEmpty(entity.RefreshToken),
             TokenExpiresAt = entity.TokenExpiresAt,
             ImportProducts = entity.ImportProducts,
