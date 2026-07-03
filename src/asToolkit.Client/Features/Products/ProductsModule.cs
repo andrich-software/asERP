@@ -20,6 +20,9 @@ public static class ProductsModule
         // ProductService: Transient - stateless, creates new instance per request
         services.AddTransient<IProductService, ProductService>();
 
+        // ThumbnailCache: Singleton - bounded in-memory cache shared across all product lists/pages
+        services.AddSingleton<Core.Media.IThumbnailCache, Core.Media.ProductThumbnailCache>();
+
         // Page models
         services.AddTransient<ProductListModel>();
         services.AddTransient<ProductDetailModel>();

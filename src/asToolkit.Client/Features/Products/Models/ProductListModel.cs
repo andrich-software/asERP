@@ -31,12 +31,6 @@ public partial record ProductListModel
         _localizer = localizer;
     }
 
-    /// <summary>
-    /// Raised after each load with the total product count. Lets the view decide whether to show a
-    /// contextual empty state (and which one) without subscribing to MVUX internals.
-    /// </summary>
-    public event Action<int>? ProductsLoaded;
-
     // Polling baseline: the newest completed product-import run we have already accounted for.
     // Lets PollForCompletedImportAsync detect server-side background imports the client never triggered.
     private Guid? _lastCompletedImportRunId;
@@ -61,6 +55,22 @@ public partial record ProductListModel
     /// Current sort sales (e.g., "Name Ascending").
     /// </summary>
     public IState<string> SortSales => State<string>.Value(this, () => "Name Ascending");
+
+    /// <summary>
+    /// The field currently sorted by; bound by the SortHeaderButton column headers.
+    /// </summary>
+    public IState<string> ActiveSortField => State<string>.Value(this, () => "Name");
+
+    /// <summary>
+    /// Current sort direction; bound by the SortHeaderButton column headers.
+    /// </summary>
+    public IState<bool> SortAscending => State<bool>.Value(this, () => true);
+
+    /// <summary>
+    /// Contextual empty state when the product list is empty (null while products exist).
+    /// Set from the Products feed; rendered declaratively by the page.
+    /// </summary>
+    public IState<ProductEmptyStateInfo?> EmptyState => State<ProductEmptyStateInfo?>.Value(this, () => null);
 
     /// <summary>
     /// When true, variant child products are included in the list.
@@ -104,28 +114,13 @@ public partial record ProductListModel
                 response.HasNextPage,
                 _localizer), ct);
 
-            // Tell the view how many products exist so it can show a contextual empty state.
-            ProductsLoaded?.Invoke(response.TotalCount);
+            // Contextual empty state: only resolved when the list is actually empty.
+            var emptyState = response.TotalCount == 0 ? await GetEmptyStateAsync(ct) : null;
+            await EmptyState.UpdateAsync(_ => emptyState, ct);
 
-            var items = response.Data.Select(d => new ProductListItemModel(d)).ToList();
-
-            // Load primary-image thumbnails in parallel; only for rows that have one.
-            await Task.WhenAll(items
-                .Where(i => i.PrimaryImageId.HasValue)
-                .Select(async item =>
-                {
-                    try
-                    {
-                        item.ThumbnailBytes = await _productService.GetProductImageBytesAsync(
-                            item.Id, item.PrimaryImageId!.Value, thumbnail: true, ct);
-                    }
-                    catch
-                    {
-                        // A missing thumbnail must not break the list.
-                    }
-                }));
-
-            return items.ToImmutableList();
+            // Thumbnails are NOT loaded here: rows appear immediately and each realized
+            // row loads its thumbnail lazily via ThumbnailLoader (with caching).
+            return response.Data.Select(d => new ProductListItemModel(d)).ToImmutableList();
         })
         .AsListFeed();
 
@@ -213,7 +208,7 @@ public partial record ProductListModel
     /// currently running, the last import failed, or simply nothing imported yet. Best-effort —
     /// falls back to a generic message if the channel API is unavailable.
     /// </summary>
-    public async Task<ProductEmptyStateInfo> GetEmptyStateAsync(CancellationToken ct = default)
+    private async Task<ProductEmptyStateInfo> GetEmptyStateAsync(CancellationToken ct = default)
     {
         try
         {
@@ -323,6 +318,24 @@ public partial record ProductListModel
     {
         await SortSales.UpdateAsync(_ => salesBy, ct);
         await CurrentPage.UpdateAsync(_ => 0, ct); // Reset to first page when sorting changes
+    }
+
+    /// <summary>
+    /// Toggles sorting for a column header: same field flips direction, a new field starts ascending.
+    /// </summary>
+    public async ValueTask ToggleSort(string field, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(field))
+        {
+            return;
+        }
+
+        var currentField = await ActiveSortField.Value(ct) ?? string.Empty;
+        var ascending = currentField == field ? !(await SortAscending.Value(ct)) : true;
+
+        await ActiveSortField.UpdateAsync(_ => field, ct);
+        await SortAscending.UpdateAsync(_ => ascending, ct);
+        await SetSortSales($"{field} {(ascending ? "Ascending" : "Descending")}", ct);
     }
 
     /// <summary>

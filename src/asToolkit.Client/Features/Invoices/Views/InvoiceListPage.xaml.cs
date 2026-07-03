@@ -1,4 +1,5 @@
-﻿using asToolkit.Client.Features.Invoices.Models;
+using asToolkit.Client.Controls;
+using asToolkit.Client.Features.Invoices.Models;
 using asToolkit.Domain.Dtos.Invoice;
 
 namespace asToolkit.Client.Features.Invoices.Views;
@@ -6,11 +7,6 @@ namespace asToolkit.Client.Features.Invoices.Views;
 public sealed partial class InvoiceListPage : Page
 {
     private bool _isInitializing = true;
-    private string _currentSortField = "InvoiceDate";
-    private bool _sortAscending = false;
-
-    // Sort icon references - will be found after template is applied
-    private readonly Dictionary<string, FontIcon> _sortIcons = new();
 
     public InvoiceListPage()
     {
@@ -21,24 +17,6 @@ public sealed partial class InvoiceListPage : Page
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _isInitializing = false;
-
-        // Cache sort icons for later updates
-        CacheSortIcons();
-    }
-
-    private void CacheSortIcons()
-    {
-        // Find sort icons in the visual tree
-        if (FindName("SortIconInvoiceNumber") is FontIcon iconInvoiceNumber)
-            _sortIcons["InvoiceNumber"] = iconInvoiceNumber;
-        if (FindName("SortIconCustomerName") is FontIcon iconCustomerName)
-            _sortIcons["CustomerName"] = iconCustomerName;
-        if (FindName("SortIconTotal") is FontIcon iconTotal)
-            _sortIcons["Total"] = iconTotal;
-        if (FindName("SortIconStatus") is FontIcon iconStatus)
-            _sortIcons["InvoiceStatus"] = iconStatus;
-        if (FindName("SortIconInvoiceDate") is FontIcon iconInvoiceDate)
-            _sortIcons["InvoiceDate"] = iconInvoiceDate;
     }
 
     private async void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -53,58 +31,10 @@ public sealed partial class InvoiceListPage : Page
 
     private async void SortHeader_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button button || DataContext is not InvoiceListModel model)
-            return;
-
-        var sortField = button.Tag?.ToString() ?? string.Empty;
-        if (string.IsNullOrEmpty(sortField))
-            return;
-
-        // Toggle direction if same field, otherwise default to ascending
-        if (_currentSortField == sortField)
+        if (sender is SortHeaderButton { SortField: { Length: > 0 } field } &&
+            DataContext is InvoiceListModel model)
         {
-            _sortAscending = !_sortAscending;
-        }
-        else
-        {
-            _currentSortField = sortField;
-            _sortAscending = true;
-        }
-
-        // Update sort icons
-        UpdateSortIcons();
-
-        // Build sort parameter
-        var sortDirection = _sortAscending ? "Ascending" : "Descending";
-        var salesBy = $"{sortField} {sortDirection}";
-
-        await model.SetSortSales(salesBy);
-    }
-
-    private void UpdateSortIcons()
-    {
-        // Try to re-cache if icons dictionary is empty (template might have been re-applied)
-        if (_sortIcons.Count == 0)
-        {
-            CacheSortIcons();
-        }
-
-        foreach (var kvp in _sortIcons)
-        {
-            var icon = kvp.Value;
-            var field = kvp.Key;
-
-            if (field == _currentSortField)
-            {
-                icon.Visibility = Visibility.Visible;
-                // E70D = ChevronUp (ascending), E70E = ChevronDown (descending)
-                icon.Glyph = _sortAscending ? "\uE70D" : "\uE70E";
-                icon.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["PrimaryBrush"];
-            }
-            else
-            {
-                icon.Visibility = Visibility.Collapsed;
-            }
+            await model.ToggleSort(field);
         }
     }
 
@@ -113,10 +43,9 @@ public sealed partial class InvoiceListPage : Page
         // TODO: Navigate to create invoice page when implemented
     }
 
-    private async void InvoiceRow_Click(object sender, RoutedEventArgs e)
+    private async void InvoiceRow_Click(object sender, ItemClickEventArgs e)
     {
-        if (sender is Button button &&
-            button.DataContext is InvoiceListDto invoice &&
+        if (e.ClickedItem is InvoiceListDto invoice &&
             DataContext is InvoiceListModel model)
         {
             await model.ViewInvoice(invoice);

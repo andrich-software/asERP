@@ -5,6 +5,7 @@
       xmlns:models="using:asToolkit.Client.Features.Invoices.Models"
       xmlns:mvux="using:Uno.Extensions.Reactive.UI"
       xmlns:utu="using:Uno.Toolkit.UI"
+      xmlns:controls="using:asToolkit.Client.Controls"
       Background="{ThemeResource BackgroundBrush}">
 
   <Grid utu:SafeArea.Insets="VisibleBounds">
@@ -155,23 +156,8 @@
                     <StackPanel Orientation="Horizontal"
                                 Spacing="8"
                                 HorizontalAlignment="Center">
-                      <!-- Invoice Status Badge -->
-                      <Border CornerRadius="16"
-                              Padding="16,6"
-                              Background="{Binding Data.InvoiceStatus, Converter={StaticResource InvoiceStatusToBackgroundConverter}}">
-                        <TextBlock Text="{Binding Data.InvoiceStatus, Converter={StaticResource InvoiceStatusToTextConverter}}"
-                                   Style="{StaticResource LabelMedium}"
-                                   Foreground="{Binding Data.InvoiceStatus, Converter={StaticResource InvoiceStatusToForegroundConverter}}" />
-                      </Border>
-
-                      <!-- Payment Status Badge -->
-                      <Border CornerRadius="16"
-                              Padding="16,6"
-                              Background="{Binding Data.PaymentStatus, Converter={StaticResource PaymentStatusToBackgroundConverter}}">
-                        <TextBlock Text="{Binding Data.PaymentStatus, Converter={StaticResource PaymentStatusToTextConverter}}"
-                                   Style="{StaticResource LabelMedium}"
-                                   Foreground="{Binding Data.PaymentStatus, Converter={StaticResource PaymentStatusToForegroundConverter}}" />
-                      </Border>
+                      <controls:StatusBadge Status="{Binding Data.InvoiceStatus}" />
+                      <controls:StatusBadge Status="{Binding Data.PaymentStatus}" />
                     </StackPanel>
 
                     <!-- Invoice Date -->

@@ -6,53 +6,9 @@ using Windows.UI;
 namespace asToolkit.Client.Presentation;
 
 /// <summary>
-/// Converts boolean sync status to localized display text (Enabled/Disabled).
-/// </summary>
-public class BoolToSyncStatusTextConverter : IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, string language)
-    {
-        if (value is bool isEnabled)
-        {
-            return isEnabled
-                ? GetLocalizedString("SyncStatus.Enabled")
-                : GetLocalizedString("SyncStatus.Disabled");
-        }
-        return GetLocalizedString("SyncStatus.Disabled");
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, string language)
-    {
-        throw new NotImplementedException();
-    }
-
-    private static string GetLocalizedString(string resourceKey)
-    {
-        try
-        {
-            var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForViewIndependentUse();
-            var result = resourceLoader.GetString(resourceKey);
-            return !string.IsNullOrEmpty(result) ? result : GetFallbackString(resourceKey);
-        }
-        catch
-        {
-            return GetFallbackString(resourceKey);
-        }
-    }
-
-    private static string GetFallbackString(string resourceKey)
-    {
-        return resourceKey switch
-        {
-            "SyncStatus.Enabled" => "Enabled",
-            "SyncStatus.Disabled" => "Disabled",
-            _ => resourceKey
-        };
-    }
-}
-
-/// <summary>
 /// Converts boolean sync status to background brush color.
+/// Only used by the dashboard's Active/Paused chip (custom wording); regular
+/// enabled/disabled chips use the StatusBadge control.
 /// </summary>
 public class BoolToSyncStatusBackgroundConverter : IValueConverter
 {

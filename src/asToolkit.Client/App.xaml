@@ -26,6 +26,12 @@
 
         <!-- Tenant Switcher Styling -->
         <ResourceDictionary Source="ms-appx:///Styles/TenantSwitcher.xaml" />
+
+        <!-- Semantic status colors (StatusBadge) -->
+        <ResourceDictionary Source="ms-appx:///Styles/StatusColors.xaml" />
+
+        <!-- Shared UI component library (SectionCard, DetailPageHeader, StatusBadge, LabeledField, EmptyState) -->
+        <ResourceDictionary Source="ms-appx:///Styles/SharedComponents.xaml" />
       </ResourceDictionary.MergedDictionaries>
 
       <!-- Converters -->
@@ -40,21 +46,14 @@
       <converters:NotZeroToVisibilityConverter x:Key="NotZeroToVisibilityConverter" />
       <converters:DateTimeOffsetToStringConverter x:Key="DateTimeOffsetToStringConverter" />
       <converters:BytesToImageSourceConverter x:Key="BytesToImageSourceConverter" />
+      <!-- Status COLOR converters are retired — status chips use controls:StatusBadge (StatusVisuals).
+           The remaining ToText converters serve enum ComboBox item templates on edit pages;
+           BoolToSyncStatusBackground/Foreground serve the dashboard's Active/Paused chip (custom wording). -->
       <converters:CustomerStatusToTextConverter x:Key="CustomerStatusToTextConverter" />
-      <converters:CustomerStatusToBackgroundConverter x:Key="CustomerStatusToBackgroundConverter" />
-      <converters:CustomerStatusToForegroundConverter x:Key="CustomerStatusToForegroundConverter" />
-      <converters:BoolToSyncStatusTextConverter x:Key="BoolToSyncStatusTextConverter" />
       <converters:BoolToSyncStatusBackgroundConverter x:Key="BoolToSyncStatusBackgroundConverter" />
       <converters:BoolToSyncStatusForegroundConverter x:Key="BoolToSyncStatusForegroundConverter" />
-      <converters:InvoiceStatusToTextConverter x:Key="InvoiceStatusToTextConverter" />
-      <converters:InvoiceStatusToBackgroundConverter x:Key="InvoiceStatusToBackgroundConverter" />
-      <converters:InvoiceStatusToForegroundConverter x:Key="InvoiceStatusToForegroundConverter" />
       <converters:PaymentStatusToTextConverter x:Key="PaymentStatusToTextConverter" />
-      <converters:PaymentStatusToBackgroundConverter x:Key="PaymentStatusToBackgroundConverter" />
-      <converters:PaymentStatusToForegroundConverter x:Key="PaymentStatusToForegroundConverter" />
       <converters:SalesStatusToTextConverter x:Key="SalesStatusToTextConverter" />
-      <converters:SalesStatusToBackgroundConverter x:Key="SalesStatusToBackgroundConverter" />
-      <converters:SalesStatusToForegroundConverter x:Key="SalesStatusToForegroundConverter" />
       <converters:SalesChannelTypeToTextConverter x:Key="SalesChannelTypeToTextConverter" />
       <converters:SyncLogLevelToForegroundConverter x:Key="SyncLogLevelToForegroundConverter" />
       <converters:SyncRunStatusToBrushConverter x:Key="SyncRunStatusToBrushConverter" />

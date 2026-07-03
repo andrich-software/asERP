@@ -1,0 +1,51 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Semantic status colors consumed by the StatusBadge control (see StatusVisuals.Kind).
+    The Light palette matches the previous hardcoded converter colors; the Dark palette
+    uses darker containers with lighter foregrounds so badges work in dark mode.
+  -->
+  <ResourceDictionary.ThemeDictionaries>
+
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="StatusNeutralBackgroundBrush" Color="#F3F4F6" />
+      <SolidColorBrush x:Key="StatusNeutralForegroundBrush" Color="#6B7280" />
+      <SolidColorBrush x:Key="StatusInfoBackgroundBrush" Color="#DBEAFE" />
+      <SolidColorBrush x:Key="StatusInfoForegroundBrush" Color="#2563EB" />
+      <SolidColorBrush x:Key="StatusSuccessBackgroundBrush" Color="#DCFCE7" />
+      <SolidColorBrush x:Key="StatusSuccessForegroundBrush" Color="#16A34A" />
+      <SolidColorBrush x:Key="StatusPositiveBackgroundBrush" Color="#A7F3D0" />
+      <SolidColorBrush x:Key="StatusPositiveForegroundBrush" Color="#059669" />
+      <SolidColorBrush x:Key="StatusWarningBackgroundBrush" Color="#FEF3C7" />
+      <SolidColorBrush x:Key="StatusWarningForegroundBrush" Color="#D97706" />
+      <SolidColorBrush x:Key="StatusCautionBackgroundBrush" Color="#FFEDD5" />
+      <SolidColorBrush x:Key="StatusCautionForegroundBrush" Color="#EA580C" />
+      <SolidColorBrush x:Key="StatusDangerBackgroundBrush" Color="#FEE2E2" />
+      <SolidColorBrush x:Key="StatusDangerForegroundBrush" Color="#DC2626" />
+      <SolidColorBrush x:Key="StatusSpecialBackgroundBrush" Color="#F3E8FF" />
+      <SolidColorBrush x:Key="StatusSpecialForegroundBrush" Color="#9333EA" />
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Default">
+      <SolidColorBrush x:Key="StatusNeutralBackgroundBrush" Color="#374151" />
+      <SolidColorBrush x:Key="StatusNeutralForegroundBrush" Color="#D1D5DB" />
+      <SolidColorBrush x:Key="StatusInfoBackgroundBrush" Color="#1E3A8A" />
+      <SolidColorBrush x:Key="StatusInfoForegroundBrush" Color="#93C5FD" />
+      <SolidColorBrush x:Key="StatusSuccessBackgroundBrush" Color="#14532D" />
+      <SolidColorBrush x:Key="StatusSuccessForegroundBrush" Color="#86EFAC" />
+      <SolidColorBrush x:Key="StatusPositiveBackgroundBrush" Color="#064E3B" />
+      <SolidColorBrush x:Key="StatusPositiveForegroundBrush" Color="#6EE7B7" />
+      <SolidColorBrush x:Key="StatusWarningBackgroundBrush" Color="#713F12" />
+      <SolidColorBrush x:Key="StatusWarningForegroundBrush" Color="#FCD34D" />
+      <SolidColorBrush x:Key="StatusCautionBackgroundBrush" Color="#7C2D12" />
+      <SolidColorBrush x:Key="StatusCautionForegroundBrush" Color="#FDBA74" />
+      <SolidColorBrush x:Key="StatusDangerBackgroundBrush" Color="#7F1D1D" />
+      <SolidColorBrush x:Key="StatusDangerForegroundBrush" Color="#FCA5A5" />
+      <SolidColorBrush x:Key="StatusSpecialBackgroundBrush" Color="#581C87" />
+      <SolidColorBrush x:Key="StatusSpecialForegroundBrush" Color="#D8B4FE" />
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+</ResourceDictionary>

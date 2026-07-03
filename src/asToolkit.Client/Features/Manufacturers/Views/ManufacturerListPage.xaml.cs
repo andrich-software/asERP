@@ -1,4 +1,5 @@
-﻿using asToolkit.Client.Features.Manufacturers.Models;
+using asToolkit.Client.Controls;
+using asToolkit.Client.Features.Manufacturers.Models;
 using asToolkit.Domain.Dtos.Manufacturer;
 
 namespace asToolkit.Client.Features.Manufacturers.Views;
@@ -6,11 +7,6 @@ namespace asToolkit.Client.Features.Manufacturers.Views;
 public sealed partial class ManufacturerListPage : Page
 {
     private bool _isInitializing = true;
-    private string _currentSortField = "Name";
-    private bool _sortAscending = true;
-
-    // Sort icon references - will be found after template is applied
-    private readonly Dictionary<string, FontIcon> _sortIcons = new();
 
     public ManufacturerListPage()
     {
@@ -21,20 +17,6 @@ public sealed partial class ManufacturerListPage : Page
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _isInitializing = false;
-
-        // Cache sort icons for later updates
-        CacheSortIcons();
-    }
-
-    private void CacheSortIcons()
-    {
-        // Find sort icons in the visual tree
-        if (FindName("SortIconName") is FontIcon iconName)
-            _sortIcons["Name"] = iconName;
-        if (FindName("SortIconCity") is FontIcon iconCity)
-            _sortIcons["City"] = iconCity;
-        if (FindName("SortIconCountry") is FontIcon iconCountry)
-            _sortIcons["Country"] = iconCountry;
     }
 
     private async void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -49,65 +31,16 @@ public sealed partial class ManufacturerListPage : Page
 
     private async void SortHeader_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button button || DataContext is not ManufacturerListModel model)
-            return;
-
-        var sortField = button.Tag?.ToString() ?? string.Empty;
-        if (string.IsNullOrEmpty(sortField))
-            return;
-
-        // Toggle direction if same field, otherwise default to ascending
-        if (_currentSortField == sortField)
+        if (sender is SortHeaderButton { SortField: { Length: > 0 } field } &&
+            DataContext is ManufacturerListModel model)
         {
-            _sortAscending = !_sortAscending;
-        }
-        else
-        {
-            _currentSortField = sortField;
-            _sortAscending = true;
-        }
-
-        // Update sort icons
-        UpdateSortIcons();
-
-        // Build sort parameter
-        var sortDirection = _sortAscending ? "Ascending" : "Descending";
-        var salesBy = $"{sortField} {sortDirection}";
-
-        await model.SetSortSales(salesBy);
-    }
-
-    private void UpdateSortIcons()
-    {
-        // Try to re-cache if icons dictionary is empty (template might have been re-applied)
-        if (_sortIcons.Count == 0)
-        {
-            CacheSortIcons();
-        }
-
-        foreach (var kvp in _sortIcons)
-        {
-            var icon = kvp.Value;
-            var field = kvp.Key;
-
-            if (field == _currentSortField)
-            {
-                icon.Visibility = Visibility.Visible;
-                // E70D = ChevronUp (ascending), E70E = ChevronDown (descending)
-                icon.Glyph = _sortAscending ? "\uE70D" : "\uE70E";
-                icon.Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["PrimaryBrush"];
-            }
-            else
-            {
-                icon.Visibility = Visibility.Collapsed;
-            }
+            await model.ToggleSort(field);
         }
     }
 
-    private async void ManufacturerRow_Click(object sender, RoutedEventArgs e)
+    private async void ManufacturerRow_Click(object sender, ItemClickEventArgs e)
     {
-        if (sender is Button button &&
-            button.DataContext is ManufacturerListDto manufacturer &&
+        if (e.ClickedItem is ManufacturerListDto manufacturer &&
             DataContext is ManufacturerListModel model)
         {
             await model.ViewManufacturer(manufacturer);

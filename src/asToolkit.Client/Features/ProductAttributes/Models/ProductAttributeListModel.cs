@@ -61,6 +61,16 @@ public partial record ProductAttributeListModel
     public IState<string> SortSales => State<string>.Value(this, () => "Name Ascending");
 
     /// <summary>
+    /// The field currently sorted by; bound by the SortHeaderButton column headers.
+    /// </summary>
+    public IState<string> ActiveSortField => State<string>.Value(this, () => "Name");
+
+    /// <summary>
+    /// Current sort direction; bound by the SortHeaderButton column headers.
+    /// </summary>
+    public IState<bool> SortAscending => State<bool>.Value(this, () => true);
+
+    /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
     public IState<ProductAttributePaginationInfo> Pagination => State<ProductAttributePaginationInfo>.Value(this, () => new ProductAttributePaginationInfo());
@@ -142,6 +152,24 @@ public partial record ProductAttributeListModel
     {
         await SortSales.UpdateAsync(_ => salesBy, ct);
         await CurrentPage.UpdateAsync(_ => 0, ct); // Reset to first page when sorting changes
+    }
+
+    /// <summary>
+    /// Toggles sorting for a column header: same field flips direction, a new field starts ascending.
+    /// </summary>
+    public async ValueTask ToggleSort(string field, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(field))
+        {
+            return;
+        }
+
+        var currentField = await ActiveSortField.Value(ct) ?? string.Empty;
+        var ascending = currentField == field ? !(await SortAscending.Value(ct)) : true;
+
+        await ActiveSortField.UpdateAsync(_ => field, ct);
+        await SortAscending.UpdateAsync(_ => ascending, ct);
+        await SetSortSales($"{field} {(ascending ? "Ascending" : "Descending")}", ct);
     }
 
     /// <summary>

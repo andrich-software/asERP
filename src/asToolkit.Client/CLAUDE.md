@@ -26,7 +26,7 @@ The active Uno features are declared in `asToolkit.Client.csproj` under `<UnoFea
 
 ## Feature-Based Architecture
 
-Every business capability is a **module** under `Features/`. Module pattern is required for new features — copy an existing one (`Customers/`, `Saless/`).
+Every business capability is a **module** under `Features/`. Module pattern is required for new features — copy an existing one (`Customers/`, `Sales/` — note: the Sales feature's *namespace* is `Features.Saless`, a legacy of the Order→Sales rename).
 
 ```
 Features/{Feature}/
@@ -108,24 +108,46 @@ Styles live in `Styles/`:
 - `ColorPaletteOverride.xaml` — Material color tokens (paired with `.json` for tooling)
 - `InputControls.xaml` — compact input styling
 - `TenantSwitcher.xaml` — tenant-selector specific
+- `StatusColors.xaml` — semantic status brushes (`Status{Kind}Background/ForegroundBrush`), theme-aware Light + Dark
+- `SharedComponents.xaml` — implicit styles for the shared controls below, shared responsive breakpoints (`BreakpointMedium`=800, `BreakpointWide`=1200 as `x:Double` for `AdaptiveTrigger`), `TableCardStyle`
 
-### Cards (mandatory pattern)
+### Shared UI components (mandatory pattern)
 
-Cards must use `ThemeShadow` + `Translation` for the 3D effect. **Do not use `BsalesBrush`/`BsalesThickness`** to outline cards.
+Custom controls live in `Controls/` (namespace `asToolkit.Client.Controls`, xmlns `controls`). **Use these instead of hand-building cards, badges, field blocks or empty states:**
 
-```xml
-<Bsales Background="{ThemeResource SurfaceBrush}"
-        CornerRadius="12"
-        Translation="0,0,8">
-  <Bsales.Shadow>
-    <ThemeShadow />
-  </Bsales.Shadow>
-  <!-- card content -->
-</Bsales>
-```
+| Control | Purpose | Localization |
+|---|---|---|
+| `DetailPageHeader` | Detail page header: icon chip, `Title`/`Subtitle` (string or UI), `Badges`, `Actions` slots; `Content` = extra slot (e.g. related-entity link) | actions/labels via child x:Uid |
+| `SectionCard` | Elevated card with icon + title header row and 16px content padding | x:Uid with `.Header` suffix key |
+| `StatusBadge` | Pill badge for any status enum or bool sync flag: `Status="{Binding ...}"` — text + colors resolved centrally in `Core/Status/StatusVisuals.cs` | automatic (`{EnumType}.{Value}` resw keys) |
+| `LabeledField` | Icon + label + value with built-in "N/A" fallback; `LabeledFieldKeyValueStyle` for label-left/value-right rows | x:Uid with `.Text` suffix key |
+| `EmptyState` | Centered icon/title/message placeholder, optional `ActionContent` | x:Uid with `.Title`/`.Message` suffix keys |
 
-- `CornerRadius="12"` for rounded corners
-- `Translation="0,0,8"` for elevation
+x:Uid on custom control properties is resolved **at compile time** by the Uno XAML generator — a typo'd resw key silently produces an empty string, so verify new keys exist in **both** `de` and `en` resw.
+
+New status enums: add the mapping in `StatusVisuals.Resolve` (text key + semantic `Kind`) — do **not** create new `*To{Text,Background,Foreground}Converter` triples.
+
+### Detail pages (mandatory layout)
+
+Detail pages use the **Header + Tabs** layout (see `Features/Sales/Views/SalesDetailPage.xaml` as the reference):
+- `utu:NavigationBar` (back only) → `mvux:FeedView` → root Grid (`MaxWidth="1400"`, rows `Auto,Auto,*`)
+- Row 0: `DetailPageHeader` (badges + Edit/Delete actions live here, not in the AppBar)
+- Row 1: `utu:TabBar` with `MaterialTopTabBarStyle` / items with `MaterialTopTabBarItemStyle`
+- Row 2: one `ScrollViewer` **per tab**, toggled via `Visibility` in ~15 lines of code-behind (`DetailTabs_Loaded`/`DetailTabs_SelectionChanged`; keep the selected index in a page field so it survives FeedView refreshes)
+- Expensive per-tab feeds (sub-lists, images) are gated on an `IState<bool>` the tab handler sets on first selection
+
+### Cards
+
+Cards use `SectionCard` (which implements `ThemeShadow` + `Translation="0,0,8"` + `CornerRadius="12"` once). **Scope the shadow mandate:** shadows only for standalone cards (≤8 per page) — `ThemeShadow` has a real per-element cost on Skia. Tables and list rows use `TableCardStyle` (border outline), never per-row shadows.
+
+### List pages (mandatory performance rules)
+
+See `Features/Products/Views/ProductListPage.xaml` as the reference:
+- **Virtualization:** table bodies are a `ListView` (`TableListViewStyle` + `TableItemContainerStyle`, default `ItemsStackPanel`). **Never** wrap it in a `ScrollViewer` or `StackPanel` and never use `ScrollViewer + ItemsRepeater` for long lists — that materializes every row and killed scroll performance.
+- **Rows:** one shallow `Grid` per row with a bottom hairline (`BorderThickness="0,0,0,1"`), **no Button wrapper** — row click via `IsItemClickEnabled` + `ItemClick`; hover/press come from the item container.
+- **Compiled bindings:** row `DataTemplate`s declare `x:DataType` and use `{x:Bind}` for leaf values. Do NOT x:Bind against FeedView's `Data.*` outside typed item templates.
+- **Sortable headers:** the header Grid sits *outside* the FeedView (page DataContext) and duplicates the row template's ColumnDefinitions (accepted duplication). Use `controls:SortHeaderButton` bound to `ActiveSortField`/`SortAscending` model states + a `ToggleSort` model method — no imperative icon juggling.
+- **Thumbnails:** never load image bytes inside the list feed (blocks the whole list). Expose a `ThumbnailRequest` on the row model and let `media:ThumbnailLoader.Request` (Core/Media) load lazily per realized row — cached via `IThumbnailCache`, cancellation-safe on container recycling, decode capped via `DecodePixelWidth`.
 
 ## Dialogs
 
