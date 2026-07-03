@@ -1,4 +1,4 @@
-﻿using asToolkit.Domain.Entities.Common;
+using asToolkit.Domain.Entities.Common;
 
 namespace asToolkit.Domain.Entities;
 
@@ -12,6 +12,7 @@ public class SalesItem : BaseEntity, IBaseEntity
     public double TaxRate { get; set; }
     public string MissingProductSku { get; set; } = string.Empty;
     public string MissingProductEan { get; set; } = string.Empty;
-    public Guid ShippingId { get; set; }
+    /// <summary>The parcel this line was packed into — enables partial shipments. Null while unassigned.</summary>
+    public Guid? ShippingId { get; set; }
     public ICollection<SalesItemSerialNumber> SerialNumbers { get; set; } = new List<SalesItemSerialNumber>();
 }

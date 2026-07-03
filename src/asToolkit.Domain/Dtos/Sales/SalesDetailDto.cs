@@ -1,4 +1,5 @@
-﻿using asToolkit.Domain.Entities;
+using asToolkit.Domain.Dtos.Shipping;
+using asToolkit.Domain.Entities;
 using asToolkit.Domain.Enums;
 
 namespace asToolkit.Domain.Dtos.Sales;
@@ -23,10 +24,14 @@ public class SalesDetailDto
     public string PaymentProvider { get; set; } = string.Empty;
     public string PaymentTransactionId { get; set; } = string.Empty;
 
+    // Legacy single-shipment fields (bound by the client) — populated from the newest
+    // non-cancelled shipment; the full list lives in Shippings.
     public string ShippingMethod { get; set; } = string.Empty;
     public string ShippingStatus { get; set; } = string.Empty;
     public string ShippingProvider { get; set; } = string.Empty;
     public string ShippingTrackingId { get; set; } = string.Empty;
+
+    public List<ShippingListDto> Shippings { get; set; } = new List<ShippingListDto>();
 
     public decimal Subtotal { get; set; }
     public decimal ShippingCost { get; set; }

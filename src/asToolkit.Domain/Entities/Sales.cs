@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using asToolkit.Domain.Entities.Common;
 using asToolkit.Domain.Enums;
 
@@ -55,4 +55,6 @@ public class Sales : BaseEntity, IBaseEntity
     public DateTime DateSalesed { get; set; }
 
     public ICollection<SalesHistory> SalesHistories { get; set; } = new List<SalesHistory>();
+
+    public ICollection<Shipping> Shippings { get; set; } = new List<Shipping>();
 }

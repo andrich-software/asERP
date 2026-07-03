@@ -1,8 +1,10 @@
-﻿using asToolkit.Application.Contracts.Logging;
+using asToolkit.Application.Contracts.Logging;
 using asToolkit.Application.Contracts.Persistence;
-using asToolkit.Domain.Dtos.Sales;
-using asToolkit.Domain.Wrapper;
 using asToolkit.Application.Mediator;
+using asToolkit.Domain.Dtos.Sales;
+using asToolkit.Domain.Dtos.Shipping;
+using asToolkit.Domain.Enums;
+using asToolkit.Domain.Wrapper;
 
 namespace asToolkit.Application.Features.Sales.Queries.SalesDetail;
 
@@ -24,16 +26,24 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
     private readonly ISalesRepository _salesRepository;
 
     /// <summary>
+    /// Repository for the shipments of the sales order
+    /// </summary>
+    private readonly IShippingRepository _shippingRepository;
+
+    /// <summary>
     /// Constructor that initializes the handler with required dependencies
     /// </summary>
     /// <param name="logger">Logger for recording operations</param>
     /// <param name="salesRepository">Repository for sales data access</param>
+    /// <param name="shippingRepository">Repository for shipment data access</param>
     public SalesDetailHandler(
         IAppLogger<SalesDetailHandler> logger,
-        ISalesRepository salesRepository)
+        ISalesRepository salesRepository,
+        IShippingRepository shippingRepository)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _salesRepository = salesRepository ?? throw new ArgumentNullException(nameof(salesRepository));
+        _shippingRepository = shippingRepository ?? throw new ArgumentNullException(nameof(shippingRepository));
     }
 
     /// <summary>
@@ -67,6 +77,10 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
             // Bestellhistorie abrufen
             var salesHistory = await _salesRepository.GetSalesHistoryAsync(request.Id);
 
+            var shippings = await _shippingRepository.GetBySalesIdAsync(sales.Id);
+            // Legacy single-shipment fields are fed from the newest non-cancelled shipment.
+            var latestShipping = shippings.FirstOrDefault(s => s.Status != ShippingStatus.Cancelled);
+
             // Manual mapping from entity to DTO
             var data = new SalesDetailDto
             {
@@ -83,11 +97,25 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
                 PaymentStatus = sales.PaymentStatus,
                 PaymentProvider = sales.PaymentProvider,
                 PaymentTransactionId = sales.PaymentTransactionId,
-                // Shipping fields not available in the entity, using empty values
-                ShippingMethod = string.Empty,
-                ShippingStatus = string.Empty,
-                ShippingProvider = string.Empty,
-                ShippingTrackingId = string.Empty,
+                ShippingMethod = latestShipping?.ShippingProviderRate?.Name ?? string.Empty,
+                ShippingStatus = latestShipping?.Status.ToString() ?? string.Empty,
+                ShippingProvider = latestShipping?.ShippingProvider.Name ?? string.Empty,
+                ShippingTrackingId = latestShipping?.TrackingNumber ?? string.Empty,
+                Shippings = shippings.Select(s => new ShippingListDto
+                {
+                    Id = s.Id,
+                    SalesId = s.SalesId,
+                    ProviderName = s.ShippingProvider.Name,
+                    RateName = s.ShippingProviderRate?.Name ?? string.Empty,
+                    Status = s.Status,
+                    TrackingNumber = s.TrackingNumber,
+                    TrackingUrl = s.TrackingUrl,
+                    ShippingCost = s.ShippingCost,
+                    HasLabel = s.LabelData != null && s.LabelData.Length > 0,
+                    ShippedAt = s.ShippedAt,
+                    DeliveredAt = s.DeliveredAt,
+                    DateCreated = s.DateCreated
+                }).ToList(),
                 Subtotal = sales.Subtotal,
                 ShippingCost = sales.ShippingCost,
                 TotalTax = sales.TotalTax,
@@ -117,7 +145,7 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
             // Set successful result with the sales details
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.Ok;
-            result.Data = data; 
+            result.Data = data;
 
             _logger.LogInformation("Sales with ID {Id} retrieved successfully", request.Id);
         }
