@@ -92,17 +92,9 @@ jobs:
           exit 1
         }
 
-        # Create Assets directory and placeholder assets
+        # Copy MSIX logo assets (checked in under assets/msix, rendered from the SVG logos)
         New-Item -Path "./publish/msix/Assets" -ItemType Directory -Force
-
-        # Create minimal placeholder PNG files (1x1 transparent pixel in base64)
-        $transparentPixelBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9BfKSVQAAAABJRU5ErkJggg=="
-        $transparentPixelBytes = [System.Convert]::FromBase64String($transparentPixelBase64)
-
-        [System.IO.File]::WriteAllBytes("./publish/msix/Assets/StoreLogo.png", $transparentPixelBytes)
-        [System.IO.File]::WriteAllBytes("./publish/msix/Assets/Square150x150Logo.png", $transparentPixelBytes)
-        [System.IO.File]::WriteAllBytes("./publish/msix/Assets/Square44x44Logo.png", $transparentPixelBytes)
-        [System.IO.File]::WriteAllBytes("./publish/msix/Assets/Wide310x150Logo.png", $transparentPixelBytes)
+        Copy-Item -Path "./assets/msix/StoreLogo.png","./assets/msix/Square150x150Logo.png","./assets/msix/Square44x44Logo.png","./assets/msix/Wide310x150Logo.png" -Destination "./publish/msix/Assets/" -Force
 
         # Create package manifest as AppxManifest.xml (required by MakeAppx)
         $manifestContent = @"
