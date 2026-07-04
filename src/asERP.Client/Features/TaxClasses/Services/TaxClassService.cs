@@ -1,0 +1,109 @@
+﻿using System.Net.Http.Json;
+using asERP.Client.Core.Constants;
+using asERP.Client.Core.Extensions;
+using asERP.Client.Core.Json;
+using asERP.Client.Core.Models;
+using asERP.Client.Features.Auth.Services;
+using asERP.Domain.Dtos.TaxClass;
+using Microsoft.Extensions.Logging;
+
+namespace asERP.Client.Features.TaxClasses.Services;
+
+/// <summary>
+/// Implementation of tax class service using HTTP client.
+/// </summary>
+public class TaxClassService : ITaxClassService
+{
+    private readonly HttpClient _httpClient;
+    private readonly ITokenStorageService _tokenStorage;
+    private readonly ILogger<TaxClassService> _logger;
+
+    public TaxClassService(
+        IHttpClientFactory httpClientFactory,
+        ITokenStorageService tokenStorage,
+        ILogger<TaxClassService> logger)
+    {
+        _httpClient = httpClientFactory.CreateClient("MaErpApi");
+        _tokenStorage = tokenStorage;
+        _logger = logger;
+    }
+
+    private async Task<string> GetBaseUrlAsync()
+    {
+        var serverUrl = await _tokenStorage.GetServerUrlAsync();
+        if (string.IsNullOrEmpty(serverUrl))
+        {
+            throw new InvalidOperationException("Server URL is not configured. Please login first.");
+        }
+        return serverUrl.TrimEnd('/');
+    }
+
+    public async Task<PaginatedResponse<TaxClassListDto>> GetTaxClassesAsync(
+        QueryParameters parameters,
+        CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.TaxClasses.Base}?{parameters.ToQueryString()}";
+
+        _logger.LogInformation("Fetching tax classes from URL: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync(
+                url, AppJsonSerializerContext.Default.PaginatedResponseTaxClassListDto, ct);
+
+            if (response?.Succeeded != true)
+            {
+                _logger.LogWarning("API returned unsuccessful response: {Messages}",
+                    string.Join(", ", response?.Messages ?? new List<string>()));
+                return new PaginatedResponse<TaxClassListDto>();
+            }
+
+            _logger.LogInformation(
+                "Fetched {Count} tax classes (Page {Page}/{TotalPages}, Total: {Total})",
+                response.Data?.Count ?? 0,
+                response.CurrentPage,
+                response.TotalPages,
+                response.TotalCount);
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching tax classes from {Url}", url);
+            throw;
+        }
+    }
+
+    public async Task<TaxClassDetailDto?> GetTaxClassAsync(Guid id, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.TaxClasses.ById(id)}";
+        var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseTaxClassDetailDto, ct);
+        return apiResponse?.Data;
+    }
+
+    public async Task CreateTaxClassAsync(TaxClassInputDto input, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.TaxClasses.Base}";
+        var response = await _httpClient.PostAsJsonAsync(url, input, AppJsonSerializerContext.Default.TaxClassInputDto, ct);
+        await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
+    }
+
+    public async Task UpdateTaxClassAsync(Guid id, TaxClassInputDto input, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.TaxClasses.ById(id)}";
+        var response = await _httpClient.PutAsJsonAsync(url, input, AppJsonSerializerContext.Default.TaxClassInputDto, ct);
+        await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
+    }
+
+    public async Task DeleteTaxClassAsync(Guid id, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.TaxClasses.ById(id)}";
+        var response = await _httpClient.DeleteAsync(url, ct);
+        await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
+    }
+}

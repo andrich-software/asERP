@@ -1,0 +1,19 @@
+﻿<UserControl x:Class="asERP.Client.Features.Shell.Views.NotificationHost"
+     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+     mc:Ignorable="d">
+
+  <!-- Background is intentionally left null so empty regions pass pointer events through to the
+       content below. Only the toast borders (which have a Background) capture clicks. The inner
+       host sizes to its content and is pinned bottom-right. -->
+  <Grid x:Name="RootHost"
+        VerticalAlignment="Bottom"
+        HorizontalAlignment="Right"
+        Margin="0,0,16,16">
+    <StackPanel x:Name="ToastPanel"
+                Spacing="8"
+                MaxWidth="400" />
+  </Grid>
+</UserControl>

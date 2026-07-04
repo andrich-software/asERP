@@ -1,0 +1,33 @@
+﻿name: asERP.Client Build and Test
+
+on:
+  push:
+    branches-ignore: [ main ]
+    paths:
+      - 'src/asERP.Domain/**'
+      - 'src/asERP.Client/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/asERP.Domain/**'
+      - 'src/asERP.Client/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+
+      - name: Restore workloads
+        run: dotnet workload restore src/asERP.Client/asERP.Client.csproj
+
+      - name: Restore asERP.Client.Tests
+        run: dotnet restore tests/asERP.Client.Tests -p:TargetFramework=net10.0
+      - name: Build asERP.Client.Tests
+        run: dotnet build tests/asERP.Client.Tests -p:TargetFramework=net10.0
+      - name: Test asERP.Client.Tests
+        run: dotnet test tests/asERP.Client.Tests --no-build --verbosity normal

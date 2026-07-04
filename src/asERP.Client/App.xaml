@@ -1,0 +1,72 @@
+﻿<Application x:Class="asERP.Client.App"
+       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+       xmlns:utum="using:Uno.Toolkit.UI.Material"
+       xmlns:converters="using:asERP.Client.Presentation">
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <!-- Load WinUI resources -->
+        <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+        <utum:MaterialToolkitTheme
+          ColorOverrideSource="ms-appx:///Styles/ColorPaletteOverride.xaml">
+          <utum:MaterialToolkitTheme.FontOverrideDictionary>
+            <ResourceDictionary>
+              <FontFamily x:Key="MaterialLightFontFamily">ms-appx:///Assets/Fonts/InterVariable.ttf#Inter</FontFamily>
+              <FontFamily x:Key="MaterialMediumFontFamily">ms-appx:///Assets/Fonts/InterVariable.ttf#Inter</FontFamily>
+              <FontFamily x:Key="MaterialRegularFontFamily">ms-appx:///Assets/Fonts/InterVariable.ttf#Inter</FontFamily>
+            </ResourceDictionary>
+          </utum:MaterialToolkitTheme.FontOverrideDictionary>
+        </utum:MaterialToolkitTheme>
+
+        <!-- Compact Input Controls Styling -->
+        <ResourceDictionary Source="ms-appx:///Styles/InputControls.xaml" />
+
+        <!-- Tenant Switcher Styling -->
+        <ResourceDictionary Source="ms-appx:///Styles/TenantSwitcher.xaml" />
+
+        <!-- Semantic status colors (StatusBadge) -->
+        <ResourceDictionary Source="ms-appx:///Styles/StatusColors.xaml" />
+
+        <!-- Shared UI component library (SectionCard, DetailPageHeader, StatusBadge, LabeledField, EmptyState) -->
+        <ResourceDictionary Source="ms-appx:///Styles/SharedComponents.xaml" />
+
+        <!-- App theme tokens: asERP-style shape overrides, link/hover/sidebar brushes, page-header text styles.
+             Must stay merged last so the shape overrides win over Material defaults. -->
+        <ResourceDictionary Source="ms-appx:///Styles/AppTheme.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+
+      <!-- Converters -->
+      <converters:DateOnlyConverter x:Key="DateOnlyConverter" />
+      <converters:CurrencyConverter x:Key="CurrencyConverter" />
+      <converters:BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+      <converters:InverseBooleanToVisibilityConverter x:Key="BoolToInverseVisibilityConverter" />
+      <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+      <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
+      <converters:StringToInverseVisibilityConverter x:Key="StringToInverseVisibilityConverter" />
+      <converters:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter" />
+      <converters:NotZeroToVisibilityConverter x:Key="NotZeroToVisibilityConverter" />
+      <converters:DateTimeOffsetToStringConverter x:Key="DateTimeOffsetToStringConverter" />
+      <converters:BytesToImageSourceConverter x:Key="BytesToImageSourceConverter" />
+      <!-- Status COLOR converters are retired — status chips use controls:StatusBadge (StatusVisuals).
+           The remaining ToText converters serve enum ComboBox item templates on edit pages;
+           BoolToSyncStatusBackground/Foreground serve the dashboard's Active/Paused chip (custom wording). -->
+      <converters:CustomerStatusToTextConverter x:Key="CustomerStatusToTextConverter" />
+      <converters:BoolToSyncStatusBackgroundConverter x:Key="BoolToSyncStatusBackgroundConverter" />
+      <converters:BoolToSyncStatusForegroundConverter x:Key="BoolToSyncStatusForegroundConverter" />
+      <converters:PaymentStatusToTextConverter x:Key="PaymentStatusToTextConverter" />
+      <converters:SalesStatusToTextConverter x:Key="SalesStatusToTextConverter" />
+      <converters:SalesChannelTypeToTextConverter x:Key="SalesChannelTypeToTextConverter" />
+      <converters:SyncLogLevelToForegroundConverter x:Key="SyncLogLevelToForegroundConverter" />
+      <converters:SyncRunStatusToBrushConverter x:Key="SyncRunStatusToBrushConverter" />
+      <converters:ProductTypeToTextConverter x:Key="ProductTypeToTextConverter" />
+      <converters:ProductTypeToVisibilityConverter x:Key="ProductTypeToVisibilityConverter" />
+      <converters:VariantOptionsSummaryConverter x:Key="VariantOptionsSummaryConverter" />
+      <converters:SearchEntityTypeToGlyphConverter x:Key="SearchEntityTypeToGlyphConverter" />
+      <converters:SearchEntityTypeToLabelConverter x:Key="SearchEntityTypeToLabelConverter" />
+
+    </ResourceDictionary>
+  </Application.Resources>
+
+</Application>

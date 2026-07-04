@@ -1,0 +1,265 @@
+<Page x:Class="asERP.Client.Features.GlobalSettings.Views.GlobalSettingsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:utu="using:Uno.Toolkit.UI"
+      xmlns:controls="using:asERP.Client.Controls"
+      Background="{ThemeResource BackgroundBrush}">
+
+  <Page.Resources>
+    <!-- One editable Setting row: label left, value right; secrets are write-only -->
+    <DataTemplate x:Key="SettingEntryTemplate">
+      <Grid Margin="0,0,0,12"
+            ToolTipService.ToolTip="{Binding Key}">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="240" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Text="{Binding Label}"
+                   Style="{StaticResource BodyMedium}"
+                   Foreground="{ThemeResource OnSurfaceBrush}"
+                   VerticalAlignment="Center"
+                   TextWrapping="Wrap"
+                   Margin="0,0,16,0" />
+
+        <TextBox Grid.Column="1"
+                 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 Visibility="{Binding IsSecret, Converter={StaticResource BoolToInverseVisibilityConverter}}" />
+
+        <StackPanel Grid.Column="1"
+                    Spacing="4"
+                    Visibility="{Binding IsSecret, Converter={StaticResource BoolToVisibilityConverter}}">
+          <PasswordBox Password="{Binding Value, Mode=TwoWay}" />
+          <TextBlock x:Uid="GlobalSettingsPage.SecretStoredHint"
+                     Style="{StaticResource BodySmall}"
+                     Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                     TextWrapping="Wrap"
+                     Visibility="{Binding ShowSecretHint, Converter={StaticResource BoolToVisibilityConverter}}" />
+        </StackPanel>
+      </Grid>
+    </DataTemplate>
+
+    <!-- One key-prefix group rendered as a SectionCard -->
+    <DataTemplate x:Key="SettingGroupTemplate">
+      <controls:SectionCard Header="{Binding Title}"
+                            HeaderGlyph="&#xE713;"
+                            Margin="0,0,0,16">
+        <ItemsControl ItemsSource="{Binding Entries}"
+                      ItemTemplate="{StaticResource SettingEntryTemplate}" />
+      </controls:SectionCard>
+    </DataTemplate>
+  </Page.Resources>
+
+  <Grid utu:SafeArea.Insets="VisibleBounds">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <utu:NavigationBar Grid.Row="0" x:Uid="GlobalSettingsPage.NavigationBar">
+      <utu:NavigationBar.MainCommand>
+        <AppBarButton Icon="Back"
+                      x:Uid="GlobalSettingsPage.AppBarButton.Back"
+                      Click="BackButton_Click" />
+      </utu:NavigationBar.MainCommand>
+    </utu:NavigationBar>
+
+    <Grid Grid.Row="1"
+          MaxWidth="1400"
+          Padding="24,16,24,0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <!-- Page header: title + save action -->
+      <controls:DetailPageHeader Grid.Row="0"
+                                 Glyph="&#xE713;">
+        <controls:DetailPageHeader.Title>
+          <TextBlock x:Uid="GlobalSettingsPage.Title"
+                     Style="{StaticResource TitleLarge}"
+                     Foreground="{ThemeResource OnSurfaceBrush}" />
+        </controls:DetailPageHeader.Title>
+        <controls:DetailPageHeader.Subtitle>
+          <TextBlock x:Uid="GlobalSettingsPage.Subtitle"
+                     Style="{StaticResource BodyMedium}"
+                     Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                     TextWrapping="Wrap" />
+        </controls:DetailPageHeader.Subtitle>
+        <controls:DetailPageHeader.Actions>
+          <Button x:Uid="GlobalSettingsPage.Button.Save"
+                  Style="{StaticResource FilledButtonStyle}"
+                  Click="SaveButton_Click"
+                  IsEnabled="{Binding IsSaving, Converter={StaticResource InverseBooleanConverter}}" />
+        </controls:DetailPageHeader.Actions>
+      </controls:DetailPageHeader>
+
+      <!-- Tabs -->
+      <utu:TabBar x:Name="SettingsTabs"
+                  Grid.Row="1"
+                  Margin="0,16,0,0"
+                  HorizontalAlignment="Left"
+                  Style="{StaticResource MaterialTopTabBarStyle}"
+                  Loaded="SettingsTabs_Loaded"
+                  SelectionChanged="SettingsTabs_SelectionChanged">
+        <utu:TabBar.Items>
+          <utu:TabBarItem x:Uid="GlobalSettingsPage.TabOAuth"
+                          Style="{StaticResource MaterialTopTabBarItemStyle}"
+                          IsSelected="True" />
+          <utu:TabBarItem x:Uid="GlobalSettingsPage.TabGeneral"
+                          Style="{StaticResource MaterialTopTabBarItemStyle}" />
+          <utu:TabBarItem x:Uid="GlobalSettingsPage.TabEmail"
+                          Style="{StaticResource MaterialTopTabBarItemStyle}" />
+          <utu:TabBarItem x:Uid="GlobalSettingsPage.TabAuthentication"
+                          Style="{StaticResource MaterialTopTabBarItemStyle}" />
+          <utu:TabBarItem x:Uid="GlobalSettingsPage.TabObservability"
+                          Style="{StaticResource MaterialTopTabBarItemStyle}" />
+        </utu:TabBar.Items>
+      </utu:TabBar>
+
+      <!-- Status / error, visible regardless of the selected tab -->
+      <StackPanel Grid.Row="2"
+                  Margin="0,12,0,0"
+                  Spacing="4">
+        <TextBlock Text="{Binding StatusMessage}"
+                   Style="{StaticResource BodyMedium}"
+                   Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                   TextWrapping="Wrap"
+                   Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}" />
+        <TextBlock Text="{Binding ErrorMessage}"
+                   Style="{StaticResource BodyMedium}"
+                   Foreground="{ThemeResource ErrorBrush}"
+                   TextWrapping="Wrap"
+                   Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}" />
+      </StackPanel>
+
+      <!-- Tab content: one ScrollViewer per tab, toggled in code-behind -->
+      <Grid Grid.Row="3">
+
+        <!-- OAuth apps (system-wide developer app bundle) -->
+        <ScrollViewer x:Name="OAuthTab"
+                      VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="16"
+                      MaxWidth="760"
+                      HorizontalAlignment="Left"
+                      Padding="0,16,0,24">
+
+            <controls:SectionCard x:Uid="GlobalSettingsPage.CardProvider"
+                                  HeaderGlyph="&#xE71D;">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <RadioButton x:Uid="GlobalSettingsPage.Provider.Ebay"
+                             IsChecked="{Binding IsEbaySelected, Mode=TwoWay}"
+                             GroupName="OAuthProvider" />
+                <RadioButton x:Uid="GlobalSettingsPage.Provider.Amazon"
+                             IsChecked="{Binding IsAmazonSelected, Mode=TwoWay}"
+                             GroupName="OAuthProvider" />
+              </StackPanel>
+            </controls:SectionCard>
+
+            <controls:SectionCard x:Uid="GlobalSettingsPage.CardAppCredentials"
+                                  HeaderGlyph="&#xE72E;">
+              <StackPanel Spacing="12">
+                <TextBox x:Uid="GlobalSettingsPage.Field.ClientId"
+                         Text="{Binding ClientId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                <PasswordBox x:Uid="GlobalSettingsPage.Field.ClientSecret"
+                             Password="{Binding ClientSecret, Mode=TwoWay}" />
+                <TextBlock Text="{Binding ClientSecretPlaceholder}"
+                           Style="{StaticResource BodySmall}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                           TextWrapping="Wrap"
+                           Visibility="{Binding ClientSecretPlaceholder, Converter={StaticResource StringToVisibilityConverter}}" />
+
+                <!-- eBay-only RuName -->
+                <TextBox x:Uid="GlobalSettingsPage.Field.RuName"
+                         Text="{Binding RuName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Visibility="{Binding IsRuNameRelevant, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                <!-- Amazon-only RedirectUri -->
+                <TextBox x:Uid="GlobalSettingsPage.Field.RedirectUri"
+                         Text="{Binding RedirectUri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Visibility="{Binding IsRedirectUriRelevant, Converter={StaticResource BoolToVisibilityConverter}}" />
+              </StackPanel>
+            </controls:SectionCard>
+
+            <controls:SectionCard x:Uid="GlobalSettingsPage.CardEndpoints"
+                                  HeaderGlyph="&#xE774;">
+              <StackPanel Spacing="12">
+                <TextBox x:Uid="GlobalSettingsPage.Field.AuthorizationEndpoint"
+                         Text="{Binding AuthorizationEndpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox x:Uid="GlobalSettingsPage.Field.TokenEndpoint"
+                         Text="{Binding TokenEndpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox x:Uid="GlobalSettingsPage.Field.Scopes"
+                         Text="{Binding Scopes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         Height="80" />
+                <ToggleSwitch x:Uid="GlobalSettingsPage.Field.UseSandbox"
+                              IsOn="{Binding UseSandbox, Mode=TwoWay}" />
+              </StackPanel>
+            </controls:SectionCard>
+
+            <controls:SectionCard x:Uid="GlobalSettingsPage.CardPublicBaseUrl"
+                                  HeaderGlyph="&#xE774;">
+              <StackPanel Spacing="8">
+                <TextBox x:Uid="GlobalSettingsPage.Field.PublicBaseUrl"
+                         Text="{Binding PublicBaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         InputScope="Url" />
+                <TextBlock x:Uid="GlobalSettingsPage.Field.PublicBaseUrl.Hint"
+                           Style="{StaticResource BodySmall}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </controls:SectionCard>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- General (company, system defaults, invoice, sales, notifications) -->
+        <ScrollViewer x:Name="GeneralTab"
+                      Visibility="Collapsed"
+                      VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding GeneralGroups}"
+                        ItemTemplate="{StaticResource SettingGroupTemplate}"
+                        MaxWidth="760"
+                        HorizontalAlignment="Left"
+                        Padding="0,16,0,24" />
+        </ScrollViewer>
+
+        <!-- E-mail -->
+        <ScrollViewer x:Name="EmailTab"
+                      Visibility="Collapsed"
+                      VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding EmailGroups}"
+                        ItemTemplate="{StaticResource SettingGroupTemplate}"
+                        MaxWidth="760"
+                        HorizontalAlignment="Left"
+                        Padding="0,16,0,24" />
+        </ScrollViewer>
+
+        <!-- Authentication (JWT) -->
+        <ScrollViewer x:Name="AuthenticationTab"
+                      Visibility="Collapsed"
+                      VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding AuthenticationGroups}"
+                        ItemTemplate="{StaticResource SettingGroupTemplate}"
+                        MaxWidth="760"
+                        HorizontalAlignment="Left"
+                        Padding="0,16,0,24" />
+        </ScrollViewer>
+
+        <!-- Observability (telemetry, Grafana, ClickHouse) -->
+        <ScrollViewer x:Name="ObservabilityTab"
+                      Visibility="Collapsed"
+                      VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding ObservabilityGroups}"
+                        ItemTemplate="{StaticResource SettingGroupTemplate}"
+                        MaxWidth="760"
+                        HorizontalAlignment="Left"
+                        Padding="0,16,0,24" />
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+  </Grid>
+</Page>

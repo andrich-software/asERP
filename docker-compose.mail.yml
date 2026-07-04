@@ -3,7 +3,7 @@
 services:
   mailpit:
     image: axllent/mailpit:latest
-    container_name: astoolkit-mailpit
+    container_name: aserp-mailpit
     restart: unless-stopped
     ports:
       - "1025:1025"  # SMTP server
@@ -14,11 +14,11 @@ services:
     volumes:
       - mailpit-data:/data
     networks:
-      - astoolkit-network
+      - aserp-network
 
 volumes:
   mailpit-data:
 
 networks:
-  astoolkit-network:
+  aserp-network:
     driver: bridge

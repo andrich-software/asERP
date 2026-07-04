@@ -6,7 +6,7 @@
     <ProjectGuid>f5fff0ee-10f3-4fe8-b173-22a9fefd33b7</ProjectGuid>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
     <DockerServiceUrl>{Scheme}://localhost:{ServicePort}</DockerServiceUrl>
-    <DockerServiceName>astoolkit.web</DockerServiceName>
+    <DockerServiceName>aserp.web</DockerServiceName>
     <DockerLaunchBrowser>true</DockerLaunchBrowser>
     <Configurations>Debug;Release</Configurations>
     <Platforms>AnyCPU</Platforms>

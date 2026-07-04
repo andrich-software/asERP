@@ -19,17 +19,17 @@
       "type": "chrome",
       "request": "launch",
       "url": "http://localhost:5000",
-      "webRoot": "${workspaceFolder}/asToolkit",
+      "webRoot": "${workspaceFolder}/asERP",
       "inspectUri": "{wsProtocol}://{url.hostname}:{url.port}/_framework/debug/ws-proxy?browser={browserInspectUri}",
       "timeout": 30000,
       "preLaunchTask": "build-wasm",
       "server": {
         "runtimeExecutable": "dotnet",
         "program": "run",
-        "args": ["--no-build","-f","net10.0-browserwasm","--launch-profile", "asToolkit (WebAssembly)"],
+        "args": ["--no-build","-f","net10.0-browserwasm","--launch-profile", "asERP (WebAssembly)"],
         "outputCapture": "std",
         "timeout": 30000,
-        "cwd": "${workspaceFolder}/asToolkit"
+        "cwd": "${workspaceFolder}/asERP"
       }
     },
     {
@@ -40,17 +40,17 @@
       "type": "msedge",
       "request": "launch",
       "url": "http://localhost:5000",
-      "webRoot": "${workspaceFolder}/asToolkit",
+      "webRoot": "${workspaceFolder}/asERP",
       "inspectUri": "{wsProtocol}://{url.hostname}:{url.port}/_framework/debug/ws-proxy?browser={browserInspectUri}",
       "timeout": 30000,
       "preLaunchTask": "build-wasm",
       "server": {
         "runtimeExecutable": "dotnet",
         "program": "run",
-        "args": ["--no-build","-f","net10.0-browserwasm","--launch-profile", "asToolkit (WebAssembly)"],
+        "args": ["--no-build","-f","net10.0-browserwasm","--launch-profile", "asERP (WebAssembly)"],
         "outputCapture": "std",
         "timeout": 30000,
-        "cwd": "${workspaceFolder}/asToolkit"
+        "cwd": "${workspaceFolder}/asERP"
       }
     },
     {
@@ -62,13 +62,13 @@
       "request": "launch",
       "preLaunchTask": "build-desktop",
       // If you have changed target frameworks, make sure to update the program path.
-      "program": "${workspaceFolder}/asToolkit/bin/Debug/net10.0-desktop/asToolkit.dll",
+      "program": "${workspaceFolder}/asERP/bin/Debug/net10.0-desktop/asERP.dll",
       "args": [],
-      "launchSettingsProfile": "asToolkit (Desktop)",
+      "launchSettingsProfile": "asERP (Desktop)",
       "env": {
         "DOTNET_MODIFIABLE_ASSEMBLIES": "debug"
       },
-      "cwd": "${workspaceFolder}/asToolkit",
+      "cwd": "${workspaceFolder}/asERP",
       // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
       "console": "internalConsole",
       "stopAtEntry": false

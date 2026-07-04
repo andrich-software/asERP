@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<OutputType>Library</OutputType>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;NU1608</WarningsNotAsErrors>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+		<PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\asERP.Application\asERP.Application.csproj" />
+		<ProjectReference Include="..\asERP.Identity\asERP.Identity.csproj" />
+	</ItemGroup>
+</Project>

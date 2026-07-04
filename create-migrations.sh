@@ -11,15 +11,15 @@ NC='\033[0m' # No Color
 MIGRATION_NAME=""
 DATABASE_TYPE="all"
 APPLY_MIGRATION=false
-STARTUP_PROJECT="src/asToolkit.Server/asToolkit.Server.csproj"
-DB_CONTEXT="asToolkit.Persistence.DatabaseContext.ApplicationDbContext"
+STARTUP_PROJECT="src/asERP.Server/asERP.Server.csproj"
+DB_CONTEXT="asERP.Persistence.DatabaseContext.ApplicationDbContext"
 CONFIGURATION="Debug"
 OUTPUT_DIR="Migrations"
-APPSETTINGS_PATH="src/asToolkit.Server/appsettings.Development.json"
+APPSETTINGS_PATH="src/asERP.Server/appsettings.Development.json"
 
 # Function to display help
 show_help() {
-    echo -e "${BLUE}asToolkit Database Migration Tool${NC}"
+    echo -e "${BLUE}asERP Database Migration Tool${NC}"
     echo ""
     echo "Usage: $0 [options]"
     echo ""
@@ -64,9 +64,9 @@ read_connection_strings() {
         echo -e "${YELLOW}Using default connection strings...${NC}"
 
         # Default connection strings as fallback
-        MSSQL_CONNECTION="Server=localhost;Database=astoolkit_migration;User Id=astoolkit;Password=astoolkit;TrustServerCertificate=True;"
-        POSTGRESQL_CONNECTION="Host=localhost;Port=5432;Database=astoolkit_migration;Username=astoolkit;Password=astoolkit;"
-        SQLITE_CONNECTION="Data Source=astoolkit_migration.db"
+        MSSQL_CONNECTION="Server=localhost;Database=aserp_migration;User Id=aserp;Password=aserp;TrustServerCertificate=True;"
+        POSTGRESQL_CONNECTION="Host=localhost;Port=5432;Database=aserp_migration;Username=aserp;Password=aserp;"
+        SQLITE_CONNECTION="Data Source=aserp_migration.db"
     else
         echo -e "${GREEN}Connection strings successfully loaded from appsettings.json${NC}"
     fi
@@ -153,17 +153,17 @@ create_migration() {
 
     case $db_type in
         mssql)
-            project="src/asToolkit.Persistence.MSSQL/asToolkit.Persistence.MSSQL.csproj"
+            project="src/asERP.Persistence.MSSQL/asERP.Persistence.MSSQL.csproj"
             db_provider="MSSQL"
             connection_string=$MSSQL_CONNECTION
             ;;
         postgresql)
-            project="src/asToolkit.Persistence.PostgreSQL/asToolkit.Persistence.PostgreSQL.csproj"
+            project="src/asERP.Persistence.PostgreSQL/asERP.Persistence.PostgreSQL.csproj"
             db_provider="POSTGRESQL"
             connection_string=$POSTGRESQL_CONNECTION
             ;;
         sqlite)
-            project="src/asToolkit.Persistence.SQLite/asToolkit.Persistence.SQLite.csproj"
+            project="src/asERP.Persistence.SQLite/asERP.Persistence.SQLite.csproj"
             db_provider="SQLITE"
             connection_string=$SQLITE_CONNECTION
             ;;

@@ -1,0 +1,34 @@
+﻿using FluentValidation;
+using asERP.Domain.Interfaces;
+
+namespace asERP.Domain.Validators;
+
+/// <summary>
+/// Basis-Validator für Tenant - enthält feldbasierte Validierungsregeln.
+/// WICHTIG: Dieser Validator wird von Client (asERP.Client) und Server (asERP.Application) verwendet.
+///
+/// Client: TenantClientValidator erbt von dieser Klasse und fügt UI-spezifische Regeln hinzu.
+/// Server: TenantCreateValidator/TenantUpdateValidator erben von dieser Klasse und fügen DB-Validierungen hinzu.
+///
+/// Änderungen an diesem Validator wirken sich auf Client UND Server aus!
+/// Enthält nur feldbasierte Validierungen ohne externe Dependencies (keine DB-Zugriffe, keine Repositories).
+/// </summary>
+public class TenantBaseValidator<T> : AbstractValidator<T> where T : ITenantInputModel
+{
+    public TenantBaseValidator()
+    {
+        RuleFor(p => p.Name)
+            .NotNull().WithMessage("{PropertyName} is required.")
+            .NotEmpty().WithMessage("{PropertyName} is required.")
+            .MinimumLength(1).WithMessage("{PropertyName} must be at least 1 character.")
+            .MaximumLength(100).WithMessage("{PropertyName} must not exceed 100 characters.");
+
+        RuleFor(p => p.Description)
+            .MaximumLength(500).WithMessage("{PropertyName} must not exceed 500 characters.");
+
+        RuleFor(p => p.ContactEmail)
+            .EmailAddress().WithMessage("{PropertyName} must be a valid email address.")
+            .MaximumLength(200).WithMessage("{PropertyName} must not exceed 200 characters.")
+            .When(p => !string.IsNullOrEmpty(p.ContactEmail));
+    }
+}

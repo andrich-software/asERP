@@ -1,0 +1,44 @@
+﻿#nullable disable
+
+using asERP.Application.Contracts.Identity;
+using asERP.Application.Models.Identity;
+using asERP.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
+
+namespace asERP.Identity.Services;
+
+public class UserService : IUserService
+{
+    private readonly UserManager<ApplicationUser> _userManager;
+
+    public UserService(UserManager<ApplicationUser> userManager)
+    {
+        _userManager = userManager;
+    }
+
+    public async Task<Employee> GetEmployee(string userId)
+    {
+        var employee = await _userManager.FindByIdAsync(userId);
+
+        return new Employee
+        {
+            Email = employee?.Email ?? string.Empty,
+            Id = employee!.Id,
+            Firstname = employee.Firstname,
+            Lastname = employee.Lastname
+        };
+    }
+
+    public async Task<List<Employee>> GetEmployees()
+    {
+        var employees = await _userManager.GetUsersInRoleAsync("Employee");
+
+        return employees.Select(q => new Employee
+        {
+            Id = q.Id,
+            Email = q.Email ?? string.Empty,
+            Firstname = q.Firstname,
+            Lastname = q.Lastname
+        }).ToList();
+    }
+}
