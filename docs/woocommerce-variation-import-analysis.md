@@ -1,4 +1,4 @@
-﻿# Analysis: Importing WooCommerce Product Variations into asToolkit
+﻿# Analysis: Importing WooCommerce Product Variations into asERP
 
 **Status:** analysis only — no code changed yet. Hand this to a focused implementation task.
 **Date:** 2026-06-12
@@ -10,7 +10,7 @@
 
 The ERP is missing products. Verified against both databases:
 
-| | WooCommerce source (`production`, MariaDB `diy-stoffe_production`) | ERP (`astoolkit_01`, Postgres) |
+| | WooCommerce source (`production`, MariaDB `diy-stoffe_production`) | ERP (`aserp_01`, Postgres) |
 |---|---|---|
 | Top-level products (`post_type=product`) | 3,596 `publish` + 3,039 `private` = **6,635** | **6,624** ✅ (≈ complete) |
 | **Variations (`post_type=product_variation`, publish)** | **4,609** (across **1,551** variable parents) | **0** ❌ |
@@ -28,19 +28,19 @@ The WooCommerce connector imports only top-level products via `wc.Product.GetAll
 
 ## 2. Current code (what to change)
 
-### Connector — `src/asToolkit.SalesChannels/Connectors/WooCommerce/WooCommerceConnector.cs`
+### Connector — `src/asERP.SalesChannels/Connectors/WooCommerce/WooCommerceConnector.cs`
 - `ImportProductsAsync(SalesChannelContext context)` (~line 62): pulls all products via `GetAllProductsAsync` (which uses the generic `GetAllPagedAsync`), then for each:
   - **skips products with an empty `sku`** (`if (string.IsNullOrEmpty(remoteProduct.sku)) continue;`),
   - calls `_productImportRepository.ImportOrUpdateFromSalesChannel(channelId, new SalesChannelImportProduct { Name, Price = price ?? 0, Sku, TaxRate = 19, Description })`.
 - `GetAllProductsAsync` → `GetAllPagedAsync(parms => wc.Product.GetAll(parms), p => p.id, ct)`. **Note:** this still **buffers all products in memory** and paginates with the **default `orderby` (date desc)** — the same instability class that caused missing *orders* (see `[[project_woocommerce_sales_import]]` / the order fix that switched to `orderby=id`). Worth fixing here too while in this code.
 
-### Import repository — `src/asToolkit.SalesChannels/Repositories/ProductImportRepository.cs`
+### Import repository — `src/asERP.SalesChannels/Repositories/ProductImportRepository.cs`
 - `ImportOrUpdateFromSalesChannel(Guid salesChannelId, SalesChannelImportProduct importProduct)`:
   - Resolves a `TaxClass` by `importProduct.TaxRate` (**throws** if none — currently hard-coded `TaxRate = 19` in the connector; variations inherit the parent's tax class in WooCommerce, so 19 is usually fine, but verify the shop's reduced-rate fabrics).
   - Upserts a `Product` **by SKU** (`GetBySkuAsync`), creating `Product` + a `ProductSalesChannel` link (`RemoteProductId`, `Price`). No stock row on import (intentional).
   - **This repository needs no structural change** — a variation is just another `SalesChannelImportProduct` with the variation's SKU/price/name. It will create one `Product` per variation SKU, which is exactly what order-line matching needs.
 
-### Import model — `src/asToolkit.SalesChannels/Models/SalesChannelImportProduct.cs`
+### Import model — `src/asERP.SalesChannels/Models/SalesChannelImportProduct.cs`
 Fields available: `RemoteProductId (int)`, `Name`, `Sku`, `Ean`, `Description`, `TaxRate (double)`, `Price (decimal)`, `Stock (double)`. Sufficient for variations.
 
 ---
@@ -116,9 +116,9 @@ After implementing and running a full "Sync products":
 4. **Order line-item health:** previously-"missing product" `SalesItem` rows for variation SKUs should now match real products on a re-sync of orders (the sales import looks products up by SKU at import time, so re-running "Sync saless" after products are complete will attach them).
 
 ### Access notes for the implementer
-- **rider** SQL bridge (`mcp__rider__execute_sql_query`) returns "not done" — broken in this environment; use the asToolkit REST API for ERP reads instead (login `admin@localhost.com` / `P@ssword1`, send `X-Tenant-Id: d97a2d78-d929-4c4a-a823-d117ed0ec1a3`, base `https://localhost:8443`).
+- **rider** SQL bridge (`mcp__rider__execute_sql_query`) returns "not done" — broken in this environment; use the asERP REST API for ERP reads instead (login `admin@localhost.com` / `P@ssword1`, send `X-Tenant-Id: d97a2d78-d929-4c4a-a823-d117ed0ec1a3`, base `https://localhost:8443`).
 - **phpstorm** SQL works for the WooCommerce source DB (project `/Users/martin/Projekte/andrich-software/diy-stoffe.de`).
-- The dev server runs Development config → Postgres `astoolkit_01` on `localhost:5432` (rider "Testsystem"). Rider "Produktivsystem" (`localhost:5434/astoolkit`) was offline during analysis.
+- The dev server runs Development config → Postgres `aserp_01` on `localhost:5432` (rider "Testsystem"). Rider "Produktivsystem" (`localhost:5434/aserp`) was offline during analysis.
 
 ---
 

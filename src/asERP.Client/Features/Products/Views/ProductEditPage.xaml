@@ -1,0 +1,736 @@
+<Page x:Class="asERP.Client.Features.Products.Views.ProductEditPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:local="using:asERP.Client.Features.Products.Views"
+      xmlns:models="using:asERP.Client.Features.Products.Models"
+      xmlns:utu="using:Uno.Toolkit.UI"
+      xmlns:controls="using:asERP.Client.Controls"
+      Background="{ThemeResource BackgroundBrush}">
+
+  <Grid utu:SafeArea.Insets="VisibleBounds">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <!-- Header with NavigationBar -->
+    <utu:NavigationBar Grid.Row="0"
+                       Content="{Binding Title}" />
+
+    <!-- Form Content -->
+    <Grid Grid.Row="1"
+          MaxWidth="1400"
+          Padding="24,16,24,0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <!-- Responsive reflow of the form card grid (2 columns -> 1 column) -->
+      <VisualStateManager.VisualStateGroups>
+        <VisualStateGroup>
+          <VisualState x:Name="Narrow">
+            <VisualState.StateTriggers>
+              <AdaptiveTrigger MinWindowWidth="0" />
+            </VisualState.StateTriggers>
+            <VisualState.Setters>
+              <Setter Target="FormColumn2.Width" Value="0" />
+              <Setter Target="BasicInfoCard.(Grid.Column)" Value="0" />
+              <Setter Target="BasicInfoCard.(Grid.Row)" Value="0" />
+              <Setter Target="BasicInfoCard.Margin" Value="0,0,0,16" />
+              <Setter Target="PricingCard.(Grid.Column)" Value="0" />
+              <Setter Target="PricingCard.(Grid.Row)" Value="1" />
+              <Setter Target="PricingCard.Margin" Value="0,0,0,16" />
+              <Setter Target="DimensionsCard.(Grid.Column)" Value="0" />
+              <Setter Target="DimensionsCard.(Grid.Row)" Value="2" />
+              <Setter Target="DimensionsCard.Margin" Value="0,0,0,16" />
+              <Setter Target="RelationshipsCard.(Grid.Column)" Value="0" />
+              <Setter Target="RelationshipsCard.(Grid.Row)" Value="3" />
+              <Setter Target="RelationshipsCard.Margin" Value="0" />
+            </VisualState.Setters>
+          </VisualState>
+
+          <VisualState x:Name="Medium">
+            <VisualState.StateTriggers>
+              <AdaptiveTrigger MinWindowWidth="{StaticResource BreakpointMedium}" />
+            </VisualState.StateTriggers>
+            <VisualState.Setters>
+              <Setter Target="FormColumn2.Width" Value="*" />
+              <Setter Target="BasicInfoCard.(Grid.Column)" Value="0" />
+              <Setter Target="BasicInfoCard.(Grid.Row)" Value="0" />
+              <Setter Target="BasicInfoCard.Margin" Value="0,0,8,16" />
+              <Setter Target="PricingCard.(Grid.Column)" Value="1" />
+              <Setter Target="PricingCard.(Grid.Row)" Value="0" />
+              <Setter Target="PricingCard.Margin" Value="8,0,0,16" />
+              <Setter Target="DimensionsCard.(Grid.Column)" Value="0" />
+              <Setter Target="DimensionsCard.(Grid.Row)" Value="1" />
+              <Setter Target="DimensionsCard.Margin" Value="0,0,8,0" />
+              <Setter Target="RelationshipsCard.(Grid.Column)" Value="1" />
+              <Setter Target="RelationshipsCard.(Grid.Row)" Value="1" />
+              <Setter Target="RelationshipsCard.Margin" Value="8,0,0,0" />
+            </VisualState.Setters>
+          </VisualState>
+        </VisualStateGroup>
+      </VisualStateManager.VisualStateGroups>
+
+      <!-- Page header: title + save/cancel actions -->
+      <controls:DetailPageHeader Grid.Row="0"
+                                 Glyph="&#xE7BF;">
+        <controls:DetailPageHeader.Title>
+          <TextBlock Text="{Binding Title}"
+                     Style="{StaticResource TitleLarge}"
+                     Foreground="{ThemeResource OnSurfaceBrush}" />
+        </controls:DetailPageHeader.Title>
+        <controls:DetailPageHeader.Actions>
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8">
+            <Button x:Uid="ProductEditPage.HeaderAction.Cancel"
+                    Click="CancelButton_Click"
+                    Style="{StaticResource OutlinedButtonStyle}" />
+            <Button x:Uid="ProductEditPage.HeaderAction.Save"
+                    Click="SaveButton_Click"
+                    IsEnabled="{Binding CanSave}"
+                    Style="{StaticResource FilledButtonStyle}" />
+          </StackPanel>
+        </controls:DetailPageHeader.Actions>
+      </controls:DetailPageHeader>
+
+      <ScrollViewer Grid.Row="1"
+                    VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="24"
+                    Padding="0,20,0,24">
+
+          <!-- Error Message Banner -->
+          <Border Background="{ThemeResource ErrorContainerBrush}"
+                  CornerRadius="8"
+                  Padding="16"
+                  Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}, FallbackValue=Collapsed}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <FontIcon Grid.Column="0"
+                        Glyph="&#xE783;"
+                        FontSize="20"
+                        Foreground="{ThemeResource OnErrorContainerBrush}"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding ErrorMessage}"
+                         Style="{StaticResource BodyMedium}"
+                         Foreground="{ThemeResource OnErrorContainerBrush}"
+                         TextWrapping="Wrap"
+                         VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+
+          <!-- Loading Overlay -->
+          <Border Background="{ThemeResource SurfaceBrush}"
+                  CornerRadius="8"
+                  Padding="24"
+                  Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center"
+                        Spacing="16">
+              <ProgressRing IsActive="True"
+                            Width="48"
+                            Height="48" />
+              <TextBlock x:Uid="Common.Loading"
+                         Style="{StaticResource BodyMedium}"
+                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                         HorizontalAlignment="Center" />
+            </StackPanel>
+          </Border>
+
+          <!-- Form Cards Grid -->
+          <Grid x:Name="FormCardsGrid"
+                Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition x:Name="FormColumn1" Width="*" />
+              <ColumnDefinition x:Name="FormColumn2" Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Basic Information -->
+            <controls:SectionCard x:Name="BasicInfoCard"
+                                  Grid.Column="0"
+                                  Grid.Row="0"
+                                  Margin="0,0,8,16"
+                                  x:Uid="ProductEditPage.Section.BasicInformation"
+                                  HeaderGlyph="&#xE8EC;">
+              <StackPanel Spacing="16">
+                <!-- Product Type Selector (hidden for existing variant children) -->
+                <StackPanel Spacing="4"
+                            Visibility="{Binding CanEditType, Converter={StaticResource BoolToVisibilityConverter}}">
+                  <TextBlock x:Uid="ProductEditPage.Field.ProductType.Label"
+                             Style="{StaticResource LabelMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                  <ComboBox x:Name="ProductTypeComboBox"
+                            HorizontalAlignment="Stretch"
+                            SelectedIndex="{Binding ProductTypeIndex, Mode=TwoWay}"
+                            IsEnabled="{Binding IsNotLoading}">
+                    <ComboBoxItem x:Uid="ProductEditPage.ProductTypeStandard" />
+                    <ComboBoxItem x:Uid="ProductEditPage.ProductTypeVariantParent" />
+                  </ComboBox>
+                </StackPanel>
+
+                <!-- Variant hint (shown when editing an existing variant child) -->
+                <Border Background="{ThemeResource TertiaryContainerBrush}"
+                        CornerRadius="8"
+                        Padding="12"
+                        Visibility="{Binding IsVariant, Converter={StaticResource BoolToVisibilityConverter}}">
+                  <StackPanel Spacing="4">
+                    <TextBlock x:Uid="ProductEditPage.VariantOfLabel"
+                               Style="{StaticResource LabelSmall}"
+                               Foreground="{ThemeResource OnTertiaryContainerBrush}" />
+                    <TextBlock Text="{Binding ParentName}"
+                               Style="{StaticResource BodyMedium}"
+                               Foreground="{ThemeResource OnTertiaryContainerBrush}"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+
+                <!-- SKU (Required) -->
+                <TextBox x:Uid="ProductEditPage.Field.Sku"
+                         Text="{Binding Sku, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding IsNotLoading}" />
+
+                <!-- Name (Required) -->
+                <TextBox x:Uid="ProductEditPage.Field.Name"
+                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding IsNotLoading}" />
+
+                <!-- EAN -->
+                <TextBox x:Uid="ProductEditPage.Field.Ean"
+                         Text="{Binding Ean, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding IsNotLoading}" />
+
+                <!-- ASIN -->
+                <TextBox x:Uid="ProductEditPage.Field.Asin"
+                         Text="{Binding Asin, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding IsNotLoading}" />
+
+                <!-- Required Fields Note -->
+                <TextBlock x:Uid="ProductEditPage.RequiredFieldsNote"
+                           Style="{StaticResource LabelSmall}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+              </StackPanel>
+            </controls:SectionCard>
+
+            <!-- Pricing -->
+            <controls:SectionCard x:Name="PricingCard"
+                                  Grid.Column="1"
+                                  Grid.Row="0"
+                                  Margin="8,0,0,16"
+                                  x:Uid="ProductEditPage.Section.Pricing"
+                                  HeaderGlyph="&#xE8C7;"
+                                  HeaderGlyphBrush="{ThemeResource TertiaryBrush}">
+              <StackPanel Spacing="16">
+                <!-- Price -->
+                <StackPanel Spacing="4">
+                  <TextBlock x:Uid="ProductEditPage.Field.Price.Label"
+                             Style="{StaticResource LabelMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                  <NumberBox x:Uid="ProductEditPage.Field.Price"
+                             Value="{Binding Price, Mode=TwoWay}"
+                             SpinButtonPlacementMode="Inline"
+                             SmallChange="0.01"
+                             LargeChange="1"
+                             Minimum="0"
+                             IsEnabled="{Binding IsNotLoading}"
+                             HorizontalAlignment="Stretch" />
+                </StackPanel>
+
+                <!-- MSRP -->
+                <StackPanel Spacing="4">
+                  <TextBlock x:Uid="ProductEditPage.Field.Msrp.Label"
+                             Style="{StaticResource LabelMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                  <NumberBox x:Uid="ProductEditPage.Field.Msrp"
+                             Value="{Binding Msrp, Mode=TwoWay}"
+                             SpinButtonPlacementMode="Inline"
+                             SmallChange="0.01"
+                             LargeChange="1"
+                             Minimum="0"
+                             IsEnabled="{Binding IsNotLoading}"
+                             HorizontalAlignment="Stretch" />
+                </StackPanel>
+              </StackPanel>
+            </controls:SectionCard>
+
+            <!-- Dimensions -->
+            <controls:SectionCard x:Name="DimensionsCard"
+                                  Grid.Column="0"
+                                  Grid.Row="1"
+                                  Margin="0,0,8,0"
+                                  x:Uid="ProductEditPage.Section.Dimensions"
+                                  HeaderGlyph="&#xEE40;"
+                                  HeaderGlyphBrush="{ThemeResource SecondaryBrush}">
+              <StackPanel Spacing="16">
+                <!-- Weight -->
+                <StackPanel Spacing="4">
+                  <TextBlock x:Uid="ProductEditPage.Field.Weight.Label"
+                             Style="{StaticResource LabelMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <NumberBox Value="{Binding Weight, Mode=TwoWay}"
+                               SpinButtonPlacementMode="Compact"
+                               SmallChange="0.1"
+                               LargeChange="1"
+                               Minimum="0"
+                               IsEnabled="{Binding IsNotLoading}"
+                               HorizontalAlignment="Stretch" />
+                    <TextBlock Grid.Column="1"
+                               x:Uid="ProductEditPage.Unit.Kg"
+                               Style="{StaticResource BodyMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0" />
+                  </Grid>
+                </StackPanel>
+
+                <!-- Width, Height, Depth in a row -->
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+
+                  <!-- Width -->
+                  <StackPanel Grid.Column="0" Spacing="4">
+                    <TextBlock x:Uid="ProductEditPage.Field.Width.Label"
+                               Style="{StaticResource LabelMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                    <NumberBox Value="{Binding Width, Mode=TwoWay}"
+                               SpinButtonPlacementMode="Hidden"
+                               SmallChange="0.1"
+                               Minimum="0"
+                               IsEnabled="{Binding IsNotLoading}" />
+                  </StackPanel>
+
+                  <!-- Height -->
+                  <StackPanel Grid.Column="2" Spacing="4">
+                    <TextBlock x:Uid="ProductEditPage.Field.Height.Label"
+                               Style="{StaticResource LabelMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                    <NumberBox Value="{Binding Height, Mode=TwoWay}"
+                               SpinButtonPlacementMode="Hidden"
+                               SmallChange="0.1"
+                               Minimum="0"
+                               IsEnabled="{Binding IsNotLoading}" />
+                  </StackPanel>
+
+                  <!-- Depth -->
+                  <StackPanel Grid.Column="4" Spacing="4">
+                    <TextBlock x:Uid="ProductEditPage.Field.Depth.Label"
+                               Style="{StaticResource LabelMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                    <NumberBox Value="{Binding Depth, Mode=TwoWay}"
+                               SpinButtonPlacementMode="Hidden"
+                               SmallChange="0.1"
+                               Minimum="0"
+                               IsEnabled="{Binding IsNotLoading}" />
+                  </StackPanel>
+                </Grid>
+
+                <!-- Unit hint -->
+                <TextBlock x:Uid="ProductEditPage.DimensionsUnit.Hint"
+                           Style="{StaticResource LabelSmall}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+              </StackPanel>
+            </controls:SectionCard>
+
+            <!-- Relationships -->
+            <controls:SectionCard x:Name="RelationshipsCard"
+                                  Grid.Column="1"
+                                  Grid.Row="1"
+                                  Margin="8,0,0,0"
+                                  x:Uid="ProductEditPage.Section.Relationships"
+                                  HeaderGlyph="&#xE731;">
+              <StackPanel Spacing="16">
+                <!-- Tax Class (Required) -->
+                <StackPanel Spacing="4">
+                  <TextBlock x:Uid="ProductEditPage.Field.TaxClass.Label"
+                             Style="{StaticResource LabelMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                  <ComboBox x:Name="TaxClassComboBox"
+                            HorizontalAlignment="Stretch"
+                            ItemsSource="{Binding TaxClasses}"
+                            SelectedValue="{Binding TaxClassId, Mode=TwoWay}"
+                            SelectedValuePath="Id"
+                            IsEnabled="{Binding IsNotLoading}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock>
+                          <Run Text="{Binding TaxRate}" />
+                          <Run Text="%" />
+                        </TextBlock>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+
+                <!-- Manufacturer (Optional) -->
+                <StackPanel Spacing="4">
+                  <TextBlock x:Uid="ProductEditPage.Field.Manufacturer.Label"
+                             Style="{StaticResource LabelMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                  <ComboBox x:Name="ManufacturerComboBox"
+                            HorizontalAlignment="Stretch"
+                            ItemsSource="{Binding Manufacturers}"
+                            SelectedValue="{Binding ManufacturerId, Mode=TwoWay}"
+                            SelectedValuePath="Id"
+                            IsEnabled="{Binding IsNotLoading}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding Name}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock x:Uid="ProductEditPage.Field.Manufacturer.Hint"
+                             Style="{StaticResource LabelSmall}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                </StackPanel>
+              </StackPanel>
+            </controls:SectionCard>
+          </Grid>
+
+          <!-- Variants (only for variant parents) -->
+          <controls:SectionCard x:Uid="ProductEditPage.Section.Variants"
+                                HeaderGlyph="&#xE8FD;"
+                                Visibility="{Binding ProductType, Converter={StaticResource ProductTypeToVisibilityConverter}, ConverterParameter=VariantParent}">
+            <StackPanel Spacing="16">
+
+              <!-- Save-first hint -->
+              <Border Background="{ThemeResource SecondaryContainerBrush}"
+                      CornerRadius="8"
+                      Padding="12"
+                      Visibility="{Binding ShowSaveFirstHint, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="ProductEditPage.SaveFirstHint"
+                           Style="{StaticResource BodyMedium}"
+                           Foreground="{ThemeResource OnSecondaryContainerBrush}"
+                           TextWrapping="Wrap" />
+              </Border>
+
+              <!-- Axis section title -->
+              <TextBlock x:Uid="ProductEditPage.Subsection.Axes"
+                         Style="{StaticResource LabelLarge}"
+                         Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+
+              <!-- Axis rows -->
+              <ItemsControl ItemsSource="{Binding Axes}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Background="{ThemeResource SurfaceVariantBrush}"
+                            CornerRadius="8"
+                            Padding="12"
+                            Margin="0,0,0,8">
+                      <StackPanel Spacing="8">
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+                          <ComboBox Grid.Column="0"
+                                    HorizontalAlignment="Stretch"
+                                    ItemsSource="{Binding AvailableAttributes}"
+                                    SelectedValue="{Binding ProductAttributeId, Mode=TwoWay}"
+                                    SelectedValuePath="Id">
+                            <ComboBox.ItemTemplate>
+                              <DataTemplate>
+                                <TextBlock Text="{Binding Name}" />
+                              </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                          </ComboBox>
+                          <Button Grid.Column="1"
+                                  Style="{StaticResource IconButtonStyle}"
+                                  Margin="8,0,0,0"
+                                  x:Uid="ProductEditPage.RemoveAxisButton"
+                                  Click="RemoveAxis_Click">
+                            <FontIcon Glyph="&#xE74D;" FontSize="16" />
+                          </Button>
+                        </Grid>
+
+                        <!-- Value checkboxes -->
+                        <ItemsControl ItemsSource="{Binding Values}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                              <CheckBox Content="{Binding Value}"
+                                        IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                        Margin="0,0,12,0" />
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <!-- Axis / generate actions -->
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button x:Uid="ProductEditPage.AddAxisButton"
+                        Style="{StaticResource OutlinedButtonStyle}"
+                        Click="AddAxis_Click" />
+                <Button x:Uid="ProductEditPage.GenerateVariantsButton"
+                        Style="{StaticResource FilledButtonStyle}"
+                        IsEnabled="{Binding CanGenerateVariants}"
+                        Click="GenerateVariants_Click" />
+                <ProgressRing IsActive="{Binding IsGenerating}"
+                              Width="24"
+                              Height="24"
+                              VerticalAlignment="Center" />
+              </StackPanel>
+
+              <!-- Existing variants table -->
+              <TextBlock x:Uid="ProductEditPage.Subsection.Variants"
+                         Style="{StaticResource LabelLarge}"
+                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                         Margin="0,8,0,0" />
+
+              <Border CornerRadius="8"
+                      BorderBrush="{ThemeResource OutlineVariantBrush}"
+                      BorderThickness="1">
+                <StackPanel>
+                  <!-- Header row -->
+                  <Grid Background="{ThemeResource SurfaceVariantBrush}"
+                        Padding="12,8">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="2*" />
+                      <ColumnDefinition Width="2*" />
+                      <ColumnDefinition Width="2*" />
+                      <ColumnDefinition Width="1.5*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" x:Uid="ProductEditPage.VariantColOptions"
+                               Style="{StaticResource LabelMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                    <TextBlock Grid.Column="1" x:Uid="ProductEditPage.VariantColSku"
+                               Style="{StaticResource LabelMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                    <TextBlock Grid.Column="2" x:Uid="ProductEditPage.VariantColEan"
+                               Style="{StaticResource LabelMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                    <TextBlock Grid.Column="3" x:Uid="ProductEditPage.VariantColPrice"
+                               Style="{StaticResource LabelMedium}"
+                               Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                  </Grid>
+
+                  <ItemsControl ItemsSource="{Binding Variants}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Grid Padding="12,6"
+                              BorderBrush="{ThemeResource OutlineVariantBrush}"
+                              BorderThickness="0,0,0,1">
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="1.5*" />
+                          </Grid.ColumnDefinitions>
+                          <TextBlock Grid.Column="0"
+                                     Text="{Binding OptionSummary}"
+                                     Style="{StaticResource BodyMedium}"
+                                     Foreground="{ThemeResource OnSurfaceBrush}"
+                                     VerticalAlignment="Center"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBox Grid.Column="1"
+                                   Text="{Binding Sku, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                   Margin="4,0" />
+                          <TextBox Grid.Column="2"
+                                   Text="{Binding Ean, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                   Margin="4,0" />
+                          <NumberBox Grid.Column="3"
+                                     Value="{Binding Price, Mode=TwoWay}"
+                                     SpinButtonPlacementMode="Hidden"
+                                     Minimum="0"
+                                     Margin="4,0" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </controls:SectionCard>
+
+          <!-- Images -->
+          <controls:SectionCard x:Uid="ProductEditPage.Section.Images"
+                                HeaderGlyph="&#xEB9F;"
+                                Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel Spacing="16">
+
+              <!-- Save-first hint (create mode) -->
+              <Border Background="{ThemeResource SecondaryContainerBrush}"
+                      CornerRadius="8"
+                      Padding="12"
+                      Visibility="{Binding ShowImageSaveFirstHint, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock x:Uid="ProductEditPage.ImagesSaveFirstHint"
+                           Style="{StaticResource BodyMedium}"
+                           Foreground="{ThemeResource OnSecondaryContainerBrush}"
+                           TextWrapping="Wrap" />
+              </Border>
+
+              <!-- Image management (edit mode) -->
+              <StackPanel Spacing="12"
+                          Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}">
+
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <Button x:Uid="ProductEditPage.AddImageButton"
+                          Style="{StaticResource OutlinedButtonStyle}"
+                          IsEnabled="{Binding CanModifyImages}"
+                          Click="AddImage_Click" />
+                  <ProgressRing IsActive="{Binding IsImageBusy}"
+                                Width="24"
+                                Height="24"
+                                VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Empty hint -->
+                <TextBlock x:Uid="ProductEditPage.ImagesEmptyHint"
+                           Style="{StaticResource BodyMedium}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                           TextWrapping="Wrap"
+                           Visibility="{Binding Images.Count, Converter={StaticResource ZeroToVisibilityConverter}}" />
+
+                <!-- Image rows -->
+                <ItemsControl ItemsSource="{Binding Images}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Background="{ThemeResource SurfaceVariantBrush}"
+                              CornerRadius="8"
+                              Padding="8"
+                              Margin="0,0,0,8">
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+
+                          <!-- Thumbnail -->
+                          <Border Grid.Column="0"
+                                  Width="64"
+                                  Height="64"
+                                  CornerRadius="6"
+                                  Background="{ThemeResource SurfaceBrush}">
+                            <Image Source="{Binding ThumbnailBytes, Converter={StaticResource BytesToImageSourceConverter}}"
+                                   Stretch="UniformToFill" />
+                          </Border>
+
+                          <!-- Info -->
+                          <StackPanel Grid.Column="1"
+                                      Margin="12,0"
+                                      VerticalAlignment="Center"
+                                      Spacing="4">
+                            <TextBlock Text="{Binding OriginalFileName}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <Border Background="{ThemeResource PrimaryContainerBrush}"
+                                    CornerRadius="4"
+                                    Padding="6,2"
+                                    HorizontalAlignment="Left"
+                                    Visibility="{Binding IsPrimary, Converter={StaticResource BoolToVisibilityConverter}}">
+                              <TextBlock x:Uid="ProductEditPage.ImagePrimaryBadge"
+                                         Style="{StaticResource LabelSmall}"
+                                         Foreground="{ThemeResource OnPrimaryContainerBrush}" />
+                            </Border>
+                          </StackPanel>
+
+                          <!-- Actions -->
+                          <StackPanel Grid.Column="2"
+                                      Orientation="Horizontal"
+                                      VerticalAlignment="Center">
+                            <Button x:Uid="ProductEditPage.MakePrimaryButton"
+                                    Style="{StaticResource IconButtonStyle}"
+                                    Click="MakeImagePrimary_Click">
+                              <FontIcon Glyph="&#xE735;" FontSize="16" />
+                            </Button>
+                            <Button x:Uid="ProductEditPage.MoveImageUpButton"
+                                    Style="{StaticResource IconButtonStyle}"
+                                    Click="MoveImageUp_Click">
+                              <FontIcon Glyph="&#xE70E;" FontSize="16" />
+                            </Button>
+                            <Button x:Uid="ProductEditPage.MoveImageDownButton"
+                                    Style="{StaticResource IconButtonStyle}"
+                                    Click="MoveImageDown_Click">
+                              <FontIcon Glyph="&#xE70D;" FontSize="16" />
+                            </Button>
+                            <Button x:Uid="ProductEditPage.DeleteImageButton"
+                                    Style="{StaticResource IconButtonStyle}"
+                                    Click="DeleteImage_Click">
+                              <FontIcon Glyph="&#xE74D;" FontSize="16" />
+                            </Button>
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+          </controls:SectionCard>
+
+          <!-- Description -->
+          <controls:SectionCard x:Uid="ProductEditPage.Section.Description"
+                                HeaderGlyph="&#xE70B;"
+                                HeaderGlyphBrush="{ThemeResource SecondaryBrush}"
+                                Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <TextBox x:Uid="ProductEditPage.Field.Description"
+                     Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     MinHeight="120"
+                     MaxHeight="300"
+                     IsEnabled="{Binding IsNotLoading}" />
+          </controls:SectionCard>
+
+          <!-- Optimized Content -->
+          <controls:SectionCard x:Uid="ProductEditPage.Section.OptimizedContent"
+                                HeaderGlyph="&#xE8D4;"
+                                HeaderGlyphBrush="{ThemeResource TertiaryBrush}"
+                                Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel Spacing="16">
+              <!-- Use Optimized Toggle -->
+              <ToggleSwitch x:Uid="ProductEditPage.Field.UseOptimized"
+                            IsOn="{Binding UseOptimized, Mode=TwoWay}"
+                            IsEnabled="{Binding IsNotLoading}" />
+
+              <!-- Name Optimized -->
+              <TextBox x:Uid="ProductEditPage.Field.NameOptimized"
+                       Text="{Binding NameOptimized, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       IsEnabled="{Binding IsNotLoading}" />
+
+              <!-- Description Optimized -->
+              <TextBox x:Uid="ProductEditPage.Field.DescriptionOptimized"
+                       Text="{Binding DescriptionOptimized, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       AcceptsReturn="True"
+                       TextWrapping="Wrap"
+                       MinHeight="120"
+                       MaxHeight="300"
+                       IsEnabled="{Binding IsNotLoading}" />
+            </StackPanel>
+          </controls:SectionCard>
+
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</Page>

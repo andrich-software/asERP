@@ -2,16 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "asToolkit.Client (WASM)",
+      "name": "asERP.Client (WASM)",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": [
         "run",
         "--project",
-        "src/asToolkit.Client/asToolkit.Client.csproj",
+        "src/asERP.Client/asERP.Client.csproj",
         "-f",
         "net10.0-browserwasm",
         "--launch-profile",
-        "asToolkit.Client (WebAssembly)"
+        "asERP.Client (WebAssembly)"
       ],
       "port": 5001
     }

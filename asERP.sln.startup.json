@@ -1,0 +1,34 @@
+﻿{
+  "Version": 3,
+  "ListAllProjects": true,
+  "MultiProjectConfigurations": {
+    "Server + Client": {
+      "Projects": {
+        "asERP.Server": {
+          "SolutionConfiguration": "Debug",
+          "SolutionPlatform": "x64s"
+        },
+        "asERP.Client": {
+          "SolutionConfiguration": "Debug",
+          "SolutionPlatform": "x64s",
+          "TargetFramework": "net10.0-desktop",
+          "LaunchProfileName": "asERP.Client (Desktop)"
+        }
+      }
+    },
+    "Server + Web": {
+      "Projects": {
+        "asERP.Server": {
+          "SolutionConfiguration": "Debug",
+          "SolutionPlatform": "x64s"
+        },
+        "asERP.Client": {
+          "SolutionConfiguration": "Debug",
+          "SolutionPlatform": "x64s",
+          "TargetFramework": "net10.0-browserwasm",
+          "LaunchProfileName": "asERP.Client (WebAssembly)"
+        }
+      }
+    }
+  }
+}

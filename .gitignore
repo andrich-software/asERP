@@ -370,14 +370,14 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-src/asToolkit.Server/astoolkit_dev.db
-src/asToolkit.Server/astoolkit.db
-src/asToolkit.Server/astoolkit.db-shm
-src/asToolkit.Server/astoolkit.db-wal
+src/asERP.Server/aserp_dev.db
+src/asERP.Server/aserp.db
+src/asERP.Server/aserp.db-shm
+src/asERP.Server/aserp.db-wal
 /.run
-src/asToolkit.Server/appsettings.Production.json
+src/asERP.Server/appsettings.Production.json
 .claude/settings.local.json
 /.claude/plans
 
 # Product images downloaded by the importer
-src/asToolkit.Server/App_Data/files/products/
+src/asERP.Server/App_Data/files/products/

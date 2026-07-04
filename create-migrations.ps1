@@ -7,7 +7,7 @@ param (
     [switch]$help
 )
 
-# asToolkit Database Migration Tool
+# asERP Database Migration Tool
 # PowerShell script to create and apply Entity Framework Core migrations
 
 # Colors for output
@@ -21,15 +21,15 @@ $NC = [ConsoleColor]::White
 $MIGRATION_NAME = ""
 $DATABASE_TYPE = "all"
 $APPLY_MIGRATION = $false
-$STARTUP_PROJECT = "src/asToolkit.Server/asToolkit.Server.csproj"
-$DB_CONTEXT = "asToolkit.Persistence.DatabaseContext.ApplicationDbContext"
+$STARTUP_PROJECT = "src/asERP.Server/asERP.Server.csproj"
+$DB_CONTEXT = "asERP.Persistence.DatabaseContext.ApplicationDbContext"
 $CONFIGURATION = "Debug"
 $OUTPUT_DIR = "Migrations"
-$APPSETTINGS_PATH = "src/asToolkit.Server/appsettings.Development.json"
+$APPSETTINGS_PATH = "src/asERP.Server/appsettings.Development.json"
 
 # Function to display help
 function Show-Help {
-    Write-Host "asToolkit Database Migration Tool" -ForegroundColor $BLUE
+    Write-Host "asERP Database Migration Tool" -ForegroundColor $BLUE
     Write-Host ""
     Write-Host "Usage: .\create-migrations.ps1 [options]"
     Write-Host ""
@@ -64,9 +64,9 @@ function Read-ConnectionStrings {
         Write-Host "Using default connection strings..." -ForegroundColor $YELLOW
 
         # Default connection strings as fallback
-        $MSSQL_CONNECTION = "Server=localhost;Database=astoolkit_migration;User Id=astoolkit;Password=astoolkit;TrustServerCertificate=True;"
-        $POSTGRESQL_CONNECTION = "Host=localhost;Port=5432;Database=astoolkit_migration;Username=astoolkit;Password=astoolkit;"
-        $SQLITE_CONNECTION = "Data Source=astoolkit_migration.db"
+        $MSSQL_CONNECTION = "Server=localhost;Database=aserp_migration;User Id=aserp;Password=aserp;TrustServerCertificate=True;"
+        $POSTGRESQL_CONNECTION = "Host=localhost;Port=5432;Database=aserp_migration;Username=aserp;Password=aserp;"
+        $SQLITE_CONNECTION = "Data Source=aserp_migration.db"
     }
 
     if ([string]::IsNullOrEmpty($MSSQL_CONNECTION) -or [string]::IsNullOrEmpty($POSTGRESQL_CONNECTION) -or [string]::IsNullOrEmpty($SQLITE_CONNECTION)) {
@@ -74,9 +74,9 @@ function Read-ConnectionStrings {
         Write-Host "Using default connection strings..." -ForegroundColor $YELLOW
 
         # Default connection strings as fallback
-        $MSSQL_CONNECTION = "Server=localhost;Database=astoolkit_migration;User Id=astoolkit;Password=astoolkit;TrustServerCertificate=True;"
-        $POSTGRESQL_CONNECTION = "Host=localhost;Port=5432;Database=astoolkit_migration;Username=astoolkit;Password=astoolkit;"
-        $SQLITE_CONNECTION = "Data Source=astoolkit_migration.db"
+        $MSSQL_CONNECTION = "Server=localhost;Database=aserp_migration;User Id=aserp;Password=aserp;TrustServerCertificate=True;"
+        $POSTGRESQL_CONNECTION = "Host=localhost;Port=5432;Database=aserp_migration;Username=aserp;Password=aserp;"
+        $SQLITE_CONNECTION = "Data Source=aserp_migration.db"
     }
     else {
         Write-Host "Connection strings successfully loaded from appsettings.json" -ForegroundColor $GREEN
@@ -135,17 +135,17 @@ function Create-Migration {
 
     switch ($DbType) {
         "mssql" {
-            $project = "src/asToolkit.Persistence.MSSQL/asToolkit.Persistence.MSSQL.csproj"
+            $project = "src/asERP.Persistence.MSSQL/asERP.Persistence.MSSQL.csproj"
             $dbProvider = "MSSQL"
             $connectionString = $ConnectionStrings["mssql"]
         }
         "postgresql" {
-            $project = "src/asToolkit.Persistence.PostgreSQL/asToolkit.Persistence.PostgreSQL.csproj"
+            $project = "src/asERP.Persistence.PostgreSQL/asERP.Persistence.PostgreSQL.csproj"
             $dbProvider = "POSTGRESQL"
             $connectionString = $ConnectionStrings["postgresql"]
         }
         "sqlite" {
-            $project = "src/asToolkit.Persistence.SQLite/asToolkit.Persistence.SQLite.csproj"
+            $project = "src/asERP.Persistence.SQLite/asERP.Persistence.SQLite.csproj"
             $dbProvider = "SQLITE"
             $connectionString = $ConnectionStrings["sqlite"]
         }

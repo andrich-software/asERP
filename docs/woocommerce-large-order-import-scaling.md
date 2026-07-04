@@ -2,7 +2,7 @@
 
 **Status:** analysis only — no code changed. Hand to a focused implementation task.
 **Date:** 2026-06-14
-**Channel:** `diy-stoffe.de` (WooCommerce, HPOS), tenant `DIY-Stoffe.de`, ERP DB `astoolkit_01`.
+**Channel:** `diy-stoffe.de` (WooCommerce, HPOS), tenant `DIY-Stoffe.de`, ERP DB `aserp_01`.
 
 ---
 
@@ -23,7 +23,7 @@ The shop is far larger than the importer can handle in one pass. Source counts (
 The connector caps a single import run at **100,000 orders**:
 
 ```
-// src/asToolkit.SalesChannels/Connectors/WooCommerce/WooCommerceConnector.cs:553-554
+// src/asERP.SalesChannels/Connectors/WooCommerce/WooCommerceConnector.cs:553-554
 private const int PageSize = 100;
 private const int MaxPages = 1000;          // 100 * 1000 = 100,000 rows hard ceiling
 ```
@@ -46,7 +46,7 @@ Result: a stable band of older-but-high-id orders is permanently absent, and the
 `SalesChannelOrchestrator.PollImportsAsync` awaits each import **synchronously** on the single tick loop:
 
 ```
-// src/asToolkit.SalesChannels/Orchestration/SalesChannelOrchestrator.cs:188
+// src/asERP.SalesChannels/Orchestration/SalesChannelOrchestrator.cs:188
 if (channel.ImportSaless)
     await dispatcher.RunImportAsync(channel, ChannelSyncOperation.ImportSaless, ChannelSyncTriggerSource.Scheduler, cancellationToken);
 ```
@@ -83,14 +83,14 @@ Also relevant: deep offset pagination. WooCommerce REST `page`/`per_page` is off
    ```sql
    SELECT COUNT(*) FROM diystoffe_wc_orders WHERE status <> 'trash';   -- ~177,600
    ```
-2. After a complete chunked backfill, ERP sales `totalCount` (asToolkit API `GET /api/v1/saless?pageSize=1`) should approach that number (minus any chosen cutoff/status filter).
+2. After a complete chunked backfill, ERP sales `totalCount` (asERP API `GET /api/v1/saless?pageSize=1`) should approach that number (minus any chosen cutoff/status filter).
 3. Confirm **no permanent gap**: pick a high-id, old, never-modified order from WooCommerce and verify it imported (`GET /saless?searchString=<RemoteSalesId>`).
 4. Confirm the orchestrator stays responsive during backfill: `DrainSyncLogsAsync`/outbox keep ticking (watch server log timestamps) rather than freezing for the import's duration.
 
 ### Access notes
-- asToolkit API: login `admin@localhost.com` / `P@ssword1`, header `X-Tenant-Id: d97a2d78-d929-4c4a-a823-d117ed0ec1a3`, base `https://localhost:8443`; channel id `29954d29-14f6-48c2-8525-2e11c645a6ec`.
+- asERP API: login `admin@localhost.com` / `P@ssword1`, header `X-Tenant-Id: d97a2d78-d929-4c4a-a823-d117ed0ec1a3`, base `https://localhost:8443`; channel id `29954d29-14f6-48c2-8525-2e11c645a6ec`.
 - **rider** SQL bridge is broken ("not done") — use the API for ERP reads. **phpstorm** SQL works for the WooCommerce source.
-- Dev server runs Development → Postgres `astoolkit_01` on `localhost:5432`.
+- Dev server runs Development → Postgres `aserp_01` on `localhost:5432`.
 
 ## 7. Related
 - `[[project_woocommerce_sales_import]]` — current order-import design (stable `orderby=id`, per-order `ChangeTracker.Clear()`, per-channel serialization, manual=full-sweep, `modified_after` watermark). This analysis builds directly on it.

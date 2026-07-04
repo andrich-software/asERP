@@ -1,0 +1,220 @@
+﻿<Page x:Class="asERP.Client.Features.Search.Views.SearchResultsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:local="using:asERP.Client.Features.Search.Views"
+      xmlns:mvux="using:Uno.Extensions.Reactive.UI"
+      xmlns:utu="using:Uno.Toolkit.UI"
+      Background="{ThemeResource BackgroundBrush}">
+
+  <Page.Resources>
+    <Style x:Key="SearchResultSectionCard" TargetType="Border">
+      <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="BorderBrush" Value="{ThemeResource OutlineVariantBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+  </Page.Resources>
+
+  <Grid utu:SafeArea.Insets="VisibleBounds">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <!-- Header -->
+    <utu:NavigationBar Grid.Row="0"
+                       Content="{Binding Query}" />
+
+    <mvux:FeedView Grid.Row="1"
+                   Source="{Binding Results}">
+      <mvux:FeedView.ValueTemplate>
+        <DataTemplate>
+          <ScrollViewer Padding="16"
+                        VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="16">
+
+              <!-- Empty state -->
+              <TextBlock x:Uid="SearchResultsPage.NoResults"
+                         Style="{StaticResource BodyLarge}"
+                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                         HorizontalAlignment="Center"
+                         Margin="0,40,0,0"
+                         Visibility="{Binding Data.TotalCount, Converter={StaticResource ZeroToVisibilityConverter}}" />
+
+              <!-- Customers -->
+              <Border Style="{StaticResource SearchResultSectionCard}"
+                      Visibility="{Binding Data.Customers.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                <StackPanel>
+                  <TextBlock x:Uid="SearchResultsPage.Customers"
+                             Style="{StaticResource TitleSmall}"
+                             Margin="16,12" />
+                  <ItemsRepeater ItemsSource="{Binding Data.Customers}">
+                    <ItemsRepeater.Layout>
+                      <StackLayout Orientation="Vertical" Spacing="0" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                      <DataTemplate>
+                        <Button Style="{StaticResource TextButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Padding="16,10"
+                                CornerRadius="0"
+                                Click="Hit_Click">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Title}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}" />
+                            <TextBlock Text="{Binding Subtitle}"
+                                       Style="{StaticResource BodySmall}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                  </ItemsRepeater>
+                </StackPanel>
+              </Border>
+
+              <!-- Sales / Orders -->
+              <Border Style="{StaticResource SearchResultSectionCard}"
+                      Visibility="{Binding Data.Sales.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                <StackPanel>
+                  <TextBlock x:Uid="SearchResultsPage.Orders"
+                             Style="{StaticResource TitleSmall}"
+                             Margin="16,12" />
+                  <ItemsRepeater ItemsSource="{Binding Data.Sales}">
+                    <ItemsRepeater.Layout>
+                      <StackLayout Orientation="Vertical" Spacing="0" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                      <DataTemplate>
+                        <Button Style="{StaticResource TextButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Padding="16,10"
+                                CornerRadius="0"
+                                Click="Hit_Click">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Title}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}" />
+                            <TextBlock Text="{Binding Subtitle}"
+                                       Style="{StaticResource BodySmall}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                  </ItemsRepeater>
+                </StackPanel>
+              </Border>
+
+              <!-- Invoices -->
+              <Border Style="{StaticResource SearchResultSectionCard}"
+                      Visibility="{Binding Data.Invoices.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                <StackPanel>
+                  <TextBlock x:Uid="SearchResultsPage.Invoices"
+                             Style="{StaticResource TitleSmall}"
+                             Margin="16,12" />
+                  <ItemsRepeater ItemsSource="{Binding Data.Invoices}">
+                    <ItemsRepeater.Layout>
+                      <StackLayout Orientation="Vertical" Spacing="0" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                      <DataTemplate>
+                        <Button Style="{StaticResource TextButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Padding="16,10"
+                                CornerRadius="0"
+                                Click="Hit_Click">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Title}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}" />
+                            <TextBlock Text="{Binding Subtitle}"
+                                       Style="{StaticResource BodySmall}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                  </ItemsRepeater>
+                </StackPanel>
+              </Border>
+
+              <!-- Products -->
+              <Border Style="{StaticResource SearchResultSectionCard}"
+                      Visibility="{Binding Data.Products.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                <StackPanel>
+                  <TextBlock x:Uid="SearchResultsPage.Products"
+                             Style="{StaticResource TitleSmall}"
+                             Margin="16,12" />
+                  <ItemsRepeater ItemsSource="{Binding Data.Products}">
+                    <ItemsRepeater.Layout>
+                      <StackLayout Orientation="Vertical" Spacing="0" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                      <DataTemplate>
+                        <Button Style="{StaticResource TextButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Padding="16,10"
+                                CornerRadius="0"
+                                Click="Hit_Click">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Title}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}" />
+                            <TextBlock Text="{Binding Subtitle}"
+                                       Style="{StaticResource BodySmall}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                  </ItemsRepeater>
+                </StackPanel>
+              </Border>
+
+              <!-- Shipments -->
+              <Border Style="{StaticResource SearchResultSectionCard}"
+                      Visibility="{Binding Data.Shippings.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                <StackPanel>
+                  <TextBlock x:Uid="SearchResultsPage.Shipments"
+                             Style="{StaticResource TitleSmall}"
+                             Margin="16,12" />
+                  <ItemsRepeater ItemsSource="{Binding Data.Shippings}">
+                    <ItemsRepeater.Layout>
+                      <StackLayout Orientation="Vertical" Spacing="0" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                      <DataTemplate>
+                        <Button Style="{StaticResource TextButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Padding="16,10"
+                                CornerRadius="0"
+                                Click="Hit_Click">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Title}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}" />
+                            <TextBlock Text="{Binding Subtitle}"
+                                       Style="{StaticResource BodySmall}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                  </ItemsRepeater>
+                </StackPanel>
+              </Border>
+
+            </StackPanel>
+          </ScrollViewer>
+        </DataTemplate>
+      </mvux:FeedView.ValueTemplate>
+    </mvux:FeedView>
+  </Grid>
+</Page>

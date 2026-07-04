@@ -1,4 +1,4 @@
-﻿name: astoolkit
+﻿name: aserp
 
 # Compose override that publishes the internal postgres container's port to
 # the host. Activated automatically by ./cli.sh when DB_INTERNAL_EXPOSE_PORT

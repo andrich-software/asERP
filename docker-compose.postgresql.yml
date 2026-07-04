@@ -1,6 +1,6 @@
-name: astoolkit-postgresql
+name: aserp-postgresql
 
-# Alternate stack — PostgreSQL backend with the legacy 'astoolkit_01' database
+# Alternate stack — PostgreSQL backend with the legacy 'aserp_01' database
 # name (kept for parity with the other engine-specific compose files).
 # For the canonical postgres setup, use docker-compose.yml together with
 # ./cli.sh which supports both internal and external postgres.
@@ -10,18 +10,18 @@ name: astoolkit-postgresql
 
 services:
   server:
-    image: ${DOCKER_REGISTRY-}astoolkit/server
+    image: ${DOCKER_REGISTRY-}aserp/server
     build:
       context: .
-      dockerfile: src/asToolkit.Server/Dockerfile
+      dockerfile: src/asERP.Server/Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - HTTP_PORTS=8443
       - DatabaseConfig__Provider=PostgreSQL
-      - DatabaseConfig__ConnectionString=Host=postgresql;Port=5432;Database=astoolkit_01;Username=astoolkit;Password=astoolkit;
+      - DatabaseConfig__ConnectionString=Host=postgresql;Port=5432;Database=aserp_01;Username=aserp;Password=aserp;
       - Logging__LogLevel__Default=Warning
     ports:
-      - "${ASTOOLKIT_SERVER_PORT:-8443}:8443"
+      - "${ASERP_SERVER_PORT:-8443}:8443"
     depends_on:
       postgresql:
         condition: service_healthy
@@ -32,18 +32,18 @@ services:
   postgresql:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: astoolkit_01
-      POSTGRES_USER: astoolkit
-      POSTGRES_PASSWORD: astoolkit
+      POSTGRES_DB: aserp_01
+      POSTGRES_USER: aserp
+      POSTGRES_PASSWORD: aserp
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - astoolkit-postgresql-data:/var/lib/postgresql/data
+      - aserp-postgresql-data:/var/lib/postgresql/data
       - ./backups/postgresql:/backups
     networks:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U astoolkit -d astoolkit_01"]
+      test: ["CMD-SHELL", "pg_isready -U aserp -d aserp_01"]
       timeout: 20s
       retries: 10
       interval: 10s
@@ -51,20 +51,20 @@ services:
 
   wasm:
     profiles: ["wasm"]
-    image: ${DOCKER_REGISTRY-}astoolkit/wasm
+    image: ${DOCKER_REGISTRY-}aserp/wasm
     build:
       context: .
-      dockerfile: src/asToolkit.Client/Dockerfile
+      dockerfile: src/asERP.Client/Dockerfile
     environment:
-      - ASTOOLKIT_RESTRICT_SERVER_URL=${ASTOOLKIT_RESTRICT_SERVER_URL:-}
+      - ASERP_RESTRICT_SERVER_URL=${ASERP_RESTRICT_SERVER_URL:-}
     ports:
-      - "${ASTOOLKIT_WASM_PORT:-8444}:80"
+      - "${ASERP_WASM_PORT:-8444}:80"
     networks:
       - backend
     restart: unless-stopped
 
 volumes:
-  astoolkit-postgresql-data:
+  aserp-postgresql-data:
 
 networks:
   backend:

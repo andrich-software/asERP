@@ -16,7 +16,7 @@ env:
 
 jobs:
   smoke_test:
-    name: Smoke Test (Debug Build of asToolkit)
+    name: Smoke Test (Debug Build of asERP)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,10 +31,10 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Restore Solution
-        run: dotnet restore asToolkit.sln
+        run: dotnet restore asERP.sln
 
-      - name: Build asToolkit Solution (Debug)
-        run: dotnet build asToolkit.sln --configuration Debug --no-restore
+      - name: Build asERP Solution (Debug)
+        run: dotnet build asERP.sln --configuration Debug --no-restore
 
   unit_test:
     name: Unit Tests
@@ -52,19 +52,19 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Restore Server Tests
-        run: dotnet restore tests/asToolkit.Server.Tests/asToolkit.Server.Tests.csproj
+        run: dotnet restore tests/asERP.Server.Tests/asERP.Server.Tests.csproj
 
       - name: Build Server Tests (Release)
-        run: dotnet build tests/asToolkit.Server.Tests/asToolkit.Server.Tests.csproj --configuration Release --no-restore
+        run: dotnet build tests/asERP.Server.Tests/asERP.Server.Tests.csproj --configuration Release --no-restore
 
       - name: Run Server Unit Tests
-        run: dotnet test tests/asToolkit.Server.Tests/asToolkit.Server.Tests.csproj --no-build -c Release --logger GitHubActions --blame-crash --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+        run: dotnet test tests/asERP.Server.Tests/asERP.Server.Tests.csproj --no-build -c Release --logger GitHubActions --blame-crash --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: Restore Client Tests
-        run: dotnet restore tests/asToolkit.Client.Tests/asToolkit.Client.Tests.csproj
+        run: dotnet restore tests/asERP.Client.Tests/asERP.Client.Tests.csproj
 
       - name: Build Client Tests (Release)
-        run: dotnet build tests/asToolkit.Client.Tests/asToolkit.Client.Tests.csproj --configuration Release --no-restore
+        run: dotnet build tests/asERP.Client.Tests/asERP.Client.Tests.csproj --configuration Release --no-restore
 
       - name: Run Client Unit Tests
-        run: dotnet test tests/asToolkit.Client.Tests/asToolkit.Client.Tests.csproj --no-build -c Release --logger GitHubActions --blame-crash --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+        run: dotnet test tests/asERP.Client.Tests/asERP.Client.Tests.csproj --no-build -c Release --logger GitHubActions --blame-crash --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover

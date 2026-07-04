@@ -4,20 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-asToolkit is a C# client-server, cross-platform, open-source ERP system developed with .NET 9, Avalonia and Entity Framework. It follows the Clean Architecture with a clear separation of concerns. It consists of the projects:
+asERP is a C# client-server, cross-platform, open-source ERP system developed with .NET 9, Avalonia and Entity Framework. It follows the Clean Architecture with a clear separation of concerns. It consists of the projects:
 
-1. **asToolkit.Domain** - Core domain entities and interfaces
-2. **asToolkit.Application** - Application logic, CQRS handlers
-3. **asToolkit.Infrastructure** - Cross-cutting concerns (email, logging, PDF generation)
-4. **asToolkit.Persistence** - Database access, repositories
-5. **asToolkit.Identity** - Authentication and authorization
-6. **asToolkit.SalesChannels** - Integrations with e-commerce platforms
-7. **asToolkit.Server** - Backend API server (headless, no frontend)
-8. **asToolkit.UI** - Shared UI components for use in Avalonia applications
-9. **asToolkit.UI.Desktop** - Avalonia Desktop Client
-10. **asToolkit.UI.Browser** - Avalonia WebAssembly Client
-11. **asToolkit.UI.iOS** - Aavalonia iOS App
-12. **asToolkit.UI.Android** - Avalonia Android App
+1. **asERP.Domain** - Core domain entities and interfaces
+2. **asERP.Application** - Application logic, CQRS handlers
+3. **asERP.Infrastructure** - Cross-cutting concerns (email, logging, PDF generation)
+4. **asERP.Persistence** - Database access, repositories
+5. **asERP.Identity** - Authentication and authorization
+6. **asERP.SalesChannels** - Integrations with e-commerce platforms
+7. **asERP.Server** - Backend API server (headless, no frontend)
+8. **asERP.UI** - Shared UI components for use in Avalonia applications
+9. **asERP.UI.Desktop** - Avalonia Desktop Client
+10. **asERP.UI.Browser** - Avalonia WebAssembly Client
+11. **asERP.UI.iOS** - Aavalonia iOS App
+12. **asERP.UI.Android** - Avalonia Android App
 
 ## Architecture
 
@@ -38,11 +38,11 @@ The codebase implements:
 # Build the entire solution
 dotnet build
 
-# Build asToolkit.Server project
-dotnet build src/asToolkit.Server/asToolkit.Server.csproj
+# Build asERP.Server project
+dotnet build src/asERP.Server/asERP.Server.csproj
 
-# Build asToolkit.UI.Browser project
-dotnet build src/asToolkit.UI.Browser/asToolkit.UI.Browser.csproj
+# Build asERP.UI.Browser project
+dotnet build src/asERP.UI.Browser/asERP.UI.Browser.csproj
 
 ```
 
@@ -50,13 +50,13 @@ dotnet build src/asToolkit.UI.Browser/asToolkit.UI.Browser.csproj
 
 ```bash
 # Run the server
-dotnet run --project src/asToolkit.Server/asToolkit.Server.csproj
+dotnet run --project src/asERP.Server/asERP.Server.csproj
 
 # Run the web frontend
-dotnet run --project src/asToolkit.UI.Browser/asToolkit.UI.Browser.csproj
+dotnet run --project src/asERP.UI.Browser/asERP.UI.Browser.csproj
 
 # Run the multi-platform client
-dotnet run --project src/asToolkit.UI.Desktop/asToolkit.UI.Desktop.csproj
+dotnet run --project src/asERP.UI.Desktop/asERP.UI.Desktop.csproj
 ```
 
 ### Testing
@@ -66,13 +66,13 @@ dotnet run --project src/asToolkit.UI.Desktop/asToolkit.UI.Desktop.csproj
 dotnet test
 
 # Run specific test project
-dotnet test tests/asToolkit.Server.Tests/asToolkit.Server.Tests.csproj
+dotnet test tests/asERP.Server.Tests/asERP.Server.Tests.csproj
 
 # Run specific test class
-dotnet test tests/asToolkit.Server.Tests/asToolkit.Server.Tests.csproj --filter "FullyQualifiedName~CustomerCrudTest"
+dotnet test tests/asERP.Server.Tests/asERP.Server.Tests.csproj --filter "FullyQualifiedName~CustomerCrudTest"
 
 # Run specific test method
-dotnet test tests/asToolkit.Server.Tests/asToolkit.Server.Tests.csproj --filter "FullyQualifiedName~CustomerCrudTest.CustomerCreateTest"
+dotnet test tests/asERP.Server.Tests/asERP.Server.Tests.csproj --filter "FullyQualifiedName~CustomerCrudTest.CustomerCreateTest"
 ```
 
 ### Database Migrations
@@ -106,21 +106,21 @@ dotnet format
 - Database provider can be configured in appsettings.json or environment variables
 - Docker containerization is fully supported and recommended for deployment
 - Authentication is JWT-based
-- asToolkit.Server is built with .NET 9 ASP.NET Core
-- asToolkit.Server uses MediatR for CQRS pattern
+- asERP.Server is built with .NET 9 ASP.NET Core
+- asERP.Server uses MediatR for CQRS pattern
 - The project is multi tenancy enabled
 - The project uses Entity Framework Core for database access
 - The project uses C# 10+ features when appropriate
 - The project uses FluentValidation for validation
 - The project uses Serilog for logging
 - The project uses GitHub Actions for CI/CD
-- asToolkit.UI is not executable. It is a shared library for asToolkit.Browser, asToolkit.Desktop, asToolkit.iOS and asToolkit.Android
+- asERP.UI is not executable. It is a shared library for asERP.Browser, asERP.Desktop, asERP.iOS and asERP.Android
 - Avalonia is used for cross-platform UI development
 - Avalonia is using CommunityToolkit.MVVM and CompiledBindings
-- ViewModels are registered in asToolkit.UI/app.xaml.cs
-- DTOs are defined in asToolkit.Domain an available as ListDto, DetailDto and InputDto
-- Repositories are defined in asToolkit.Persistence
-- Services are defined in asToolkit.Application
+- ViewModels are registered in asERP.UI/app.xaml.cs
+- DTOs are defined in asERP.Domain an available as ListDto, DetailDto and InputDto
+- Repositories are defined in asERP.Persistence
+- Services are defined in asERP.Application
 - on layout changes, always consider the Avalonia platform limitations and capabilities
 - when implementing new features, always consider the cross-platform nature of the project
 - when implementing new features, always consider the performance and scalability of the solution

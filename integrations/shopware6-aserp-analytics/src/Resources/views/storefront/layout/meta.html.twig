@@ -1,0 +1,14 @@
+﻿{% sw_extends '@Storefront/storefront/layout/meta.html.twig' %}
+
+{# Inject the asERP tracker into the head. The endpoint is a same-origin route on this storefront; the
+   secret token is added server-side in the collector controller and never appears here. #}
+{% block layout_head_javascript_tracking %}
+    {{ parent() }}
+
+    <script>
+        window.aserpTrackConfig = window.aserpTrackConfig || {};
+        window.aserpTrackConfig.endpoint = '{{ path('frontend.aserp.collect') }}';
+    </script>
+    <script defer src="{{ asset('bundles/aserpanalytics/aserp-s.js') }}"></script>
+    <script defer src="{{ asset('bundles/aserpanalytics/aserp-sw.js') }}"></script>
+{% endblock %}

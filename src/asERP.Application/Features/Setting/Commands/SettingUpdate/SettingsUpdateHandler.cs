@@ -1,0 +1,83 @@
+﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Persistence;
+using asERP.Domain.Wrapper;
+using asERP.Application.Mediator;
+
+namespace asERP.Application.Features.Setting.Commands.SettingUpdate;
+
+public class SettingUpdateQuery : IRequestHandler<SettingUpdateCommand, Result<Guid>>
+{
+    private readonly IAppLogger<SettingUpdateQuery> _logger;
+    private readonly ISettingRepository _settingRepository;
+
+
+    public SettingUpdateQuery(
+        IAppLogger<SettingUpdateQuery> logger,
+        ISettingRepository settingRepository)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _settingRepository = settingRepository ?? throw new ArgumentNullException(nameof(settingRepository));
+    }
+
+    public async Task<Result<Guid>> Handle(SettingUpdateCommand request, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Updating setting with ID: {Id} and name: {Name}", request.Id, request.Key);
+
+        var result = new Result<Guid>();
+
+        // Validate incoming data
+        var validator = new SettingUpdateValidator(_settingRepository);
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+
+        if (!validationResult.IsValid)
+        {
+            result.Succeeded = false;
+            result.StatusCode = ResultStatusCode.BadRequest;
+            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+
+            _logger.LogWarning("Validation errors in update request for {0}: {1}",
+                nameof(SettingUpdateCommand),
+                string.Join(", ", result.Messages));
+
+            return result;
+        }
+
+        try
+        {
+            // Get the existing entity to preserve fields we don't want to overwrite
+            var existingSetting = await _settingRepository.GetByIdAsync(request.Id);
+            if (existingSetting == null)
+            {
+                result.Succeeded = false;
+                result.StatusCode = ResultStatusCode.NotFound;
+                result.Messages.Add("Setting not found");
+                return result;
+            }
+
+            // Update only the fields that should be modified
+            existingSetting.Key = request.Key;
+            existingSetting.Value = request.Value;
+            existingSetting.DateModified = DateTime.UtcNow;
+
+            // Update in database
+            await _settingRepository.UpdateAsync(existingSetting);
+
+            result.Succeeded = true;
+            result.StatusCode = ResultStatusCode.Ok;
+            result.Data = existingSetting.Id;
+
+            _logger.LogInformation("Successfully updated setting with ID: {Id}", existingSetting.Id);
+        }
+        catch (Exception ex)
+        {
+            result.Succeeded = false;
+            result.StatusCode = ResultStatusCode.InternalServerError;
+            result.Messages.Add($"An error occurred while updating the setting: {ex.Message}");
+
+            _logger.LogError("Error updating setting: {Message}", ex.Message);
+        }
+
+        return result;
+    }
+
+}

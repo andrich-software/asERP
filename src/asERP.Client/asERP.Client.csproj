@@ -1,0 +1,110 @@
+﻿<Project Sdk="Uno.Sdk">
+  <PropertyGroup>
+    <!-- iOS temporarily disabled due to Xcode xcrun issues -->
+    <!-- WasmOnlyBuild=true (set by the WASM Dockerfile) trims the multi-target
+         list to browser-WASM so the container image doesn't pull Android/iOS
+         workloads it doesn't need. -->
+    <TargetFrameworks Condition="'$(WasmOnlyBuild)' == 'true'">net10.0-browserwasm</TargetFrameworks>
+    <TargetFrameworks Condition="'$(WasmOnlyBuild)' != 'true'">net10.0-android;net10.0-browserwasm;net10.0-desktop;net10.0</TargetFrameworks>
+    <!-- <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-browserwasm;net10.0-desktop;net10.0</TargetFrameworks> -->
+
+    <OutputType>Exe</OutputType>
+    <UnoSingleProject>true</UnoSingleProject>
+
+    <!-- Display name -->
+    <ApplicationTitle>asERP.Client</ApplicationTitle>
+    <!-- App Identifier -->
+    <ApplicationId>de.martinandrich.asERP.Client</ApplicationId>
+    <!-- Versions -->
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <!-- Package Publisher -->
+    <ApplicationPublisher>martin</ApplicationPublisher>
+    <!-- Package Description -->
+    <Description>asERP.Client powered by Uno Platform.</Description>
+
+    <!-- Android minSdkVersion - required by AndroidX.Lifecycle 2.10.x -->
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23</SupportedOSPlatformVersion>
+
+    <!-- Required by [JSImport] source generator (used in App.xaml.cs for WASM URL rewrite). -->
+    <AllowUnsafeBlocks Condition="'$(TargetFramework)' == 'net10.0-browserwasm'">true</AllowUnsafeBlocks>
+
+    <!--
+      UnoFeatures are used to quickly add and manage features enabled for your app.
+      https://aka.platform.uno/singleproject-features
+    -->
+    <UnoFeatures>
+      Material;
+      Dsp;
+      Hosting;
+      Toolkit;
+      Logging;
+      LoggingSerilog;
+      MVUX;
+      Configuration;
+      HttpKiota;
+      Serialization;
+      Localization;
+      Authentication;
+      Navigation;
+      ThemeService;
+      SkiaRenderer;
+    </UnoFeatures>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Debug' or '$(IsUiAutomationMappingEnabled)'=='True'">
+    <IsUiAutomationMappingEnabled>True</IsUiAutomationMappingEnabled>
+    <DefineConstants>$(DefineConstants);USE_UITESTS</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../asERP.Domain/asERP.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Tmds.DBus.Protocol" />
+    <PackageReference Include="Uno.WinUI" />
+    <PackageReference Include="Uno.CommunityToolkit.WinUI.UI.Controls.DataGrid" />
+    <PackageReference Include="System.Security.Cryptography.Xml" />  
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+    <PackageReference Include="Uno.WinUI.Runtime.Skia.Android" />
+    <PackageReference Include="Xamarin.AndroidX.Activity" />
+    <PackageReference Include="Xamarin.AndroidX.Browser" />
+    <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
+    <PackageReference Include="Xamarin.AndroidX.Legacy.Support.V4" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" />
+    <PackageReference Include="Xamarin.AndroidX.SwipeRefreshLayout" />
+    <PackageReference Include="Xamarin.AndroidX.AppCompat" />
+    <PackageReference Include="Xamarin.AndroidX.RecyclerView" />
+    <PackageReference Include="Xamarin.Google.Android.Material" />
+    <!-- Exclude duplicate Compose annotation JVM to fix D8 "defined multiple times" error -->
+    <PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.Jvm" ExcludeAssets="all" PrivateAssets="all">
+      <IncludeAssets>none</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-desktop'">
+    <PackageReference Include="Uno.WinUI.Runtime.Skia.Linux.FrameBuffer" />
+    <PackageReference Include="Uno.WinUI.Runtime.Skia.MacOS" />
+    <PackageReference Include="Uno.WinUI.Runtime.Skia.Win32" />
+    <PackageReference Include="Uno.WinUI.Runtime.Skia.Wpf" />
+    <PackageReference Include="Uno.WinUI.Runtime.Skia.X11" />
+
+    <PackageReference Include="SkiaSharp.Skottie" />
+    <PackageReference Include="SkiaSharp.Views.Uno.WinUI" />
+
+    <!-- Shipping-label printing (guarded by OperatingSystem.IsWindows() at runtime) -->
+    <PackageReference Include="PDFtoImage" />
+    <PackageReference Include="System.Drawing.Common" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browserwasm'">
+    <PackageReference Include="Uno.WinUI.Runtime.Skia.WebAssembly.Browser" />
+
+    <PackageReference Include="SkiaSharp.Skottie" />
+    <PackageReference Include="SkiaSharp.Views.Uno.WinUI" />
+  </ItemGroup>
+</Project>
