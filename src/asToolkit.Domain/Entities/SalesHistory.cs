@@ -8,6 +8,10 @@ public class SalesHistory : BaseEntity, IBaseEntity
 {
     public Guid UserId { get; set; }
     public Guid SalesId { get; set; }
+
+    /// <summary>Set when the entry belongs to a specific shipment; null for order-level entries.
+    /// No navigation/FK on purpose — shipments may be deleted while their audit trail stays.</summary>
+    public Guid? ShippingId { get; set; }
     public SalesStatus? SalesStatusOld { get; set; }
     public SalesStatus? SalesStatusNew { get; set; }
     public PaymentStatus? PaymentStatusOld { get; set; }

@@ -11,14 +11,13 @@
         <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
         <utum:MaterialToolkitTheme
           ColorOverrideSource="ms-appx:///Styles/ColorPaletteOverride.xaml">
-          <!-- NOTE: You can override the default Roboto font by providing your font assets here. -->
-          <!-- <utum:MaterialToolkitTheme.FontOverrideDictionary>
+          <utum:MaterialToolkitTheme.FontOverrideDictionary>
             <ResourceDictionary>
-              <FontFamily x:Key="MaterialLightFontFamily">ms-appx:///Uno.Fonts.Roboto/Fonts/Roboto-Light.ttf#Roboto</FontFamily>
-              <FontFamily x:Key="MaterialMediumFontFamily">ms-appx:///Uno.Fonts.Roboto/Fonts/Roboto-Medium.ttf#Roboto</FontFamily>
-              <FontFamily x:Key="MaterialRegularFontFamily">ms-appx:///Uno.Fonts.Roboto/Fonts/Roboto-Regular.ttf#Roboto</FontFamily>
+              <FontFamily x:Key="MaterialLightFontFamily">ms-appx:///Assets/Fonts/InterVariable.ttf#Inter</FontFamily>
+              <FontFamily x:Key="MaterialMediumFontFamily">ms-appx:///Assets/Fonts/InterVariable.ttf#Inter</FontFamily>
+              <FontFamily x:Key="MaterialRegularFontFamily">ms-appx:///Assets/Fonts/InterVariable.ttf#Inter</FontFamily>
             </ResourceDictionary>
-          </utum:MaterialToolkitTheme.FontOverrideDictionary> -->
+          </utum:MaterialToolkitTheme.FontOverrideDictionary>
         </utum:MaterialToolkitTheme>
 
         <!-- Compact Input Controls Styling -->
@@ -32,6 +31,10 @@
 
         <!-- Shared UI component library (SectionCard, DetailPageHeader, StatusBadge, LabeledField, EmptyState) -->
         <ResourceDictionary Source="ms-appx:///Styles/SharedComponents.xaml" />
+
+        <!-- App theme tokens: Cloudflare-style shape overrides, link/hover/sidebar brushes, page-header text styles.
+             Must stay merged last so the shape overrides win over Material defaults. -->
+        <ResourceDictionary Source="ms-appx:///Styles/AppTheme.xaml" />
       </ResourceDictionary.MergedDictionaries>
 
       <!-- Converters -->

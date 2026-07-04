@@ -159,7 +159,7 @@
                 <StackPanel Orientation="Horizontal"
                             Spacing="8">
                   <!-- Variant Parent Badge -->
-                  <Border CornerRadius="12"
+                  <Border CornerRadius="8"
                           Padding="10,4"
                           Background="{ThemeResource PrimaryContainerBrush}"
                           Visibility="{Binding Data.ProductType, Converter={StaticResource ProductTypeToVisibilityConverter}, ConverterParameter=VariantParent}">
@@ -169,7 +169,7 @@
                   </Border>
 
                   <!-- Variant Child Badge -->
-                  <Border CornerRadius="12"
+                  <Border CornerRadius="8"
                           Padding="10,4"
                           Background="{ThemeResource TertiaryContainerBrush}"
                           Visibility="{Binding Data.ProductType, Converter={StaticResource ProductTypeToVisibilityConverter}, ConverterParameter=Variant}">
@@ -179,7 +179,7 @@
                   </Border>
 
                   <!-- UseOptimized Badge -->
-                  <Border CornerRadius="12"
+                  <Border CornerRadius="8"
                           Padding="10,4"
                           Background="{ThemeResource TertiaryContainerBrush}"
                           Visibility="{Binding Data.UseOptimized, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -431,7 +431,7 @@
 
                       <!-- Optimized Name (if different from Name) -->
                       <Border Background="{ThemeResource TertiaryContainerBrush}"
-                              CornerRadius="12"
+                              CornerRadius="8"
                               Padding="16"
                               Visibility="{Binding Data.NameOptimized, Converter={StaticResource StringToVisibilityConverter}}">
                         <StackPanel Spacing="4">
@@ -487,8 +487,8 @@
                           Visibility="{Binding Data.Variants.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
                     <StackPanel>
                       <!-- Header -->
-                      <Grid Background="{ThemeResource SurfaceVariantBrush}"
-                            CornerRadius="12,12,0,0"
+                      <Grid Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="8,8,0,0"
                             Padding="16,10">
                         <Grid.ColumnDefinitions>
                           <ColumnDefinition Width="2*" />

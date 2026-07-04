@@ -22,8 +22,12 @@ public class ShippingInputDto : IShippingInputModel
     public decimal? WidthCm { get; set; }
     public decimal? HeightCm { get; set; }
 
-    /// <summary>Order lines packed into this parcel. Optional.</summary>
+    /// <summary>Order lines packed into this parcel as whole lines. Optional.</summary>
     public List<Guid> SalesItemIds { get; set; } = new();
+
+    /// <summary>Order lines packed with explicit quantities — a quantity below the line's
+    /// open quantity splits the line into a shipped and a remaining part. Optional.</summary>
+    public List<ShippingItemInputDto> Items { get; set; } = new();
 
     /// <summary>Request a carrier label immediately after creation.</summary>
     public bool RequestLabel { get; set; } = true;

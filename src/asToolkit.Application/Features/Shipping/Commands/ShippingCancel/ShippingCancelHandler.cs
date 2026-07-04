@@ -15,17 +15,20 @@ public class ShippingCancelHandler : IRequestHandler<ShippingCancelCommand, Resu
     private readonly IShippingRepository _shippingRepository;
     private readonly IShippingCarrierService _shippingCarrierService;
     private readonly IShippingStatusUpdater _shippingStatusUpdater;
+    private readonly ISalesShippingStatusService _salesShippingStatusService;
 
     public ShippingCancelHandler(
         IAppLogger<ShippingCancelHandler> logger,
         IShippingRepository shippingRepository,
         IShippingCarrierService shippingCarrierService,
-        IShippingStatusUpdater shippingStatusUpdater)
+        IShippingStatusUpdater shippingStatusUpdater,
+        ISalesShippingStatusService salesShippingStatusService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _shippingRepository = shippingRepository ?? throw new ArgumentNullException(nameof(shippingRepository));
         _shippingCarrierService = shippingCarrierService ?? throw new ArgumentNullException(nameof(shippingCarrierService));
         _shippingStatusUpdater = shippingStatusUpdater ?? throw new ArgumentNullException(nameof(shippingStatusUpdater));
+        _salesShippingStatusService = salesShippingStatusService ?? throw new ArgumentNullException(nameof(salesShippingStatusService));
     }
 
     public async Task<Result<Guid>> Handle(ShippingCancelCommand request, CancellationToken cancellationToken)
@@ -95,6 +98,8 @@ public class ShippingCancelHandler : IRequestHandler<ShippingCancelCommand, Resu
             }
 
             await _shippingRepository.SaveChangesAsync(cancellationToken);
+
+            await _salesShippingStatusService.RecomputeAsync(shipping.SalesId, cancellationToken);
 
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.Ok;

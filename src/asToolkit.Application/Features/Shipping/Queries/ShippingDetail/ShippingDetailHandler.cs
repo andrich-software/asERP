@@ -11,13 +11,16 @@ public class ShippingDetailHandler : IRequestHandler<ShippingDetailQuery, Result
 {
     private readonly IAppLogger<ShippingDetailHandler> _logger;
     private readonly IShippingRepository _shippingRepository;
+    private readonly ISalesRepository _salesRepository;
 
     public ShippingDetailHandler(
         IAppLogger<ShippingDetailHandler> logger,
-        IShippingRepository shippingRepository)
+        IShippingRepository shippingRepository,
+        ISalesRepository salesRepository)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _shippingRepository = shippingRepository ?? throw new ArgumentNullException(nameof(shippingRepository));
+        _salesRepository = salesRepository ?? throw new ArgumentNullException(nameof(salesRepository));
     }
 
     public async Task<Result<ShippingDetailDto>> Handle(ShippingDetailQuery request, CancellationToken cancellationToken)
@@ -33,6 +36,7 @@ public class ShippingDetailHandler : IRequestHandler<ShippingDetailQuery, Result
 
         var assignedItems = await _shippingRepository.GetAssignedSalesItemsAsync(shipping.Id);
         var labelOutbox = await _shippingRepository.GetLabelOutboxAsync(shipping.Id);
+        var history = await _salesRepository.GetShippingHistoryAsync(shipping.Id);
 
         var data = new ShippingDetailDto
         {
@@ -63,6 +67,16 @@ public class ShippingDetailHandler : IRequestHandler<ShippingDetailQuery, Result
             LabelQueueStatus = labelOutbox?.Status,
             LabelQueueLastError = labelOutbox?.LastError,
             SalesItemIds = assignedItems.Select(i => i.Id).ToList(),
+            History = history.Select(h => new ShippingHistoryEntryDto
+            {
+                Id = h.Id,
+                ShippingStatusOld = h.ShippingStatusOld,
+                ShippingStatusNew = h.ShippingStatusNew,
+                Description = h.Description,
+                IsSystemGenerated = h.IsSystemGenerated,
+                UserId = h.UserId,
+                DateCreated = h.DateCreated
+            }).ToList(),
             DateCreated = shipping.DateCreated
         };
 

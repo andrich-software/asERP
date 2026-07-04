@@ -9,13 +9,9 @@
   <Page.Resources>
     <Style x:Key="SearchResultSectionCard" TargetType="Border">
       <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
-      <Setter Property="CornerRadius" Value="12" />
-      <Setter Property="Translation" Value="0,0,8" />
-      <Setter Property="Shadow">
-        <Setter.Value>
-          <ThemeShadow />
-        </Setter.Value>
-      </Setter>
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="BorderBrush" Value="{ThemeResource OutlineVariantBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
     </Style>
   </Page.Resources>
 
@@ -155,6 +151,40 @@
                              Style="{StaticResource TitleSmall}"
                              Margin="16,12" />
                   <ItemsRepeater ItemsSource="{Binding Data.Products}">
+                    <ItemsRepeater.Layout>
+                      <StackLayout Orientation="Vertical" Spacing="0" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                      <DataTemplate>
+                        <Button Style="{StaticResource TextButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Padding="16,10"
+                                CornerRadius="0"
+                                Click="Hit_Click">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Title}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}" />
+                            <TextBlock Text="{Binding Subtitle}"
+                                       Style="{StaticResource BodySmall}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                  </ItemsRepeater>
+                </StackPanel>
+              </Border>
+
+              <!-- Shipments -->
+              <Border Style="{StaticResource SearchResultSectionCard}"
+                      Visibility="{Binding Data.Shippings.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                <StackPanel>
+                  <TextBlock x:Uid="SearchResultsPage.Shipments"
+                             Style="{StaticResource TitleSmall}"
+                             Margin="16,12" />
+                  <ItemsRepeater ItemsSource="{Binding Data.Shippings}">
                     <ItemsRepeater.Layout>
                       <StackLayout Orientation="Vertical" Spacing="0" />
                     </ItemsRepeater.Layout>

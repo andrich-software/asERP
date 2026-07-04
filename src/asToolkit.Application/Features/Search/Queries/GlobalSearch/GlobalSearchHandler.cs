@@ -1,9 +1,9 @@
-﻿using asToolkit.Application.Contracts.Logging;
+using asToolkit.Application.Contracts.Logging;
 using asToolkit.Application.Contracts.Persistence;
+using asToolkit.Application.Mediator;
 using asToolkit.Domain.Dtos.Search;
 using asToolkit.Domain.Enums;
 using asToolkit.Domain.Wrapper;
-using asToolkit.Application.Mediator;
 using Microsoft.EntityFrameworkCore;
 
 namespace asToolkit.Application.Features.Search.Queries.GlobalSearch;
@@ -17,19 +17,22 @@ public class GlobalSearchHandler : IRequestHandler<GlobalSearchQuery, Result<Glo
     private readonly ISalesRepository _salesRepository;
     private readonly IInvoiceRepository _invoiceRepository;
     private readonly IProductRepository _productRepository;
+    private readonly IShippingRepository _shippingRepository;
 
     public GlobalSearchHandler(
         IAppLogger<GlobalSearchHandler> logger,
         ICustomerRepository customerRepository,
         ISalesRepository salesRepository,
         IInvoiceRepository invoiceRepository,
-        IProductRepository productRepository)
+        IProductRepository productRepository,
+        IShippingRepository shippingRepository)
     {
         _logger = logger;
         _customerRepository = customerRepository;
         _salesRepository = salesRepository;
         _invoiceRepository = invoiceRepository;
         _productRepository = productRepository;
+        _shippingRepository = shippingRepository;
     }
 
     public async Task<Result<GlobalSearchResultDto>> Handle(GlobalSearchQuery request, CancellationToken cancellationToken)
@@ -126,7 +129,20 @@ public class GlobalSearchHandler : IRequestHandler<GlobalSearchQuery, Result<Glo
             })
             .ToListAsync(cancellationToken);
 
-        result.TotalCount = result.Customers.Count + result.Sales.Count + result.Invoices.Count + result.Products.Count;
+        result.Shippings = await _shippingRepository.Entities
+            .Where(sh => sh.TrackingNumber.ToLower().Contains(s))
+            .OrderByDescending(sh => sh.DateCreated)
+            .Take(limit)
+            .Select(sh => new GlobalSearchHitDto
+            {
+                Id = sh.Id,
+                Type = SearchEntityType.Shipping,
+                Title = sh.TrackingNumber,
+                Subtitle = "#" + sh.Sales.SalesId + " · " + sh.ShippingProvider.Name
+            })
+            .ToListAsync(cancellationToken);
+
+        result.TotalCount = result.Customers.Count + result.Sales.Count + result.Invoices.Count + result.Products.Count + result.Shippings.Count;
 
         return Result<GlobalSearchResultDto>.Success(result);
     }

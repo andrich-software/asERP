@@ -1,12 +1,17 @@
+using System.Windows.Input;
+using asToolkit.Client.Core.Helpers;
 using asToolkit.Client.Features.Saless.Models;
+using asToolkit.Client.Features.Shippings.Services;
+using asToolkit.Domain.Dtos.Shipping;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Uno.Toolkit.UI;
 
 namespace asToolkit.Client.Features.Saless.Views;
 
 public sealed partial class SalesDetailPage : Page
 {
-    private static readonly string[] TabPanelNames = ["OverviewTab", "ItemsTab", "AddressesTab", "HistoryTab"];
+    private static readonly string[] TabPanelNames = ["OverviewTab", "ItemsTab", "ShipmentsTab", "AddressesTab", "HistoryTab"];
 
     // Survives FeedView template re-realization (e.g. refresh after returning from Edit).
     private int _selectedTabIndex;
@@ -14,6 +19,7 @@ public sealed partial class SalesDetailPage : Page
     public SalesDetailPage()
     {
         this.InitializeComponent();
+        ShipmentDialog.ShipmentCreated += OnShipmentCreated;
     }
 
     private async void BackButton_Click(object sender, RoutedEventArgs e)
@@ -38,6 +44,96 @@ public sealed partial class SalesDetailPage : Page
             DataContext is SalesDetailModel model)
         {
             await model.NavigateToCustomer(customerId);
+        }
+    }
+
+    private async void ShipButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { CommandParameter: Guid salesId })
+        {
+            await ShipmentDialog.OpenAsync(salesId);
+        }
+    }
+
+    private async void CancelSalesButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SalesDetailModel model || this.XamlRoot is not { } xamlRoot)
+        {
+            return;
+        }
+
+        var confirmed = await ConfirmDialog.ShowAsync(
+            xamlRoot,
+            "SalesDetailPage.CancelSalesConfirmTitle",
+            "SalesDetailPage.CancelSalesConfirmMessage",
+            confirmKey: "Common.Confirm");
+
+        if (confirmed && await model.CancelSales())
+        {
+            RefreshFeed();
+        }
+    }
+
+    private async void ShipmentRow_Tapped(object sender, TappedRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ShippingListDto shipping } &&
+            DataContext is SalesDetailModel model)
+        {
+            await model.NavigateToShipping(shipping.Id);
+        }
+    }
+
+    private async void ShipmentTracking_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { CommandParameter: string url } &&
+            Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            await Windows.System.Launcher.LaunchUriAsync(uri);
+        }
+    }
+
+    private async void ShipmentLabel_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { CommandParameter: Guid shippingId })
+        {
+            // One click: remembered preference first, platform default otherwise (toasts inside).
+            await LabelActionRunner.RunQuickAsync(shippingId);
+        }
+    }
+
+    private async void ShipmentCancel_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { CommandParameter: Guid shippingId } ||
+            DataContext is not SalesDetailModel model ||
+            this.XamlRoot is not { } xamlRoot)
+        {
+            return;
+        }
+
+        var confirmed = await ConfirmDialog.ShowAsync(
+            xamlRoot,
+            "SalesDetailPage.CancelShipmentConfirmTitle",
+            "SalesDetailPage.CancelShipmentConfirmMessage",
+            confirmKey: "Common.Confirm");
+
+        if (confirmed && await model.CancelShipment(shippingId))
+        {
+            RefreshFeed();
+        }
+    }
+
+    private Task OnShipmentCreated()
+    {
+        // Status may have moved to PartiallyDelivered/Completed and the shipments tab gained a row.
+        RefreshFeed();
+        return Task.CompletedTask;
+    }
+
+    private void RefreshFeed()
+    {
+        if (SalesFeedView.Refresh is ICommand command && command.CanExecute(null))
+        {
+            command.Execute(null);
         }
     }
 

@@ -95,6 +95,10 @@
 
     <PackageReference Include="SkiaSharp.Skottie" />
     <PackageReference Include="SkiaSharp.Views.Uno.WinUI" />
+
+    <!-- Shipping-label printing (guarded by OperatingSystem.IsWindows() at runtime) -->
+    <PackageReference Include="PDFtoImage" />
+    <PackageReference Include="System.Drawing.Common" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-browserwasm'">

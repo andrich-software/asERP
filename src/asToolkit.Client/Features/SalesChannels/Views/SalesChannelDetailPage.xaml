@@ -102,11 +102,7 @@
                 <!-- Hero Card with Name and Type -->
                 <Border Background="{ThemeResource SurfaceBrush}"
                         CornerRadius="16"
-                        Padding="32"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        Padding="32" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel HorizontalAlignment="Center"
                               Spacing="16">
                     <!-- Sales Channel Icon -->
@@ -144,11 +140,7 @@
 
                 <!-- Connection Information Card -->
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel Spacing="0">
                     <!-- Card Header -->
                     <Grid Padding="16,16,16,8">
@@ -255,11 +247,7 @@
                           Grid.Row="0"
                           Margin="0,0,8,0"
                           Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12"
-                          Translation="0,0,8">
-                    <Border.Shadow>
-                      <ThemeShadow />
-                    </Border.Shadow>
+                          CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <StackPanel Spacing="0">
                       <!-- Card Header -->
                       <Grid Padding="16,16,16,8">
@@ -289,7 +277,7 @@
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
                           <controls:StatusBadge Grid.Column="1"
-                                  CornerRadius="12"
+                                  CornerRadius="8"
                                   Padding="10,4"
                                   Status="{Binding Data.ImportProducts}" />
                         </Grid>
@@ -306,7 +294,7 @@
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
                           <controls:StatusBadge Grid.Column="1"
-                                  CornerRadius="12"
+                                  CornerRadius="8"
                                   Padding="10,4"
                                   Status="{Binding Data.ImportCustomers}" />
                         </Grid>
@@ -323,7 +311,7 @@
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
                           <controls:StatusBadge Grid.Column="1"
-                                  CornerRadius="12"
+                                  CornerRadius="8"
                                   Padding="10,4"
                                   Status="{Binding Data.ImportSaless}" />
                         </Grid>
@@ -337,11 +325,7 @@
                           Grid.Row="0"
                           Margin="8,0,0,0"
                           Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12"
-                          Translation="0,0,8">
-                    <Border.Shadow>
-                      <ThemeShadow />
-                    </Border.Shadow>
+                          CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <StackPanel Spacing="0">
                       <!-- Card Header -->
                       <Grid Padding="16,16,16,8">
@@ -371,7 +355,7 @@
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
                           <controls:StatusBadge Grid.Column="1"
-                                  CornerRadius="12"
+                                  CornerRadius="8"
                                   Padding="10,4"
                                   Status="{Binding Data.ExportProducts}" />
                         </Grid>
@@ -388,7 +372,7 @@
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
                           <controls:StatusBadge Grid.Column="1"
-                                  CornerRadius="12"
+                                  CornerRadius="8"
                                   Padding="10,4"
                                   Status="{Binding Data.ExportCustomers}" />
                         </Grid>
@@ -405,7 +389,7 @@
                                      Foreground="{ThemeResource OnSurfaceBrush}"
                                      VerticalAlignment="Center" />
                           <controls:StatusBadge Grid.Column="1"
-                                  CornerRadius="12"
+                                  CornerRadius="8"
                                   Padding="10,4"
                                   Status="{Binding Data.ExportSaless}" />
                         </Grid>
@@ -427,7 +411,7 @@
                   </StackPanel>
 
                   <!-- Warehouse Table -->
-                  <Border CornerRadius="12"
+                  <Border CornerRadius="8"
                           BorderBrush="{ThemeResource OutlineVariantBrush}"
                           BorderThickness="1"
                           Background="{ThemeResource SurfaceBrush}"
@@ -440,8 +424,8 @@
 
                       <!-- Table Header -->
                       <Border Grid.Row="0"
-                              Background="{ThemeResource SurfaceVariantBrush}"
-                              CornerRadius="12,12,0,0"
+                              Background="{ThemeResource SurfaceBrush}"
+                              CornerRadius="8,8,0,0"
                               BorderBrush="{ThemeResource OutlineVariantBrush}"
                               BorderThickness="0,0,0,1">
                         <Grid Padding="16,12">
@@ -507,7 +491,7 @@
 
                   <!-- No Warehouses Placeholder -->
                   <Border Background="{ThemeResource SurfaceVariantBrush}"
-                          CornerRadius="12"
+                          CornerRadius="8"
                           Padding="24"
                           Visibility="{Binding Data.Warehouses.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
                     <StackPanel HorizontalAlignment="Center"
@@ -525,7 +509,7 @@
 
                 <!-- Usage Hint Card -->
                 <Border Background="{ThemeResource SecondaryContainerBrush}"
-                        CornerRadius="12"
+                        CornerRadius="8"
                         Padding="16">
                   <Grid>
                     <Grid.ColumnDefinitions>
@@ -548,11 +532,7 @@
 
                 <!-- Orchestration: manual sync, test connection, status, sync-run history, dead-letter retry. -->
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel Spacing="12" Padding="16">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                       <FontIcon Glyph="&#xE895;"
@@ -655,11 +635,7 @@
 
                 <!-- Sync log explorer: per-channel synchronization log lines (last 24h), filterable by level. -->
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel Spacing="12" Padding="16">
                     <Grid>
                       <Grid.ColumnDefinitions>

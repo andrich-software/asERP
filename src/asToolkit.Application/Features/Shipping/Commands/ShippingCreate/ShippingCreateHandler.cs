@@ -1,7 +1,9 @@
 using asToolkit.Application.Contracts.Infrastructure;
 using asToolkit.Application.Contracts.Logging;
 using asToolkit.Application.Contracts.Persistence;
+using asToolkit.Application.Contracts.Services;
 using asToolkit.Application.Mediator;
+using asToolkit.Domain.Dtos.Shipping;
 using asToolkit.Domain.Entities;
 using asToolkit.Domain.Enums;
 using asToolkit.Domain.Wrapper;
@@ -14,23 +16,26 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
     private readonly ISalesRepository _salesRepository;
     private readonly IShippingRepository _shippingRepository;
     private readonly IShippingProviderRateRepository _shippingProviderRateRepository;
-    private readonly ICountryRepository _countryRepository;
+    private readonly IShippingDestinationResolver _destinationResolver;
     private readonly IShippingCarrierService _shippingCarrierService;
+    private readonly ISalesShippingStatusService _salesShippingStatusService;
 
     public ShippingCreateHandler(
         IAppLogger<ShippingCreateHandler> logger,
         ISalesRepository salesRepository,
         IShippingRepository shippingRepository,
         IShippingProviderRateRepository shippingProviderRateRepository,
-        ICountryRepository countryRepository,
-        IShippingCarrierService shippingCarrierService)
+        IShippingDestinationResolver destinationResolver,
+        IShippingCarrierService shippingCarrierService,
+        ISalesShippingStatusService salesShippingStatusService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _salesRepository = salesRepository ?? throw new ArgumentNullException(nameof(salesRepository));
         _shippingRepository = shippingRepository ?? throw new ArgumentNullException(nameof(shippingRepository));
         _shippingProviderRateRepository = shippingProviderRateRepository ?? throw new ArgumentNullException(nameof(shippingProviderRateRepository));
-        _countryRepository = countryRepository ?? throw new ArgumentNullException(nameof(countryRepository));
+        _destinationResolver = destinationResolver ?? throw new ArgumentNullException(nameof(destinationResolver));
         _shippingCarrierService = shippingCarrierService ?? throw new ArgumentNullException(nameof(shippingCarrierService));
+        _salesShippingStatusService = salesShippingStatusService ?? throw new ArgumentNullException(nameof(salesShippingStatusService));
     }
 
     public async Task<Result<Guid>> Handle(ShippingCreateCommand request, CancellationToken cancellationToken)
@@ -85,23 +90,43 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
                 return Result<Guid>.Fail(ResultStatusCode.BadRequest, limitError);
             }
 
-            var salesItems = new List<SalesItem>();
-            foreach (var itemId in request.SalesItemIds.Distinct())
+            var assignments = request.SalesItemIds.Distinct()
+                .Select(id => new SalesItemAssignment(id, null))
+                .Concat(request.Items.Select(i => new SalesItemAssignment(i.SalesItemId, i.Quantity)))
+                .ToList();
+
+            foreach (var assignment in assignments)
             {
-                var item = sales.SalesItems.FirstOrDefault(i => i.Id == itemId);
+                var item = sales.SalesItems.FirstOrDefault(i => i.Id == assignment.SalesItemId);
                 if (item == null)
                 {
                     return Result<Guid>.Fail(ResultStatusCode.BadRequest,
-                        $"Sales item {itemId} does not belong to this sales order.");
+                        $"Sales item {assignment.SalesItemId} does not belong to this sales order.");
                 }
 
                 if (item.ShippingId != null)
                 {
                     return Result<Guid>.Fail(ResultStatusCode.BadRequest,
-                        $"Sales item {itemId} is already assigned to another shipment.");
+                        $"Sales item {assignment.SalesItemId} is already assigned to another shipment.");
                 }
 
-                salesItems.Add(item);
+                if (assignment.Quantity is not double quantity)
+                {
+                    continue;
+                }
+
+                if (quantity > item.Quantity + SalesItemAssignment.QuantityTolerance)
+                {
+                    return Result<Guid>.Fail(ResultStatusCode.BadRequest,
+                        $"The requested quantity ({quantity}) for sales item {assignment.SalesItemId} exceeds the open quantity ({item.Quantity}).");
+                }
+
+                // A split would have to divide serial-number rows arbitrarily — force whole lines.
+                if (quantity < item.Quantity - SalesItemAssignment.QuantityTolerance && item.SerialNumbers.Any())
+                {
+                    return Result<Guid>.Fail(ResultStatusCode.BadRequest,
+                        $"Sales item {assignment.SalesItemId} has serial numbers and must be shipped as a whole line.");
+                }
             }
 
             var shippingToCreate = new Domain.Entities.Shipping
@@ -123,13 +148,12 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
             await _shippingRepository.CreateAsync(shippingToCreate);
 
             // The sales aggregate is loaded untracked — stamp the items via a tracked update.
-            await _shippingRepository.AssignSalesItemsAsync(
-                shippingToCreate.Id,
-                salesItems.Select(i => i.Id).ToList());
+            await _shippingRepository.AssignSalesItemsAsync(shippingToCreate.Id, assignments);
 
             await _salesRepository.AddSalesHistoryAsync(new SalesHistory
             {
                 SalesId = sales.Id,
+                ShippingId = shippingToCreate.Id,
                 UserId = Guid.Empty,
                 TenantId = sales.TenantId,
                 ShippingStatusOld = null,
@@ -137,6 +161,8 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
                 Description = $"Shipment created ({rate.ShippingProvider.Name} / {rate.Name})",
                 IsSystemGenerated = false
             });
+
+            await _salesShippingStatusService.RecomputeAsync(sales.Id, cancellationToken);
 
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.Created;
@@ -168,21 +194,16 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
         return result;
     }
 
-    /// <summary>Resolves the order's free-text delivery country against the seeded country list and checks the rate allows it.</summary>
+    /// <summary>Resolves the order's delivery country via the shared resolver and checks the rate allows it.</summary>
     private async Task<string?> ValidateDestinationCountryAsync(Domain.Entities.Sales sales, Domain.Entities.ShippingProviderRate rate)
     {
-        var countryString = sales.DeliveryAddressCountry;
-        if (string.IsNullOrWhiteSpace(countryString))
+        var destination = await _destinationResolver.ResolveAsync(sales);
+        if (destination.Error != null)
         {
-            return "The sales order has no delivery country.";
+            return destination.Error;
         }
 
-        var country = await _countryRepository.GetCountryByString(countryString);
-        if (country == null)
-        {
-            return $"The delivery country '{countryString}' could not be resolved to a known country.";
-        }
-
+        var country = destination.Country!;
         if (rate.AllowedCountries.All(c => c.CountryId != country.Id))
         {
             return $"The shipping option '{rate.Name}' does not ship to '{country.Name}'.";

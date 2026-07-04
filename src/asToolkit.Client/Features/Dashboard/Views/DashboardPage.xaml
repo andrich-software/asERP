@@ -8,10 +8,6 @@
       Background="{ThemeResource BackgroundBrush}">
 
   <Page.Resources>
-    <SolidColorBrush x:Key="PositiveChangeBrush" Color="#16A34A" />
-    <SolidColorBrush x:Key="NegativeChangeBrush" Color="#DC2626" />
-    <SolidColorBrush x:Key="CriticalAlertBrush" Color="#DC2626" />
-    <SolidColorBrush x:Key="WarningAlertBrush" Color="#F59E0B" />
   </Page.Resources>
 
   <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -87,11 +83,9 @@
                        Style="{StaticResource LabelSmall}"
                        Foreground="{ThemeResource OnSurfaceVariantBrush}" />
             <TextBlock x:Uid="DashboardPage.Header.Welcome"
-                       Style="{StaticResource HeadlineMedium}"
-                       Foreground="{ThemeResource OnBackgroundBrush}" />
+                       Style="{StaticResource PageTitleTextStyle}" />
             <TextBlock x:Uid="DashboardPage.Header.Subtitle"
-                       Style="{StaticResource BodyMedium}"
-                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                       Style="{StaticResource PageDescriptionTextStyle}"
                        Margin="0,4,0,0" />
           </StackPanel>
 
@@ -239,12 +233,8 @@
             <mvux:FeedView.ValueTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
-                        Padding="20"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        CornerRadius="8"
+                        Padding="20" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <Grid>
                     <Grid.RowDefinitions>
                       <RowDefinition Height="Auto" />
@@ -287,13 +277,26 @@
                                 Grid.ColumnSpan="2"
                                 Orientation="Horizontal"
                                 Margin="0,8,0,0">
-                      <FontIcon Glyph="&#xE74A;"
-                                FontSize="12"
-                                Foreground="{StaticResource PositiveChangeBrush}"
-                                Margin="0,0,4,0" />
-                      <TextBlock Text="{Binding Data.RevenueChangeFormatted}"
-                                 Style="{StaticResource LabelMedium}"
-                                 Foreground="{StaticResource PositiveChangeBrush}" />
+                      <StackPanel Orientation="Horizontal"
+                                  Visibility="{Binding Data.RevenueChangePositive, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <FontIcon Glyph="&#xE74A;"
+                                  FontSize="12"
+                                  Foreground="{ThemeResource StatusChangePositiveBrush}"
+                                  Margin="0,0,4,0" />
+                        <TextBlock Text="{Binding Data.RevenueChangeFormatted}"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource StatusChangePositiveBrush}" />
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal"
+                                  Visibility="{Binding Data.RevenueChangePositive, Converter={StaticResource BoolToInverseVisibilityConverter}}">
+                        <FontIcon Glyph="&#xE74B;"
+                                  FontSize="12"
+                                  Foreground="{ThemeResource StatusChangeNegativeBrush}"
+                                  Margin="0,0,4,0" />
+                        <TextBlock Text="{Binding Data.RevenueChangeFormatted}"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource StatusChangeNegativeBrush}" />
+                      </StackPanel>
                       <TextBlock x:Uid="DashboardPage.KPI.VsLastWeek"
                                  Style="{StaticResource LabelMedium}"
                                  Foreground="{ThemeResource OnSurfaceVariantBrush}"
@@ -315,13 +318,9 @@
             <mvux:FeedView.ProgressTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
+                        CornerRadius="8"
                         Padding="20"
-                        MinHeight="140"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        MinHeight="140" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <ProgressRing IsActive="True"
                                 Width="32"
                                 Height="32"
@@ -333,13 +332,9 @@
             <mvux:FeedView.ErrorTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource ErrorContainerBrush}"
-                        CornerRadius="12"
+                        CornerRadius="8"
                         Padding="12"
-                        MinHeight="140"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        MinHeight="140" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Error loading revenue"
                                Style="{StaticResource BodySmall}"
@@ -367,12 +362,8 @@
             <mvux:FeedView.ValueTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
-                        Padding="20"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        CornerRadius="8"
+                        Padding="20" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <Grid>
                     <Grid.RowDefinitions>
                       <RowDefinition Height="Auto" />
@@ -415,13 +406,26 @@
                                 Grid.ColumnSpan="2"
                                 Orientation="Horizontal"
                                 Margin="0,8,0,0">
-                      <FontIcon Glyph="&#xE74A;"
-                                FontSize="12"
-                                Foreground="{StaticResource PositiveChangeBrush}"
-                                Margin="0,0,4,0" />
-                      <TextBlock Text="{Binding Data.SalessChangeFormatted}"
-                                 Style="{StaticResource LabelMedium}"
-                                 Foreground="{StaticResource PositiveChangeBrush}" />
+                      <StackPanel Orientation="Horizontal"
+                                  Visibility="{Binding Data.SalessChangePositive, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <FontIcon Glyph="&#xE74A;"
+                                  FontSize="12"
+                                  Foreground="{ThemeResource StatusChangePositiveBrush}"
+                                  Margin="0,0,4,0" />
+                        <TextBlock Text="{Binding Data.SalessChangeFormatted}"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource StatusChangePositiveBrush}" />
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal"
+                                  Visibility="{Binding Data.SalessChangePositive, Converter={StaticResource BoolToInverseVisibilityConverter}}">
+                        <FontIcon Glyph="&#xE74B;"
+                                  FontSize="12"
+                                  Foreground="{ThemeResource StatusChangeNegativeBrush}"
+                                  Margin="0,0,4,0" />
+                        <TextBlock Text="{Binding Data.SalessChangeFormatted}"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource StatusChangeNegativeBrush}" />
+                      </StackPanel>
                       <TextBlock x:Uid="DashboardPage.KPI.VsLastWeek"
                                  Style="{StaticResource LabelMedium}"
                                  Foreground="{ThemeResource OnSurfaceVariantBrush}"
@@ -443,13 +447,9 @@
             <mvux:FeedView.ProgressTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
+                        CornerRadius="8"
                         Padding="20"
-                        MinHeight="140"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        MinHeight="140" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <ProgressRing IsActive="True"
                                 Width="32"
                                 Height="32"
@@ -461,13 +461,9 @@
             <mvux:FeedView.ErrorTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource ErrorContainerBrush}"
-                        CornerRadius="12"
+                        CornerRadius="8"
                         Padding="12"
-                        MinHeight="140"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        MinHeight="140" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Error loading saless"
                                Style="{StaticResource BodySmall}"
@@ -495,12 +491,8 @@
             <mvux:FeedView.ValueTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
-                        Padding="20"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        CornerRadius="8"
+                        Padding="20" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <Grid>
                     <Grid.RowDefinitions>
                       <RowDefinition Height="Auto" />
@@ -543,13 +535,26 @@
                                 Grid.ColumnSpan="2"
                                 Orientation="Horizontal"
                                 Margin="0,8,0,0">
-                      <FontIcon Glyph="&#xE74A;"
-                                FontSize="12"
-                                Foreground="{StaticResource PositiveChangeBrush}"
-                                Margin="0,0,4,0" />
-                      <TextBlock Text="{Binding Data.CustomersChangeFormatted}"
-                                 Style="{StaticResource LabelMedium}"
-                                 Foreground="{StaticResource PositiveChangeBrush}" />
+                      <StackPanel Orientation="Horizontal"
+                                  Visibility="{Binding Data.CustomersChangePositive, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <FontIcon Glyph="&#xE74A;"
+                                  FontSize="12"
+                                  Foreground="{ThemeResource StatusChangePositiveBrush}"
+                                  Margin="0,0,4,0" />
+                        <TextBlock Text="{Binding Data.CustomersChangeFormatted}"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource StatusChangePositiveBrush}" />
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal"
+                                  Visibility="{Binding Data.CustomersChangePositive, Converter={StaticResource BoolToInverseVisibilityConverter}}">
+                        <FontIcon Glyph="&#xE74B;"
+                                  FontSize="12"
+                                  Foreground="{ThemeResource StatusChangeNegativeBrush}"
+                                  Margin="0,0,4,0" />
+                        <TextBlock Text="{Binding Data.CustomersChangeFormatted}"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource StatusChangeNegativeBrush}" />
+                      </StackPanel>
                       <TextBlock x:Uid="DashboardPage.KPI.VsLastMonth"
                                  Style="{StaticResource LabelMedium}"
                                  Foreground="{ThemeResource OnSurfaceVariantBrush}"
@@ -571,13 +576,9 @@
             <mvux:FeedView.ProgressTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
+                        CornerRadius="8"
                         Padding="20"
-                        MinHeight="140"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        MinHeight="140" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <ProgressRing IsActive="True"
                                 Width="32"
                                 Height="32"
@@ -589,13 +590,9 @@
             <mvux:FeedView.ErrorTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource ErrorContainerBrush}"
-                        CornerRadius="12"
+                        CornerRadius="8"
                         Padding="12"
-                        MinHeight="140"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        MinHeight="140" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Error loading customers"
                                Style="{StaticResource BodySmall}"
@@ -623,12 +620,8 @@
             <mvux:FeedView.ValueTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
-                        Padding="20"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        CornerRadius="8"
+                        Padding="20" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <Grid>
                     <Grid.RowDefinitions>
                       <RowDefinition Height="Auto" />
@@ -671,13 +664,26 @@
                                 Grid.ColumnSpan="2"
                                 Orientation="Horizontal"
                                 Margin="0,8,0,0">
-                      <FontIcon Glyph="&#xE74B;"
-                                FontSize="12"
-                                Foreground="{StaticResource NegativeChangeBrush}"
-                                Margin="0,0,4,0" />
-                      <TextBlock Text="{Binding Data.ProductsChangeFormatted}"
-                                 Style="{StaticResource LabelMedium}"
-                                 Foreground="{StaticResource NegativeChangeBrush}" />
+                      <StackPanel Orientation="Horizontal"
+                                  Visibility="{Binding Data.ProductsChangePositive, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <FontIcon Glyph="&#xE74A;"
+                                  FontSize="12"
+                                  Foreground="{ThemeResource StatusChangePositiveBrush}"
+                                  Margin="0,0,4,0" />
+                        <TextBlock Text="{Binding Data.ProductsChangeFormatted}"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource StatusChangePositiveBrush}" />
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal"
+                                  Visibility="{Binding Data.ProductsChangePositive, Converter={StaticResource BoolToInverseVisibilityConverter}}">
+                        <FontIcon Glyph="&#xE74B;"
+                                  FontSize="12"
+                                  Foreground="{ThemeResource StatusChangeNegativeBrush}"
+                                  Margin="0,0,4,0" />
+                        <TextBlock Text="{Binding Data.ProductsChangeFormatted}"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource StatusChangeNegativeBrush}" />
+                      </StackPanel>
                       <TextBlock x:Uid="DashboardPage.KPI.VsLastWeek"
                                  Style="{StaticResource LabelMedium}"
                                  Foreground="{ThemeResource OnSurfaceVariantBrush}"
@@ -687,7 +693,7 @@
                                Grid.Column="0"
                                Grid.ColumnSpan="2"
                                Style="{StaticResource BodySmall}"
-                               Foreground="{StaticResource WarningAlertBrush}"
+                               Foreground="{ThemeResource StatusAlertWarningBrush}"
                                Margin="0,4,0,0">
                       <Run Text="{Binding Data.ProductsLowStockFormatted}" />
                       <Run x:Uid="DashboardPage.KPI.LowStockItems" />
@@ -699,13 +705,9 @@
             <mvux:FeedView.ProgressTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
+                        CornerRadius="8"
                         Padding="20"
-                        MinHeight="140"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        MinHeight="140" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <ProgressRing IsActive="True"
                                 Width="32"
                                 Height="32"
@@ -717,13 +719,9 @@
             <mvux:FeedView.ErrorTemplate>
               <DataTemplate>
                 <Border Background="{ThemeResource ErrorContainerBrush}"
-                        CornerRadius="12"
+                        CornerRadius="8"
                         Padding="12"
-                        MinHeight="140"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        MinHeight="140" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Error loading inventory"
                                Style="{StaticResource BodySmall}"
@@ -765,12 +763,8 @@
                   Grid.Row="0"
                   Margin="0,0,8,0"
                   Background="{ThemeResource SurfaceBrush}"
-                  CornerRadius="12"
-                  MinHeight="300"
-                  Translation="0,0,8">
-            <Border.Shadow>
-              <ThemeShadow />
-            </Border.Shadow>
+                  CornerRadius="8"
+                  MinHeight="300" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
             <Grid>
               <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -890,12 +884,8 @@
                   Grid.Row="0"
                   Margin="8,0,0,0"
                   Background="{ThemeResource SurfaceBrush}"
-                  CornerRadius="12"
-                  MinHeight="300"
-                  Translation="0,0,8">
-            <Border.Shadow>
-              <ThemeShadow />
-            </Border.Shadow>
+                  CornerRadius="8"
+                  MinHeight="300" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
             <Grid>
               <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />

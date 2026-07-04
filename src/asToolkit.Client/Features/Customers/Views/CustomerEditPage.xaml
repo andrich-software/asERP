@@ -121,7 +121,7 @@
 
           <!-- Loading Overlay -->
           <Border Background="{ThemeResource SurfaceBrush}"
-                  CornerRadius="12"
+                  CornerRadius="8"
                   Padding="24"
                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center"
@@ -288,7 +288,7 @@
                                     Spacing="8"
                                     Margin="0,0,0,8">
                           <!-- Delivery Address Badge -->
-                          <Border CornerRadius="12"
+                          <Border CornerRadius="8"
                                   Padding="10,4"
                                   Background="{ThemeResource PrimaryContainerBrush}"
                                   Visibility="{Binding DefaultDeliveryAddress, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -304,7 +304,7 @@
                           </Border>
 
                           <!-- Invoice Address Badge -->
-                          <Border CornerRadius="12"
+                          <Border CornerRadius="8"
                                   Padding="10,4"
                                   Background="{ThemeResource TertiaryContainerBrush}"
                                   Visibility="{Binding DefaultInvoiceAddress, Converter={StaticResource BoolToVisibilityConverter}}">

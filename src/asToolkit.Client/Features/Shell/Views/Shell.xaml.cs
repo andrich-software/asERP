@@ -67,6 +67,19 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
         TabBarNav.SelectionChanged += OnTabBarSelectionChanged;
         this.Loaded += OnShellLoaded;
+
+        // Ctrl+K focuses the sidebar quick search (Cloudflare-style shortcut)
+        var quickSearchAccelerator = new Microsoft.UI.Xaml.Input.KeyboardAccelerator
+        {
+            Key = Windows.System.VirtualKey.K,
+            Modifiers = Windows.System.VirtualKeyModifiers.Control
+        };
+        quickSearchAccelerator.Invoked += (_, args) =>
+        {
+            QuickSearchBox.Focus(FocusState.Programmatic);
+            args.Handled = true;
+        };
+        KeyboardAccelerators.Add(quickSearchAccelerator);
     }
 
     private void OnUserActivity(object sender, RoutedEventArgs e)
@@ -85,6 +98,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             { "Products", NavItemProducts },
             { "Manufacturers", NavItemManufacturers },
             { "Saless", NavItemSaless },
+            { "Shippings", NavItemShippings },
             { "Invoices", NavItemInvoices },
             { "StatisticsRevenue", NavItemRevenue },
             { "SalesChannelOverview", NavItemSalesChannels },
@@ -112,8 +126,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
         if (_activeNavButton != null)
         {
-            _activeNavButton.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-            _activeNavButton.ClearValue(Button.FontWeightProperty);
+            _activeNavButton.Style = (Style)Resources["SidebarNavItemStyle"];
         }
 
         _activeNavButton = null;
@@ -132,10 +145,9 @@ public sealed partial class Shell : UserControl, IContentControlProvider
 
         if (btn != null)
         {
-            if (Application.Current.Resources["PrimaryContainerBrush"] is Brush highlight)
-            {
-                btn.Background = highlight;
-            }
+            // Style switch instead of a Resources[] lookup: the indexer does not resolve
+            // ThemeDictionaries theme-aware, ThemeResource inside the style does.
+            btn.Style = (Style)Resources["SidebarNavItemActiveStyle"];
             _activeNavButton = btn;
         }
     }
@@ -427,6 +439,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                     if (shellModel.IsAuthenticated)
                     {
                         UpdateTenantDisplay();
+                        await CompleteSessionRestoreAsync(app.Host.Services);
                     }
 
                     InitializeDarkModeToggle();
@@ -442,6 +455,59 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                 Console.WriteLine($"[Shell] Exception getting ShellModel (attempt {retry + 1}): {ex.Message}");
                 await Task.Delay(retryDelayMs);
             }
+        }
+    }
+
+    /// <summary>
+    /// Completes a restored session (token from storage still valid). Such sessions skip
+    /// the login/refresh-token responses that normally populate the tenant list and
+    /// trigger the initial navigation — without this, the shell sits authenticated on an
+    /// empty content pane. Loads the tenants if missing, then navigates to the dashboard
+    /// (or shows the first-tenant overlay). Never throws: OnShellLoaded's retry loop must
+    /// not re-run its setup because of a failed restore.
+    /// </summary>
+    private async Task CompleteSessionRestoreAsync(IServiceProvider services)
+    {
+        try
+        {
+            var shellModel = services.GetRequiredService<ShellModel>();
+            var tenantContext = services.GetRequiredService<ITenantContextService>();
+
+            var hasTenants = tenantContext.AvailableTenants.Count > 0;
+            if (!hasTenants)
+            {
+                try
+                {
+                    hasTenants = await tenantContext.RefreshTenantsAndCheckAvailabilityAsync();
+                }
+                catch (Exception ex)
+                {
+                    // Offline/server trouble is inconclusive: prefer the dashboard (it
+                    // surfaces its own errors) over wrongly claiming the user has no
+                    // tenants and showing the first-tenant overlay.
+                    Console.WriteLine($"[Shell] Tenant refresh on session restore failed: {ex.Message}");
+                    hasTenants = true;
+                }
+
+                UpdateTenantDisplay();
+            }
+
+            if (!hasTenants)
+            {
+                shellModel.UpdateNoTenantsState(true);
+                return;
+            }
+
+            var navigator = Splash.Navigator() ?? services.GetService<INavigator>();
+            if (navigator != null)
+            {
+                await NavigateToDashboardAsync(navigator);
+                UpdateSidebarSelection("Dashboard");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Shell] CompleteSessionRestoreAsync failed: {ex.Message}");
         }
     }
 

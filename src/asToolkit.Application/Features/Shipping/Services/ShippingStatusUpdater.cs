@@ -90,6 +90,7 @@ public class ShippingStatusUpdater : IShippingStatusUpdater
         await _salesRepository.AddSalesHistoryAsync(new SalesHistory
         {
             SalesId = shipping.SalesId,
+            ShippingId = shipping.Id,
             UserId = userId ?? Guid.Empty,
             TenantId = shipping.TenantId,
             ShippingStatusOld = oldStatus.ToString(),

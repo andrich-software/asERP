@@ -137,7 +137,7 @@
 
           <!-- Loading Overlay -->
           <Border Background="{ThemeResource SurfaceBrush}"
-                  CornerRadius="12"
+                  CornerRadius="8"
                   Padding="24"
                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center"
@@ -170,11 +170,7 @@
                     Grid.Row="0"
                     Margin="0,0,8,16"
                     Background="{ThemeResource SurfaceBrush}"
-                    CornerRadius="12"
-                    Translation="0,0,8">
-              <Border.Shadow>
-                <ThemeShadow />
-              </Border.Shadow>
+                    CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
               <StackPanel Spacing="0">
                 <!-- Card Header -->
                 <Grid Padding="16,16,16,8">
@@ -236,11 +232,7 @@
                     Grid.Row="0"
                     Margin="8,0,0,16"
                     Background="{ThemeResource SurfaceBrush}"
-                    CornerRadius="12"
-                    Translation="0,0,8">
-              <Border.Shadow>
-                <ThemeShadow />
-              </Border.Shadow>
+                    CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
               <StackPanel Spacing="0">
                 <!-- Card Header -->
                 <Grid Padding="16,16,16,8">
@@ -278,11 +270,7 @@
                     Grid.Row="1"
                     Margin="0,0,8,0"
                     Background="{ThemeResource SurfaceBrush}"
-                    CornerRadius="12"
-                    Translation="0,0,8">
-              <Border.Shadow>
-                <ThemeShadow />
-              </Border.Shadow>
+                    CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
               <StackPanel Spacing="0">
                 <!-- Card Header -->
                 <Grid Padding="16,16,16,8">

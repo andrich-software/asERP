@@ -3,6 +3,7 @@ using asToolkit.Client.Features.Invoices.Models;
 using asToolkit.Client.Features.Products.Models;
 using asToolkit.Client.Features.Saless;
 using asToolkit.Client.Features.Search.Services;
+using asToolkit.Client.Features.Shippings;
 using asToolkit.Domain.Dtos.Search;
 using asToolkit.Domain.Enums;
 
@@ -55,6 +56,9 @@ public partial record SearchResultsModel
                 break;
             case SearchEntityType.Product:
                 await _navigator.NavigateDataAsync(this, new ProductDetailData(hit.Id));
+                break;
+            case SearchEntityType.Shipping:
+                await _navigator.NavigateDataAsync(this, new ShippingDetailData(hit.Id));
                 break;
         }
     }

@@ -258,18 +258,14 @@
                     <ItemsRepeater.ItemTemplate>
                       <DataTemplate>
                         <Border Background="{ThemeResource SurfaceBrush}"
-                                CornerRadius="12"
-                                Padding="16"
-                                Translation="0,0,8">
-                          <Border.Shadow>
-                            <ThemeShadow />
-                          </Border.Shadow>
+                                CornerRadius="8"
+                                Padding="16" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                           <StackPanel Spacing="8">
                             <!-- Address Type Badges -->
                             <StackPanel Orientation="Horizontal"
                                         Spacing="8">
                               <!-- Delivery Address Badge -->
-                              <Border CornerRadius="12"
+                              <Border CornerRadius="8"
                                       Padding="10,4"
                                       Background="{ThemeResource PrimaryContainerBrush}"
                                       Visibility="{Binding DefaultDeliveryAddress, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -285,7 +281,7 @@
                               </Border>
 
                               <!-- Invoice Address Badge -->
-                              <Border CornerRadius="12"
+                              <Border CornerRadius="8"
                                       Padding="10,4"
                                       Background="{ThemeResource TertiaryContainerBrush}"
                                       Visibility="{Binding DefaultInvoiceAddress, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -360,8 +356,8 @@
 
                             <!-- Table Header -->
                             <Border Grid.Row="0"
-                                    Background="{ThemeResource SurfaceVariantBrush}"
-                                    CornerRadius="12,12,0,0"
+                                    Background="{ThemeResource SurfaceBrush}"
+                                    CornerRadius="8,8,0,0"
                                     BorderBrush="{ThemeResource OutlineVariantBrush}"
                                     BorderThickness="0,0,0,1">
                               <Grid Padding="16,12">
@@ -475,7 +471,7 @@
                     <mvux:FeedView.ErrorTemplate>
                       <DataTemplate>
                         <Border Background="{ThemeResource SurfaceVariantBrush}"
-                                CornerRadius="12"
+                                CornerRadius="8"
                                 Padding="24">
                           <TextBlock x:Uid="CustomerDetailPage.SalessLoadError"
                                      Style="{StaticResource BodyMedium}"

@@ -1,4 +1,4 @@
-﻿using asToolkit.Domain.Enums;
+using asToolkit.Domain.Enums;
 
 namespace asToolkit.Domain.Dtos.Search;
 
@@ -12,6 +12,7 @@ public class GlobalSearchResultDto
     public List<GlobalSearchHitDto> Sales { get; set; } = new();
     public List<GlobalSearchHitDto> Invoices { get; set; } = new();
     public List<GlobalSearchHitDto> Products { get; set; } = new();
+    public List<GlobalSearchHitDto> Shippings { get; set; } = new();
 
     /// <summary>Total number of hits across all types.</summary>
     public int TotalCount { get; set; }

@@ -426,6 +426,15 @@
   <data name="CustomerListPage.NavigationBar.Content" xml:space="preserve">
     <value>Kunden</value>
   </data>
+  <data name="CustomerListPage.PageHeader.Title" xml:space="preserve">
+    <value>Kunden</value>
+  </data>
+  <data name="CustomerListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie Ihre Kunden, Adressen und Kontaktdaten.</value>
+  </data>
+  <data name="CustomerListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Kunde erstellen</value>
+  </data>
   <data name="CustomerListPage.AppBarButton.Refresh.Label" xml:space="preserve">
     <value>Aktualisieren</value>
   </data>
@@ -1887,6 +1896,15 @@
   <data name="SalesChannelOverviewPage.AppBarButton.ManageList.ToolTip" xml:space="preserve">
     <value>Vertriebskanäle anlegen und bearbeiten</value>
   </data>
+  <data name="SalesChannelOverviewPage.PageHeader.Title" xml:space="preserve">
+    <value>Vertriebskanäle</value>
+  </data>
+  <data name="SalesChannelOverviewPage.PageHeader.Description" xml:space="preserve">
+    <value>Live-Übersicht über alle Vertriebskanäle und deren Umsatzzahlen.</value>
+  </data>
+  <data name="SalesChannelOverviewPage.HeaderButton.ManageList.Content" xml:space="preserve">
+    <value>Verwalten</value>
+  </data>
   <data name="SalesChannelOverviewPage.Header.Breadcrumb.Text" xml:space="preserve">
     <value>VERTRIEB &#8250; ÜBERSICHT</value>
   </data>
@@ -3054,7 +3072,7 @@
     <value>Versandbereit</value>
   </data>
   <data name="SalesStatus.PartiallyDelivered" xml:space="preserve">
-    <value>Teilweise geliefert</value>
+    <value>Teilversand</value>
   </data>
   <data name="SalesStatus.Completed" xml:space="preserve">
     <value>Abgeschlossen</value>
@@ -3072,6 +3090,58 @@
     <value>Pausiert</value>
   </data>
   <data name="SalesStatus.Failed" xml:space="preserve">
+    <value>Fehlgeschlagen</value>
+  </data>
+
+  <!-- Shipping Status (enum member "InProgess" is misspelled in code — key must match) -->
+  <data name="ShippingStatus.Open" xml:space="preserve">
+    <value>Offen</value>
+  </data>
+  <data name="ShippingStatus.InProgess" xml:space="preserve">
+    <value>In Bearbeitung</value>
+  </data>
+  <data name="ShippingStatus.ReadyForShipping" xml:space="preserve">
+    <value>Versandbereit</value>
+  </data>
+  <data name="ShippingStatus.Shipped" xml:space="preserve">
+    <value>Versendet</value>
+  </data>
+  <data name="ShippingStatus.Delivered" xml:space="preserve">
+    <value>Zugestellt</value>
+  </data>
+  <data name="ShippingStatus.Cancelled" xml:space="preserve">
+    <value>Storniert</value>
+  </data>
+  <data name="ShippingStatus.LabelCreated" xml:space="preserve">
+    <value>Label erstellt</value>
+  </data>
+  <data name="ShippingStatus.InTransit" xml:space="preserve">
+    <value>Unterwegs</value>
+  </data>
+  <data name="ShippingStatus.OutForDelivery" xml:space="preserve">
+    <value>In Zustellung</value>
+  </data>
+  <data name="ShippingStatus.DeliveryFailed" xml:space="preserve">
+    <value>Zustellung fehlgeschlagen</value>
+  </data>
+  <data name="ShippingStatus.ReturnedToSender" xml:space="preserve">
+    <value>Retour an Absender</value>
+  </data>
+  <data name="ShippingStatus.Lost" xml:space="preserve">
+    <value>Verloren</value>
+  </data>
+
+  <!-- Shipping Label Outbox Status -->
+  <data name="ShippingOutboxStatus.Pending" xml:space="preserve">
+    <value>Wird erstellt</value>
+  </data>
+  <data name="ShippingOutboxStatus.InFlight" xml:space="preserve">
+    <value>Wird erstellt</value>
+  </data>
+  <data name="ShippingOutboxStatus.Done" xml:space="preserve">
+    <value>Erstellt</value>
+  </data>
+  <data name="ShippingOutboxStatus.DeadLetter" xml:space="preserve">
     <value>Fehlgeschlagen</value>
   </data>
 
@@ -4678,5 +4748,408 @@
   </data>
   <data name="ProductDetailPage.TabVariants.Content" xml:space="preserve">
     <value>Varianten</value>
+  </data>
+
+  <!-- Cloudflare-style PageHeader (list pages) -->
+  <data name="AiModelListPage.PageHeader.Title" xml:space="preserve">
+    <value>KI-Modelle</value>
+  </data>
+  <data name="AiModelListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie die verfügbaren KI-Modelle und deren Konfiguration.</value>
+  </data>
+  <data name="AiModelListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>KI-Modell erstellen</value>
+  </data>
+  <data name="AiPromptListPage.PageHeader.Title" xml:space="preserve">
+    <value>KI-Prompts</value>
+  </data>
+  <data name="AiPromptListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie wiederverwendbare Prompt-Vorlagen für KI-gestützte Funktionen.</value>
+  </data>
+  <data name="AiPromptListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>KI-Prompt erstellen</value>
+  </data>
+  <data name="InvoiceListPage.PageHeader.Title" xml:space="preserve">
+    <value>Rechnungen</value>
+  </data>
+  <data name="InvoiceListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie Ihre Rechnungen und behalten Sie Beträge und Status im Blick.</value>
+  </data>
+  <data name="InvoiceListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Rechnung erstellen</value>
+  </data>
+  <data name="ManufacturerListPage.PageHeader.Title" xml:space="preserve">
+    <value>Hersteller</value>
+  </data>
+  <data name="ManufacturerListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie die Hersteller Ihrer Produkte und deren Stammdaten.</value>
+  </data>
+  <data name="ManufacturerListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Hersteller erstellen</value>
+  </data>
+  <data name="ProductAttributeListPage.PageHeader.Title" xml:space="preserve">
+    <value>Produkt-Attribute</value>
+  </data>
+  <data name="ProductAttributeListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie Produkt-Attribute und deren Werte für Varianten und Filter.</value>
+  </data>
+  <data name="ProductAttributeListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Produkt-Attribut erstellen</value>
+  </data>
+  <data name="ProductListPage.PageHeader.Title" xml:space="preserve">
+    <value>Produkte</value>
+  </data>
+  <data name="ProductListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie Ihren Produktkatalog mit Preisen, Herstellern und Varianten.</value>
+  </data>
+  <data name="ProductListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Produkt erstellen</value>
+  </data>
+  <data name="SalesListPage.PageHeader.Title" xml:space="preserve">
+    <value>Verkäufe</value>
+  </data>
+  <data name="SalesListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie Ihre Verkaufsaufträge und behalten Sie Status, Kunden und Beträge im Blick.</value>
+  </data>
+  <data name="SalesListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Verkauf erstellen</value>
+  </data>
+  <data name="SalesChannelListPage.PageHeader.Title" xml:space="preserve">
+    <value>Vertriebskanäle</value>
+  </data>
+  <data name="SalesChannelListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie Ihre angebundenen Vertriebskanäle wie Shops, Marktplätze und Kassensysteme.</value>
+  </data>
+  <data name="SalesChannelListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Vertriebskanal erstellen</value>
+  </data>
+  <data name="SuperadminTenantListPage.PageHeader.Title" xml:space="preserve">
+    <value>Alle Mandanten</value>
+  </data>
+  <data name="SuperadminTenantListPage.PageHeader.Description" xml:space="preserve">
+    <value>Übersicht über alle Mandanten des Systems für die mandantenübergreifende Verwaltung.</value>
+  </data>
+  <data name="TaxClassListPage.PageHeader.Title" xml:space="preserve">
+    <value>Steuerklassen</value>
+  </data>
+  <data name="TaxClassListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie die Steuersätze, die Ihren Produkten zugeordnet werden.</value>
+  </data>
+  <data name="TaxClassListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Steuerklasse erstellen</value>
+  </data>
+  <data name="TenantListPage.PageHeader.Title" xml:space="preserve">
+    <value>Mandanten</value>
+  </data>
+  <data name="TenantListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie Ihre Mandanten und deren Firmendaten.</value>
+  </data>
+  <data name="TenantListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Mandant erstellen</value>
+  </data>
+  <data name="WarehouseListPage.PageHeader.Title" xml:space="preserve">
+    <value>Lager</value>
+  </data>
+  <data name="WarehouseListPage.PageHeader.Description" xml:space="preserve">
+    <value>Verwalten Sie Ihre Lagerstandorte für die Bestandsführung.</value>
+  </data>
+  <data name="WarehouseListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Lager erstellen</value>
+  </data>
+
+  <!-- Shippings feature -->
+  <data name="Shell.NavItem.Shippings.Text" xml:space="preserve">
+    <value>Sendungen</value>
+  </data>
+  <data name="SearchType.Shipping" xml:space="preserve">
+    <value>Sendung</value>
+  </data>
+  <data name="SearchResultsPage.Shipments.Text" xml:space="preserve">
+    <value>Sendungen</value>
+  </data>
+  <data name="Common.Confirm" xml:space="preserve">
+    <value>Bestätigen</value>
+  </data>
+  <data name="Pagination.ShippingsSingular" xml:space="preserve">
+    <value>1 Sendung</value>
+  </data>
+  <data name="Pagination.ShippingsPlural" xml:space="preserve">
+    <value>{0} Sendungen</value>
+  </data>
+  <data name="ShippingListPage.PageHeader.Title" xml:space="preserve">
+    <value>Sendungen</value>
+  </data>
+  <data name="ShippingListPage.PageHeader.Description" xml:space="preserve">
+    <value>Alle Sendungen suchen, filtern und verfolgen.</value>
+  </data>
+  <data name="ShippingListPage.SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Sendungen suchen...</value>
+  </data>
+  <data name="ShippingListPage.StatusFilterAll" xml:space="preserve">
+    <value>Alle Status</value>
+  </data>
+  <data name="ShippingListPage.ProblemsOnly.Header" xml:space="preserve">
+    <value>Nur Probleme</value>
+  </data>
+  <data name="ShippingListPage.Header.ShippedAt.Text" xml:space="preserve">
+    <value>Versanddatum</value>
+  </data>
+  <data name="ShippingListPage.Header.Recipient.Text" xml:space="preserve">
+    <value>Empfänger</value>
+  </data>
+  <data name="ShippingListPage.Header.SalesNumber.Text" xml:space="preserve">
+    <value>Bestellnr.</value>
+  </data>
+  <data name="ShippingListPage.Header.Provider.Text" xml:space="preserve">
+    <value>Anbieter</value>
+  </data>
+  <data name="ShippingListPage.Header.TrackingNumber.Text" xml:space="preserve">
+    <value>Sendungsnummer</value>
+  </data>
+  <data name="ShippingListPage.Header.Status.Text" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="ShippingListPage.CopyTracking.ToolTip" xml:space="preserve">
+    <value>Sendungsnummer kopieren</value>
+  </data>
+  <data name="ShippingListPage.TrackingCopied" xml:space="preserve">
+    <value>Sendungsnummer kopiert</value>
+  </data>
+  <data name="ShippingListPage.NoShippings.Message" xml:space="preserve">
+    <value>Keine Sendungen gefunden</value>
+  </data>
+  <data name="ShippingListPage.LoadError.Message" xml:space="preserve">
+    <value>Sendungen konnten nicht geladen werden</value>
+  </data>
+  <data name="ShippingListPage.PreviousPage.ToolTip" xml:space="preserve">
+    <value>Vorherige Seite</value>
+  </data>
+  <data name="ShippingListPage.NextPage.ToolTip" xml:space="preserve">
+    <value>Nächste Seite</value>
+  </data>
+  <data name="ShippingListPage.ItemsPerPage.Text" xml:space="preserve">
+    <value>Einträge pro Seite:</value>
+  </data>
+  <data name="ShippingDetailPage.NavigationBar.Content" xml:space="preserve">
+    <value>Sendungsdetails</value>
+  </data>
+  <data name="ShippingDetailPage.AppBarButton.Back.Label" xml:space="preserve">
+    <value>Zurück</value>
+  </data>
+  <data name="ShippingDetailPage.FallbackTitle.Text" xml:space="preserve">
+    <value>Sendung</value>
+  </data>
+  <data name="ShippingDetailPage.Label.SalesNumber.Text" xml:space="preserve">
+    <value>Bestellung #</value>
+  </data>
+  <data name="ShippingDetailPage.ActionOpenTracking.Content" xml:space="preserve">
+    <value>Tracking öffnen</value>
+  </data>
+  <data name="ShippingDetailPage.ActionOpenLabel.Content" xml:space="preserve">
+    <value>Label öffnen</value>
+  </data>
+  <data name="ShippingDetailPage.ActionRetryLabel.Content" xml:space="preserve">
+    <value>Label erneut anfordern</value>
+  </data>
+  <data name="ShippingDetailPage.ActionCancel.Content" xml:space="preserve">
+    <value>Sendung stornieren</value>
+  </data>
+  <data name="ShippingDetailPage.CancelConfirmTitle" xml:space="preserve">
+    <value>Sendung stornieren?</value>
+  </data>
+  <data name="ShippingDetailPage.CancelConfirmMessage" xml:space="preserve">
+    <value>Die Sendung wird beim Versanddienstleister storniert und die enthaltenen Artikel werden wieder freigegeben.</value>
+  </data>
+  <data name="ShippingDetailPage.CancelSuccess" xml:space="preserve">
+    <value>Sendung wurde storniert</value>
+  </data>
+  <data name="ShippingDetailPage.RetrySuccess" xml:space="preserve">
+    <value>Label wurde erneut angefordert</value>
+  </data>
+  <data name="ShippingDetailPage.Section.LabelQueue.Header" xml:space="preserve">
+    <value>Label-Erstellung</value>
+  </data>
+  <data name="ShippingDetailPage.LabelQueueInfo.Text" xml:space="preserve">
+    <value>Das Versandlabel wird über die Hintergrund-Warteschlange erstellt.</value>
+  </data>
+  <data name="ShippingDetailPage.Section.ShipmentData.Header" xml:space="preserve">
+    <value>Sendungsdaten</value>
+  </data>
+  <data name="ShippingDetailPage.Section.History.Header" xml:space="preserve">
+    <value>Verlauf</value>
+  </data>
+  <data name="ShippingDetailPage.Field.Provider.Text" xml:space="preserve">
+    <value>Anbieter</value>
+  </data>
+  <data name="ShippingDetailPage.Field.Rate.Text" xml:space="preserve">
+    <value>Versandoption</value>
+  </data>
+  <data name="ShippingDetailPage.Field.Cost.Text" xml:space="preserve">
+    <value>Versandkosten</value>
+  </data>
+  <data name="ShippingDetailPage.Field.Weight.Text" xml:space="preserve">
+    <value>Gewicht (kg)</value>
+  </data>
+  <data name="ShippingDetailPage.Field.Length.Text" xml:space="preserve">
+    <value>Länge (cm)</value>
+  </data>
+  <data name="ShippingDetailPage.Field.Width.Text" xml:space="preserve">
+    <value>Breite (cm)</value>
+  </data>
+  <data name="ShippingDetailPage.Field.Height.Text" xml:space="preserve">
+    <value>Höhe (cm)</value>
+  </data>
+  <data name="ShippingDetailPage.Field.TrackingNumber.Text" xml:space="preserve">
+    <value>Sendungsnummer</value>
+  </data>
+  <data name="ShippingDetailPage.Field.CarrierShipmentId.Text" xml:space="preserve">
+    <value>Carrier-Sendungs-ID</value>
+  </data>
+  <data name="ShippingDetailPage.Field.ShippedAt.Text" xml:space="preserve">
+    <value>Versendet am</value>
+  </data>
+  <data name="ShippingDetailPage.Field.DeliveredAt.Text" xml:space="preserve">
+    <value>Zugestellt am</value>
+  </data>
+  <data name="ShippingDetailPage.Field.LastTrackedAt.Text" xml:space="preserve">
+    <value>Zuletzt getrackt</value>
+  </data>
+  <data name="ShippingDetailPage.Field.LastCarrierStatusRaw.Text" xml:space="preserve">
+    <value>Carrier-Status (roh)</value>
+  </data>
+  <data name="ShippingDetailPage.EmptyHistory.Title" xml:space="preserve">
+    <value>Kein Verlauf</value>
+  </data>
+  <data name="ShippingDetailPage.EmptyHistory.Message" xml:space="preserve">
+    <value>Für diese Sendung gibt es noch keine Einträge.</value>
+  </data>
+  <data name="ShippingDetailPage.LoadError.Text" xml:space="preserve">
+    <value>Sendung konnte nicht geladen werden</value>
+  </data>
+  <data name="LabelAction.Save.Content" xml:space="preserve">
+    <value>Label speichern</value>
+  </data>
+  <data name="LabelAction.Download.Content" xml:space="preserve">
+    <value>Label herunterladen</value>
+  </data>
+  <data name="LabelAction.Print.Content" xml:space="preserve">
+    <value>Label drucken</value>
+  </data>
+  <data name="LabelAction.Open.Content" xml:space="preserve">
+    <value>Label öffnen</value>
+  </data>
+  <data name="LabelAction.Saved" xml:space="preserve">
+    <value>Label gespeichert</value>
+  </data>
+  <data name="LabelAction.Downloaded" xml:space="preserve">
+    <value>Label heruntergeladen</value>
+  </data>
+  <data name="LabelAction.Printed" xml:space="preserve">
+    <value>Label gedruckt</value>
+  </data>
+  <data name="LabelAction.Failed" xml:space="preserve">
+    <value>Label-Aktion fehlgeschlagen</value>
+  </data>
+  <data name="LabelAction.PrinterLabel" xml:space="preserve">
+    <value>Drucker</value>
+  </data>
+  <data name="SalesDetailPage.HeaderAction.Ship.Content" xml:space="preserve">
+    <value>Versenden</value>
+  </data>
+  <data name="SalesDetailPage.HeaderAction.CancelSales.Content" xml:space="preserve">
+    <value>Stornieren</value>
+  </data>
+  <data name="SalesDetailPage.TabShipments.Content" xml:space="preserve">
+    <value>Sendungen</value>
+  </data>
+  <data name="SalesDetailPage.ShipHeader.Status.Text" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="SalesDetailPage.ShipHeader.Tracking.Text" xml:space="preserve">
+    <value>Sendungsnummer</value>
+  </data>
+  <data name="SalesDetailPage.ShipHeader.Provider.Text" xml:space="preserve">
+    <value>Anbieter</value>
+  </data>
+  <data name="SalesDetailPage.ShipHeader.ShippedAt.Text" xml:space="preserve">
+    <value>Versanddatum</value>
+  </data>
+  <data name="SalesDetailPage.ShipRowLabel.ToolTip" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="SalesDetailPage.ShipRowCancel.ToolTip" xml:space="preserve">
+    <value>Sendung stornieren</value>
+  </data>
+  <data name="SalesDetailPage.NoShipments.Title" xml:space="preserve">
+    <value>Keine Sendungen</value>
+  </data>
+  <data name="SalesDetailPage.NoShipments.Message" xml:space="preserve">
+    <value>Für diese Bestellung wurden noch keine Sendungen erstellt.</value>
+  </data>
+  <data name="SalesDetailPage.CancelSalesConfirmTitle" xml:space="preserve">
+    <value>Bestellung stornieren?</value>
+  </data>
+  <data name="SalesDetailPage.CancelSalesConfirmMessage" xml:space="preserve">
+    <value>Die Bestellung wird storniert und offene Sendungen werden beim Versanddienstleister storniert.</value>
+  </data>
+  <data name="SalesDetailPage.CancelSalesSuccess" xml:space="preserve">
+    <value>Bestellung wurde storniert</value>
+  </data>
+  <data name="SalesDetailPage.CancelShipmentConfirmTitle" xml:space="preserve">
+    <value>Sendung stornieren?</value>
+  </data>
+  <data name="SalesDetailPage.CancelShipmentConfirmMessage" xml:space="preserve">
+    <value>Die Sendung wird beim Versanddienstleister storniert und die enthaltenen Artikel werden wieder freigegeben.</value>
+  </data>
+  <data name="CreateShipmentDialog.Title.Text" xml:space="preserve">
+    <value>Sendung erstellen</value>
+  </data>
+  <data name="CreateShipmentDialog.Items.Text" xml:space="preserve">
+    <value>Positionen</value>
+  </data>
+  <data name="CreateShipmentDialog.Rate.Header" xml:space="preserve">
+    <value>Versandoption</value>
+  </data>
+  <data name="CreateShipmentDialog.Weight.Header" xml:space="preserve">
+    <value>Gewicht (kg)</value>
+  </data>
+  <data name="CreateShipmentDialog.RequestLabel.Header" xml:space="preserve">
+    <value>Label anfordern</value>
+  </data>
+  <data name="CreateShipmentDialog.RememberAction.Content" xml:space="preserve">
+    <value>Aktion merken</value>
+  </data>
+  <data name="CreateShipmentDialog.Create.Content" xml:space="preserve">
+    <value>Sendung erstellen</value>
+  </data>
+  <data name="CreateShipmentDialog.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="CreateShipmentDialog.Done.Content" xml:space="preserve">
+    <value>Fertig</value>
+  </data>
+  <data name="CreateShipmentDialog.LabelReady.Text" xml:space="preserve">
+    <value>Label ist bereit</value>
+  </data>
+  <data name="CreateShipmentDialog.QueuedTitle.Text" xml:space="preserve">
+    <value>Label wird erstellt</value>
+  </data>
+  <data name="CreateShipmentDialog.QueuedMessage.Text" xml:space="preserve">
+    <value>Das Versandlabel wird im Hintergrund erstellt. Den Status finden Sie im Sendungsdetail.</value>
+  </data>
+  <data name="CreateShipmentDialog.DeadLetterHint.Text" xml:space="preserve">
+    <value>Die Label-Erstellung ist fehlgeschlagen. Im Sendungsdetail können Sie sie erneut anstoßen.</value>
+  </data>
+  <data name="CreateShipmentDialog.StockHint" xml:space="preserve">
+    <value>Bestand: {0}</value>
+  </data>
+  <data name="CreateShipmentDialog.NoOptions" xml:space="preserve">
+    <value>Keine passenden Versandoptionen verfügbar</value>
+  </data>
+  <data name="CreateShipmentDialog.WeightWarning" xml:space="preserve">
+    <value>Gewicht überschreitet das Maximum der gewählten Versandoption ({0} kg)</value>
+  </data>
+  <data name="CreateShipmentDialog.Created" xml:space="preserve">
+    <value>Sendung erstellt</value>
   </data>
 </root>

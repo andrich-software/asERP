@@ -174,6 +174,7 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
             Id = history.Id,
             UserId = history.UserId,
             SalesId = history.SalesId,
+            ShippingId = history.ShippingId,
             SalesStatusOld = history.SalesStatusOld,
             SalesStatusNew = history.SalesStatusNew,
             PaymentStatusOld = history.PaymentStatusOld,

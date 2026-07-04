@@ -1,4 +1,4 @@
-﻿namespace asToolkit.Domain.Enums;
+namespace asToolkit.Domain.Enums;
 
 /// <summary>
 /// Discriminates the entity type of a global search hit.
@@ -9,4 +9,5 @@ public enum SearchEntityType
     Sales = 2,
     Invoice = 3,
     Product = 4,
+    Shipping = 5,
 }

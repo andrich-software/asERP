@@ -45,5 +45,8 @@ public class ShippingDetailDto
 
     public List<Guid> SalesItemIds { get; set; } = new();
 
+    /// <summary>Tracking timeline of this shipment, newest first.</summary>
+    public List<ShippingHistoryEntryDto> History { get; set; } = new();
+
     public DateTime DateCreated { get; set; }
 }

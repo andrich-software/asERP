@@ -58,6 +58,19 @@ public static class ApiEndpoints
         public const string Base = $"{ApiBase}/saless";
         public static string ById(Guid id) => $"{Base}/{id}";
         public static string ByCustomer(int customerId) => $"{Base}/customer/{customerId}";
+        public static string ShippableItems(Guid id) => $"{Base}/{id}/shippable-items";
+        public static string ShippingOptions(Guid id) => $"{Base}/{id}/shipping-options";
+        public static string Cancel(Guid id) => $"{Base}/{id}/cancel";
+    }
+
+    // Shippings
+    public static class Shippings
+    {
+        public const string Base = $"{ApiBase}/shippings";
+        public static string ById(Guid id) => $"{Base}/{id}";
+        public static string Label(Guid id) => $"{Base}/{id}/label";
+        public static string LabelRetry(Guid id) => $"{Base}/{id}/label/retry";
+        public static string Cancel(Guid id) => $"{Base}/{id}/cancel";
     }
 
     // Products

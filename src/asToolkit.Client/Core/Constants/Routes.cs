@@ -30,6 +30,10 @@ public static class Routes
     public const string SalesEdit = "SalesEdit";
     public const string SalesCreate = "SalesCreate";
 
+    // Shippings
+    public const string ShippingList = "Shippings";
+    public const string ShippingDetail = "ShippingDetail";
+
     // Products
     public const string ProductList = "Products";
     public const string ProductDetail = "ProductDetail";

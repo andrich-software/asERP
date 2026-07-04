@@ -7,6 +7,7 @@ public class SalesHistoryDto
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
     public Guid SalesId { get; set; }
+    public Guid? ShippingId { get; set; }
     public string Action { get; set; } = string.Empty;
     public SalesStatus? SalesStatusOld { get; set; }
     public SalesStatus? SalesStatusNew { get; set; }

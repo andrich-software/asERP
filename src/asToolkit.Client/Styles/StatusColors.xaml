@@ -25,6 +25,10 @@
       <SolidColorBrush x:Key="StatusDangerForegroundBrush" Color="#DC2626" />
       <SolidColorBrush x:Key="StatusSpecialBackgroundBrush" Color="#F3E8FF" />
       <SolidColorBrush x:Key="StatusSpecialForegroundBrush" Color="#9333EA" />
+      <SolidColorBrush x:Key="StatusChangePositiveBrush" Color="#16A34A" />
+      <SolidColorBrush x:Key="StatusChangeNegativeBrush" Color="#DC2626" />
+      <SolidColorBrush x:Key="StatusAlertCriticalBrush" Color="#DC2626" />
+      <SolidColorBrush x:Key="StatusAlertWarningBrush" Color="#F59E0B" />
     </ResourceDictionary>
 
     <ResourceDictionary x:Key="Default">
@@ -44,6 +48,10 @@
       <SolidColorBrush x:Key="StatusDangerForegroundBrush" Color="#FCA5A5" />
       <SolidColorBrush x:Key="StatusSpecialBackgroundBrush" Color="#581C87" />
       <SolidColorBrush x:Key="StatusSpecialForegroundBrush" Color="#D8B4FE" />
+      <SolidColorBrush x:Key="StatusChangePositiveBrush" Color="#86EFAC" />
+      <SolidColorBrush x:Key="StatusChangeNegativeBrush" Color="#FCA5A5" />
+      <SolidColorBrush x:Key="StatusAlertCriticalBrush" Color="#FCA5A5" />
+      <SolidColorBrush x:Key="StatusAlertWarningBrush" Color="#FCD34D" />
     </ResourceDictionary>
 
   </ResourceDictionary.ThemeDictionaries>

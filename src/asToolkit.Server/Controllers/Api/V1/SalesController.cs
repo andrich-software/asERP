@@ -1,4 +1,5 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
+using asToolkit.Application.Features.Sales.Commands.SalesCancel;
 using asToolkit.Application.Features.Sales.Commands.SalesCreate;
 using asToolkit.Application.Features.Sales.Commands.SalesDelete;
 using asToolkit.Application.Features.Sales.Commands.SalesUpdate;
@@ -7,9 +8,12 @@ using asToolkit.Application.Features.Sales.Queries.SalesDetail;
 using asToolkit.Application.Features.Sales.Queries.SalesList;
 using asToolkit.Application.Features.Sales.Queries.SalesNotPaidList;
 using asToolkit.Application.Features.Sales.Queries.SalesReadyForDeliveryList;
-using asToolkit.Domain.Dtos.Sales;
-using asToolkit.Domain.Wrapper;
+using asToolkit.Application.Features.Sales.Queries.SalesShippableItems;
+using asToolkit.Application.Features.Shipping.Queries.ShippingOptionsForSales;
 using asToolkit.Application.Mediator;
+using asToolkit.Domain.Dtos.Sales;
+using asToolkit.Domain.Dtos.Shipping;
+using asToolkit.Domain.Wrapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -83,6 +87,26 @@ public class SalessController(IMediator mediator) : ControllerBase
         return StatusCode((int)response.StatusCode, response);
     }
 
+    // GET: api/v1/<SalessController>/5/shippable-items
+    [HttpGet("{id:guid}/shippable-items")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<ShippableSalesItemDto>>> GetShippableItems(Guid id)
+    {
+        var response = await mediator.Send(new SalesShippableItemsQuery { Id = id });
+        return StatusCode((int)response.StatusCode, response);
+    }
+
+    // GET: api/v1/<SalessController>/5/shipping-options
+    [HttpGet("{id:guid}/shipping-options")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<ApplicableShippingRateDto>>> GetShippingOptions(Guid id)
+    {
+        var response = await mediator.Send(new ShippingOptionsForSalesQuery { Id = id });
+        return StatusCode((int)response.StatusCode, response);
+    }
+
     // POST: api/v1/<SalessController>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -93,7 +117,7 @@ public class SalessController(IMediator mediator) : ControllerBase
         {
             return BadRequest(ModelState);
         }
-        
+
         var response = await mediator.Send(salesCreateCommand);
         return StatusCode((int)response.StatusCode, response);
     }
@@ -111,9 +135,20 @@ public class SalessController(IMediator mediator) : ControllerBase
         {
             return BadRequest("ID mismatch between route and payload");
         }
-        
+
         salesUpdateCommand.Id = id;
         var response = await mediator.Send(salesUpdateCommand);
+        return StatusCode((int)response.StatusCode, response);
+    }
+
+    // POST: api/v1/<SalessController>/5/cancel
+    [HttpPost("{id:guid}/cancel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> Cancel(Guid id)
+    {
+        var response = await mediator.Send(new SalesCancelCommand { Id = id });
         return StatusCode((int)response.StatusCode, response);
     }
 

@@ -15,6 +15,7 @@ using asToolkit.Domain.Dtos.Product;
 using asToolkit.Domain.Dtos.ProductAttribute;
 using asToolkit.Domain.Dtos.SalesChannel;
 using asToolkit.Domain.Dtos.ServerInfo;
+using asToolkit.Domain.Dtos.Shipping;
 using asToolkit.Domain.Dtos.Statistic;
 using asToolkit.Domain.Dtos.Superadmin;
 using asToolkit.Domain.Dtos.TaxClass;
@@ -43,6 +44,7 @@ namespace asToolkit.Client.Core.Json;
 [JsonSerializable(typeof(PaginatedResponse<SalesChannelListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<CountryListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<UserListDto>))]
+[JsonSerializable(typeof(PaginatedResponse<ShipmentListItemDto>))]
 
 // ApiResponse<T> types
 [JsonSerializable(typeof(ApiResponse<TenantDetailDto>))]
@@ -84,6 +86,9 @@ namespace asToolkit.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<string>))]
 [JsonSerializable(typeof(ApiResponse<List<Guid>>))]
 [JsonSerializable(typeof(ApiResponse<GlobalSearchResultDto>))]
+[JsonSerializable(typeof(ApiResponse<ShippingDetailDto>))]
+[JsonSerializable(typeof(ApiResponse<List<ShippableSalesItemDto>>))]
+[JsonSerializable(typeof(ApiResponse<List<ApplicableShippingRateDto>>))]
 
 // Direct response types
 [JsonSerializable(typeof(GlobalSearchResultDto))]
@@ -105,6 +110,7 @@ namespace asToolkit.Client.Core.Json;
 [JsonSerializable(typeof(ProductVariantGenerateDto))]
 [JsonSerializable(typeof(ProductImageReorderDto))]
 [JsonSerializable(typeof(SalesInputDto))]
+[JsonSerializable(typeof(ShippingInputDto))]
 [JsonSerializable(typeof(ManufacturerInputDto))]
 [JsonSerializable(typeof(CustomerInputDto))]
 [JsonSerializable(typeof(LoginRequestDto))]

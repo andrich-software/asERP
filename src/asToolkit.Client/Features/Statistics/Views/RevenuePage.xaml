@@ -23,11 +23,7 @@
 
         <!-- Chart card (full width) -->
         <Border Background="{ThemeResource SurfaceBrush}"
-                CornerRadius="12"
-                Translation="0,0,8">
-          <Border.Shadow>
-            <ThemeShadow />
-          </Border.Shadow>
+                CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
 
           <StackPanel Padding="24"
                       Spacing="20">

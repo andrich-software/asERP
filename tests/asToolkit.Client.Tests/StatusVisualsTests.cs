@@ -73,6 +73,34 @@ public class StatusVisualsTests
         Assert.That(kind, Is.EqualTo(expected));
     }
 
+    [TestCase(ShippingStatus.Delivered, Kind.Success)]
+    [TestCase(ShippingStatus.ReadyForShipping, Kind.Positive)]
+    [TestCase(ShippingStatus.LabelCreated, Kind.Positive)]
+    [TestCase(ShippingStatus.Shipped, Kind.Info)]
+    [TestCase(ShippingStatus.InTransit, Kind.Info)]
+    [TestCase(ShippingStatus.OutForDelivery, Kind.Info)]
+    [TestCase(ShippingStatus.InProgess, Kind.Warning)]
+    [TestCase(ShippingStatus.DeliveryFailed, Kind.Danger)]
+    [TestCase(ShippingStatus.ReturnedToSender, Kind.Danger)]
+    [TestCase(ShippingStatus.Lost, Kind.Danger)]
+    [TestCase(ShippingStatus.Cancelled, Kind.Neutral)]
+    [TestCase(ShippingStatus.Open, Kind.Neutral)]
+    public void ShippingStatus_MapsToExpectedKind(ShippingStatus status, Kind expected)
+    {
+        var (_, kind) = StatusVisuals.Resolve(status);
+        Assert.That(kind, Is.EqualTo(expected));
+    }
+
+    [TestCase(ShippingOutboxStatus.Done, Kind.Success)]
+    [TestCase(ShippingOutboxStatus.Pending, Kind.Warning)]
+    [TestCase(ShippingOutboxStatus.InFlight, Kind.Warning)]
+    [TestCase(ShippingOutboxStatus.DeadLetter, Kind.Danger)]
+    public void ShippingOutboxStatus_MapsToExpectedKind(ShippingOutboxStatus status, Kind expected)
+    {
+        var (_, kind) = StatusVisuals.Resolve(status);
+        Assert.That(kind, Is.EqualTo(expected));
+    }
+
     [Test]
     public void BoolSyncFlag_MapsToSuccessOrNeutral()
     {
