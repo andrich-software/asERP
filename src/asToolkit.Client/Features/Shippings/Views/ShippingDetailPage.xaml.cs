@@ -79,6 +79,14 @@ public sealed partial class ShippingDetailPage : Page
         }
     }
 
+    private async void PackingSlip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { CommandParameter: Guid shippingId })
+        {
+            await PackingSlipActionRunner.RunAsync(shippingId, this.XamlRoot);
+        }
+    }
+
     private async void RetryLabel_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is ShippingDetailModel model && await model.RetryLabel())

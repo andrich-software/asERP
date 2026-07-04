@@ -579,7 +579,7 @@ public sealed class WooCommerceConnector : ConnectorBase
 
     /// <summary>
     /// Fetches one page of orders, retrying a handful of times on transient failures (timeouts, 5xx,
-    /// brief DNS/TLS hiccups, a Cloudflare interstitial). Without this, a single transient blip on any
+    /// brief DNS/TLS hiccups, a WAF interstitial). Without this, a single transient blip on any
     /// page aborts the whole run as a PartialFailure — which used to advance the incremental watermark
     /// and permanently skip every order the run never reached. Retrying lets a run actually complete and
     /// reach Success. Cancellation (server shutdown) is never retried; it propagates to end the walk.
@@ -1221,7 +1221,7 @@ public sealed class WooCommerceConnector : ConnectorBase
     private static readonly TimeSpan MaxBackfillRunDuration = TimeSpan.FromMinutes(15);
 
     // Retry budget for a single order-page fetch. Transient blips (timeout, 5xx, brief DNS/TLS hiccup,
-    // Cloudflare interstitial) should not abort an otherwise-healthy run.
+    // WAF interstitial) should not abort an otherwise-healthy run.
     private const int PageFetchAttempts = 3;
     private static readonly TimeSpan PageRetryDelay = TimeSpan.FromSeconds(3);
 
@@ -1314,7 +1314,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         return all;
     }
 
-    // A browser-like User-Agent so the shop's CDN/WAF bot protection (e.g. Cloudflare managed challenge)
+    // A browser-like User-Agent so the shop's CDN/WAF bot protection (e.g. a managed bot challenge)
     // does not flag the API calls. WooCommerceNET's default UA gets challenged, which stalls the import
     // mid-walk after a burst of page requests.
     private const string BrowserUserAgent =

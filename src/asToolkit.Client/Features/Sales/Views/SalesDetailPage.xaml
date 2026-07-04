@@ -443,7 +443,7 @@
                           <ColumnDefinition Width="*" MinWidth="140" />
                           <ColumnDefinition Width="*" MinWidth="140" />
                           <ColumnDefinition Width="110" />
-                          <ColumnDefinition Width="96" />
+                          <ColumnDefinition Width="128" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0"
                                    x:Uid="SalesDetailPage.ShipHeader.Status"
@@ -479,7 +479,7 @@
                                 <ColumnDefinition Width="*" MinWidth="140" />
                                 <ColumnDefinition Width="*" MinWidth="140" />
                                 <ColumnDefinition Width="110" />
-                                <ColumnDefinition Width="96" />
+                                <ColumnDefinition Width="128" />
                               </Grid.ColumnDefinitions>
 
                               <controls:StatusBadge Grid.Column="0"
@@ -527,6 +527,13 @@
                                           Spacing="4"
                                           HorizontalAlignment="Right"
                                           VerticalAlignment="Center">
+                                <Button Style="{StaticResource IconButtonStyle}"
+                                        x:Uid="SalesDetailPage.ShipRowPackingSlip"
+                                        Click="ShipmentPackingSlip_Click"
+                                        CommandParameter="{x:Bind Id}">
+                                  <FontIcon Glyph="&#xE7C3;"
+                                            FontSize="14" />
+                                </Button>
                                 <Button Style="{StaticResource IconButtonStyle}"
                                         x:Uid="SalesDetailPage.ShipRowLabel"
                                         Click="ShipmentLabel_Click"

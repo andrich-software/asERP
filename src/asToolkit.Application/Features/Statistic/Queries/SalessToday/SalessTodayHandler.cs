@@ -39,9 +39,11 @@ public class SalessTodayHandler : IRequestHandler<SalessTodayQuery, Result<Sales
             if (request.SalesChannelId.HasValue)
                 baseQuery = baseQuery.Where(o => o.SalesChannelId == request.SalesChannelId.Value);
 
-            // Sales calculations
+            // Period window: last N hours when requested, otherwise the legacy calendar day
+            var periodStart = request.Hours.HasValue ? now.AddHours(-request.Hours.Value) : todayStart;
+
             dto.SalessToday = await baseQuery
-                .Where(o => o.DateSalesed >= todayStart)
+                .Where(o => o.DateSalesed >= periodStart)
                 .CountAsync(cancellationToken);
 
             dto.SalessPending = await baseQuery
@@ -52,14 +54,18 @@ public class SalessTodayHandler : IRequestHandler<SalessTodayQuery, Result<Sales
                 .Where(o => o.DateSalesed >= weekStart)
                 .CountAsync(cancellationToken);
 
-            // Saless change compared to last week
-            var salessLastWeek = await baseQuery
-                .Where(o => o.DateSalesed >= lastWeekStart && o.DateSalesed < lastWeekEnd)
+            // Change vs the preceding window of equal length (hours mode)
+            // or this week vs last week (legacy mode)
+            var previousStart = request.Hours.HasValue ? periodStart.AddHours(-request.Hours.Value) : lastWeekStart;
+            var previousEnd = request.Hours.HasValue ? periodStart : lastWeekEnd;
+            var currentCount = request.Hours.HasValue ? dto.SalessToday : dto.SalessThisWeek;
+            var salessPrevious = await baseQuery
+                .Where(o => o.DateSalesed >= previousStart && o.DateSalesed < previousEnd)
                 .CountAsync(cancellationToken);
 
-            dto.SalessChangePercent = salessLastWeek > 0
-                ? ((decimal)(dto.SalessThisWeek - salessLastWeek) / salessLastWeek) * 100
-                : dto.SalessThisWeek > 0 ? 100 : 0;
+            dto.SalessChangePercent = salessPrevious > 0
+                ? ((decimal)(currentCount - salessPrevious) / salessPrevious) * 100
+                : currentCount > 0 ? 100 : 0;
 
             return Result<SalessTodayDto>.Success(dto);
         }

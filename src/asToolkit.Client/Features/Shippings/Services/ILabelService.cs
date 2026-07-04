@@ -35,6 +35,9 @@ public interface ILabelService
     /// <summary>Downloads the label of a shipment from the API.</summary>
     Task<LabelFile> FetchLabelAsync(Guid shippingId, CancellationToken ct = default);
 
+    /// <summary>Downloads the packing-slip PDF of a shipment from the API.</summary>
+    Task<LabelFile> FetchPackingSlipAsync(Guid shippingId, CancellationToken ct = default);
+
     /// <summary>Installed printer names; empty when the platform cannot enumerate printers.</summary>
     Task<IReadOnlyList<string>> GetPrinterNamesAsync();
 

@@ -141,6 +141,9 @@
               <ToggleSwitch x:Name="RequestLabelToggle"
                             x:Uid="CreateShipmentDialog.RequestLabel"
                             IsOn="True" />
+
+              <CheckBox x:Name="PrintPackingSlipCheck"
+                        x:Uid="CreateShipmentDialog.PrintPackingSlip" />
             </StackPanel>
 
             <!-- Step 2: label action (only when no remembered preference exists) -->

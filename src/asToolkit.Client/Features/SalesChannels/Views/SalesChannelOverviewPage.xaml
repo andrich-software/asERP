@@ -17,7 +17,7 @@
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
 
-    <!-- Cloudflare-style page header: big title + description, actions top-right -->
+    <!-- asERP-style page header: big title + description, actions top-right -->
     <controls:PageHeader Grid.Row="0"
                          x:Uid="SalesChannelOverviewPage.PageHeader"
                          Glyph="&#xE8A7;"

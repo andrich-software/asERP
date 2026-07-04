@@ -7,6 +7,7 @@ public class ShippingPreferences : IShippingPreferences
 {
     internal static string LastRateKey(Guid tenantId) => $"shipping.lastRate.{tenantId:N}";
     internal static string LabelActionKey(Guid tenantId) => $"shipping.labelAction.{tenantId:N}";
+    internal static string PackingSlipPrinterKey(Guid tenantId) => $"shipping.packingSlipPrinter.{tenantId:N}";
 
     public Guid? GetLastRateId(Guid tenantId)
     {
@@ -36,5 +37,23 @@ public class ShippingPreferences : IShippingPreferences
         }
 
         ApplicationData.Current.LocalSettings.Values[LabelActionKey(tenantId)] = preference.Serialize();
+    }
+
+    public string? GetPackingSlipPrinter(Guid tenantId)
+    {
+        return ApplicationData.Current.LocalSettings.Values.TryGetValue(PackingSlipPrinterKey(tenantId), out var raw)
+            ? raw as string
+            : null;
+    }
+
+    public void SetPackingSlipPrinter(Guid tenantId, string? printerName)
+    {
+        if (string.IsNullOrEmpty(printerName))
+        {
+            ApplicationData.Current.LocalSettings.Values.Remove(PackingSlipPrinterKey(tenantId));
+            return;
+        }
+
+        ApplicationData.Current.LocalSettings.Values[PackingSlipPrinterKey(tenantId)] = printerName;
     }
 }

@@ -111,7 +111,9 @@ public class TenantDetailHandler : IRequestHandler<TenantDetailQuery, Result<Ten
                 AdminEmail = null,
                 ValidUntil = null,
                 UserCount = userCount,
-                CanManageTenant = canManageTenant
+                CanManageTenant = canManageTenant,
+                PackingSlipShowPrices = tenant.PackingSlipShowPrices,
+                PackingSlipPrintByDefault = tenant.PackingSlipPrintByDefault
             };
 
             _logger.LogInformation("Tenant with ID {Id} retrieved successfully for user {UserId}",

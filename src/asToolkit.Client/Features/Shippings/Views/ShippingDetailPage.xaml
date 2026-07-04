@@ -98,6 +98,10 @@
                           Click="OpenLabel_Click"
                           CommandParameter="{Binding Data.Id}"
                           Visibility="{Binding Data.HasLabel, Converter={StaticResource LabelCapabilityToVisibilityConverter}, ConverterParameter=Open}" />
+                  <Button x:Uid="ShippingDetailPage.ActionPackingSlip"
+                          Style="{StaticResource OutlinedButtonStyle}"
+                          Click="PackingSlip_Click"
+                          CommandParameter="{Binding Data.Id}" />
                   <Button x:Uid="ShippingDetailPage.ActionRetryLabel"
                           Style="{StaticResource OutlinedButtonStyle}"
                           Click="RetryLabel_Click"

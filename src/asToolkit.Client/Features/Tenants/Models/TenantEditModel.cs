@@ -42,6 +42,10 @@ public class TenantEditModel : AsyncInitializableModel
     // Payment Information
     private string _iban = string.Empty;
 
+    // Shipping documents
+    private bool _packingSlipShowPrices;
+    private bool _packingSlipPrintByDefault;
+
     // UI State
     private bool _isSaving;
     private string _errorMessage = string.Empty;
@@ -178,6 +182,22 @@ public class TenantEditModel : AsyncInitializableModel
     {
         get => _iban;
         set => SetProperty(ref _iban, value);
+    }
+
+    #endregion
+
+    #region Shipping Documents
+
+    public bool PackingSlipShowPrices
+    {
+        get => _packingSlipShowPrices;
+        set => SetProperty(ref _packingSlipShowPrices, value);
+    }
+
+    public bool PackingSlipPrintByDefault
+    {
+        get => _packingSlipPrintByDefault;
+        set => SetProperty(ref _packingSlipPrintByDefault, value);
     }
 
     #endregion
@@ -364,6 +384,10 @@ public class TenantEditModel : AsyncInitializableModel
 
             // Payment Information
             Iban = tenant.Iban ?? string.Empty;
+
+            // Shipping documents
+            PackingSlipShowPrices = tenant.PackingSlipShowPrices;
+            PackingSlipPrintByDefault = tenant.PackingSlipPrintByDefault;
         }
     }
 
@@ -390,7 +414,9 @@ public class TenantEditModel : AsyncInitializableModel
                 City = string.IsNullOrWhiteSpace(City) ? null : City,
                 State = string.IsNullOrWhiteSpace(State) ? null : State,
                 Country = string.IsNullOrWhiteSpace(Country) ? null : Country,
-                Iban = string.IsNullOrWhiteSpace(Iban) ? null : Iban
+                Iban = string.IsNullOrWhiteSpace(Iban) ? null : Iban,
+                PackingSlipShowPrices = PackingSlipShowPrices,
+                PackingSlipPrintByDefault = PackingSlipPrintByDefault
             };
 
             if (_tenantId.HasValue)

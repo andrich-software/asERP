@@ -71,7 +71,7 @@ public static class Routes
     public const string UserProfile = "UserProfile";
     public const string TenantSettings = "TenantSettings";
     public const string TenantOAuthSettings = "TenantOAuthSettings";
-    public const string SystemOAuthSettings = "SystemOAuthSettings";
+    public const string GlobalSettings = "GlobalSettings";
 
     // Tenants
     public const string TenantList = "Tenants";

@@ -20,7 +20,13 @@ public partial class LabelService : ILabelService
         _tokenStorage = tokenStorage;
     }
 
-    public async Task<LabelFile> FetchLabelAsync(Guid shippingId, CancellationToken ct = default)
+    public Task<LabelFile> FetchLabelAsync(Guid shippingId, CancellationToken ct = default) =>
+        FetchAsync(ApiEndpoints.Shippings.Label(shippingId), "label", shippingId, ct);
+
+    public Task<LabelFile> FetchPackingSlipAsync(Guid shippingId, CancellationToken ct = default) =>
+        FetchAsync(ApiEndpoints.Shippings.PackingSlip(shippingId), "packliste", shippingId, ct);
+
+    private async Task<LabelFile> FetchAsync(string relativeUrl, string fallbackPrefix, Guid shippingId, CancellationToken ct)
     {
         var serverUrl = await _tokenStorage.GetServerUrlAsync();
         if (string.IsNullOrEmpty(serverUrl))
@@ -28,27 +34,27 @@ public partial class LabelService : ILabelService
             throw new InvalidOperationException("Server URL is not configured. Please login first.");
         }
 
-        var url = $"{serverUrl.TrimEnd('/')}{ApiEndpoints.Shippings.Label(shippingId)}";
+        var url = $"{serverUrl.TrimEnd('/')}{relativeUrl}";
         var response = await _httpClient.GetAsync(url, ct);
         await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
 
         var bytes = await response.Content.ReadAsByteArrayAsync(ct);
         var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/pdf";
-        var fileName = ResolveFileName(response, shippingId, contentType);
+        var fileName = ResolveFileName(response, fallbackPrefix, shippingId, contentType);
 
         return new LabelFile(bytes, contentType, fileName);
     }
 
     /// <summary>Content-Disposition filename (RFC 5987 star form preferred), with a
     /// deterministic fallback name derived from the shipment id.</summary>
-    private static string ResolveFileName(HttpResponseMessage response, Guid shippingId, string contentType)
+    private static string ResolveFileName(HttpResponseMessage response, string fallbackPrefix, Guid shippingId, string contentType)
     {
         var disposition = response.Content.Headers.ContentDisposition;
         var name = disposition?.FileNameStar ?? disposition?.FileName;
         name = name?.Trim().Trim('"');
 
         return string.IsNullOrWhiteSpace(name)
-            ? $"label-{shippingId:N}{LabelContentTypes.GetExtension(contentType)}"
+            ? $"{fallbackPrefix}-{shippingId:N}{LabelContentTypes.GetExtension(contentType)}"
             : name;
     }
 

@@ -85,7 +85,9 @@ public class TenantUpdateCommandTests : TenantIsolatedTestBase
             City = "Updated City",
             State = "Updated State",
             Country = "Updated Country",
-            Iban = "DE89370400440532013000"
+            Iban = "DE89370400440532013000",
+            PackingSlipShowPrices = true,
+            PackingSlipPrintByDefault = true
         };
     }
 
@@ -308,6 +310,28 @@ public class TenantUpdateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertEqual(updateInput.State, updatedTenant.State);
         TestAssertions.AssertEqual(updateInput.Country, updatedTenant.Country);
         TestAssertions.AssertEqual(updateInput.Iban, updatedTenant.Iban);
+        TestAssertions.AssertTrue(updatedTenant.PackingSlipShowPrices);
+        TestAssertions.AssertTrue(updatedTenant.PackingSlipPrintByDefault);
+    }
+
+    [Fact]
+    public async Task UpdateTenant_PackingSlipSettings_ShouldBeReturnedByDetailQuery()
+    {
+        await SeedUserTenantsAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        SimulateAuthenticatedRequest(AdminUserId);
+
+        var updateInput = CreateUpdateTenantInput();
+        var updateResponse = await PutAsJsonAsync($"/api/v1/tenants/{TenantConstants.TestTenant1Id}", updateInput);
+        TestAssertions.AssertEqual(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        var detailResponse = await Client.GetAsync($"/api/v1/tenants/{TenantConstants.TestTenant1Id}");
+
+        TestAssertions.AssertHttpSuccess(detailResponse);
+        var result = await ReadResponseAsync<Result<TenantDetailDto>>(detailResponse);
+        TestAssertions.AssertNotNull(result.Data);
+        TestAssertions.AssertTrue(result.Data!.PackingSlipShowPrices);
+        TestAssertions.AssertTrue(result.Data.PackingSlipPrintByDefault);
     }
 
     [Fact]

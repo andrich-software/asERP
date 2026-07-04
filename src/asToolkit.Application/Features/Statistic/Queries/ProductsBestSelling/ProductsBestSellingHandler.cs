@@ -28,7 +28,19 @@ public class ProductsBestSellingHandler : IRequestHandler<ProductsBestSellingQue
             _logger.LogInformation("Handle ProductsBestSellingQuery - fetching {Count} best-selling products", request.Count);
 
             // Get SalesItems context
-            var salesItems = _productRepository.GetContext<SalesItem>();
+            var salesItems = _productRepository.GetContext<SalesItem>().AsQueryable();
+
+            // Restrict to sales within the requested look-back window
+            if (request.Hours.HasValue)
+            {
+                var periodStart = DateTime.UtcNow.AddHours(-request.Hours.Value);
+                var sales = _productRepository.GetContext<Domain.Entities.Sales>();
+                salesItems = salesItems
+                    .Join(sales.Where(s => s.DateSalesed >= periodStart),
+                        oi => oi.SalesId,
+                        s => s.Id,
+                        (oi, s) => oi);
+            }
 
             // Group sales items by ProductId and calculate totals
             var bestSelling = await salesItems

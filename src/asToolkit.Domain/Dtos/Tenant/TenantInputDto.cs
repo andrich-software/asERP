@@ -49,4 +49,8 @@ public class TenantInputDto : ITenantInputModel
     [MaxLength(34)]
     [RegularExpression(@"^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$", ErrorMessage = "Invalid IBAN format")]
     public string? Iban { get; set; }
+
+    public bool PackingSlipShowPrices { get; set; }
+
+    public bool PackingSlipPrintByDefault { get; set; }
 }

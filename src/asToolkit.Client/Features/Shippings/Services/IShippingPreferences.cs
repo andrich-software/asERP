@@ -11,4 +11,10 @@ public interface IShippingPreferences
 
     /// <summary>Null clears the remembered action.</summary>
     void SetLabelAction(Guid tenantId, LabelActionPreference? preference);
+
+    /// <summary>Printer remembered for packing-slip printing (independent of the label printer).</summary>
+    string? GetPackingSlipPrinter(Guid tenantId);
+
+    /// <summary>Null clears the remembered printer.</summary>
+    void SetPackingSlipPrinter(Guid tenantId, string? printerName);
 }

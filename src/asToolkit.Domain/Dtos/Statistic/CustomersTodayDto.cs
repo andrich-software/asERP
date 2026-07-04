@@ -16,7 +16,12 @@ public class CustomersTodayDto
     public int CustomersNewThisMonth { get; set; }
 
     /// <summary>
-    /// Customers percentage change compared to last month
+    /// New customers within the requested period (last N hours; falls back to this month when no period was requested)
+    /// </summary>
+    public int CustomersNew { get; set; }
+
+    /// <summary>
+    /// Customers percentage change compared to the previous period (or last month when no period was requested)
     /// </summary>
     public decimal CustomersChangePercent { get; set; }
 }

@@ -221,13 +221,13 @@
 
   <!-- Dashboard KPI Cards -->
   <data name="DashboardPage.KPI.Revenue.Text" xml:space="preserve">
-    <value>Revenue Today</value>
+    <value>Revenue</value>
   </data>
   <data name="DashboardPage.KPI.Saless.Text" xml:space="preserve">
-    <value>Saless Today</value>
+    <value>Sales</value>
   </data>
   <data name="DashboardPage.KPI.Customers.Text" xml:space="preserve">
-    <value>Total Customers</value>
+    <value>New Customers</value>
   </data>
   <data name="DashboardPage.KPI.Inventory.Text" xml:space="preserve">
     <value>Products in Stock</value>
@@ -235,8 +235,8 @@
   <data name="DashboardPage.KPI.VsLastWeek.Text" xml:space="preserve">
     <value>vs last week</value>
   </data>
-  <data name="DashboardPage.KPI.VsLastMonth.Text" xml:space="preserve">
-    <value>vs last month</value>
+  <data name="DashboardPage.KPI.VsPrevPeriod.Text" xml:space="preserve">
+    <value>vs previous period</value>
   </data>
   <data name="DashboardPage.KPI.ThisWeek.Text" xml:space="preserve">
     <value>This week: </value>
@@ -244,8 +244,8 @@
   <data name="DashboardPage.KPI.Pending.Text" xml:space="preserve">
     <value> pending</value>
   </data>
-  <data name="DashboardPage.KPI.NewThisMonth.Text" xml:space="preserve">
-    <value> new this month</value>
+  <data name="DashboardPage.KPI.CustomersTotalPrefix.Text" xml:space="preserve">
+    <value>Total customers: </value>
   </data>
   <data name="DashboardPage.KPI.LowStockItems.Text" xml:space="preserve">
     <value> low stock items</value>
@@ -2116,36 +2116,58 @@
     <value>Connection disconnected.</value>
   </data>
 
-  <!-- System OAuth settings -->
-  <data name="SystemOAuthSettingsPage.NavigationBar.Content" xml:space="preserve"><value>OAuth apps (system)</value></data>
-  <data name="SystemOAuthSettingsPage.AppBarButton.Back.Label" xml:space="preserve"><value>Back</value></data>
-  <data name="SystemOAuthSettingsPage.AppBarButton.Save.Label" xml:space="preserve"><value>Save</value></data>
-  <data name="SystemOAuthSettingsPage.Section.Provider.Text" xml:space="preserve"><value>Provider</value></data>
-  <data name="SystemOAuthSettingsPage.Section.AppCredentials.Text" xml:space="preserve"><value>App credentials</value></data>
-  <data name="SystemOAuthSettingsPage.Section.Endpoints.Text" xml:space="preserve"><value>Endpoints</value></data>
-  <data name="SystemOAuthSettingsPage.Section.PublicBaseUrl.Text" xml:space="preserve"><value>Public base URL</value></data>
-  <data name="SystemOAuthSettingsPage.Provider.Ebay.Content" xml:space="preserve"><value>eBay</value></data>
-  <data name="SystemOAuthSettingsPage.Provider.Amazon.Content" xml:space="preserve"><value>Amazon</value></data>
-  <data name="SystemOAuthSettingsPage.Field.ClientId.Header" xml:space="preserve"><value>Client id</value></data>
-  <data name="SystemOAuthSettingsPage.Field.ClientSecret.Header" xml:space="preserve"><value>Client secret (enter only to set / rotate)</value></data>
-  <data name="SystemOAuthSettingsPage.Field.RuName.Header" xml:space="preserve"><value>RuName (eBay alias)</value></data>
-  <data name="SystemOAuthSettingsPage.Field.RedirectUri.Header" xml:space="preserve"><value>Redirect URI</value></data>
-  <data name="SystemOAuthSettingsPage.Field.AuthorizationEndpoint.Header" xml:space="preserve"><value>Authorize URL</value></data>
-  <data name="SystemOAuthSettingsPage.Field.TokenEndpoint.Header" xml:space="preserve"><value>Token URL</value></data>
-  <data name="SystemOAuthSettingsPage.Field.Scopes.Header" xml:space="preserve"><value>Scopes (space-separated)</value></data>
-  <data name="SystemOAuthSettingsPage.Field.UseSandbox.Header" xml:space="preserve"><value>Sandbox mode</value></data>
-  <data name="SystemOAuthSettingsPage.Field.PublicBaseUrl.Header" xml:space="preserve"><value>Server base URL (HTTPS) for browser callbacks</value></data>
-  <data name="SystemOAuthSettingsPage.Field.PublicBaseUrl.Hint.Text" xml:space="preserve"><value>Example: https://erp.yourdomain.com — used by the OAuth callback endpoint.</value></data>
-  <data name="SystemOAuthSettings.ClientSecretSetHint" xml:space="preserve"><value>A secret is stored. Leave empty to keep it unchanged.</value></data>
-  <data name="SystemOAuthSettings.SaveSucceeded" xml:space="preserve"><value>Settings saved.</value></data>
+  <!-- Global settings (Superadmin) -->
+  <data name="GlobalSettingsPage.NavigationBar.Content" xml:space="preserve"><value>Global settings</value></data>
+  <data name="GlobalSettingsPage.AppBarButton.Back.Label" xml:space="preserve"><value>Back</value></data>
+  <data name="GlobalSettingsPage.Title.Text" xml:space="preserve"><value>Global settings</value></data>
+  <data name="GlobalSettingsPage.Subtitle.Text" xml:space="preserve"><value>System-wide settings of this installation — apply to all tenants.</value></data>
+  <data name="GlobalSettingsPage.Button.Save.Content" xml:space="preserve"><value>Save</value></data>
+  <data name="GlobalSettingsPage.TabOAuth.Content" xml:space="preserve"><value>OAuth apps</value></data>
+  <data name="GlobalSettingsPage.TabGeneral.Content" xml:space="preserve"><value>General</value></data>
+  <data name="GlobalSettingsPage.TabEmail.Content" xml:space="preserve"><value>E-mail</value></data>
+  <data name="GlobalSettingsPage.TabAuthentication.Content" xml:space="preserve"><value>Authentication</value></data>
+  <data name="GlobalSettingsPage.TabObservability.Content" xml:space="preserve"><value>Observability</value></data>
+  <data name="GlobalSettingsPage.SecretStoredHint.Text" xml:space="preserve"><value>A secret is stored. Leave empty to keep it unchanged.</value></data>
+  <data name="GlobalSettingsPage.CardProvider.Header" xml:space="preserve"><value>Provider</value></data>
+  <data name="GlobalSettingsPage.CardAppCredentials.Header" xml:space="preserve"><value>App credentials</value></data>
+  <data name="GlobalSettingsPage.CardEndpoints.Header" xml:space="preserve"><value>Endpoints</value></data>
+  <data name="GlobalSettingsPage.CardPublicBaseUrl.Header" xml:space="preserve"><value>Public base URL</value></data>
+  <data name="GlobalSettingsPage.Provider.Ebay.Content" xml:space="preserve"><value>eBay</value></data>
+  <data name="GlobalSettingsPage.Provider.Amazon.Content" xml:space="preserve"><value>Amazon</value></data>
+  <data name="GlobalSettingsPage.Field.ClientId.Header" xml:space="preserve"><value>Client id</value></data>
+  <data name="GlobalSettingsPage.Field.ClientSecret.Header" xml:space="preserve"><value>Client secret (enter only to set / rotate)</value></data>
+  <data name="GlobalSettingsPage.Field.RuName.Header" xml:space="preserve"><value>RuName (eBay alias)</value></data>
+  <data name="GlobalSettingsPage.Field.RedirectUri.Header" xml:space="preserve"><value>Redirect URI</value></data>
+  <data name="GlobalSettingsPage.Field.AuthorizationEndpoint.Header" xml:space="preserve"><value>Authorize URL</value></data>
+  <data name="GlobalSettingsPage.Field.TokenEndpoint.Header" xml:space="preserve"><value>Token URL</value></data>
+  <data name="GlobalSettingsPage.Field.Scopes.Header" xml:space="preserve"><value>Scopes (space-separated)</value></data>
+  <data name="GlobalSettingsPage.Field.UseSandbox.Header" xml:space="preserve"><value>Sandbox mode</value></data>
+  <data name="GlobalSettingsPage.Field.PublicBaseUrl.Header" xml:space="preserve"><value>Server base URL (HTTPS) for browser callbacks</value></data>
+  <data name="GlobalSettingsPage.Field.PublicBaseUrl.Hint.Text" xml:space="preserve"><value>Example: https://erp.yourdomain.com — used by the OAuth callback endpoint.</value></data>
+  <data name="GlobalSettings.ClientSecretSetHint" xml:space="preserve"><value>A secret is stored. Leave empty to keep it unchanged.</value></data>
+  <data name="GlobalSettings.SaveSucceeded" xml:space="preserve"><value>Settings saved.</value></data>
+  <data name="GlobalSettings.GroupCompany" xml:space="preserve"><value>Company details</value></data>
+  <data name="GlobalSettings.GroupSystem" xml:space="preserve"><value>System defaults</value></data>
+  <data name="GlobalSettings.GroupInvoice" xml:space="preserve"><value>Invoices</value></data>
+  <data name="GlobalSettings.GroupSales" xml:space="preserve"><value>Sales</value></data>
+  <data name="GlobalSettings.GroupNotification" xml:space="preserve"><value>Notifications</value></data>
+  <data name="GlobalSettings.GroupEmail" xml:space="preserve"><value>E-mail delivery</value></data>
+  <data name="GlobalSettings.GroupJwt" xml:space="preserve"><value>JWT / tokens</value></data>
+  <data name="GlobalSettings.GroupTelemetry" xml:space="preserve"><value>Telemetry</value></data>
+  <data name="GlobalSettings.GroupGrafana" xml:space="preserve"><value>Grafana / Loki</value></data>
+  <data name="GlobalSettings.GroupClickHouse" xml:space="preserve"><value>ClickHouse (web analytics)</value></data>
 
   <!-- Tenant OAuth settings -->
   <data name="TenantOAuthSettingsPage.NavigationBar.Content" xml:space="preserve"><value>OAuth apps (tenant)</value></data>
   <data name="TenantOAuthSettingsPage.AppBarButton.Back.Label" xml:space="preserve"><value>Back</value></data>
-  <data name="TenantOAuthSettingsPage.AppBarButton.Save.Label" xml:space="preserve"><value>Save</value></data>
-  <data name="TenantOAuthSettingsPage.AppBarButton.Delete.Label" xml:space="preserve"><value>Remove override</value></data>
-  <data name="TenantOAuthSettingsPage.Section.Provider.Text" xml:space="preserve"><value>Provider</value></data>
-  <data name="TenantOAuthSettingsPage.Section.Override.Text" xml:space="preserve"><value>Tenant override</value></data>
+  <data name="TenantOAuthSettingsPage.Title.Text" xml:space="preserve"><value>OAuth apps (tenant)</value></data>
+  <data name="TenantOAuthSettingsPage.Subtitle.Text" xml:space="preserve"><value>Tenant override of the OAuth developer apps — empty fields fall back to the system settings.</value></data>
+  <data name="TenantOAuthSettingsPage.Button.Save.Content" xml:space="preserve"><value>Save</value></data>
+  <data name="TenantOAuthSettingsPage.Button.Delete.Content" xml:space="preserve"><value>Remove override</value></data>
+  <data name="TenantOAuthSettingsPage.DeleteConfirmTitle" xml:space="preserve"><value>Remove tenant override?</value></data>
+  <data name="TenantOAuthSettingsPage.DeleteConfirmMessage" xml:space="preserve"><value>The override for the selected provider will be deleted; the system settings apply again afterwards.</value></data>
+  <data name="TenantOAuthSettingsPage.CardProvider.Header" xml:space="preserve"><value>Provider</value></data>
+  <data name="TenantOAuthSettingsPage.CardOverride.Header" xml:space="preserve"><value>Tenant override</value></data>
   <data name="TenantOAuthSettingsPage.Provider.Ebay.Content" xml:space="preserve"><value>eBay</value></data>
   <data name="TenantOAuthSettingsPage.Provider.Amazon.Content" xml:space="preserve"><value>Amazon</value></data>
   <data name="TenantOAuthSettingsPage.FallbackHint.Text" xml:space="preserve"><value>Empty fields fall back to the system settings. Toggle "Active" off to pause the entire tenant override.</value></data>
@@ -3646,6 +3668,15 @@
   <data name="TenantEditPage.Section.PaymentInformation.Text" xml:space="preserve">
     <value>Payment Information</value>
   </data>
+  <data name="TenantEditPage.Section.ShippingDocuments.Text" xml:space="preserve">
+    <value>Shipping documents</value>
+  </data>
+  <data name="TenantEditPage.Field.PackingSlipShowPrices.Content" xml:space="preserve">
+    <value>Show prices on the packing slip</value>
+  </data>
+  <data name="TenantEditPage.Field.PackingSlipPrintByDefault.Content" xml:space="preserve">
+    <value>Print packing slip by default when shipping</value>
+  </data>
 
   <!-- TenantEditPage - Basic Fields -->
   <data name="TenantEditPage.Field.Name.Header" xml:space="preserve">
@@ -4403,8 +4434,8 @@
   <data name="Shell.NavItem.TenantOAuthSettings.Text" xml:space="preserve">
     <value>OAuth apps</value>
   </data>
-  <data name="Shell.NavItem.SystemOAuthSettings.Text" xml:space="preserve">
-    <value>OAuth apps (system)</value>
+  <data name="Shell.NavItem.GlobalSettings.Text" xml:space="preserve">
+    <value>Global settings</value>
   </data>
   <data name="Shell.Search.Placeholder.Text" xml:space="preserve">
     <value>Quick search…</value>
@@ -4449,8 +4480,20 @@
   <data name="DashboardPage.Section.Kpi.Text" xml:space="preserve">
     <value>Key Metrics</value>
   </data>
-  <data name="DashboardPage.Filter.Last24h.Text" xml:space="preserve">
+  <data name="DashboardPage.Period24h.Text" xml:space="preserve">
     <value>Last 24 hours</value>
+  </data>
+  <data name="DashboardPage.Period48h.Text" xml:space="preserve">
+    <value>Last 48 hours</value>
+  </data>
+  <data name="DashboardPage.Period72h.Text" xml:space="preserve">
+    <value>Last 72 hours</value>
+  </data>
+  <data name="DashboardPage.Period7d.Text" xml:space="preserve">
+    <value>Last 7 days</value>
+  </data>
+  <data name="DashboardPage.Period30d.Text" xml:space="preserve">
+    <value>Last 30 days</value>
   </data>
 
   <!-- Shell User Menu - My Account -->
@@ -4751,7 +4794,7 @@
     <value>Variants</value>
   </data>
 
-  <!-- Cloudflare-style PageHeader (list pages) -->
+  <!-- asERP-style PageHeader (list pages) -->
   <data name="AiModelListPage.PageHeader.Title" xml:space="preserve">
     <value>AI Models</value>
   </data>
@@ -4952,6 +4995,9 @@
   <data name="ShippingDetailPage.ActionRetryLabel.Content" xml:space="preserve">
     <value>Retry label</value>
   </data>
+  <data name="ShippingDetailPage.ActionPackingSlip.Content" xml:space="preserve">
+    <value>Packing slip</value>
+  </data>
   <data name="ShippingDetailPage.ActionCancel.Content" xml:space="preserve">
     <value>Cancel shipment</value>
   </data>
@@ -5054,6 +5100,15 @@
   <data name="LabelAction.PrinterLabel" xml:space="preserve">
     <value>Printer</value>
   </data>
+  <data name="PackingSlipAction.Printed" xml:space="preserve">
+    <value>Packing slip printed</value>
+  </data>
+  <data name="PackingSlipAction.Downloaded" xml:space="preserve">
+    <value>Packing slip downloaded</value>
+  </data>
+  <data name="PackingSlipAction.Failed" xml:space="preserve">
+    <value>Packing slip action failed</value>
+  </data>
   <data name="SalesDetailPage.HeaderAction.Ship.Content" xml:space="preserve">
     <value>Ship</value>
   </data>
@@ -5074,6 +5129,9 @@
   </data>
   <data name="SalesDetailPage.ShipHeader.ShippedAt.Text" xml:space="preserve">
     <value>Shipped at</value>
+  </data>
+  <data name="SalesDetailPage.ShipRowPackingSlip.ToolTip" xml:space="preserve">
+    <value>Packing slip</value>
   </data>
   <data name="SalesDetailPage.ShipRowLabel.ToolTip" xml:space="preserve">
     <value>Label</value>
@@ -5116,6 +5174,9 @@
   </data>
   <data name="CreateShipmentDialog.RequestLabel.Header" xml:space="preserve">
     <value>Request label</value>
+  </data>
+  <data name="CreateShipmentDialog.PrintPackingSlip.Content" xml:space="preserve">
+    <value>Also print packing slip</value>
   </data>
   <data name="CreateShipmentDialog.RememberAction.Content" xml:space="preserve">
     <value>Remember action</value>

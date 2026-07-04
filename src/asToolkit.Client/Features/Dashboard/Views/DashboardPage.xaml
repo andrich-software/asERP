@@ -111,10 +111,20 @@
                           Padding="10,0">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <FontIcon Glyph="&#xE787;" FontSize="12" />
-              <TextBlock x:Uid="DashboardPage.Filter.Last24h"
+              <TextBlock x:Name="PeriodLabel"
+                         x:Uid="DashboardPage.Period24h"
                          Style="{StaticResource LabelMedium}"
                          VerticalAlignment="Center" />
             </StackPanel>
+            <DropDownButton.Flyout>
+              <MenuFlyout Placement="Bottom">
+                <MenuFlyoutItem x:Uid="DashboardPage.Period24h" Tag="24" Click="PeriodOption_Click" />
+                <MenuFlyoutItem x:Uid="DashboardPage.Period48h" Tag="48" Click="PeriodOption_Click" />
+                <MenuFlyoutItem x:Uid="DashboardPage.Period72h" Tag="72" Click="PeriodOption_Click" />
+                <MenuFlyoutItem x:Uid="DashboardPage.Period7d" Tag="168" Click="PeriodOption_Click" />
+                <MenuFlyoutItem x:Uid="DashboardPage.Period30d" Tag="720" Click="PeriodOption_Click" />
+              </MenuFlyout>
+            </DropDownButton.Flyout>
           </DropDownButton>
         </Grid>
 
@@ -297,7 +307,7 @@
                                    Style="{StaticResource LabelMedium}"
                                    Foreground="{ThemeResource StatusChangeNegativeBrush}" />
                       </StackPanel>
-                      <TextBlock x:Uid="DashboardPage.KPI.VsLastWeek"
+                      <TextBlock x:Uid="DashboardPage.KPI.VsPrevPeriod"
                                  Style="{StaticResource LabelMedium}"
                                  Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                  Margin="4,0,0,0" />
@@ -426,7 +436,7 @@
                                    Style="{StaticResource LabelMedium}"
                                    Foreground="{ThemeResource StatusChangeNegativeBrush}" />
                       </StackPanel>
-                      <TextBlock x:Uid="DashboardPage.KPI.VsLastWeek"
+                      <TextBlock x:Uid="DashboardPage.KPI.VsPrevPeriod"
                                  Style="{StaticResource LabelMedium}"
                                  Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                  Margin="4,0,0,0" />
@@ -526,7 +536,7 @@
                     <TextBlock Grid.Row="1"
                                Grid.Column="0"
                                Grid.ColumnSpan="2"
-                               Text="{Binding Data.CustomersTotalFormatted}"
+                               Text="{Binding Data.CustomersNewFormatted}"
                                Style="{StaticResource HeadlineLarge}"
                                Foreground="{ThemeResource OnSurfaceBrush}"
                                Margin="0,8,0,0" />
@@ -555,7 +565,7 @@
                                    Style="{StaticResource LabelMedium}"
                                    Foreground="{ThemeResource StatusChangeNegativeBrush}" />
                       </StackPanel>
-                      <TextBlock x:Uid="DashboardPage.KPI.VsLastMonth"
+                      <TextBlock x:Uid="DashboardPage.KPI.VsPrevPeriod"
                                  Style="{StaticResource LabelMedium}"
                                  Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                  Margin="4,0,0,0" />
@@ -566,8 +576,8 @@
                                Style="{StaticResource BodySmall}"
                                Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                Margin="0,4,0,0">
-                      <Run Text="{Binding Data.CustomersNewThisMonthFormatted}" />
-                      <Run x:Uid="DashboardPage.KPI.NewThisMonth" />
+                      <Run x:Uid="DashboardPage.KPI.CustomersTotalPrefix" />
+                      <Run Text="{Binding Data.CustomersTotalFormatted}" />
                     </TextBlock>
                   </Grid>
                 </Border>

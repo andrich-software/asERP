@@ -1,6 +1,6 @@
-﻿using asToolkit.Domain.Dtos.SystemOAuthSettings;
+using asToolkit.Domain.Dtos.SystemOAuthSettings;
 
-namespace asToolkit.Client.Features.SystemOAuthSettings.Services;
+namespace asToolkit.Client.Features.GlobalSettings.Services;
 
 public interface ISystemOAuthSettingsService
 {

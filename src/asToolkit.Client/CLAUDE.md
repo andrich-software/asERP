@@ -104,7 +104,7 @@ Strings resolved at runtime via `_localizer["..."]` (model properties, code-behi
 
 ## Styling
 
-The app follows a **Cloudflare-dashboard design language**: white flat surfaces, 1px hairline borders (`OutlineVariantBrush`) instead of shadows, corner radius 8 (12 for dialogs), Cloudflare blue `#3A5BE0` as primary, Inter as the app font (bundled in `Assets/Fonts/InterVariable.ttf`, wired via `MaterialToolkitTheme.FontOverrideDictionary` in App.xaml). **Do not add `ThemeShadow`/`Translation` elevation to new UI** — use a hairline border.
+The app follows a **asERP design language**: white flat surfaces, 1px hairline borders (`OutlineVariantBrush`) instead of shadows, corner radius 8 (12 for dialogs), asERP blue `#3A5BE0` as primary, Inter as the app font (bundled in `Assets/Fonts/InterVariable.ttf`, wired via `MaterialToolkitTheme.FontOverrideDictionary` in App.xaml). **Do not add `ThemeShadow`/`Translation` elevation to new UI** — use a hairline border.
 
 Styles live in `Styles/`:
 - `ColorPaletteOverride.xaml` — Material color tokens. **Generated on build from `ColorPaletteOverride.json` (Uno Dsp) — edit the JSON only, never the XAML.**
@@ -112,7 +112,40 @@ Styles live in `Styles/`:
 - `InputControls.xaml` — compact input styling
 - `TenantSwitcher.xaml` — tenant-selector specific
 - `StatusColors.xaml` — semantic status brushes (`Status{Kind}Background/ForegroundBrush`), theme-aware Light + Dark
-- `SharedComponents.xaml` — implicit styles for the shared controls below, shared responsive breakpoints (`BreakpointMedium`=800, `BreakpointWide`=1200 as `x:Double` for `AdaptiveTrigger`), `TableCardStyle`
+- `SharedComponents.xaml` — implicit styles for the shared controls below, shared responsive breakpoints (`BreakpointMedium`=800, `BreakpointWide`=1200 as `x:Double` for `AdaptiveTrigger`), `TableCardStyle`, `PageTitleTextStyle`/`PageDescriptionTextStyle`
+
+### Design rules for new or changed UI (mandatory)
+
+Any new page, card, dialog or control must blend into the asERP-style design. The rules:
+
+**Colors — only `{ThemeResource}` brushes, never hex values in pages:**
+
+| Use | Brush |
+|---|---|
+| Body text / icons that carry meaning | `OnSurfaceBrush` |
+| Secondary text, descriptions, decorative icons | `OnSurfaceVariantBrush` |
+| Page & card surfaces | `SurfaceBrush` (white) / `BackgroundBrush` |
+| Hover bands, active nav, neutral chips, icon-chip fills | `SurfaceVariantBrush` (#F2F2F2) / `TableRowHoverBrush` for row hover |
+| Hairline separators & card borders | `OutlineVariantBrush` (1px) |
+| Input borders | `OutlineBrush` |
+| Primary actions, focus, selected tabs | `PrimaryBrush` (asERP blue) |
+| Hyperlinks / first-column table links | `AppLinkForegroundBrush` |
+| Status colors (badges, alerts, deltas) | `Status*` brushes from `StatusColors.xaml` |
+
+New app-level tokens go into `AppTheme.xaml` (both `Light` **and** `Default` ThemeDictionaries); Material-level color changes go into `ColorPaletteOverride.json` (both schemes). Never invent a page-local `SolidColorBrush`.
+
+**Shape & elevation:** corner radius **8** everywhere (cards, buttons, inputs, table corners `8,8,0,0`), **12** for dialogs, full-round only for pill badges. **No `ThemeShadow`/`Translation`** — separation comes exclusively from 1px `OutlineVariantBrush` borders on white. Buttons and inputs get radius 8 automatically via the shape overrides in `AppTheme.xaml` — don't set `CornerRadius` on them manually.
+
+**Typography:** Inter is applied globally via the font override — never set `FontFamily` manually. Use the existing ramp: `PageTitleTextStyle` (34px SemiBold, only via `PageHeader`/page headers), `TitleMedium` for card headers, `HeadlineLarge` for big KPI values, `BodyMedium` for body text, `LabelMedium`/`LabelSmall` for meta text, 11px SemiBold + `CharacterSpacing=60` for sidebar section headers.
+
+**Buttons:** one `FilledButtonStyle` (blue) primary action per page, placed top-right in the `PageHeader.Actions` slot ("«Entität» erstellen" / "Create «entity»"). Everything else is `OutlinedButtonStyle` (white, 1px border; icon-only allowed) or `TextButtonStyle` inline. No `AppBarButton`s for page actions anymore.
+
+**Page skeletons:** list/overview pages start with `controls:PageHeader` (Title + Description resw keys in **both** `de`/`en`, no `utu:NavigationBar`); detail/edit pages keep `utu:NavigationBar` (back only) + `DetailPageHeader`. Copy `CustomerListPage` / `SalesDetailPage` as references.
+
+**Theme-awareness traps (cost us real bugs):**
+- Use `{ThemeResource}` for every brush (never `{StaticResource}`) and check dark mode via the user-menu toggle.
+- `Application.Current.Resources["SomeBrush"]` in code-behind does **not** resolve ThemeDictionaries theme-aware (it can return the dark value in light mode). To change a brush from code, switch between two styles whose setters use `{ThemeResource}` — see `SidebarNavItemActiveStyle` in `Shell.xaml(.cs)`.
+- Converters returning brushes can't be theme-aware with static colors. For sign/state-dependent colors (e.g. +/- change indicators) use the dual-element pattern instead: two elements with `{ThemeResource}` brushes, toggled via a model bool + `BoolToVisibilityConverter`/`BoolToInverseVisibilityConverter` — see the KPI change indicators in `DashboardPage.xaml` (glyphs `&#xE74A;` up/green, `&#xE74B;` down/red).
 
 ### Shared UI components (mandatory pattern)
 
@@ -185,3 +218,5 @@ When adding UI, think about all four runtimes (Desktop / WASM / Android / iOS):
 | Translate a string | Add the same key to **both** `de` and `en` `Resources.resw` |
 | Add a converter | `Core/Converters` (or local to a module) and reference in App.xaml `<Application.Resources>` |
 | Page-level error display | Catch `ApiException` in the model, bind `ErrorMessage` to a `TextBlock` |
+| Change a color/design token | Material palette → `Styles/ColorPaletteOverride.json` (both schemes; XAML is generated); app tokens → `Styles/AppTheme.xaml` (Light + Default); status colors → `Styles/StatusColors.xaml` |
+| Add a new page header | List page → `controls:PageHeader`; detail/edit page → `DetailPageHeader` (see "Design rules") |

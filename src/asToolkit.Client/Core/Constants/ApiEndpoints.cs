@@ -70,6 +70,7 @@ public static class ApiEndpoints
         public static string ById(Guid id) => $"{Base}/{id}";
         public static string Label(Guid id) => $"{Base}/{id}/label";
         public static string LabelRetry(Guid id) => $"{Base}/{id}/label/retry";
+        public static string PackingSlip(Guid id) => $"{Base}/{id}/packing-slip";
         public static string Cancel(Guid id) => $"{Base}/{id}/cancel";
     }
 
@@ -135,6 +136,11 @@ public static class ApiEndpoints
     {
         public const string Base = $"{ApiBase}/superadmin/oauth-app-settings";
         public static string ByProvider(string provider) => $"{Base}/{provider}";
+    }
+
+    public static class GlobalSettings
+    {
+        public const string Base = $"{ApiBase}/superadmin/global-settings";
     }
 
     // Manufacturers

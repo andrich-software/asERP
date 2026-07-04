@@ -120,7 +120,7 @@
     </Setter>
   </Style>
 
-  <!-- PageHeader: Cloudflare-style page header - big title (optional leading icon),
+  <!-- PageHeader: asERP-style page header - big title (optional leading icon),
        gray description below, actions slot top-right. For list/overview pages. -->
   <Style TargetType="controls:PageHeader">
     <Setter Property="IsTabStop" Value="False" />
@@ -165,7 +165,7 @@
     </Setter>
   </Style>
 
-  <!-- SectionCard: flat outlined card with optional icon + title header (Cloudflare style: hairline border, no shadow) -->
+  <!-- SectionCard: flat outlined card with optional icon + title header (asERP style: hairline border, no shadow) -->
   <Style TargetType="controls:SectionCard">
     <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
     <Setter Property="CornerRadius" Value="8" />
@@ -215,7 +215,7 @@
   </Style>
 
   <!-- DetailPageHeader: icon chip | title / subtitle / badges / extra content | actions.
-       Cloudflare style: plain page header (transparent, no card chrome). -->
+       asERP style: plain page header (transparent, no card chrome). -->
   <Style TargetType="controls:DetailPageHeader">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="CornerRadius" Value="8" />

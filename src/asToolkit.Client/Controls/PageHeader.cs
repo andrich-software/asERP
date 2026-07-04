@@ -4,7 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 namespace asToolkit.Client.Controls;
 
 /// <summary>
-/// Cloudflare-style page header for list/overview pages: large title with an
+/// asERP-style page header for list/overview pages: large title with an
 /// optional leading icon, a gray one-to-two-line description below it, and an
 /// actions slot (primary button etc.) aligned top-right.
 /// Localize Title/Description via x:Uid (".Title"/".Description" suffix keys);

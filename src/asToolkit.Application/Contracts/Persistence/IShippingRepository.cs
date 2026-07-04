@@ -9,6 +9,9 @@ public interface IShippingRepository : IGenericRepository<Shipping>
     Task<List<Shipping>> GetBySalesIdAsync(Guid salesId);
     Task<List<SalesItem>> GetAssignedSalesItemsAsync(Guid shippingId);
 
+    /// <summary>Assigned order lines incl. serial numbers — for packing-slip/pick-list documents.</summary>
+    Task<List<SalesItem>> GetAssignedSalesItemsWithSerialsAsync(Guid shippingId);
+
     /// <summary>Stamps <c>ShippingId</c> on the given order lines via a tracked update.</summary>
     Task AssignSalesItemsAsync(Guid shippingId, ICollection<Guid> salesItemIds);
 
