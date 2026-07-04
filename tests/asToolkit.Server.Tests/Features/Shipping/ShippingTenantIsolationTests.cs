@@ -167,9 +167,10 @@ public class ShippingTenantIsolationTests : TenantIsolatedTestBase
         var response = await Client.GetAsync($"/api/v1/Shippings?salesId={sales.Id}");
 
         TestAssertions.AssertHttpSuccess(response);
-        var result = await ReadResponseAsync<Result<List<ShippingListDto>>>(response);
+        var result = await ReadResponseAsync<PaginatedResult<ShipmentListItemDto>>(response);
         TestAssertions.AssertNotNull(result.Data);
-        TestAssertions.AssertEmpty(result.Data!);
+        TestAssertions.AssertEmpty(result.Data);
+        TestAssertions.AssertEqual(0, result.TotalCount);
     }
 
     [Fact]

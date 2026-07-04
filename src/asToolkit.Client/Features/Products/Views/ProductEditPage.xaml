@@ -127,7 +127,7 @@
 
           <!-- Loading Overlay -->
           <Border Background="{ThemeResource SurfaceBrush}"
-                  CornerRadius="12"
+                  CornerRadius="8"
                   Padding="24"
                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center"

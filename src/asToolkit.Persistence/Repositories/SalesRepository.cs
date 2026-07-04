@@ -18,6 +18,7 @@ public class SalesRepository : GenericRepository<Sales>, ISalesRepository
         return await Entities
             .Where(o => o.Id == id)
             .Include(o => o.SalesItems)
+                .ThenInclude(i => i.SerialNumbers)
             .Include(o => o.SalesHistories)
             .Include(o => o.Customer)
             .AsSplitQuery()
@@ -48,6 +49,26 @@ public class SalesRepository : GenericRepository<Sales>, ISalesRepository
 
         return await query
             .Where(oh => oh.SalesId == salesId)
+            .OrderByDescending(oh => oh.DateCreated)
+            .ToListAsync();
+    }
+
+    public async Task<List<SalesHistory>> GetShippingHistoryAsync(Guid shippingId)
+    {
+        var currentTenantId = TenantContext.GetCurrentTenantId();
+        var query = Context.SalesHistory.AsQueryable();
+
+        if (currentTenantId.HasValue)
+        {
+            query = query.Where(oh => oh.TenantId == null || oh.TenantId == currentTenantId.Value);
+        }
+        else
+        {
+            query = query.Where(oh => oh.TenantId == null);
+        }
+
+        return await query
+            .Where(oh => oh.ShippingId == shippingId)
             .OrderByDescending(oh => oh.DateCreated)
             .ToListAsync();
     }

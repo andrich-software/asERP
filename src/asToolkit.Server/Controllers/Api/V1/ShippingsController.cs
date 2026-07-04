@@ -6,9 +6,10 @@ using asToolkit.Application.Features.Shipping.Commands.ShippingLabelRetry;
 using asToolkit.Application.Features.Shipping.Commands.ShippingUpdate;
 using asToolkit.Application.Features.Shipping.Queries.ShippingDetail;
 using asToolkit.Application.Features.Shipping.Queries.ShippingLabel;
-using asToolkit.Application.Features.Shipping.Queries.ShippingListBySales;
+using asToolkit.Application.Features.Shipping.Queries.ShippingList;
 using asToolkit.Application.Mediator;
 using asToolkit.Domain.Dtos.Shipping;
+using asToolkit.Domain.Enums;
 using asToolkit.Domain.Wrapper;
 using asToolkit.Server.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -22,24 +23,21 @@ namespace asToolkit.Server.Controllers.Api.V1;
 [Route("/api/v{version:apiVersion}/[controller]")]
 public class ShippingsController(IMediator mediator) : ControllerBase
 {
-    // GET: api/v1/<ShippingsController>?salesId=...
+    // GET: api/v1/<ShippingsController>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<List<ShippingListDto>>> GetBySales([FromQuery] Guid salesId)
+    public async Task<ActionResult<PaginatedResult<ShipmentListItemDto>>> GetAll(
+        int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "",
+        [FromQuery] ShippingStatus? status = null, bool problemsOnly = false, [FromQuery] Guid? salesId = null)
     {
-        if (salesId == Guid.Empty)
+        if (string.IsNullOrEmpty(salesBy))
         {
-            var errorResponse = ProblemDetailsResult.BadRequest(
-                "Invalid Request",
-                "The salesId query parameter is required.",
-                "https://tools.ietf.org/html/rfc9110#section-15.5.1",
-                "/api/v1/shippings"
-            );
-            return errorResponse.ToActionResult();
+            salesBy = "ShippedAt Descending";
         }
 
-        var response = await mediator.Send(new ShippingListBySalesQuery { SalesId = salesId });
+        var response = await mediator.Send(new ShippingListQuery(
+            pageNumber, pageSize, searchString, salesBy, status, problemsOnly, salesId));
         return response.ToActionResult();
     }
 

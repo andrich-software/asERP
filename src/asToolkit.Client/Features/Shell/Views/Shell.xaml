@@ -20,10 +20,17 @@
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Left" />
       <Setter Property="Padding" Value="12,0,12,0" />
-      <Setter Property="Height" Value="34" />
+      <Setter Property="Height" Value="38" />
       <Setter Property="Margin" Value="8,1,8,1" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
+    </Style>
+
+    <!-- Active sidebar nav item: light gray pill, theme-aware via ThemeResource
+         (code-behind switches between this and SidebarNavItemStyle) -->
+    <Style x:Key="SidebarNavItemActiveStyle" TargetType="Button" BasedOn="{StaticResource SidebarNavItemStyle}">
+      <Setter Property="Background" Value="{ThemeResource SidebarActiveBackgroundBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
     <!-- Sidebar section header -->
@@ -69,7 +76,7 @@
           <VisualState.Setters>
             <Setter Target="TabBarNav.Visibility" Value="Collapsed" />
             <Setter Target="Sidebar.Visibility" Value="Visible" />
-            <Setter Target="Sidebar.Width" Value="220" />
+            <Setter Target="Sidebar.Width" Value="240" />
             <Setter Target="ContentHeader.Visibility" Value="Visible" />
           </VisualState.Setters>
         </VisualState>
@@ -82,7 +89,7 @@
           <VisualState.Setters>
             <Setter Target="TabBarNav.Visibility" Value="Collapsed" />
             <Setter Target="Sidebar.Visibility" Value="Visible" />
-            <Setter Target="Sidebar.Width" Value="260" />
+            <Setter Target="Sidebar.Width" Value="280" />
             <Setter Target="ContentHeader.Visibility" Value="Visible" />
           </VisualState.Setters>
         </VisualState>
@@ -97,8 +104,8 @@
     <!-- ====================== SIDEBAR ====================== -->
     <Grid x:Name="Sidebar"
           Grid.Column="0"
-          Width="260"
-          Background="{ThemeResource SurfaceVariantBrush}"
+          Width="280"
+          Background="{ThemeResource SurfaceBrush}"
           BorderBrush="{ThemeResource OutlineVariantBrush}"
           BorderThickness="0,0,1,0">
       <Grid.RowDefinitions>
@@ -108,12 +115,10 @@
         <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
 
-      <!-- Brand + Tenant Switcher -->
+      <!-- Brand + Tenant Switcher (no divider below the brand row, Cloudflare-style) -->
       <Grid Grid.Row="0"
-            Height="48"
-            Padding="12,0,12,0"
-            BorderBrush="{ThemeResource OutlineVariantBrush}"
-            BorderThickness="0,0,0,1">
+            Height="56"
+            Padding="16,0,12,0">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="*" />
@@ -159,11 +164,14 @@
                    TextTrimming="CharacterEllipsis" />
       </Grid>
 
-      <!-- Quick Search -->
+      <!-- Quick Search (Ctrl+K accelerator wired in code-behind) -->
       <AutoSuggestBox x:Name="QuickSearchBox"
                       x:Uid="Shell.Search"
                       Grid.Row="1"
-                      Margin="12,12,12,4"
+                      Margin="12,4,12,4"
+                      CornerRadius="10"
+                      BorderBrush="{ThemeResource OutlineBrush}"
+                      Background="{ThemeResource SurfaceBrush}"
                       QueryIcon="Find"
                       TextMemberPath="Title"
                       TextChanged="OnQuickSearchTextChanged"
@@ -263,6 +271,18 @@
               </StackPanel>
             </Button>
 
+            <Button x:Name="NavItemShippings"
+                    Style="{StaticResource SidebarNavItemStyle}"
+                    Tag="Shippings"
+                    Click="OnNavItemClick">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <FontIcon Glyph="&#xE7B8;" FontSize="16" />
+                <TextBlock x:Uid="Shell.NavItem.Shippings"
+                           Style="{StaticResource BodyMedium}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
             <Button x:Name="NavItemInvoices"
                     Style="{StaticResource SidebarNavItemStyle}"
                     Tag="Invoices"
@@ -287,15 +307,19 @@
               </StackPanel>
             </Button>
 
-            <!-- Dynamic SalesChannel sub-items (one nav button per configured channel) -->
+            <!-- Dynamic SalesChannel sub-items (one nav button per configured channel),
+                 indented behind a thin vertical guide line -->
+            <Border Margin="24,2,0,2"
+                    BorderBrush="{ThemeResource OutlineVariantBrush}"
+                    BorderThickness="1,0,0,0">
             <ItemsRepeater x:Name="SalesChannelSubItemsRepeater"
                            ItemsSource="{Binding SalesChannels}">
               <ItemsRepeater.ItemTemplate>
                 <DataTemplate x:DataType="models:SalesChannelNavItem">
                   <Button Style="{StaticResource SidebarNavItemStyle}"
                           Tag="{x:Bind Tag}"
-                          Margin="24,1,8,1"
-                          Height="30"
+                          Margin="8,1,8,1"
+                          Height="32"
                           Click="OnNavItemClick">
                     <StackPanel Orientation="Horizontal"
                                 Spacing="10">
@@ -310,6 +334,7 @@
                 </DataTemplate>
               </ItemsRepeater.ItemTemplate>
             </ItemsRepeater>
+            </Border>
           </StackPanel>
 
           <!-- STATISTIK -->
@@ -588,8 +613,8 @@
       <!-- Minimal top bar (user menu on the right) -->
       <Grid x:Name="ContentHeader"
             Grid.Row="0"
-            Height="48"
-            Background="{ThemeResource BackgroundBrush}"
+            Height="64"
+            Background="{ThemeResource SurfaceBrush}"
             BorderBrush="{ThemeResource OutlineVariantBrush}"
             BorderThickness="0,0,0,1">
         <StackPanel Orientation="Horizontal"

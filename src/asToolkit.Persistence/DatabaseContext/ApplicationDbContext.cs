@@ -141,6 +141,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new ShippingProviderRateCountryConfiguration());
         modelBuilder.ApplyConfiguration(new ShippingConfiguration());
         modelBuilder.ApplyConfiguration(new ShippingLabelOutboxConfiguration());
+        modelBuilder.ApplyConfiguration(new SalesHistoryConfiguration());
         modelBuilder.ApplyConfiguration(new TenantEmailSettingsConfiguration());
         modelBuilder.ApplyConfiguration(new ChannelSyncRunConfiguration());
         modelBuilder.ApplyConfiguration(new ChannelSyncLogConfiguration());

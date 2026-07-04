@@ -8,6 +8,7 @@ using asToolkit.Client.Features.Dashboard.Models;
 using asToolkit.Client.Features.Invoices;
 using asToolkit.Client.Features.Manufacturers;
 using asToolkit.Client.Features.Saless;
+using asToolkit.Client.Features.Shippings;
 using asToolkit.Client.Features.Search;
 using asToolkit.Client.Features.Products;
 using asToolkit.Client.Features.Shell;
@@ -226,34 +227,53 @@ public partial class App : Application
         Host = await builder.NavigateAsync<Shell>
             (initialNavigate: async (services, navigator) =>
             {
-                var auth = services.GetRequiredService<IAuthenticationService>();
+                Console.WriteLine("[App] initialNavigate: starting");
 
-                // Honour "remember me": if the user did not opt in, drop any persisted tokens
-                // (incl. the Uno token cache) before attempting silent re-auth, so a reload or
-                // relaunch does not auto-login an un-remembered session.
-                var tokenStorage = services.GetRequiredService<ITokenStorageService>();
-                if (!await tokenStorage.GetRememberMeAsync())
-                {
-                    await tokenStorage.ClearTokenAsync();
-                }
+                // Auth init is single-flight in ShellModel (its ctor already kicked it off):
+                // a second concurrent RefreshAsync races Uno's clear-then-set token save and
+                // can see an empty cache, reporting "not authenticated" for a valid session.
+                var shell = services.GetRequiredService<ShellModel>();
+                await shell.InitializeAuthenticationState();
 
-                var authenticated = await auth.RefreshAsync();
+                Console.WriteLine($"[App] initialNavigate: auth init done, IsAuthenticated={shell.IsAuthenticated}");
 
-                if (authenticated)
+                if (shell.IsAuthenticated)
                 {
                     var tenantContext = services.GetRequiredService<ITenantContextService>();
-                    var shell = services.GetRequiredService<ShellModel>();
 
-                    if (tenantContext.AvailableTenants.Count == 0)
+                    // A restored session with a still-valid access token skips the login/
+                    // refresh-token responses that normally populate the tenant list — fetch
+                    // it explicitly, otherwise the shell sits on an empty content pane.
+                    var hasTenants = tenantContext.AvailableTenants.Count > 0;
+                    if (!hasTenants)
+                    {
+                        try
+                        {
+                            hasTenants = await tenantContext.RefreshTenantsAndCheckAvailabilityAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            // Offline/server trouble is inconclusive: go to the dashboard (it
+                            // surfaces its own errors) instead of wrongly claiming the user
+                            // has no tenants and showing the first-tenant overlay.
+                            Console.WriteLine($"[App] Tenant refresh on session restore failed: {ex.Message}");
+                            hasTenants = true;
+                        }
+                    }
+
+                    if (!hasTenants)
                     {
                         // Authenticated but no tenants - show first tenant creation overlay
                         // Don't navigate anywhere, the Shell's FirstTenantOverlay will be shown
+                        Console.WriteLine("[App] initialNavigate: no tenants, showing first-tenant overlay");
                         shell.UpdateNoTenantsState(true);
                     }
                     else
                     {
                         // Has tenants - normal Dashboard
-                        await navigator.NavigateViewModelAsync<DashboardModel>(this, qualifier: Qualifiers.Nested);
+                        Console.WriteLine("[App] initialNavigate: navigating to Dashboard");
+                        var response = await navigator.NavigateViewModelAsync<DashboardModel>(this, qualifier: Qualifiers.Nested);
+                        Console.WriteLine($"[App] initialNavigate: dashboard navigation {(response is null ? "UNHANDLED" : "ok")}");
                     }
                 }
                 else
@@ -360,6 +380,7 @@ public partial class App : Application
         SearchModule.RegisterServices(services);
         CustomersModule.RegisterServices(services);
         SalessModule.RegisterServices(services);
+        ShippingsModule.RegisterServices(services);
         ProductsModule.RegisterServices(services);
         ManufacturersModule.RegisterServices(services);
         InvoicesModule.RegisterServices(services);
@@ -390,6 +411,7 @@ public partial class App : Application
         SearchModule.RegisterViews(views);
         CustomersModule.RegisterViews(views);
         SalessModule.RegisterViews(views);
+        ShippingsModule.RegisterViews(views);
         ProductsModule.RegisterViews(views);
         ManufacturersModule.RegisterViews(views);
         InvoicesModule.RegisterViews(views);
@@ -414,6 +436,7 @@ public partial class App : Application
         nestedRoutes.AddRange(SearchModule.GetRoutes(views));
         nestedRoutes.AddRange(CustomersModule.GetRoutes(views));
         nestedRoutes.AddRange(SalessModule.GetRoutes(views));
+        nestedRoutes.AddRange(ShippingsModule.GetRoutes(views));
         nestedRoutes.AddRange(ProductsModule.GetRoutes(views));
         nestedRoutes.AddRange(ManufacturersModule.GetRoutes(views));
         nestedRoutes.AddRange(InvoicesModule.GetRoutes(views));

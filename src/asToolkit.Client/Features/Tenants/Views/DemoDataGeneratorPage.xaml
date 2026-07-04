@@ -161,12 +161,8 @@
                     Grid.Row="0"
                     Margin="0,0,8,0"
                     Background="{ThemeResource SurfaceBrush}"
-                    CornerRadius="12"
-                    Translation="0,0,8"
+                    CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                     MinHeight="360">
-              <Border.Shadow>
-                <ThemeShadow />
-              </Border.Shadow>
               <Grid>
                 <Grid.RowDefinitions>
                   <RowDefinition Height="Auto" />
@@ -183,7 +179,7 @@
                   </Grid.ColumnDefinitions>
                   <Border Grid.Column="0"
                           Background="{ThemeResource PrimaryContainerBrush}"
-                          CornerRadius="12"
+                          CornerRadius="8"
                           Width="48"
                           Height="48"
                           Margin="0,0,16,0">
@@ -307,12 +303,8 @@
                     Grid.Row="0"
                     Margin="8,0,8,0"
                     Background="{ThemeResource SurfaceBrush}"
-                    CornerRadius="12"
-                    Translation="0,0,8"
+                    CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                     MinHeight="360">
-              <Border.Shadow>
-                <ThemeShadow />
-              </Border.Shadow>
               <Grid>
                 <Grid.RowDefinitions>
                   <RowDefinition Height="Auto" />
@@ -329,7 +321,7 @@
                   </Grid.ColumnDefinitions>
                   <Border Grid.Column="0"
                           Background="{ThemeResource SecondaryContainerBrush}"
-                          CornerRadius="12"
+                          CornerRadius="8"
                           Width="48"
                           Height="48"
                           Margin="0,0,16,0">
@@ -453,12 +445,8 @@
                     Grid.Row="0"
                     Margin="8,0,8,0"
                     Background="{ThemeResource SurfaceBrush}"
-                    CornerRadius="12"
-                    Translation="0,0,8"
+                    CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                     MinHeight="360">
-              <Border.Shadow>
-                <ThemeShadow />
-              </Border.Shadow>
               <Grid>
                 <Grid.RowDefinitions>
                   <RowDefinition Height="Auto" />
@@ -475,7 +463,7 @@
                   </Grid.ColumnDefinitions>
                   <Border Grid.Column="0"
                           Background="{ThemeResource SecondaryContainerBrush}"
-                          CornerRadius="12"
+                          CornerRadius="8"
                           Width="48"
                           Height="48"
                           Margin="0,0,16,0">
@@ -623,12 +611,8 @@
                     Grid.Row="0"
                     Margin="8,0,0,0"
                     Background="{ThemeResource SurfaceBrush}"
-                    CornerRadius="12"
-                    Translation="0,0,8"
+                    CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                     MinHeight="360">
-              <Border.Shadow>
-                <ThemeShadow />
-              </Border.Shadow>
               <Grid>
                 <Grid.RowDefinitions>
                   <RowDefinition Height="Auto" />
@@ -646,7 +630,7 @@
                   </Grid.ColumnDefinitions>
                   <Border Grid.Column="0"
                           Background="{ThemeResource TertiaryContainerBrush}"
-                          CornerRadius="12"
+                          CornerRadius="8"
                           Width="48"
                           Height="48"
                           Margin="0,0,16,0">
@@ -669,7 +653,7 @@
                   <!-- AI Badge -->
                   <Border Grid.Column="2"
                           Background="{ThemeResource TertiaryContainerBrush}"
-                          CornerRadius="12"
+                          CornerRadius="8"
                           Padding="8,4"
                           VerticalAlignment="Top">
                     <TextBlock Text="AI"

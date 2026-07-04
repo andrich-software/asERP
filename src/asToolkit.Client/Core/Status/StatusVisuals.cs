@@ -70,6 +70,28 @@ public static class StatusVisuals
             CustomerStatus.NoDoi => Kind.Warning,
             _ => Kind.Neutral,
         }),
+        ShippingStatus sh => (LocalizeEnum(sh), sh switch
+        {
+            ShippingStatus.Delivered => Kind.Success,
+            ShippingStatus.ReadyForShipping => Kind.Positive,
+            ShippingStatus.LabelCreated => Kind.Positive,
+            ShippingStatus.Shipped => Kind.Info,
+            ShippingStatus.InTransit => Kind.Info,
+            ShippingStatus.OutForDelivery => Kind.Info,
+            ShippingStatus.InProgess => Kind.Warning,
+            ShippingStatus.DeliveryFailed => Kind.Danger,
+            ShippingStatus.ReturnedToSender => Kind.Danger,
+            ShippingStatus.Lost => Kind.Danger,
+            _ => Kind.Neutral, // Open, Cancelled
+        }),
+        ShippingOutboxStatus o => (LocalizeEnum(o), o switch
+        {
+            ShippingOutboxStatus.Done => Kind.Success,
+            ShippingOutboxStatus.Pending => Kind.Warning,
+            ShippingOutboxStatus.InFlight => Kind.Warning,
+            ShippingOutboxStatus.DeadLetter => Kind.Danger,
+            _ => Kind.Neutral,
+        }),
         bool syncEnabled => syncEnabled
             ? (LocalizationHelper.GetLocalizedString("SyncStatus.Enabled", "Enabled"), Kind.Success)
             : (LocalizationHelper.GetLocalizedString("SyncStatus.Disabled", "Disabled"), Kind.Neutral),

@@ -104,8 +104,11 @@ Strings resolved at runtime via `_localizer["..."]` (model properties, code-behi
 
 ## Styling
 
+The app follows a **Cloudflare-dashboard design language**: white flat surfaces, 1px hairline borders (`OutlineVariantBrush`) instead of shadows, corner radius 8 (12 for dialogs), Cloudflare blue `#3A5BE0` as primary, Inter as the app font (bundled in `Assets/Fonts/InterVariable.ttf`, wired via `MaterialToolkitTheme.FontOverrideDictionary` in App.xaml). **Do not add `ThemeShadow`/`Translation` elevation to new UI** — use a hairline border.
+
 Styles live in `Styles/`:
-- `ColorPaletteOverride.xaml` — Material color tokens (paired with `.json` for tooling)
+- `ColorPaletteOverride.xaml` — Material color tokens. **Generated on build from `ColorPaletteOverride.json` (Uno Dsp) — edit the JSON only, never the XAML.**
+- `AppTheme.xaml` — app tokens on top of Material: `AppLinkForegroundBrush`, `SidebarActiveBackgroundBrush`, `TableRowHoverBrush`, NavigationBar lightweight-styling overrides, Material shape overrides (button/input radius 8). Merged last in App.xaml so its shape overrides win.
 - `InputControls.xaml` — compact input styling
 - `TenantSwitcher.xaml` — tenant-selector specific
 - `StatusColors.xaml` — semantic status brushes (`Status{Kind}Background/ForegroundBrush`), theme-aware Light + Dark
@@ -117,7 +120,8 @@ Custom controls live in `Controls/` (namespace `asToolkit.Client.Controls`, xmln
 
 | Control | Purpose | Localization |
 |---|---|---|
-| `DetailPageHeader` | Detail page header: icon chip, `Title`/`Subtitle` (string or UI), `Badges`, `Actions` slots; `Content` = extra slot (e.g. related-entity link) | actions/labels via child x:Uid |
+| `DetailPageHeader` | Detail page header: icon chip, `Title`/`Subtitle` (string or UI), `Badges`, `Actions` slots; `Content` = extra slot (e.g. related-entity link). Renders as a plain (transparent, chrome-less) page header | actions/labels via child x:Uid |
+| `PageHeader` | List/overview page header: big 34px `Title`, gray `Description`, optional `Glyph`, `Actions` slot top-right (primary button = `FilledButtonStyle`). Replaces the `NavigationBar` on list pages | x:Uid with `.Title`/`.Description` suffix keys |
 | `SectionCard` | Elevated card with icon + title header row and 16px content padding | x:Uid with `.Header` suffix key |
 | `StatusBadge` | Pill badge for any status enum or bool sync flag: `Status="{Binding ...}"` — text + colors resolved centrally in `Core/Status/StatusVisuals.cs` | automatic (`{EnumType}.{Value}` resw keys) |
 | `LabeledField` | Icon + label + value with built-in "N/A" fallback; `LabeledFieldKeyValueStyle` for label-left/value-right rows | x:Uid with `.Text` suffix key |
@@ -138,13 +142,13 @@ Detail pages use the **Header + Tabs** layout (see `Features/Sales/Views/SalesDe
 
 ### Cards
 
-Cards use `SectionCard` (which implements `ThemeShadow` + `Translation="0,0,8"` + `CornerRadius="12"` once). **Scope the shadow mandate:** shadows only for standalone cards (≤8 per page) — `ThemeShadow` has a real per-element cost on Skia. Tables and list rows use `TableCardStyle` (border outline), never per-row shadows.
+Cards use `SectionCard` (flat: `SurfaceBrush` background, 1px `OutlineVariantBrush` border, `CornerRadius="8"` — no shadow). Tables and list rows use `TableCardStyle` (same border-outline look). `ThemeShadow` is not used anywhere anymore; do not reintroduce it (per-element cost on Skia and off-design).
 
 ### List pages (mandatory performance rules)
 
 See `Features/Products/Views/ProductListPage.xaml` as the reference:
 - **Virtualization:** table bodies are a `ListView` (`TableListViewStyle` + `TableItemContainerStyle`, default `ItemsStackPanel`). **Never** wrap it in a `ScrollViewer` or `StackPanel` and never use `ScrollViewer + ItemsRepeater` for long lists — that materializes every row and killed scroll performance.
-- **Rows:** one shallow `Grid` per row with a bottom hairline (`BorderThickness="0,0,0,1"`), **no Button wrapper** — row click via `IsItemClickEnabled` + `ItemClick`; hover/press come from the item container.
+- **Rows:** one shallow `Grid` per row with a bottom hairline (`BorderThickness="0,0,0,1"`), **no Button wrapper** — row click via `IsItemClickEnabled` + `ItemClick`; hover/press come from the item container. Row min-height is 52 (`TableItemContainerStyle`); table header rows are white (`SurfaceBrush`) with `CornerRadius="8,8,0,0"`.
 - **Compiled bindings:** row `DataTemplate`s declare `x:DataType` and use `{x:Bind}` for leaf values. Do NOT x:Bind against FeedView's `Data.*` outside typed item templates.
 - **Sortable headers:** the header Grid sits *outside* the FeedView (page DataContext) and duplicates the row template's ColumnDefinitions (accepted duplication). Use `controls:SortHeaderButton` bound to `ActiveSortField`/`SortAscending` model states + a `ToggleSort` model method — no imperative icon juggling.
 - **Thumbnails:** never load image bytes inside the list feed (blocks the whole list). Expose a `ThumbnailRequest` on the row model and let `media:ThumbnailLoader.Request` (Core/Media) load lazily per realized row — cached via `IThumbnailCache`, cancellation-safe on container recycling, decode capped via `DecodePixelWidth`.

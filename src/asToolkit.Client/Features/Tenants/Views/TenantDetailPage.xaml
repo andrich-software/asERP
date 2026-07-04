@@ -142,12 +142,8 @@
 
                 <!-- Profile Header Section -->
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
-                        Padding="24"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        CornerRadius="8"
+                        Padding="24" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel HorizontalAlignment="Center"
                               Spacing="16">
                     <!-- Tenant Icon -->
@@ -215,11 +211,7 @@
                           Grid.Row="0"
                           Margin="0,0,8,16"
                           Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12"
-                          Translation="0,0,8">
-                    <Border.Shadow>
-                      <ThemeShadow />
-                    </Border.Shadow>
+                          CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <StackPanel Spacing="0">
                       <!-- Card Header -->
                       <Grid Padding="16,16,16,8">
@@ -329,11 +321,7 @@
                           Grid.Row="0"
                           Margin="8,0,0,16"
                           Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12"
-                          Translation="0,0,8">
-                    <Border.Shadow>
-                      <ThemeShadow />
-                    </Border.Shadow>
+                          CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <StackPanel Spacing="0">
                       <!-- Card Header -->
                       <Grid Padding="16,16,16,8">
@@ -453,11 +441,7 @@
                           Grid.Row="1"
                           Margin="0,0,8,0"
                           Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12"
-                          Translation="0,0,8">
-                    <Border.Shadow>
-                      <ThemeShadow />
-                    </Border.Shadow>
+                          CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <StackPanel Spacing="0">
                       <!-- Card Header -->
                       <Grid Padding="16,16,16,8">
@@ -511,11 +495,7 @@
                           Grid.Row="1"
                           Margin="8,0,0,0"
                           Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12"
-                          Translation="0,0,8">
-                    <Border.Shadow>
-                      <ThemeShadow />
-                    </Border.Shadow>
+                          CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <StackPanel Spacing="0">
                       <!-- Card Header -->
                       <Grid Padding="16,16,16,8">
@@ -615,13 +595,9 @@
                                Foreground="{ThemeResource OnSurfaceBrush}" />
                   </StackPanel>
                   <Border Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12"
+                          CornerRadius="8"
                           Padding="16"
-                          MinHeight="80"
-                          Translation="0,0,8">
-                    <Border.Shadow>
-                      <ThemeShadow />
-                    </Border.Shadow>
+                          MinHeight="80" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <TextBlock Text="{Binding Data.Description}"
                                Style="{StaticResource BodyMedium}"
                                Foreground="{ThemeResource OnSurfaceBrush}"
@@ -642,12 +618,8 @@
                   </StackPanel>
 
                   <Border Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12"
-                          Padding="16"
-                          Translation="0,0,8">
-                    <Border.Shadow>
-                      <ThemeShadow />
-                    </Border.Shadow>
+                          CornerRadius="8"
+                          Padding="16" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <StackPanel Spacing="12">
                       <!-- Generate Demo Data Button -->
                       <Button x:Uid="TenantDetailPage.Button.GenerateDemoData"
@@ -754,11 +726,7 @@
               Margin="24"
               Padding="24"
               HorizontalAlignment="Center"
-              VerticalAlignment="Center"
-              Translation="0,0,32">
-        <Border.Shadow>
-          <ThemeShadow />
-        </Border.Shadow>
+              VerticalAlignment="Center" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
         <StackPanel Spacing="16">
           <!-- Icon -->
           <Border Width="48"

@@ -1,0 +1,44 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    App-level design tokens for the Cloudflare-style theme.
+    Merged AFTER MaterialToolkitTheme in App.xaml so the shape overrides win
+    over the Material defaults (pill buttons -> radius 8).
+  -->
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="AppLinkForegroundBrush" Color="#2C60D9" />
+      <SolidColorBrush x:Key="SidebarActiveBackgroundBrush" Color="#F2F2F2" />
+      <SolidColorBrush x:Key="TableRowHoverBrush" Color="#FAFAFA" />
+      <!-- NavigationBar lightweight styling: flat white app bars on every page -->
+      <SolidColorBrush x:Key="NavigationBarBackground" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="NavigationBarForeground" Color="#1D1F20" />
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Default">
+      <SolidColorBrush x:Key="AppLinkForegroundBrush" Color="#8AB4F8" />
+      <SolidColorBrush x:Key="SidebarActiveBackgroundBrush" Color="#2A2C30" />
+      <SolidColorBrush x:Key="TableRowHoverBrush" Color="#26282C" />
+      <SolidColorBrush x:Key="NavigationBarBackground" Color="#202124" />
+      <SolidColorBrush x:Key="NavigationBarForeground" Color="#E4E5E7" />
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- Shape overrides: flat 8px radius instead of Material pills -->
+  <CornerRadius x:Key="MaterialButtonCornerRadius">8</CornerRadius>
+  <CornerRadius x:Key="MaterialComboBoxCornerRadius">8</CornerRadius>
+  <CornerRadius x:Key="OutlinedTextBoxCornerRadius">8</CornerRadius>
+  <CornerRadius x:Key="FilledTextBoxCornerRadius">8</CornerRadius>
+  <CornerRadius x:Key="OutlinedPasswordBoxCornerRadius">8</CornerRadius>
+  <CornerRadius x:Key="MaterialContentDialogCornerRadius">12</CornerRadius>
+  <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+  <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
+
+  <!-- Page header typography lives in SharedComponents.xaml (PageHeader template references it
+       via StaticResource, which cannot forward-reference this later-merged dictionary). -->
+
+</ResourceDictionary>

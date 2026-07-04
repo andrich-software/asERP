@@ -74,11 +74,7 @@
                 <!-- Attribute Hero Card -->
                 <Border Background="{ThemeResource SurfaceBrush}"
                         CornerRadius="16"
-                        Padding="32"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        Padding="32" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel HorizontalAlignment="Center"
                               Spacing="16">
                     <!-- Attribute Icon -->
@@ -112,11 +108,7 @@
 
                 <!-- Information Card -->
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel Spacing="0">
                     <!-- Card Header -->
                     <Grid Padding="16,16,16,8">
@@ -183,11 +175,7 @@
 
                 <!-- Values Card -->
                 <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
-                        Translation="0,0,8">
-                  <Border.Shadow>
-                    <ThemeShadow />
-                  </Border.Shadow>
+                        CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel Spacing="0">
                     <!-- Card Header -->
                     <Grid Padding="16,16,16,8">
@@ -236,7 +224,7 @@
 
                 <!-- Usage Hint Card -->
                 <Border Background="{ThemeResource SecondaryContainerBrush}"
-                        CornerRadius="12"
+                        CornerRadius="8"
                         Padding="16">
                   <Grid>
                     <Grid.ColumnDefinitions>

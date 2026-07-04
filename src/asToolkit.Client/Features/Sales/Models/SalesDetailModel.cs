@@ -1,5 +1,9 @@
-﻿using asToolkit.Client.Features.Customers;
+using asToolkit.Client.Core.Exceptions;
+using asToolkit.Client.Core.Notifications;
+using asToolkit.Client.Features.Customers;
 using asToolkit.Client.Features.Saless.Services;
+using asToolkit.Client.Features.Shippings;
+using asToolkit.Client.Features.Shippings.Services;
 using asToolkit.Domain.Dtos.Sales;
 
 namespace asToolkit.Client.Features.Saless.Models;
@@ -11,16 +15,25 @@ namespace asToolkit.Client.Features.Saless.Models;
 public partial record SalesDetailModel
 {
     private readonly ISalesService _salesService;
+    private readonly IShippingService _shippingService;
     private readonly INavigator _navigator;
+    private readonly INotificationService _notifications;
+    private readonly IStringLocalizer _localizer;
     private readonly Guid _salesId;
 
     public SalesDetailModel(
         ISalesService salesService,
+        IShippingService shippingService,
         INavigator navigator,
+        INotificationService notifications,
+        IStringLocalizer localizer,
         SalesDetailData data)
     {
         _salesService = salesService;
+        _shippingService = shippingService;
         _navigator = navigator;
+        _notifications = notifications;
+        _localizer = localizer;
         _salesId = data.salesId;
     }
 
@@ -60,5 +73,56 @@ public partial record SalesDetailModel
         }
 
         await _navigator.NavigateDataAsync(this, new CustomerDetailData(customerId));
+    }
+
+    /// <summary>
+    /// Navigate to the detail page of a shipment of this order.
+    /// </summary>
+    public async Task NavigateToShipping(Guid shippingId)
+    {
+        if (shippingId == Guid.Empty)
+        {
+            return;
+        }
+
+        await _navigator.NavigateDataAsync(this, new ShippingDetailData(shippingId));
+    }
+
+    /// <summary>
+    /// Cancels the order on the server (status guard and carrier voids run server-side).
+    /// Returns true on success so the view can refresh its feed.
+    /// </summary>
+    public async Task<bool> CancelSales()
+    {
+        try
+        {
+            await _shippingService.CancelSalesAsync(_salesId);
+            _notifications.Show(_localizer["SalesDetailPage.CancelSalesSuccess"].Value, NotificationSeverity.Success);
+            return true;
+        }
+        catch (ApiException ex)
+        {
+            _notifications.Show(ex.CombinedMessage, NotificationSeverity.Error);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Cancels a single shipment of this order (carrier void, item release). Returns true
+    /// on success so the view can refresh its feed.
+    /// </summary>
+    public async Task<bool> CancelShipment(Guid shippingId)
+    {
+        try
+        {
+            await _shippingService.CancelShippingAsync(shippingId);
+            _notifications.Show(_localizer["ShippingDetailPage.CancelSuccess"].Value, NotificationSeverity.Success);
+            return true;
+        }
+        catch (ApiException ex)
+        {
+            _notifications.Show(ex.CombinedMessage, NotificationSeverity.Error);
+            return false;
+        }
     }
 }

@@ -177,7 +177,22 @@ public partial class ShellModel : INotifyPropertyChanged
         await _navigator.NavigateViewModelAsync<DashboardModel>(this, qualifier: Qualifiers.ClearBackStack);
     }
 
-    public async Task InitializeAuthenticationState()
+    // Single-flight: the ctor (primary instance), App.initialNavigate and Shell.OnShellLoaded
+    // all trigger auth init. Concurrent RefreshAsync calls race Uno's clear-then-set token
+    // save and can see a momentarily empty cache (-> spurious "not authenticated", which
+    // used to leave the shell without any initial navigation). Everyone awaits ONE run.
+    private readonly object _authInitSync = new();
+    private Task? _authInitTask;
+
+    public Task InitializeAuthenticationState()
+    {
+        lock (_authInitSync)
+        {
+            return _authInitTask ??= InitializeAuthenticationStateCore();
+        }
+    }
+
+    private async Task InitializeAuthenticationStateCore()
     {
         System.Diagnostics.Debug.WriteLine("[ShellModel] InitializeAuthenticationState called");
 

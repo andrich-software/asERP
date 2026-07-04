@@ -30,12 +30,8 @@
 
           <!-- Provider selector -->
           <Border Background="{ThemeResource SurfaceBrush}"
-                  CornerRadius="12"
-                  Translation="0,0,8"
+                  CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                   Padding="16">
-            <Border.Shadow>
-              <ThemeShadow />
-            </Border.Shadow>
             <StackPanel Spacing="12">
               <TextBlock x:Uid="SystemOAuthSettingsPage.Section.Provider"
                          Style="{StaticResource TitleMedium}"
@@ -53,12 +49,8 @@
 
           <!-- App credentials -->
           <Border Background="{ThemeResource SurfaceBrush}"
-                  CornerRadius="12"
-                  Translation="0,0,8"
+                  CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                   Padding="16">
-            <Border.Shadow>
-              <ThemeShadow />
-            </Border.Shadow>
             <StackPanel Spacing="12">
               <TextBlock x:Uid="SystemOAuthSettingsPage.Section.AppCredentials"
                          Style="{StaticResource TitleMedium}"
@@ -88,12 +80,8 @@
 
           <!-- Endpoints -->
           <Border Background="{ThemeResource SurfaceBrush}"
-                  CornerRadius="12"
-                  Translation="0,0,8"
+                  CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                   Padding="16">
-            <Border.Shadow>
-              <ThemeShadow />
-            </Border.Shadow>
             <StackPanel Spacing="12">
               <TextBlock x:Uid="SystemOAuthSettingsPage.Section.Endpoints"
                          Style="{StaticResource TitleMedium}"
@@ -114,12 +102,8 @@
 
           <!-- Public base URL (shared across providers) -->
           <Border Background="{ThemeResource SurfaceBrush}"
-                  CornerRadius="12"
-                  Translation="0,0,8"
+                  CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                   Padding="16">
-            <Border.Shadow>
-              <ThemeShadow />
-            </Border.Shadow>
             <StackPanel Spacing="8">
               <TextBlock x:Uid="SystemOAuthSettingsPage.Section.PublicBaseUrl"
                          Style="{StaticResource TitleMedium}"

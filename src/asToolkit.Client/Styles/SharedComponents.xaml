@@ -16,12 +16,27 @@
   <!-- Self-contained converter used by the control templates below -->
   <converters:ObjectToVisibilityConverter x:Key="SharedObjectToVisibilityConverter" />
 
+  <!-- Page header typography (consumed by controls:PageHeader; also usable directly) -->
+  <Style x:Key="PageTitleTextStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="34" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="CharacterSpacing" Value="-15" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style x:Key="PageDescriptionTextStyle" TargetType="TextBlock">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceVariantBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
   <!-- Table container: outlined card (no shadow - ThemeShadow is a per-element cost on Skia) -->
   <Style x:Key="TableCardStyle" TargetType="Border">
     <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{ThemeResource OutlineVariantBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="CornerRadius" Value="8" />
   </Style>
 
   <!-- Virtualized table body: ListView keeps its default ItemsStackPanel (UI virtualization).
@@ -36,7 +51,7 @@
          TargetType="ListViewItem"
          BasedOn="{StaticResource MaterialListViewItemStyle}">
     <Setter Property="Padding" Value="0" />
-    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="MinHeight" Value="52" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
   </Style>
@@ -58,7 +73,7 @@
                 <VisualState x:Name="Normal" />
                 <VisualState x:Name="PointerOver">
                   <VisualState.Setters>
-                    <Setter Target="HeaderRoot.Background" Value="{ThemeResource SurfaceVariantBrush}" />
+                    <Setter Target="HeaderRoot.Background" Value="{ThemeResource TableRowHoverBrush}" />
                   </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="Pressed">
@@ -90,7 +105,7 @@
                         HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}">
               <TextBlock Text="{TemplateBinding Text}"
                          Style="{StaticResource LabelLarge}"
-                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                         Foreground="{ThemeResource OnSurfaceBrush}"
                          VerticalAlignment="Center" />
               <FontIcon x:Name="SortChevron"
                         Glyph="&#xE70D;"
@@ -105,12 +120,57 @@
     </Setter>
   </Style>
 
-  <!-- SectionCard: elevated card with optional icon + title header -->
+  <!-- PageHeader: Cloudflare-style page header - big title (optional leading icon),
+       gray description below, actions slot top-right. For list/overview pages. -->
+  <Style TargetType="controls:PageHeader">
+    <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="0,16,0,12" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="controls:PageHeader">
+          <Grid Padding="{TemplateBinding Padding}"
+                ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Spacing="8">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <FontIcon Glyph="{TemplateBinding Glyph}"
+                          FontSize="26"
+                          Foreground="{ThemeResource OnSurfaceBrush}"
+                          VerticalAlignment="Center"
+                          Visibility="{Binding Glyph, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource SharedObjectToVisibilityConverter}}" />
+                <TextBlock Text="{TemplateBinding Title}"
+                           Style="{StaticResource PageTitleTextStyle}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+              <TextBlock Text="{TemplateBinding Description}"
+                         Style="{StaticResource PageDescriptionTextStyle}"
+                         MaxWidth="720"
+                         HorizontalAlignment="Left"
+                         Visibility="{Binding Description, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource SharedObjectToVisibilityConverter}}" />
+            </StackPanel>
+
+            <ContentPresenter Grid.Column="1"
+                              Content="{TemplateBinding Actions}"
+                              VerticalAlignment="Top"
+                              HorizontalAlignment="Right"
+                              Visibility="{Binding Actions, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource SharedObjectToVisibilityConverter}}" />
+          </Grid>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- SectionCard: flat outlined card with optional icon + title header (Cloudflare style: hairline border, no shadow) -->
   <Style TargetType="controls:SectionCard">
     <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
-    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="16,0,16,16" />
-    <Setter Property="HeaderGlyphBrush" Value="{ThemeResource PrimaryBrush}" />
+    <Setter Property="HeaderGlyphBrush" Value="{ThemeResource OnSurfaceVariantBrush}" />
     <Setter Property="IsTabStop" Value="False" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -120,10 +180,8 @@
         <ControlTemplate TargetType="controls:SectionCard">
           <Border Background="{TemplateBinding Background}"
                   CornerRadius="{TemplateBinding CornerRadius}"
-                  Translation="0,0,8">
-            <Border.Shadow>
-              <ThemeShadow />
-            </Border.Shadow>
+                  BorderBrush="{ThemeResource OutlineVariantBrush}"
+                  BorderThickness="1">
             <Grid>
               <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -156,11 +214,12 @@
     </Setter>
   </Style>
 
-  <!-- DetailPageHeader: icon chip | title / subtitle / badges / extra content | actions -->
+  <!-- DetailPageHeader: icon chip | title / subtitle / badges / extra content | actions.
+       Cloudflare style: plain page header (transparent, no card chrome). -->
   <Style TargetType="controls:DetailPageHeader">
-    <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
-    <Setter Property="CornerRadius" Value="12" />
-    <Setter Property="Padding" Value="20,16" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="0,12" />
     <Setter Property="IsTabStop" Value="False" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="Template">
@@ -168,11 +227,7 @@
         <ControlTemplate TargetType="controls:DetailPageHeader">
           <Border Background="{TemplateBinding Background}"
                   CornerRadius="{TemplateBinding CornerRadius}"
-                  Padding="{TemplateBinding Padding}"
-                  Translation="0,0,8">
-            <Border.Shadow>
-              <ThemeShadow />
-            </Border.Shadow>
+                  Padding="{TemplateBinding Padding}">
             <Grid ColumnSpacing="16">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -180,15 +235,15 @@
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
 
-              <Border Width="56"
-                      Height="56"
-                      CornerRadius="28"
-                      Background="{ThemeResource PrimaryContainerBrush}"
+              <Border Width="40"
+                      Height="40"
+                      CornerRadius="8"
+                      Background="{ThemeResource SurfaceVariantBrush}"
                       VerticalAlignment="Center"
                       Visibility="{Binding Glyph, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource SharedObjectToVisibilityConverter}}">
                 <FontIcon Glyph="{TemplateBinding Glyph}"
-                          FontSize="26"
-                          Foreground="{ThemeResource OnPrimaryContainerBrush}"
+                          FontSize="20"
+                          Foreground="{ThemeResource OnSurfaceVariantBrush}"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Center" />
               </Border>
@@ -197,7 +252,8 @@
                           VerticalAlignment="Center"
                           Spacing="4">
                 <ContentPresenter Content="{TemplateBinding Title}"
-                                  FontSize="22"
+                                  FontSize="28"
+                                  FontWeight="SemiBold"
                                   Foreground="{ThemeResource OnSurfaceBrush}" />
                 <ContentPresenter Content="{TemplateBinding Subtitle}"
                                   FontSize="14"
@@ -226,7 +282,7 @@
   <!-- StatusBadge: pill badge, colors driven by StatusVisuals.Kind visual states -->
   <Style TargetType="controls:StatusBadge">
     <Setter Property="CornerRadius" Value="16" />
-    <Setter Property="Padding" Value="16,6" />
+    <Setter Property="Padding" Value="10,4" />
     <Setter Property="IsTabStop" Value="False" />
     <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="Template">
@@ -383,8 +439,8 @@
 
   <!-- EmptyState: centered icon + optional title + message + optional action -->
   <Style TargetType="controls:EmptyState">
-    <Setter Property="Background" Value="{ThemeResource SurfaceVariantBrush}" />
-    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="24" />
     <Setter Property="IsTabStop" Value="False" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -393,6 +449,8 @@
         <ControlTemplate TargetType="controls:EmptyState">
           <Border Background="{TemplateBinding Background}"
                   CornerRadius="{TemplateBinding CornerRadius}"
+                  BorderBrush="{ThemeResource OutlineVariantBrush}"
+                  BorderThickness="1"
                   Padding="{TemplateBinding Padding}">
             <StackPanel HorizontalAlignment="Center"
                         Spacing="8">

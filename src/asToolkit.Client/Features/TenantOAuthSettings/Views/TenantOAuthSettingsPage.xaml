@@ -33,12 +33,8 @@
         <StackPanel Spacing="20" MaxWidth="700" HorizontalAlignment="Center">
 
           <Border Background="{ThemeResource SurfaceBrush}"
-                  CornerRadius="12"
-                  Translation="0,0,8"
+                  CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                   Padding="16">
-            <Border.Shadow>
-              <ThemeShadow />
-            </Border.Shadow>
             <StackPanel Spacing="12">
               <TextBlock x:Uid="TenantOAuthSettingsPage.Section.Provider"
                          Style="{StaticResource TitleMedium}"
@@ -59,12 +55,8 @@
           </Border>
 
           <Border Background="{ThemeResource SurfaceBrush}"
-                  CornerRadius="12"
-                  Translation="0,0,8"
+                  CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                   Padding="16">
-            <Border.Shadow>
-              <ThemeShadow />
-            </Border.Shadow>
             <StackPanel Spacing="12">
               <TextBlock x:Uid="TenantOAuthSettingsPage.Section.Override"
                          Style="{StaticResource TitleMedium}"

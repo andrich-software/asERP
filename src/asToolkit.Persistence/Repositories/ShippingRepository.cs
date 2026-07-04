@@ -1,5 +1,6 @@
 using asToolkit.Application.Contracts.Persistence;
 using asToolkit.Application.Contracts.Services;
+using asToolkit.Domain.Dtos.Shipping;
 using asToolkit.Domain.Entities;
 using asToolkit.Persistence.DatabaseContext;
 using Microsoft.EntityFrameworkCore;
@@ -59,22 +60,61 @@ public class ShippingRepository : GenericRepository<Shipping>, IShippingReposito
             .FirstOrDefaultAsync();
     }
 
-    public async Task AssignSalesItemsAsync(Guid shippingId, ICollection<Guid> salesItemIds)
+    public Task AssignSalesItemsAsync(Guid shippingId, ICollection<Guid> salesItemIds)
     {
-        if (salesItemIds.Count == 0)
+        return AssignSalesItemsAsync(shippingId,
+            salesItemIds.Select(id => new SalesItemAssignment(id, null)).ToList());
+    }
+
+    public async Task AssignSalesItemsAsync(Guid shippingId, ICollection<SalesItemAssignment> assignments)
+    {
+        if (assignments.Count == 0)
         {
             return;
         }
 
         // Tracked load on purpose: the sales aggregate is fetched AsNoTracking elsewhere, so the
         // stamping must happen on tracked instances to be persisted.
+        var itemIds = assignments.Select(a => a.SalesItemId).ToList();
         var items = await Context.SalesItem
-            .Where(i => salesItemIds.Contains(i.Id))
+            .Where(i => itemIds.Contains(i.Id))
             .ToListAsync();
 
-        foreach (var item in items)
+        foreach (var assignment in assignments)
         {
+            var item = items.First(i => i.Id == assignment.SalesItemId);
+
+            // Within tolerance of the full line quantity → whole-line assignment, no split.
+            if (assignment.Quantity is not double quantity
+                || Math.Abs(item.Quantity - quantity) < SalesItemAssignment.QuantityTolerance)
+            {
+                item.ShippingId = shippingId;
+                continue;
+            }
+
+            // The original row becomes the shipped part (serial-number rows stay attached to it);
+            // the remainder is a new unassigned row. Price is per-unit, so amounts follow quantity.
+            var remainder = Math.Round(item.Quantity - quantity, 4);
+            item.Quantity = quantity;
             item.ShippingId = shippingId;
+
+            if (remainder >= SalesItemAssignment.QuantityTolerance)
+            {
+                Context.SalesItem.Add(new SalesItem
+                {
+                    Id = Guid.NewGuid(),
+                    SalesId = item.SalesId,
+                    ProductId = item.ProductId,
+                    Name = item.Name,
+                    Price = item.Price,
+                    TaxRate = item.TaxRate,
+                    MissingProductSku = item.MissingProductSku,
+                    MissingProductEan = item.MissingProductEan,
+                    Quantity = remainder,
+                    ShippingId = null,
+                    TenantId = item.TenantId
+                });
+            }
         }
 
         await Context.SaveChangesAsync();

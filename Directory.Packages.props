@@ -87,6 +87,9 @@
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageVersion Include="PDFsharp" Version="6.2.4" />
     <PackageVersion Include="PDFsharp-MigraDoc" Version="6.2.4" />
+    <!-- Label printing on the desktop head (Windows only at runtime) -->
+    <PackageVersion Include="PDFtoImage" Version="5.2.1" />
+    <PackageVersion Include="System.Drawing.Common" Version="10.0.9" />
     <!-- Pinned to 3.119.2 to match the SkiaSharp version Uno 6.5.x resolves transitively.
          A higher pin (e.g. 3.119.4) mixes native asset versions and breaks WASM boot-config generation. -->
     <PackageVersion Include="SkiaSharp" Version="3.119.2" />

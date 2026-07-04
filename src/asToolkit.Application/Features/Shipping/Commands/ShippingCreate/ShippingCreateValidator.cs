@@ -24,6 +24,20 @@ public class ShippingCreateValidator : AbstractValidator<ShippingCreateCommand>
         RuleFor(s => s.TrackingNumber)
             .MaximumLength(100).WithMessage("Tracking number must not exceed 100 characters.");
 
+        RuleForEach(s => s.Items).ChildRules(item =>
+        {
+            item.RuleFor(i => i.SalesItemId)
+                .NotEmpty().WithMessage("SalesItemId is required for every item.");
+
+            item.RuleFor(i => i.Quantity)
+                .GreaterThan(0).WithMessage("Item quantity must be greater than 0.");
+        });
+
+        RuleFor(s => s)
+            .Must(s => s.Items.Select(i => i.SalesItemId).Concat(s.SalesItemIds).Distinct().Count()
+                == s.Items.Count + s.SalesItemIds.Count)
+            .WithMessage("A sales item must not appear more than once across Items and SalesItemIds.");
+
         RuleFor(s => s.ShippingCost)
             .GreaterThanOrEqualTo(0).When(s => s.ShippingCost.HasValue)
             .WithMessage("Shipping cost must not be negative.");

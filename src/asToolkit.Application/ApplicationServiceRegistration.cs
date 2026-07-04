@@ -19,6 +19,8 @@ public static class ApplicationServiceRegistration
         // Register services
         services.AddScoped<IUserTenantService, UserTenantService>();
         services.AddScoped<IShippingStatusUpdater, ShippingStatusUpdater>();
+        services.AddScoped<ISalesShippingStatusService, SalesShippingStatusService>();
+        services.AddScoped<IShippingDestinationResolver, ShippingDestinationResolver>();
 
         // Register FluentValidation validators
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());

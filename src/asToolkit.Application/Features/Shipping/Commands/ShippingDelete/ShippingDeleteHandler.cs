@@ -1,5 +1,6 @@
 using asToolkit.Application.Contracts.Logging;
 using asToolkit.Application.Contracts.Persistence;
+using asToolkit.Application.Contracts.Services;
 using asToolkit.Application.Exceptions;
 using asToolkit.Application.Mediator;
 using asToolkit.Domain.Enums;
@@ -19,13 +20,16 @@ public class ShippingDeleteHandler : IRequestHandler<ShippingDeleteCommand, Resu
 
     private readonly IAppLogger<ShippingDeleteHandler> _logger;
     private readonly IShippingRepository _shippingRepository;
+    private readonly ISalesShippingStatusService _salesShippingStatusService;
 
     public ShippingDeleteHandler(
         IAppLogger<ShippingDeleteHandler> logger,
-        IShippingRepository shippingRepository)
+        IShippingRepository shippingRepository,
+        ISalesShippingStatusService salesShippingStatusService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _shippingRepository = shippingRepository ?? throw new ArgumentNullException(nameof(shippingRepository));
+        _salesShippingStatusService = salesShippingStatusService ?? throw new ArgumentNullException(nameof(salesShippingStatusService));
     }
 
     public async Task<Result<Guid>> Handle(ShippingDeleteCommand request, CancellationToken cancellationToken)
@@ -66,6 +70,8 @@ public class ShippingDeleteHandler : IRequestHandler<ShippingDeleteCommand, Resu
 
             await _shippingRepository.SaveChangesAsync(cancellationToken);
             await _shippingRepository.DeleteAsync(shipping);
+
+            await _salesShippingStatusService.RecomputeAsync(shipping.SalesId, cancellationToken);
 
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.NoContent;

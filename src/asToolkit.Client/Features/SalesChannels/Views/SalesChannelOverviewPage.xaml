@@ -5,11 +5,10 @@
       xmlns:models="using:asToolkit.Client.Features.SalesChannels.Models"
       xmlns:mvux="using:Uno.Extensions.Reactive.UI"
       xmlns:utu="using:Uno.Toolkit.UI"
+      xmlns:controls="using:asToolkit.Client.Controls"
       Background="{ThemeResource BackgroundBrush}">
 
   <Page.Resources>
-    <SolidColorBrush x:Key="PositiveChangeBrush" Color="#16A34A" />
-    <SolidColorBrush x:Key="NegativeChangeBrush" Color="#DC2626" />
   </Page.Resources>
 
   <Grid utu:SafeArea.Insets="VisibleBounds">
@@ -18,23 +17,23 @@
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
 
-    <utu:NavigationBar Grid.Row="0"
-                       x:Uid="SalesChannelOverviewPage.NavigationBar">
-      <utu:NavigationBar.PrimaryCommands>
-        <AppBarButton x:Uid="SalesChannelOverviewPage.AppBarButton.ManageList"
-                      Click="ManageList_Click">
-          <AppBarButton.Icon>
-            <FontIcon Glyph="&#xE713;" />
-          </AppBarButton.Icon>
-        </AppBarButton>
-        <AppBarButton x:Uid="SalesChannelOverviewPage.AppBarButton.Refresh"
-                      Command="{Binding Refresh, ElementName=OverviewFeedView}">
-          <AppBarButton.Icon>
-            <FontIcon Glyph="&#xE72C;" />
-          </AppBarButton.Icon>
-        </AppBarButton>
-      </utu:NavigationBar.PrimaryCommands>
-    </utu:NavigationBar>
+    <!-- Cloudflare-style page header: big title + description, actions top-right -->
+    <controls:PageHeader Grid.Row="0"
+                         x:Uid="SalesChannelOverviewPage.PageHeader"
+                         Glyph="&#xE8A7;"
+                         Margin="24,0">
+      <controls:PageHeader.Actions>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Style="{StaticResource OutlinedButtonStyle}"
+                  Command="{Binding Refresh, ElementName=OverviewFeedView}">
+            <FontIcon Glyph="&#xE72C;" FontSize="16" />
+          </Button>
+          <Button x:Uid="SalesChannelOverviewPage.HeaderButton.ManageList"
+                  Style="{StaticResource OutlinedButtonStyle}"
+                  Click="ManageList_Click" />
+        </StackPanel>
+      </controls:PageHeader.Actions>
+    </controls:PageHeader>
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
       <Grid Padding="24">
@@ -46,27 +45,11 @@
             <DataTemplate>
               <StackPanel Spacing="20">
 
-                <!-- Page Header -->
-                <StackPanel Spacing="2">
-                  <TextBlock x:Uid="SalesChannelOverviewPage.Header.Breadcrumb"
-                             Style="{StaticResource LabelSmall}"
-                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
-                  <TextBlock x:Uid="SalesChannelOverviewPage.Header.Title"
-                             Style="{StaticResource HeadlineMedium}"
-                             Foreground="{ThemeResource OnBackgroundBrush}" />
-                  <TextBlock x:Uid="SalesChannelOverviewPage.Header.Subtitle"
-                             Style="{StaticResource BodyMedium}"
-                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
-                             TextWrapping="Wrap" />
-                </StackPanel>
-
                 <!-- Empty State -->
                 <Border Visibility="{Binding Data.HasNoChannels, Converter={StaticResource BoolToVisibilityConverter}}"
                         Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="12"
-                        Padding="32"
-                        Translation="0,0,8">
-                  <Border.Shadow><ThemeShadow /></Border.Shadow>
+                        CornerRadius="8"
+                        Padding="32" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                   <StackPanel Spacing="12" HorizontalAlignment="Center">
                     <FontIcon Glyph="&#xE8A7;" FontSize="48"
                               Foreground="{ThemeResource OnSurfaceVariantBrush}"
@@ -102,9 +85,7 @@
                   <!-- KPI: Total Revenue This Month -->
                   <Border Grid.Column="0"
                           Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12" Padding="20"
-                          Translation="0,0,8">
-                    <Border.Shadow><ThemeShadow /></Border.Shadow>
+                          CornerRadius="8" Padding="20" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <Grid>
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -145,9 +126,7 @@
                   <!-- KPI: Total Sales Today -->
                   <Border Grid.Column="1"
                           Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12" Padding="20"
-                          Translation="0,0,8">
-                    <Border.Shadow><ThemeShadow /></Border.Shadow>
+                          CornerRadius="8" Padding="20" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <Grid>
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -188,9 +167,7 @@
                   <!-- KPI: Active Channels -->
                   <Border Grid.Column="2"
                           Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12" Padding="20"
-                          Translation="0,0,8">
-                    <Border.Shadow><ThemeShadow /></Border.Shadow>
+                          CornerRadius="8" Padding="20" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <Grid>
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -228,9 +205,7 @@
                   <!-- KPI: Top Performer -->
                   <Border Grid.Column="3"
                           Background="{ThemeResource SurfaceBrush}"
-                          CornerRadius="12" Padding="20"
-                          Translation="0,0,8">
-                    <Border.Shadow><ThemeShadow /></Border.Shadow>
+                          CornerRadius="8" Padding="20" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                     <Grid>
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -298,10 +273,8 @@
                                 Padding="0"
                                 Click="ChannelCard_Click">
                           <Border Background="{ThemeResource SurfaceBrush}"
-                                  CornerRadius="12"
-                                  Padding="20"
-                                  Translation="0,0,8">
-                            <Border.Shadow><ThemeShadow /></Border.Shadow>
+                                  CornerRadius="8"
+                                  Padding="20" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                             <Grid>
                               <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -404,21 +377,21 @@
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
                                             Visibility="{Binding RevenueChangePositive, Converter={StaticResource BoolToVisibilityConverter}}">
                                   <FontIcon Glyph="&#xE74A;" FontSize="10"
-                                            Foreground="{StaticResource PositiveChangeBrush}"
+                                            Foreground="{ThemeResource StatusChangePositiveBrush}"
                                             VerticalAlignment="Center" />
                                   <TextBlock Text="{Binding RevenueChangeFormatted}"
                                              Style="{StaticResource LabelSmall}"
-                                             Foreground="{StaticResource PositiveChangeBrush}"
+                                             Foreground="{ThemeResource StatusChangePositiveBrush}"
                                              VerticalAlignment="Center" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
                                             Visibility="{Binding RevenueChangePositive, Converter={StaticResource BoolToInverseVisibilityConverter}}">
                                   <FontIcon Glyph="&#xE74B;" FontSize="10"
-                                            Foreground="{StaticResource NegativeChangeBrush}"
+                                            Foreground="{ThemeResource StatusChangeNegativeBrush}"
                                             VerticalAlignment="Center" />
                                   <TextBlock Text="{Binding RevenueChangeFormatted}"
                                              Style="{StaticResource LabelSmall}"
-                                             Foreground="{StaticResource NegativeChangeBrush}"
+                                             Foreground="{ThemeResource StatusChangeNegativeBrush}"
                                              VerticalAlignment="Center" />
                                 </StackPanel>
                               </Grid>
@@ -461,10 +434,8 @@
           <mvux:FeedView.ProgressTemplate>
             <DataTemplate>
               <Border Background="{ThemeResource SurfaceBrush}"
-                      CornerRadius="12"
-                      Padding="48"
-                      Translation="0,0,8">
-                <Border.Shadow><ThemeShadow /></Border.Shadow>
+                      CornerRadius="8"
+                      Padding="48" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
                 <ProgressRing IsActive="True" Width="48" Height="48"
                               HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Border>
@@ -473,7 +444,7 @@
 
           <mvux:FeedView.ErrorTemplate>
             <DataTemplate>
-              <Border CornerRadius="12"
+              <Border CornerRadius="8"
                       Background="{ThemeResource ErrorContainerBrush}"
                       BorderBrush="{ThemeResource ErrorBrush}"
                       BorderThickness="1"

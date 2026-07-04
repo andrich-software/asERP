@@ -183,7 +183,9 @@ public static class ShippingTestDataSeeder
         ShippingStatus status = ShippingStatus.Open,
         string trackingNumber = "",
         byte[]? labelData = null,
-        string? labelFormat = null)
+        string? labelFormat = null,
+        DateTime? shippedAt = null,
+        DateTime? deliveredAt = null)
     {
         var shipping = new Domain.Entities.Shipping
         {
@@ -196,10 +198,93 @@ public static class ShippingTestDataSeeder
             ShippingCost = rate?.Price ?? 4.99m,
             LabelData = labelData,
             LabelFormat = labelFormat,
+            ShippedAt = shippedAt,
+            DeliveredAt = deliveredAt,
             TenantId = sales.TenantId
         };
 
         context.Shipping.Add(shipping);
         return shipping;
+    }
+
+    public static ShippingLabelOutbox AddLabelOutbox(
+        ApplicationDbContext context,
+        Domain.Entities.Shipping shipping,
+        ShippingOutboxStatus status = ShippingOutboxStatus.DeadLetter)
+    {
+        var outbox = new ShippingLabelOutbox
+        {
+            Id = Guid.NewGuid(),
+            ShippingId = shipping.Id,
+            ShippingProviderId = shipping.ShippingProviderId,
+            IdempotencyKey = $"label:{shipping.Id:N}",
+            Status = status,
+            AttemptCount = 1,
+            NextAttemptAt = DateTime.UtcNow,
+            TenantId = shipping.TenantId
+        };
+
+        context.ShippingLabelOutbox.Add(outbox);
+        return outbox;
+    }
+
+    /// <summary>Adds a product with per-warehouse stock rows for the shippable-items query.</summary>
+    public static Product AddProduct(
+        ApplicationDbContext context,
+        Guid tenantId,
+        string sku,
+        decimal weight = 0m,
+        decimal width = 0m,
+        decimal height = 0m,
+        decimal depth = 0m,
+        params double[] warehouseStocks)
+    {
+        var product = new Product
+        {
+            Id = Guid.NewGuid(),
+            Sku = sku,
+            Name = $"Product {sku}",
+            TaxClassId = Guid.NewGuid(),
+            ProductType = ProductType.Standard,
+            Weight = weight,
+            Width = width,
+            Height = height,
+            Depth = depth,
+            TenantId = tenantId
+        };
+
+        context.Product.Add(product);
+
+        foreach (var stock in warehouseStocks)
+        {
+            context.ProductStock.Add(new ProductStock
+            {
+                Id = Guid.NewGuid(),
+                ProductId = product.Id,
+                WarehouseId = Guid.NewGuid(),
+                Stock = stock,
+                TenantId = tenantId
+            });
+        }
+
+        return product;
+    }
+
+    public static SalesItemSerialNumber AddSerialNumber(
+        ApplicationDbContext context,
+        SalesItem item,
+        string serialNumber)
+    {
+        var serial = new SalesItemSerialNumber
+        {
+            Id = Guid.NewGuid(),
+            SalesItemId = item.Id,
+            SerialNumber = serialNumber,
+            TenantId = item.TenantId
+        };
+
+        item.SerialNumbers.Add(serial);
+        context.SalesItemSerialNumber.Add(serial);
+        return serial;
     }
 }

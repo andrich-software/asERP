@@ -3,10 +3,21 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:local="using:asToolkit.Client.Features.Saless.Views"
       xmlns:models="using:asToolkit.Client.Features.Saless.Models"
+      xmlns:shippings="using:asToolkit.Client.Features.Shippings"
+      xmlns:shipmodels="using:asToolkit.Client.Features.Shippings.Models"
+      xmlns:shipviews="using:asToolkit.Client.Features.Shippings.Views"
+      xmlns:shipdtos="using:asToolkit.Domain.Dtos.Shipping"
       xmlns:mvux="using:Uno.Extensions.Reactive.UI"
       xmlns:utu="using:Uno.Toolkit.UI"
       xmlns:controls="using:asToolkit.Client.Controls"
       Background="{ThemeResource BackgroundBrush}">
+
+  <Page.Resources>
+    <!-- Page-local converters delegating to SalesShipmentRules (untyped detail template → classic Binding) -->
+    <shippings:SalesStatusToShipVisibilityConverter x:Key="SalesStatusToShipVisibilityConverter" />
+    <shippings:SalesStatusToCancelVisibilityConverter x:Key="SalesStatusToCancelVisibilityConverter" />
+    <shippings:CanCancelShipmentToVisibilityConverter x:Key="CanCancelShipmentToVisibilityConverter" />
+  </Page.Resources>
 
   <Grid utu:SafeArea.Insets="VisibleBounds">
     <Grid.RowDefinitions>
@@ -24,7 +35,8 @@
     </utu:NavigationBar>
 
     <!-- Sales Details Content -->
-    <mvux:FeedView Grid.Row="1"
+    <mvux:FeedView x:Name="SalesFeedView"
+                   Grid.Row="1"
                    Source="{Binding Sales}">
       <mvux:FeedView.ValueTemplate>
         <DataTemplate>
@@ -142,9 +154,22 @@
                 </StackPanel>
               </controls:DetailPageHeader.Badges>
               <controls:DetailPageHeader.Actions>
-                <Button x:Uid="SalesDetailPage.HeaderAction.Edit"
-                        Click="EditButton_Click"
-                        Style="{StaticResource OutlinedButtonStyle}" />
+                <StackPanel Orientation="Horizontal"
+                            Spacing="8">
+                  <Button x:Uid="SalesDetailPage.HeaderAction.Ship"
+                          Click="ShipButton_Click"
+                          CommandParameter="{Binding Data.Id}"
+                          Style="{StaticResource FilledButtonStyle}"
+                          Visibility="{Binding Data.Status, Converter={StaticResource SalesStatusToShipVisibilityConverter}}" />
+                  <Button x:Uid="SalesDetailPage.HeaderAction.Edit"
+                          Click="EditButton_Click"
+                          Style="{StaticResource OutlinedButtonStyle}" />
+                  <Button x:Uid="SalesDetailPage.HeaderAction.CancelSales"
+                          Click="CancelSalesButton_Click"
+                          Style="{StaticResource OutlinedButtonStyle}"
+                          Foreground="{ThemeResource ErrorBrush}"
+                          Visibility="{Binding Data.Status, Converter={StaticResource SalesStatusToCancelVisibilityConverter}}" />
+                </StackPanel>
               </controls:DetailPageHeader.Actions>
 
               <!-- Extra slot: link to the customer -->
@@ -175,6 +200,8 @@
                                 Style="{StaticResource MaterialTopTabBarItemStyle}"
                                 IsSelected="True" />
                 <utu:TabBarItem x:Uid="SalesDetailPage.TabItems"
+                                Style="{StaticResource MaterialTopTabBarItemStyle}" />
+                <utu:TabBarItem x:Uid="SalesDetailPage.TabShipments"
                                 Style="{StaticResource MaterialTopTabBarItemStyle}" />
                 <utu:TabBarItem x:Uid="SalesDetailPage.TabAddresses"
                                 Style="{StaticResource MaterialTopTabBarItemStyle}" />
@@ -314,8 +341,8 @@
                   <Border Style="{StaticResource TableCardStyle}">
                     <StackPanel>
                       <Grid Padding="16,12"
-                            Background="{ThemeResource SurfaceVariantBrush}"
-                            CornerRadius="12,12,0,0">
+                            Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="8,8,0,0">
                         <Grid.ColumnDefinitions>
                           <ColumnDefinition Width="*" MinWidth="150" />
                           <ColumnDefinition Width="80" />
@@ -396,6 +423,137 @@
                                            Glyph="&#xE8EF;"
                                            Background="Transparent"
                                            Visibility="{Binding Data.SalesItems.Count, Converter={StaticResource ZeroToVisibilityConverter}}" />
+                    </StackPanel>
+                  </Border>
+                </StackPanel>
+              </ScrollViewer>
+
+              <!-- Tab: Shipments -->
+              <ScrollViewer x:Name="ShipmentsTab"
+                            VerticalScrollBarVisibility="Auto"
+                            Visibility="Collapsed">
+                <StackPanel Padding="0,20,0,24">
+                  <Border Style="{StaticResource TableCardStyle}">
+                    <StackPanel>
+                      <Grid Padding="16,12"
+                            Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="8,8,0,0">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="140" />
+                          <ColumnDefinition Width="*" MinWidth="140" />
+                          <ColumnDefinition Width="*" MinWidth="140" />
+                          <ColumnDefinition Width="110" />
+                          <ColumnDefinition Width="96" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   x:Uid="SalesDetailPage.ShipHeader.Status"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="1"
+                                   x:Uid="SalesDetailPage.ShipHeader.Tracking"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="2"
+                                   x:Uid="SalesDetailPage.ShipHeader.Provider"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="3"
+                                   x:Uid="SalesDetailPage.ShipHeader.ShippedAt"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                      </Grid>
+
+                      <ItemsRepeater ItemsSource="{Binding Data.Shippings}">
+                        <ItemsRepeater.Layout>
+                          <StackLayout Orientation="Vertical" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                          <DataTemplate x:DataType="shipdtos:ShippingListDto">
+                            <Grid Padding="16,8"
+                                  Background="Transparent"
+                                  BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                  BorderThickness="0,1,0,0"
+                                  Tapped="ShipmentRow_Tapped">
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="*" MinWidth="140" />
+                                <ColumnDefinition Width="*" MinWidth="140" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="96" />
+                              </Grid.ColumnDefinitions>
+
+                              <controls:StatusBadge Grid.Column="0"
+                                                    Status="{x:Bind Status}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center" />
+
+                              <!-- Tracking number: link when a tracking URL exists, plain text otherwise -->
+                              <Grid Grid.Column="1"
+                                    VerticalAlignment="Center">
+                                <Button Style="{StaticResource TextButtonStyle}"
+                                        Padding="4,2"
+                                        Background="Transparent"
+                                        HorizontalAlignment="Left"
+                                        Click="ShipmentTracking_Click"
+                                        CommandParameter="{x:Bind TrackingUrl}"
+                                        Visibility="{x:Bind shipmodels:ShippingRowVisuals.HasText(TrackingUrl)}">
+                                  <TextBlock Text="{x:Bind TrackingNumber}"
+                                             Style="{StaticResource BodyMedium}"
+                                             Foreground="{ThemeResource PrimaryBrush}" />
+                                </Button>
+                                <TextBlock Text="{x:Bind TrackingNumber}"
+                                           Style="{StaticResource BodyMedium}"
+                                           Foreground="{ThemeResource OnSurfaceBrush}"
+                                           VerticalAlignment="Center"
+                                           Visibility="{x:Bind shipmodels:ShippingRowVisuals.NoText(TrackingUrl)}" />
+                              </Grid>
+
+                              <TextBlock Grid.Column="2"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceBrush}"
+                                         VerticalAlignment="Center"
+                                         TextTrimming="CharacterEllipsis">
+                                <Run Text="{x:Bind ProviderName}" /><Run Text=" · " /><Run Text="{x:Bind RateName}" />
+                              </TextBlock>
+
+                              <TextBlock Grid.Column="3"
+                                         Text="{x:Bind shipmodels:ShippingRowVisuals.FormatDate(ShippedAt)}"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceBrush}"
+                                         VerticalAlignment="Center" />
+
+                              <StackPanel Grid.Column="4"
+                                          Orientation="Horizontal"
+                                          Spacing="4"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Center">
+                                <Button Style="{StaticResource IconButtonStyle}"
+                                        x:Uid="SalesDetailPage.ShipRowLabel"
+                                        Click="ShipmentLabel_Click"
+                                        CommandParameter="{x:Bind Id}"
+                                        Visibility="{x:Bind shipmodels:ShippingRowVisuals.Visible(HasLabel)}">
+                                  <FontIcon Glyph="&#xE7BA;"
+                                            FontSize="14" />
+                                </Button>
+                                <Button Style="{StaticResource IconButtonStyle}"
+                                        x:Uid="SalesDetailPage.ShipRowCancel"
+                                        Click="ShipmentCancel_Click"
+                                        CommandParameter="{x:Bind Id}"
+                                        Visibility="{x:Bind Status, Converter={StaticResource CanCancelShipmentToVisibilityConverter}}">
+                                  <FontIcon Glyph="&#xE711;"
+                                            FontSize="14"
+                                            Foreground="{ThemeResource ErrorBrush}" />
+                                </Button>
+                              </StackPanel>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                      </ItemsRepeater>
+
+                      <controls:EmptyState x:Uid="SalesDetailPage.NoShipments"
+                                           Glyph="&#xE7B8;"
+                                           Background="Transparent"
+                                           Visibility="{Binding Data.Shippings.Count, Converter={StaticResource ZeroToVisibilityConverter}}" />
                     </StackPanel>
                   </Border>
                 </StackPanel>
@@ -599,5 +757,11 @@
         </DataTemplate>
       </mvux:FeedView.ErrorTemplate>
     </mvux:FeedView>
+
+    <!-- Create-shipment overlay (scrim + centered card); opened from the "Ship" header action -->
+    <shipviews:CreateShipmentDialog x:Name="ShipmentDialog"
+                                    Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Visibility="Collapsed" />
   </Grid>
 </Page>

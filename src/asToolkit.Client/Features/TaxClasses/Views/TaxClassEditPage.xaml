@@ -80,7 +80,7 @@
 
           <!-- Error Message Banner -->
           <Border Background="{ThemeResource ErrorContainerBrush}"
-                  CornerRadius="12"
+                  CornerRadius="8"
                   Padding="16"
                   Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}, FallbackValue=Collapsed}">
             <Grid>
@@ -124,12 +124,8 @@
           <Border x:Name="TaxRateCard"
                   Background="{ThemeResource SurfaceBrush}"
                   CornerRadius="16"
-                  Padding="24"
-                  Translation="0,0,8"
+                  Padding="24" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
                   Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Border.Shadow>
-              <ThemeShadow />
-            </Border.Shadow>
             <StackPanel Spacing="24">
               <!-- Card Header with Icon -->
               <Grid>
@@ -247,7 +243,7 @@
           <!-- Info Card -->
           <Border x:Name="InfoCard"
                   Background="{ThemeResource SecondaryContainerBrush}"
-                  CornerRadius="12"
+                  CornerRadius="8"
                   Padding="20"
                   Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid>

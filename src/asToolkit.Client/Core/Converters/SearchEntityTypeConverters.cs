@@ -19,6 +19,7 @@ public class SearchEntityTypeToGlyphConverter : IValueConverter
                 SearchEntityType.Sales => "",    // Shop / cart
                 SearchEntityType.Invoice => "",  // Document
                 SearchEntityType.Product => "",  // Tag
+                SearchEntityType.Shipping => "", // Delivery truck
                 _ => ""                           // Search
             };
         }
@@ -47,6 +48,7 @@ public class SearchEntityTypeToLabelConverter : IValueConverter
                 SearchEntityType.Sales => LocalizationHelper.GetLocalizedString("SearchType.Sales", "Order"),
                 SearchEntityType.Invoice => LocalizationHelper.GetLocalizedString("SearchType.Invoice", "Invoice"),
                 SearchEntityType.Product => LocalizationHelper.GetLocalizedString("SearchType.Product", "Product"),
+                SearchEntityType.Shipping => LocalizationHelper.GetLocalizedString("SearchType.Shipping", "Shipment"),
                 _ => string.Empty
             };
         }

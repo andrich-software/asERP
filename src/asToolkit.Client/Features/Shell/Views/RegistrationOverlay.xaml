@@ -85,11 +85,7 @@
         </Border>
 
         <Border Background="{ThemeResource SurfaceBrush}"
-                CornerRadius="12"
-                Translation="0,0,8">
-          <Border.Shadow>
-            <ThemeShadow />
-          </Border.Shadow>
+                CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
           <StackPanel Spacing="0">
             <Grid Padding="16,16,16,8">
               <StackPanel Orientation="Horizontal">
