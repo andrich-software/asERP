@@ -48,7 +48,7 @@ public static class SalesChannelServiceRegistration
         // shorter Polly settings make sense; for now we share the default policy.
         services.AddHttpClient("amazon-lwa").AddPollyHandlers();
         // Plain (unauthenticated) client for downloading product photos from the shops' public URLs.
-        // The Chrome UA + "asToolkit" suffix lets Cloudflare rules identify and allow the importer.
+        // The Chrome UA + "asToolkit" suffix lets the shop's CDN/WAF rules identify and allow the importer.
         services.AddHttpClient(ProductImageImportService.HttpClientName, client =>
             {
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(

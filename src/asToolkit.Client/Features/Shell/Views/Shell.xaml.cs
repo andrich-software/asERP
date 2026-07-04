@@ -68,7 +68,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         TabBarNav.SelectionChanged += OnTabBarSelectionChanged;
         this.Loaded += OnShellLoaded;
 
-        // Ctrl+K focuses the sidebar quick search (Cloudflare-style shortcut)
+        // Ctrl+K focuses the sidebar quick search (asERP-style shortcut)
         var quickSearchAccelerator = new Microsoft.UI.Xaml.Input.KeyboardAccelerator
         {
             Key = Windows.System.VirtualKey.K,
@@ -110,7 +110,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             { "AiPrompts", NavItemAiPrompts },
             { "TenantOAuthSettings", NavItemTenantOAuthSettings },
             { "SuperadminTenants", NavItemSuperadminTenants },
-            { "SystemOAuthSettings", NavItemSystemOAuthSettings }
+            { "GlobalSettings", NavItemGlobalSettings }
         };
     }
 
@@ -616,8 +616,8 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                 case "SuperadminTenants":
                     await navigator.NavigateViewModelAsync<SuperadminTenantListModel>(this);
                     break;
-                case "SystemOAuthSettings":
-                    await navigator.NavigateViewModelAsync<asToolkit.Client.Features.SystemOAuthSettings.Models.SystemOAuthSettingsModel>(this);
+                case "GlobalSettings":
+                    await navigator.NavigateViewModelAsync<asToolkit.Client.Features.GlobalSettings.Models.GlobalSettingsModel>(this);
                     break;
                 case "TenantOAuthSettings":
                     await navigator.NavigateViewModelAsync<asToolkit.Client.Features.TenantOAuthSettings.Models.TenantOAuthSettingsModel>(this);

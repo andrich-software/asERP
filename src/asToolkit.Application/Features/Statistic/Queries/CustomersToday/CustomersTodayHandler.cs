@@ -40,14 +40,24 @@ public class CustomersTodayHandler : IRequestHandler<CustomersTodayQuery, Result
                 .Where(c => c.DateCreated >= monthStart)
                 .CountAsync(cancellationToken);
 
-            // Customers change compared to last month
-            var customersLastMonth = await _customerRepository.Entities
-                .Where(c => c.DateCreated >= lastMonthStart && c.DateCreated < lastMonthEnd)
+            // Period window: last N hours when requested, otherwise the current month
+            var periodStart = request.Hours.HasValue ? now.AddHours(-request.Hours.Value) : monthStart;
+            dto.CustomersNew = request.Hours.HasValue
+                ? await _customerRepository.Entities
+                    .Where(c => c.DateCreated >= periodStart)
+                    .CountAsync(cancellationToken)
+                : dto.CustomersNewThisMonth;
+
+            // Change vs the preceding window of equal length (hours mode) or vs last month (legacy mode)
+            var previousStart = request.Hours.HasValue ? periodStart.AddHours(-request.Hours.Value) : lastMonthStart;
+            var previousEnd = request.Hours.HasValue ? periodStart : lastMonthEnd;
+            var customersPrevious = await _customerRepository.Entities
+                .Where(c => c.DateCreated >= previousStart && c.DateCreated < previousEnd)
                 .CountAsync(cancellationToken);
 
-            dto.CustomersChangePercent = customersLastMonth > 0
-                ? ((decimal)(dto.CustomersNewThisMonth - customersLastMonth) / customersLastMonth) * 100
-                : dto.CustomersNewThisMonth > 0 ? 100 : 0;
+            dto.CustomersChangePercent = customersPrevious > 0
+                ? ((decimal)(dto.CustomersNew - customersPrevious) / customersPrevious) * 100
+                : dto.CustomersNew > 0 ? 100 : 0;
 
             return Result<CustomersTodayDto>.Success(dto);
         }

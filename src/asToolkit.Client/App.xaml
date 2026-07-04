@@ -32,7 +32,7 @@
         <!-- Shared UI component library (SectionCard, DetailPageHeader, StatusBadge, LabeledField, EmptyState) -->
         <ResourceDictionary Source="ms-appx:///Styles/SharedComponents.xaml" />
 
-        <!-- App theme tokens: Cloudflare-style shape overrides, link/hover/sidebar brushes, page-header text styles.
+        <!-- App theme tokens: asERP-style shape overrides, link/hover/sidebar brushes, page-header text styles.
              Must stay merged last so the shape overrides win over Material defaults. -->
         <ResourceDictionary Source="ms-appx:///Styles/AppTheme.xaml" />
       </ResourceDictionary.MergedDictionaries>

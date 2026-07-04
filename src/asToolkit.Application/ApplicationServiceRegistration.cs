@@ -21,6 +21,7 @@ public static class ApplicationServiceRegistration
         services.AddScoped<IShippingStatusUpdater, ShippingStatusUpdater>();
         services.AddScoped<ISalesShippingStatusService, SalesShippingStatusService>();
         services.AddScoped<IShippingDestinationResolver, ShippingDestinationResolver>();
+        services.AddScoped<IShippingDocumentDataService, ShippingDocumentDataService>();
 
         // Register FluentValidation validators
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());

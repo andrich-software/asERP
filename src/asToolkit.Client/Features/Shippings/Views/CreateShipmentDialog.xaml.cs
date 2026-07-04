@@ -3,6 +3,7 @@ using asToolkit.Client.Core.Notifications;
 using asToolkit.Client.Features.Auth.Services;
 using asToolkit.Client.Features.Shippings.Models;
 using asToolkit.Client.Features.Shippings.Services;
+using asToolkit.Client.Features.Tenants.Services;
 using asToolkit.Domain.Dtos.Shipping;
 using asToolkit.Domain.Enums;
 using Microsoft.UI.Xaml.Controls;
@@ -30,6 +31,7 @@ public sealed partial class CreateShipmentDialog : UserControl
     private bool _weightTouched;
     private bool _suppressWeightEvent;
     private bool _busy;
+    private bool _printPackingSlip;
 
     private static IServiceProvider? Services => (Application.Current as App)?.Host?.Services;
 
@@ -50,6 +52,7 @@ public sealed partial class CreateShipmentDialog : UserControl
         _createdShippingId = Guid.Empty;
         _weightTouched = false;
         _busy = false;
+        _printPackingSlip = false;
 
         ResetToLoadingState();
         Visibility = Visibility.Visible;
@@ -63,7 +66,10 @@ public sealed partial class CreateShipmentDialog : UserControl
         {
             var itemsTask = shippingService.GetShippableItemsAsync(salesId);
             var optionsTask = shippingService.GetShippingOptionsAsync(salesId);
-            await Task.WhenAll(itemsTask, optionsTask);
+            var packingSlipDefaultTask = LoadPackingSlipDefaultAsync(services);
+            await Task.WhenAll(itemsTask, optionsTask, packingSlipDefaultTask);
+
+            PrintPackingSlipCheck.IsChecked = packingSlipDefaultTask.Result;
 
             var stockHintFormat = _resourceLoader.GetString("CreateShipmentDialog.StockHint");
             _rows.Clear();
@@ -120,6 +126,25 @@ public sealed partial class CreateShipmentDialog : UserControl
         }
     }
 
+    /// <summary>Tenant default for "also print packing slip" — a load failure must never block the dialog.</summary>
+    private async Task<bool> LoadPackingSlipDefaultAsync(IServiceProvider services)
+    {
+        if (_tenantId == Guid.Empty)
+        {
+            return false;
+        }
+
+        try
+        {
+            var tenant = await services.GetRequiredService<ITenantService>().GetTenantAsync(_tenantId);
+            return tenant?.PackingSlipPrintByDefault ?? false;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     /// <summary>Hides the overlay without raising <see cref="ShipmentCreated"/>.</summary>
     public void Close()
     {
@@ -134,6 +159,7 @@ public sealed partial class CreateShipmentDialog : UserControl
         WeightWarningText.Visibility = Visibility.Collapsed;
         RememberActionCheck.IsChecked = false;
         RequestLabelToggle.IsOn = true;
+        PrintPackingSlipCheck.IsChecked = false;
 
         Step1Panel.Visibility = Visibility.Collapsed;
         Step2Panel.Visibility = Visibility.Collapsed;
@@ -288,6 +314,7 @@ public sealed partial class CreateShipmentDialog : UserControl
 
             _createdShippingId = await shippingService.CreateShippingAsync(input);
             preferences.SetLastRateId(_tenantId, option.Rate.RateId);
+            _printPackingSlip = PrintPackingSlipCheck.IsChecked == true;
         }
         catch (ApiException ex)
         {
@@ -449,6 +476,14 @@ public sealed partial class CreateShipmentDialog : UserControl
 
     private async Task RaiseCreatedAndCloseAsync()
     {
+        // Packing slip runs after the label flow, whatever path led here (immediate,
+        // remembered, queued or failed label). Reset first — idempotent on re-entry.
+        if (_printPackingSlip && _createdShippingId != Guid.Empty)
+        {
+            _printPackingSlip = false;
+            await PackingSlipActionRunner.RunAsync(_createdShippingId, XamlRoot);
+        }
+
         if (ShipmentCreated is { } handler)
         {
             await handler();

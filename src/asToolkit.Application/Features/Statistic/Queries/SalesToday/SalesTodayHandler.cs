@@ -37,9 +37,11 @@ public class SalesTodayHandler : IRequestHandler<SalesTodayQuery, Result<SalesTo
             if (request.SalesChannelId.HasValue)
                 baseQuery = baseQuery.Where(o => o.SalesChannelId == request.SalesChannelId.Value);
 
-            // Revenue calculations
+            // Period window: last N hours when requested, otherwise the legacy calendar day
+            var periodStart = request.Hours.HasValue ? now.AddHours(-request.Hours.Value) : todayStart;
+
             dto.RevenueToday = await baseQuery
-                .Where(o => o.DateSalesed >= todayStart)
+                .Where(o => o.DateSalesed >= periodStart)
                 .SumAsync(o => o.Total, cancellationToken);
 
             dto.RevenueThisWeek = await baseQuery
@@ -50,15 +52,18 @@ public class SalesTodayHandler : IRequestHandler<SalesTodayQuery, Result<SalesTo
                 .Where(o => o.DateSalesed >= monthStart)
                 .SumAsync(o => o.Total, cancellationToken);
 
-            // Calculate revenue change compared to last week's same day
-            var lastWeekSameDayStart = todayStart.AddDays(-7);
-            var lastWeekSameDayEnd = lastWeekSameDayStart.AddDays(1);
-            var revenueLastWeekSameDay = await baseQuery
-                .Where(o => o.DateSalesed >= lastWeekSameDayStart && o.DateSalesed < lastWeekSameDayEnd)
+            // Change vs the preceding window of equal length (hours mode)
+            // or vs last week's same day (legacy mode)
+            var previousStart = request.Hours.HasValue
+                ? periodStart.AddHours(-request.Hours.Value)
+                : todayStart.AddDays(-7);
+            var previousEnd = request.Hours.HasValue ? periodStart : previousStart.AddDays(1);
+            var revenuePrevious = await baseQuery
+                .Where(o => o.DateSalesed >= previousStart && o.DateSalesed < previousEnd)
                 .SumAsync(o => o.Total, cancellationToken);
 
-            dto.RevenueChangePercent = revenueLastWeekSameDay > 0
-                ? ((dto.RevenueToday - revenueLastWeekSameDay) / revenueLastWeekSameDay) * 100
+            dto.RevenueChangePercent = revenuePrevious > 0
+                ? ((dto.RevenueToday - revenuePrevious) / revenuePrevious) * 100
                 : dto.RevenueToday > 0 ? 100 : 0;
 
             return Result<SalesTodayDto>.Success(dto);

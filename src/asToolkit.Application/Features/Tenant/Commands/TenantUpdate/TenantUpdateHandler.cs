@@ -73,6 +73,8 @@ public class TenantUpdateHandler : IRequestHandler<TenantUpdateCommand, Result<G
             tenantToUpdate.State = request.State;
             tenantToUpdate.Country = request.Country;
             tenantToUpdate.Iban = request.Iban;
+            tenantToUpdate.PackingSlipShowPrices = request.PackingSlipShowPrices;
+            tenantToUpdate.PackingSlipPrintByDefault = request.PackingSlipPrintByDefault;
 
             await _tenantRepository.UpdateAsync(tenantToUpdate);
 

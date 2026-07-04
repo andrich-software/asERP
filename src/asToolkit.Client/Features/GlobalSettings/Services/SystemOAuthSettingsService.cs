@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using asToolkit.Client.Core.Constants;
 using asToolkit.Client.Core.Extensions;
 using asToolkit.Client.Core.Json;
@@ -6,7 +6,7 @@ using asToolkit.Client.Features.Auth.Services;
 using asToolkit.Domain.Dtos.SystemOAuthSettings;
 using Microsoft.Extensions.Logging;
 
-namespace asToolkit.Client.Features.SystemOAuthSettings.Services;
+namespace asToolkit.Client.Features.GlobalSettings.Services;
 
 public class SystemOAuthSettingsService : ISystemOAuthSettingsService
 {

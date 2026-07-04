@@ -75,7 +75,9 @@ public class TenantCreateHandler : IRequestHandler<TenantCreateCommand, Result<G
                 City = request.City,
                 State = request.State,
                 Country = request.Country,
-                Iban = request.Iban
+                Iban = request.Iban,
+                PackingSlipShowPrices = request.PackingSlipShowPrices,
+                PackingSlipPrintByDefault = request.PackingSlipPrintByDefault
             };
 
             // Add tenant to context without saving

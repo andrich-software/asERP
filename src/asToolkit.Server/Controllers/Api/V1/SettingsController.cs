@@ -13,7 +13,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace asToolkit.Server.Controllers.Api.V1;
 
 [ApiController]
-[Authorize]
+// Superadmin-only: the raw rows include credentials (Jwt.Key, SMTP password, …) that must not
+// be readable by every authenticated user. The Client uses the masked
+// /superadmin/global-settings endpoint instead.
+[Authorize(Roles = "Superadmin")]
 [ApiVersion(1.0)]
 [Route("/api/v{version:apiVersion}/[controller]")]
 public class SettingsController(IMediator mediator) : ControllerBase

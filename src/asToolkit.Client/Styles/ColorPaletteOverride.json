@@ -1,5 +1,5 @@
 {
-    "description": "Cloudflare 2025 palette - edit this JSON only, ColorPaletteOverride.xaml is regenerated on build (Uno Dsp)",
+    "description": "asERP palette - edit this JSON only, ColorPaletteOverride.xaml is regenerated on build (Uno Dsp)",
     "seed": "#3a5be0",
     "coreColors": {
         "primary": "#3a5be0",

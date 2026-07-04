@@ -1,4 +1,5 @@
-﻿using asToolkit.Client.Features.TenantOAuthSettings.Models;
+using asToolkit.Client.Core.Helpers;
+using asToolkit.Client.Features.TenantOAuthSettings.Models;
 using Microsoft.UI.Xaml.Controls;
 
 namespace asToolkit.Client.Features.TenantOAuthSettings.Views;
@@ -22,6 +23,19 @@ public sealed partial class TenantOAuthSettingsPage : Page
 
     private async void DeleteButton_Click(object sender, RoutedEventArgs e)
     {
-        if (DataContext is TenantOAuthSettingsModel model) await model.DeleteAsync();
+        if (DataContext is not TenantOAuthSettingsModel model || this.XamlRoot is not { } xamlRoot)
+        {
+            return;
+        }
+
+        var confirmed = await ConfirmDialog.ShowAsync(
+            xamlRoot,
+            "TenantOAuthSettingsPage.DeleteConfirmTitle",
+            "TenantOAuthSettingsPage.DeleteConfirmMessage");
+
+        if (confirmed)
+        {
+            await model.DeleteAsync();
+        }
     }
 }

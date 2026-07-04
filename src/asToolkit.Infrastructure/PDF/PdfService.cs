@@ -15,7 +15,7 @@ using System.Collections.Generic;
 
 namespace asToolkit.Infrastructure.PDF;
 
-public class PdfService : IPdfService
+public partial class PdfService : IPdfService
 {
     private readonly ISettingRepository _settingRepository;
     private readonly object _settingsLock = new();

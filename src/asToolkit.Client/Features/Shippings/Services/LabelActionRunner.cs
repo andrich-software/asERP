@@ -85,8 +85,10 @@ public static class LabelActionRunner
     /// <summary>
     /// Windows-desktop printer picker (small ContentDialog with a ComboBox); returns the
     /// chosen printer, null for "default printer" and cancels with (false, null).
+    /// <paramref name="preselectedPrinter"/> overrides the remembered label printer.
     /// </summary>
-    public static async Task<(bool Confirmed, string? PrinterName)> PickPrinterAsync(XamlRoot xamlRoot)
+    public static async Task<(bool Confirmed, string? PrinterName)> PickPrinterAsync(
+        XamlRoot xamlRoot, string? preselectedPrinter = null)
     {
         if (Services is not { } services)
         {
@@ -111,7 +113,7 @@ public static class LabelActionRunner
         };
 
         var tenantId = await tokenStorage.GetCurrentTenantIdAsync() ?? Guid.Empty;
-        var remembered = preferences.GetLabelAction(tenantId)?.PrinterName;
+        var remembered = preselectedPrinter ?? preferences.GetLabelAction(tenantId)?.PrinterName;
         comboBox.SelectedIndex = remembered is not null && printers.Contains(remembered)
             ? printers.ToList().IndexOf(remembered)
             : 0;

@@ -7,6 +7,8 @@ using asToolkit.Application.Features.Shipping.Commands.ShippingUpdate;
 using asToolkit.Application.Features.Shipping.Queries.ShippingDetail;
 using asToolkit.Application.Features.Shipping.Queries.ShippingLabel;
 using asToolkit.Application.Features.Shipping.Queries.ShippingList;
+using asToolkit.Application.Features.Shipping.Queries.ShippingPackingSlip;
+using asToolkit.Application.Features.Shipping.Queries.ShippingPickList;
 using asToolkit.Application.Mediator;
 using asToolkit.Domain.Dtos.Shipping;
 using asToolkit.Domain.Enums;
@@ -60,6 +62,38 @@ public class ShippingsController(IMediator mediator) : ControllerBase
         var response = await mediator.Send(new ShippingLabelQuery { Id = id });
 
         // The one action returning a file — unwrap the Result manually.
+        if (!response.Succeeded || response.Data == null)
+        {
+            return response.ToActionResult();
+        }
+
+        return File(response.Data.Data, response.Data.ContentType, response.Data.FileName);
+    }
+
+    // GET: api/v1/<ShippingsController>/5/packing-slip
+    [HttpGet("{id:guid}/packing-slip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPackingSlip(Guid id)
+    {
+        var response = await mediator.Send(new ShippingPackingSlipQuery { Id = id });
+
+        if (!response.Succeeded || response.Data == null)
+        {
+            return response.ToActionResult();
+        }
+
+        return File(response.Data.Data, response.Data.ContentType, response.Data.FileName);
+    }
+
+    // GET: api/v1/<ShippingsController>/5/pick-list
+    [HttpGet("{id:guid}/pick-list")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPickList(Guid id)
+    {
+        var response = await mediator.Send(new ShippingPickListQuery { Id = id });
+
         if (!response.Succeeded || response.Data == null)
         {
             return response.ToActionResult();

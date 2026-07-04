@@ -101,6 +101,14 @@ public sealed partial class SalesDetailPage : Page
         }
     }
 
+    private async void ShipmentPackingSlip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { CommandParameter: Guid shippingId })
+        {
+            await PackingSlipActionRunner.RunAsync(shippingId, this.XamlRoot);
+        }
+    }
+
     private async void ShipmentCancel_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { CommandParameter: Guid shippingId } ||

@@ -49,6 +49,11 @@ public class Tenant : BaseEntityWithoutTenant, IBaseEntityWithoutTenant
     [MaxLength(34)]
     public string? Iban { get; set; }
 
+    // Shipping documents
+    public bool PackingSlipShowPrices { get; set; }
+
+    public bool PackingSlipPrintByDefault { get; set; }
+
     // Users with this tenant as their default tenant
     public ICollection<ApplicationUser>? DefaultForUsers { get; set; }
 

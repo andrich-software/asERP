@@ -46,27 +46,38 @@ public partial record DashboardModel
         await _navigator.NavigateDataAsync(this, new SalesDetailData(sales.Id));
     }
 
+    /// <summary>
+    /// Selected look-back window in hours for the period-dependent KPIs
+    /// (revenue, sales, new customers, top products). Changing it re-evaluates those feeds.
+    /// </summary>
+    public IState<int> PeriodHours => State<int>.Value(this, () => 24);
+
+    public async ValueTask SetPeriod(int hours, CancellationToken ct = default)
+    {
+        await PeriodHours.UpdateAsync(_ => hours, ct);
+    }
+
     // KPI Data Feeds - four separate feeds for parallel loading
-    public IFeed<RevenueKpiData> RevenueData => Feed.Async(LoadRevenueDataAsync);
-    public IFeed<SalessKpiData> SalessData => Feed.Async(LoadSalessDataAsync);
-    public IFeed<CustomersKpiData> CustomersData => Feed.Async(LoadCustomersDataAsync);
+    public IFeed<RevenueKpiData> RevenueData => PeriodHours.SelectAsync(LoadRevenueDataAsync);
+    public IFeed<SalessKpiData> SalessData => PeriodHours.SelectAsync(LoadSalessDataAsync);
+    public IFeed<CustomersKpiData> CustomersData => PeriodHours.SelectAsync(LoadCustomersDataAsync);
     public IFeed<ProductsKpiData> ProductsData => Feed.Async(LoadProductsDataAsync);
 
     // Recent Saless Feed
     public IListFeed<RecentSalesItem> RecentSaless => ListFeed.Async(LoadRecentSalessAsync);
 
     // Top Selling Products Feed
-    public IListFeed<TopProductItem> TopProducts => ListFeed.Async(LoadTopProductsAsync);
+    public IListFeed<TopProductItem> TopProducts => PeriodHours.SelectAsync(LoadTopProductsAsync).AsListFeed();
 
     // Low Stock Alerts Feed
     public IListFeed<LowStockItem> LowStockAlerts => ListFeed.Async(LoadLowStockAlertsAsync);
 
-    private async ValueTask<RevenueKpiData> LoadRevenueDataAsync(CancellationToken ct)
+    private async ValueTask<RevenueKpiData> LoadRevenueDataAsync(int hours, CancellationToken ct)
     {
         try
         {
-            _logger.LogInformation("Loading revenue KPI data");
-            var data = await _statisticsService.GetSalesTodayAsync(ct);
+            _logger.LogInformation("Loading revenue KPI data for last {Hours}h", hours);
+            var data = await _statisticsService.GetSalesTodayAsync(hours, ct);
 
             if (data == null)
             {
@@ -91,12 +102,12 @@ public partial record DashboardModel
         }
     }
 
-    private async ValueTask<SalessKpiData> LoadSalessDataAsync(CancellationToken ct)
+    private async ValueTask<SalessKpiData> LoadSalessDataAsync(int hours, CancellationToken ct)
     {
         try
         {
-            _logger.LogInformation("Loading saless KPI data");
-            var data = await _statisticsService.GetSalessTodayAsync(ct);
+            _logger.LogInformation("Loading saless KPI data for last {Hours}h", hours);
+            var data = await _statisticsService.GetSalessTodayAsync(hours, ct);
 
             if (data == null)
             {
@@ -121,12 +132,12 @@ public partial record DashboardModel
         }
     }
 
-    private async ValueTask<CustomersKpiData> LoadCustomersDataAsync(CancellationToken ct)
+    private async ValueTask<CustomersKpiData> LoadCustomersDataAsync(int hours, CancellationToken ct)
     {
         try
         {
-            _logger.LogInformation("Loading customers KPI data");
-            var data = await _statisticsService.GetCustomersTodayAsync(ct);
+            _logger.LogInformation("Loading customers KPI data for last {Hours}h", hours);
+            var data = await _statisticsService.GetCustomersTodayAsync(hours, ct);
 
             if (data == null)
             {
@@ -139,6 +150,7 @@ public partial record DashboardModel
             return new CustomersKpiData
             {
                 CustomersTotal = data.CustomersTotal,
+                CustomersNew = data.CustomersNew,
                 CustomersNewThisMonth = data.CustomersNewThisMonth,
                 CustomersChange = data.CustomersChangePercent
             };
@@ -213,12 +225,12 @@ public partial record DashboardModel
         }
     }
 
-    private async ValueTask<IImmutableList<TopProductItem>> LoadTopProductsAsync(CancellationToken ct)
+    private async ValueTask<IImmutableList<TopProductItem>> LoadTopProductsAsync(int hours, CancellationToken ct)
     {
         try
         {
-            _logger.LogInformation("Loading top products");
-            var data = await _statisticsService.GetProductsBestSellingAsync(5, ct);
+            _logger.LogInformation("Loading top products for last {Hours}h", hours);
+            var data = await _statisticsService.GetProductsBestSellingAsync(5, hours, ct);
 
             if (data == null || data.Products.Count == 0)
             {
@@ -301,10 +313,12 @@ public record SalessKpiData
 public record CustomersKpiData
 {
     public int CustomersTotal { get; init; }
+    public int CustomersNew { get; init; }
     public int CustomersNewThisMonth { get; init; }
     public decimal CustomersChange { get; init; }
 
     public string CustomersTotalFormatted => CustomersTotal.ToString("N0");
+    public string CustomersNewFormatted => CustomersNew.ToString("N0");
     public string CustomersNewThisMonthFormatted => CustomersNewThisMonth.ToString("N0");
     public string CustomersChangeFormatted => $"{(CustomersChange >= 0 ? "+" : "")}{CustomersChange:F1}%";
     public bool CustomersChangePositive => CustomersChange >= 0;

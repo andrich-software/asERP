@@ -134,4 +134,21 @@ public class ShippingRepository : GenericRepository<Shipping>, IShippingReposito
 
         return await query.ToListAsync();
     }
+
+    public async Task<List<SalesItem>> GetAssignedSalesItemsWithSerialsAsync(Guid shippingId)
+    {
+        var query = Context.SalesItem
+            .Where(x => x.ShippingId == shippingId);
+
+        // Apply manual tenant filtering
+        var currentTenantId = TenantContext.GetCurrentTenantId();
+        if (currentTenantId.HasValue)
+        {
+            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
+        }
+
+        return await query
+            .Include(x => x.SerialNumbers)
+            .ToListAsync();
+    }
 }

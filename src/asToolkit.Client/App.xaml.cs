@@ -21,7 +21,7 @@ using asToolkit.Client.Features.ProductAttributes;
 using asToolkit.Client.Features.TaxClasses;
 using asToolkit.Client.Features.Tenants;
 using asToolkit.Client.Features.Warehouses;
-using asToolkit.Client.Features.SystemOAuthSettings;
+using asToolkit.Client.Features.GlobalSettings;
 using asToolkit.Client.Features.TenantOAuthSettings;
 using asToolkit.Client.Features.Shell.Views;
 using asToolkit.Client.Features.Shell.Models;
@@ -394,7 +394,7 @@ public partial class App : Application
         ProductAttributesModule.RegisterServices(services);
         TenantsModule.RegisterServices(services);
         AccountModule.RegisterServices(services);
-        SystemOAuthSettingsModule.RegisterServices(services);
+        GlobalSettingsModule.RegisterServices(services);
         TenantOAuthSettingsModule.RegisterServices(services);
     }
 
@@ -425,7 +425,7 @@ public partial class App : Application
         ProductAttributesModule.RegisterViews(views);
         TenantsModule.RegisterViews(views);
         AccountModule.RegisterViews(views);
-        SystemOAuthSettingsModule.RegisterViews(views);
+        GlobalSettingsModule.RegisterViews(views);
         TenantOAuthSettingsModule.RegisterViews(views);
 
         // Collect routes from all feature modules
@@ -450,7 +450,7 @@ public partial class App : Application
         nestedRoutes.AddRange(ProductAttributesModule.GetRoutes(views));
         nestedRoutes.AddRange(TenantsModule.GetRoutes(views));
         nestedRoutes.AddRange(AccountModule.GetRoutes(views));
-        nestedRoutes.AddRange(SystemOAuthSettingsModule.GetRoutes(views));
+        nestedRoutes.AddRange(GlobalSettingsModule.GetRoutes(views));
         nestedRoutes.AddRange(TenantOAuthSettingsModule.GetRoutes(views));
 
         // Register the root route with all nested routes

@@ -73,6 +73,8 @@ namespace asToolkit.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<asToolkit.Domain.Dtos.SalesChannelOAuth.OAuthStartResponseDto>))]
 [JsonSerializable(typeof(ApiResponse<asToolkit.Domain.Dtos.SystemOAuthSettings.SystemOAuthSettingsDto>))]
 [JsonSerializable(typeof(asToolkit.Domain.Dtos.SystemOAuthSettings.SystemOAuthSettingsInputDto))]
+[JsonSerializable(typeof(ApiResponse<List<asToolkit.Domain.Dtos.GlobalSettings.GlobalSettingDto>>))]
+[JsonSerializable(typeof(asToolkit.Domain.Dtos.GlobalSettings.GlobalSettingsUpdateInputDto))]
 [JsonSerializable(typeof(ApiResponse<asToolkit.Domain.Dtos.TenantOAuthAppSettings.TenantOAuthAppSettingsDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<List<asToolkit.Domain.Dtos.TenantOAuthAppSettings.TenantOAuthAppSettingsListDto>>))]
 [JsonSerializable(typeof(asToolkit.Domain.Dtos.TenantOAuthAppSettings.TenantOAuthAppSettingsInputDto))]

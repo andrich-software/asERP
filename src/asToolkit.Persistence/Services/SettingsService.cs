@@ -86,7 +86,8 @@ public class SettingsService : ISettingsService
                     emailSettings.SmtpUsername = setting.Value;
                     break;
                 case "Email.SmtpPassword":
-                    emailSettings.SmtpPassword = setting.Value;
+                    // May have been re-saved via the encrypted settings path (global-settings UI).
+                    emailSettings.SmtpPassword = setting.IsEncrypted ? _encryptor.Decrypt(setting.Value) : setting.Value;
                     break;
                 case "Email.SmtpEnableSsl":
                     if (bool.TryParse(setting.Value, out var enableSsl))
@@ -99,7 +100,7 @@ public class SettingsService : ISettingsService
                     emailSettings.M365ClientId = setting.Value;
                     break;
                 case "Email.M365ClientSecret":
-                    emailSettings.M365ClientSecret = setting.Value;
+                    emailSettings.M365ClientSecret = setting.IsEncrypted ? _encryptor.Decrypt(setting.Value) : setting.Value;
                     break;
                 case "Email.M365SenderAddress":
                     emailSettings.M365SenderAddress = setting.Value;

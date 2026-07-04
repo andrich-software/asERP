@@ -37,10 +37,13 @@ public class StatisticsService : IStatisticsService
         return serverUrl.TrimEnd('/');
     }
 
-    public async Task<SalesTodayDto?> GetSalesTodayAsync(CancellationToken ct = default)
+    private static string AppendHours(string url, int? hours)
+        => hours.HasValue ? $"{url}{(url.Contains('?') ? "&" : "?")}hours={hours.Value}" : url;
+
+    public async Task<SalesTodayDto?> GetSalesTodayAsync(int? hours = null, CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();
-        var url = $"{baseUrl}{ApiEndpoints.Statistics.SalesToday}";
+        var url = AppendHours($"{baseUrl}{ApiEndpoints.Statistics.SalesToday}", hours);
 
         _logger.LogInformation("Fetching sales today statistics from URL: {Url}", url);
 
@@ -73,10 +76,10 @@ public class StatisticsService : IStatisticsService
         }
     }
 
-    public async Task<SalessTodayDto?> GetSalessTodayAsync(CancellationToken ct = default)
+    public async Task<SalessTodayDto?> GetSalessTodayAsync(int? hours = null, CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();
-        var url = $"{baseUrl}{ApiEndpoints.Statistics.SalessToday}";
+        var url = AppendHours($"{baseUrl}{ApiEndpoints.Statistics.SalessToday}", hours);
 
         _logger.LogInformation("Fetching saless today statistics from URL: {Url}", url);
 
@@ -109,10 +112,10 @@ public class StatisticsService : IStatisticsService
         }
     }
 
-    public async Task<CustomersTodayDto?> GetCustomersTodayAsync(CancellationToken ct = default)
+    public async Task<CustomersTodayDto?> GetCustomersTodayAsync(int? hours = null, CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();
-        var url = $"{baseUrl}{ApiEndpoints.Statistics.CustomersToday}";
+        var url = AppendHours($"{baseUrl}{ApiEndpoints.Statistics.CustomersToday}", hours);
 
         _logger.LogInformation("Fetching customers today statistics from URL: {Url}", url);
 
@@ -216,10 +219,10 @@ public class StatisticsService : IStatisticsService
         }
     }
 
-    public async Task<ProductsBestSellingDto?> GetProductsBestSellingAsync(int count = 5, CancellationToken ct = default)
+    public async Task<ProductsBestSellingDto?> GetProductsBestSellingAsync(int count = 5, int? hours = null, CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();
-        var url = $"{baseUrl}{ApiEndpoints.Statistics.ProductsBestSelling}?count={count}";
+        var url = AppendHours($"{baseUrl}{ApiEndpoints.Statistics.ProductsBestSelling}?count={count}", hours);
 
         _logger.LogInformation("Fetching best-selling products from URL: {Url}", url);
 
