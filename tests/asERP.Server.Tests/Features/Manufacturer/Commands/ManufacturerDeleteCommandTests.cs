@@ -425,15 +425,16 @@ public class ManufacturerDeleteCommandTests : TenantIsolatedTestBase
     {
         await SeedTestDataAsync();
 
-        var tenant1CountBefore = await DbContext.Manufacturer.CountAsync(m => m.TenantId == TenantConstants.TestTenant1Id);
-        var tenant2CountBefore = await DbContext.Manufacturer.CountAsync(m => m.TenantId == TenantConstants.TestTenant2Id);
+        // Cross-tenant assertions count both tenants' rows — bypass the tenant filter.
+        var tenant1CountBefore = await DbContext.Manufacturer.IgnoreQueryFilters().CountAsync(m => m.TenantId == TenantConstants.TestTenant1Id);
+        var tenant2CountBefore = await DbContext.Manufacturer.IgnoreQueryFilters().CountAsync(m => m.TenantId == TenantConstants.TestTenant2Id);
 
         SetTenantHeader(TenantConstants.TestTenant1Id);
         var response = await Client.DeleteAsync($"/api/v1/Manufacturers/{Manufacturer1Id}");
         TestAssertions.AssertEqual(HttpStatusCode.NoContent, response.StatusCode);
 
-        var tenant1CountAfter = await DbContext.Manufacturer.CountAsync(m => m.TenantId == TenantConstants.TestTenant1Id);
-        var tenant2CountAfter = await DbContext.Manufacturer.CountAsync(m => m.TenantId == TenantConstants.TestTenant2Id);
+        var tenant1CountAfter = await DbContext.Manufacturer.IgnoreQueryFilters().CountAsync(m => m.TenantId == TenantConstants.TestTenant1Id);
+        var tenant2CountAfter = await DbContext.Manufacturer.IgnoreQueryFilters().CountAsync(m => m.TenantId == TenantConstants.TestTenant2Id);
 
         TestAssertions.AssertEqual(tenant1CountBefore - 1, tenant1CountAfter);
         TestAssertions.AssertEqual(tenant2CountBefore, tenant2CountAfter);

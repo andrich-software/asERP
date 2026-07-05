@@ -55,7 +55,9 @@ public class SettingListQueryTests : GlobalTestBase
     {
         await SeedSettingTestDataAsync();
 
-        var response = await Client.GetAsync("/api/v1/Settings");
+        // The settings initializer seeds the full default set at startup, so request the
+        // maximum page size to make sure the test-seeded settings are part of the page.
+        var response = await Client.GetAsync("/api/v1/Settings?pageSize=200");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SettingListDto>>(response);
@@ -69,7 +71,7 @@ public class SettingListQueryTests : GlobalTestBase
     {
         await SeedSettingTestDataAsync();
 
-        var response = await Client.GetAsync("/api/v1/Settings");
+        var response = await Client.GetAsync("/api/v1/Settings?pageSize=200");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SettingListDto>>(response);
@@ -83,7 +85,7 @@ public class SettingListQueryTests : GlobalTestBase
     {
         await SeedSettingTestDataAsync();
 
-        var response = await Client.GetAsync("/api/v1/Settings");
+        var response = await Client.GetAsync("/api/v1/Settings?pageSize=200");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SettingListDto>>(response);
@@ -193,22 +195,26 @@ public class SettingListQueryTests : GlobalTestBase
     }
 
     [Fact]
-    public async Task GetSettings_WithSalesByValue_ShouldReturnValueSalesedResults()
+    public async Task GetSettings_WithSalesByValue_ShouldIgnoreValueOrdering()
     {
         await SeedSettingTestDataAsync();
 
+        // Ordering by Value is deliberately not allowed (encrypted settings hold secrets at rest,
+        // ordering by Value would be a probing vector). The request must still succeed and the
+        // sort clause must be ignored, i.e. the order matches the unsorted listing.
+        var unsortedResponse = await Client.GetAsync("/api/v1/Settings");
         var response = await Client.GetAsync("/api/v1/Settings?salesBy=Value");
 
         TestAssertions.AssertHttpSuccess(response);
+        var unsortedResult = await ReadResponseAsync<PaginatedResult<SettingListDto>>(unsortedResponse);
         var result = await ReadResponseAsync<PaginatedResult<SettingListDto>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertNotNull(result!.Data);
         TestAssertions.AssertTrue(result.Data!.Count > 0);
 
-        // Verify value salesing
-        var values = result.Data!.Select(x => x.Value).ToList();
-        var sortedValues = values.OrderBy(v => v).ToList();
-        TestAssertions.AssertEqual(sortedValues, values);
+        var unsortedKeys = unsortedResult!.Data!.Select(x => x.Key).ToList();
+        var keys = result.Data!.Select(x => x.Key).ToList();
+        TestAssertions.AssertEqual(unsortedKeys, keys);
     }
 
     [Fact]
@@ -361,7 +367,7 @@ public class SettingListQueryTests : GlobalTestBase
     {
         await SeedSettingTestDataAsync();
 
-        var response = await Client.GetAsync("/api/v1/Settings?searchString=");
+        var response = await Client.GetAsync("/api/v1/Settings?searchString=&pageSize=200");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SettingListDto>>(response);

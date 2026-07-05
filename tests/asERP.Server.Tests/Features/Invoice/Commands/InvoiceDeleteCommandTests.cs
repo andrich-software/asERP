@@ -52,6 +52,10 @@ public class InvoiceDeleteCommandTests : IDisposable
         Client.DefaultRequestHeaders.Remove("X-Tenant-Id");
         Client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId.ToString());
 
+        // Keep the test scope's tenant context in sync so DbContext assertions see the
+        // same tenant-filtered data as the server (the tenant query filter is always active).
+        TenantContext.SetCurrentTenantId(tenantId);
+
         Task.Delay(10).Wait();
     }
 
@@ -273,7 +277,8 @@ public class InvoiceDeleteCommandTests : IDisposable
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
 
-        var invoice3 = await DbContext.Invoice.AsNoTracking().FirstOrDefaultAsync(i => i.Id == Invoice3Id);
+        // Cross-tenant assertion (tenant 2's invoice while acting as tenant 1) — bypass the filter.
+        var invoice3 = await DbContext.Invoice.IgnoreQueryFilters().AsNoTracking().FirstOrDefaultAsync(i => i.Id == Invoice3Id);
         TestAssertions.AssertNotNull(invoice3);
         TestAssertions.AssertEqual(TenantConstants.TestTenant2Id, invoice3!.TenantId);
     }
@@ -375,16 +380,17 @@ public class InvoiceDeleteCommandTests : IDisposable
         await SeedTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var invoicesBeforeDelete = await DbContext.Invoice.Where(i => i.TenantId == TenantConstants.TestTenant2Id).CountAsync();
+        // Cross-tenant assertions (tenant 2's invoices while acting as tenant 1) — bypass the filter.
+        var invoicesBeforeDelete = await DbContext.Invoice.IgnoreQueryFilters().Where(i => i.TenantId == TenantConstants.TestTenant2Id).CountAsync();
         TestAssertions.AssertEqual(1, invoicesBeforeDelete);
 
         var response = await Client.DeleteAsync($"/api/v1/Invoices/{Invoice1Id}");
         TestAssertions.AssertHttpSuccess(response);
 
-        var invoicesAfterDelete = await DbContext.Invoice.Where(i => i.TenantId == TenantConstants.TestTenant2Id).CountAsync();
+        var invoicesAfterDelete = await DbContext.Invoice.IgnoreQueryFilters().Where(i => i.TenantId == TenantConstants.TestTenant2Id).CountAsync();
         TestAssertions.AssertEqual(1, invoicesAfterDelete);
 
-        var tenant2Invoice = await DbContext.Invoice.FindAsync(Invoice3Id);
+        var tenant2Invoice = await DbContext.Invoice.IgnoreQueryFilters().AsNoTracking().FirstOrDefaultAsync(i => i.Id == Invoice3Id);
         TestAssertions.AssertNotNull(tenant2Invoice);
         TestAssertions.AssertEqual(TenantConstants.TestTenant2Id, tenant2Invoice!.TenantId);
     }
@@ -462,15 +468,16 @@ public class InvoiceDeleteCommandTests : IDisposable
     {
         await SeedTestDataAsync();
 
-        var tenant1InvoicesBeforeDelete = await DbContext.Invoice.Where(i => i.TenantId == TenantConstants.TestTenant1Id).CountAsync();
-        var tenant2InvoicesBeforeDelete = await DbContext.Invoice.Where(i => i.TenantId == TenantConstants.TestTenant2Id).CountAsync();
+        // Cross-tenant assertions count both tenants' rows — bypass the tenant filter.
+        var tenant1InvoicesBeforeDelete = await DbContext.Invoice.IgnoreQueryFilters().Where(i => i.TenantId == TenantConstants.TestTenant1Id).CountAsync();
+        var tenant2InvoicesBeforeDelete = await DbContext.Invoice.IgnoreQueryFilters().Where(i => i.TenantId == TenantConstants.TestTenant2Id).CountAsync();
 
         SetTenantHeader(TenantConstants.TestTenant1Id);
         var response = await Client.DeleteAsync($"/api/v1/Invoices/{Invoice1Id}");
         TestAssertions.AssertHttpSuccess(response);
 
-        var tenant1InvoicesAfterDelete = await DbContext.Invoice.Where(i => i.TenantId == TenantConstants.TestTenant1Id).CountAsync();
-        var tenant2InvoicesAfterDelete = await DbContext.Invoice.Where(i => i.TenantId == TenantConstants.TestTenant2Id).CountAsync();
+        var tenant1InvoicesAfterDelete = await DbContext.Invoice.IgnoreQueryFilters().Where(i => i.TenantId == TenantConstants.TestTenant1Id).CountAsync();
+        var tenant2InvoicesAfterDelete = await DbContext.Invoice.IgnoreQueryFilters().Where(i => i.TenantId == TenantConstants.TestTenant2Id).CountAsync();
 
         TestAssertions.AssertEqual(tenant1InvoicesBeforeDelete - 1, tenant1InvoicesAfterDelete);
         TestAssertions.AssertEqual(tenant2InvoicesBeforeDelete, tenant2InvoicesAfterDelete);

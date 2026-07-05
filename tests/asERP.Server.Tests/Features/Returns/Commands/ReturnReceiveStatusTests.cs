@@ -96,11 +96,12 @@ public class ReturnReceiveStatusTests : TenantIsolatedTestBase
     public async Task Receive_WithValidSerialNumbers_ShouldRecordThem()
     {
         var (_, returnShipment) = await SeedReturnAsync(981, returnAllItems: false);
+        // Act as tenant 1 before reading the seeded sales item — the tenant filter hides it otherwise.
+        SetTenantHeader(TenantConstants.TestTenant1Id);
         var salesItemId = returnShipment.Items.First().SalesItemId;
         var salesItem = await DbContext.SalesItem.FirstAsync(i => i.Id == salesItemId);
         ShippingTestDataSeeder.AddSerialNumber(DbContext, salesItem, "SN-981-1");
         await DbContext.SaveChangesAsync();
-        SetTenantHeader(TenantConstants.TestTenant1Id);
 
         var response = await PostAsJsonAsync($"/api/v1/Returns/{returnShipment.Id}/receive",
             BuildReceiveInput(returnShipment, serialNumbers: ["SN-981-1"]));

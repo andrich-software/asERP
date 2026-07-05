@@ -46,6 +46,12 @@ public abstract class TenantIsolatedTestBase : IDisposable
     {
         Client.DefaultRequestHeaders.Remove("X-Tenant-Id");
         Client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId.ToString());
+
+        // The global tenant query filter is always active (also in tests). Align the test scope's
+        // tenant context with the tenant the HTTP client acts as, so arrangement/assertion queries
+        // via DbContext see the same data the server sees for this tenant. Cross-tenant assertions
+        // must use IgnoreQueryFilters() or set the tenant context explicitly.
+        TenantContext.SetCurrentTenantId(tenantId);
     }
 
     protected void SetInvalidTenantHeader()
@@ -62,6 +68,7 @@ public abstract class TenantIsolatedTestBase : IDisposable
     protected void RemoveTenantHeader()
     {
         Client.DefaultRequestHeaders.Remove("X-Tenant-Id");
+        TenantContext.SetCurrentTenantId(null);
     }
 
     protected void SimulateUnauthenticatedRequest()

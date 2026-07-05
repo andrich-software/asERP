@@ -232,12 +232,13 @@ public class ShippingCreatePartialQuantityTests : TenantIsolatedTestBase
     public async Task AlreadyAssignedItemViaItems_ShouldReturnBadRequest()
     {
         var (rate, sales) = await SeedSetupAsync(840, firstItemQuantity: 3);
+        // Act as tenant 1 before reading the seeded provider — the tenant filter hides it otherwise.
+        SetTenantHeader(TenantConstants.TestTenant1Id);
         var provider = await DbContext.ShippingProvider.FirstAsync();
         var existing = ShippingTestDataSeeder.AddShipping(DbContext, sales, provider, rate);
         var item = sales.SalesItems.First();
         item.ShippingId = existing.Id;
         await DbContext.SaveChangesAsync();
-        SetTenantHeader(TenantConstants.TestTenant1Id);
 
         var response = await PostAsJsonAsync("/api/v1/Shippings",
             CreateInputDto(sales.Id, rate.Id, (item.Id, 1)));

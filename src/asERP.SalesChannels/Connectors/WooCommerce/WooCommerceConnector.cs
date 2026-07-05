@@ -49,7 +49,8 @@ public sealed class WooCommerceConnector : ConnectorBase
         SalesChannelCapabilities.ImportCustomers |
         SalesChannelCapabilities.ImportStock |
         SalesChannelCapabilities.UpdateStock |
-        SalesChannelCapabilities.UpdatePrice;
+        SalesChannelCapabilities.UpdatePrice |
+        SalesChannelCapabilities.CancelSales;
 
     public override async Task<ConnectionTestResult> TestConnectionAsync(SalesChannelContext context)
     {
@@ -1195,6 +1196,31 @@ public sealed class WooCommerceConnector : ConnectorBase
             }
 
             return ExportResult.Ok(payload.RemoteProductId);
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
+    }
+
+    public override async Task<ExportResult> CancelSalesAsync(SalesChannelContext context, CancelSalesPayload payload)
+    {
+        if (string.IsNullOrEmpty(payload.RemoteSalesId) || !uint.TryParse(payload.RemoteSalesId, out var orderId))
+        {
+            return ExportResult.Fail("WooCommerce order id (numeric RemoteSalesId) is required for cancellations");
+        }
+
+        try
+        {
+            var wc = BuildClient(context);
+
+            // WooCommerce cancellation is a plain status transition on the order resource.
+            await wc.Order.Update(orderId, new Order
+            {
+                status = "cancelled",
+            });
+
+            return ExportResult.Ok(payload.RemoteSalesId);
         }
         catch (Exception ex)
         {

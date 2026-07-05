@@ -25,6 +25,10 @@ public class ShippingLabelOutboxTests : TenantIsolatedTestBase
     private async Task<asERP.Domain.Entities.Shipping> SeedShippingAsync(
         bool providerExists = true, bool providerEnabled = true, int customerNumber = 841)
     {
+        // All data in these tests belongs to tenant 1; act as that tenant so the always-on
+        // tenant query filter lets the enqueuer/drainer and the assertions see the rows.
+        TenantContext.SetCurrentTenantId(TenantConstants.TestTenant1Id);
+
         await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
 
         asERP.Domain.Entities.ShippingProvider? provider = null;

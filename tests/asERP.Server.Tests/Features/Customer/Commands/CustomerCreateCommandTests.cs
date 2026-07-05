@@ -344,8 +344,9 @@ public class CustomerCreateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertEqual(HttpStatusCode.Created, responseT2.StatusCode);
         var resultT2 = await ReadResponseAsync<Result<Guid>>(responseT2);
 
-        var customerT1 = await DbContext.Customer.FindAsync(resultT1.Data);
-        var customerT2 = await DbContext.Customer.FindAsync(resultT2.Data);
+        // Cross-tenant assertion: inspect both tenants' rows, so bypass the tenant filter.
+        var customerT1 = await DbContext.Customer.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.Id == resultT1.Data);
+        var customerT2 = await DbContext.Customer.IgnoreQueryFilters().FirstOrDefaultAsync(c => c.Id == resultT2.Data);
 
         TestAssertions.AssertNotNull(customerT1);
         TestAssertions.AssertNotNull(customerT2);

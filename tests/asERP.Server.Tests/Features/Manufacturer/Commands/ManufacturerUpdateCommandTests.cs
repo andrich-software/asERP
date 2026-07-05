@@ -299,7 +299,11 @@ public class ManufacturerUpdateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertEqual("Updated Manufacturer Name", updatedManufacturer!.Name);
         TestAssertions.AssertEqual<Guid>(TenantConstants.TestTenant1Id, updatedManufacturer.TenantId!.Value);
 
-        var tenant2Manufacturer = await DbContext.Manufacturer.FindAsync(Manufacturer3Id);
+        // Cross-tenant assertion (tenant 2's manufacturer while acting as tenant 1) — bypass the filter.
+        var tenant2Manufacturer = await DbContext.Manufacturer
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == Manufacturer3Id);
         TestAssertions.AssertNotNull(tenant2Manufacturer);
         TestAssertions.AssertEqual("Tenant 2 Manufacturer", tenant2Manufacturer!.Name);
         TestAssertions.AssertEqual<Guid>(TenantConstants.TestTenant2Id, tenant2Manufacturer.TenantId!.Value);

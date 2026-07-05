@@ -56,7 +56,9 @@ public class WooCommerceDatabaseConnectorTests
     {
         var channel = new SalesChannel
         {
-            AdditionalConfigJson = """{"host":"db.example.com","port":3307,"database":"shop","tablePrefix":"wpx_"}""",
+            // allowPrivateHost bypasses the DNS-based SSRF guard so this test stays deterministic and
+            // offline — it exercises JSON parsing and connection-string building, not host resolution.
+            AdditionalConfigJson = """{"host":"db.example.com","port":3307,"database":"shop","tablePrefix":"wpx_","allowPrivateHost":true}""",
         };
 
         var config = WooCommerceDatabaseChannelConfig.FromSalesChannel(channel);

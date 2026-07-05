@@ -54,3 +54,8 @@ public sealed record DelistPayload(
     string Sku,
     string? RemoteProductId,
     string? ExternalListingId);
+
+public sealed record CancelSalesPayload(
+    Guid SalesId,
+    string? RemoteSalesId,
+    string? Reason = null);

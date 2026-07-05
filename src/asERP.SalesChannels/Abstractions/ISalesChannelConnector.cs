@@ -26,4 +26,5 @@ public interface ISalesChannelConnector
     Task<ExportResult> UpdatePriceAsync(SalesChannelContext context, PriceUpdatePayload payload);
     Task<ExportResult> UpdateSalesAsync(SalesChannelContext context, SalesUpdatePayload payload);
     Task<ExportResult> DelistProductAsync(SalesChannelContext context, DelistPayload payload);
+    Task<ExportResult> CancelSalesAsync(SalesChannelContext context, CancelSalesPayload payload);
 }

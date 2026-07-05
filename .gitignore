@@ -264,7 +264,10 @@ Generated_Code/
 # to a newer Visual Studio version. Backup files are not needed,
 # because we have git ;-)
 _UpgradeReport_Files/
-Backup*/
+# Only ignore VS upgrade backup folders at the repo root, not source folders named "Backup"
+/Backup*/
+# Keep the persistence Backup services under version control regardless
+!src/asERP.Persistence/Services/Backup/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

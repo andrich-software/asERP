@@ -20,10 +20,12 @@ public class ProductImageImportServiceTests : TenantIsolatedTestBase
     private static readonly Guid ChannelA = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private static readonly Guid ChannelB = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
-    private const string Url1 = "https://shop.example/media/front.png";
-    private const string Url2 = "https://shop.example/media/back.png";
-    private const string Url3 = "https://shop.example/media/side.png";
-    private const string BrokenUrl = "https://shop.example/media/missing.png";
+    // Literal public (TEST-NET-3) IP: the SSRF validator accepts it without a DNS lookup, and the
+    // stubbed HttpMessageHandler answers the request, so no real network access ever happens.
+    private const string Url1 = "https://203.0.113.10/media/front.png";
+    private const string Url2 = "https://203.0.113.10/media/back.png";
+    private const string Url3 = "https://203.0.113.10/media/side.png";
+    private const string BrokenUrl = "https://203.0.113.10/media/missing.png";
 
     private async Task<Guid> SeedProductAsync()
     {

@@ -197,7 +197,8 @@ public class CustomerDeleteCommandTests : TenantIsolatedTestBase
         await SeedCustomerTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant2Id);
 
-        var customerExists = await DbContext.Customer.AnyAsync(c => c.Id == Customer1Id);
+        // Cross-tenant assertion (tenant 1's customer while acting as tenant 2) — bypass the filter.
+        var customerExists = await DbContext.Customer.IgnoreQueryFilters().AnyAsync(c => c.Id == Customer1Id);
         TestAssertions.AssertTrue(customerExists);
 
         var response = await Client.DeleteAsync($"/api/v1/Customers/{Customer1Id}");
@@ -208,7 +209,7 @@ public class CustomerDeleteCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertFalse(result.Succeeded);
 
         // Verify customer still exists
-        var customerStillExists = await DbContext.Customer.AnyAsync(c => c.Id == Customer1Id);
+        var customerStillExists = await DbContext.Customer.IgnoreQueryFilters().AnyAsync(c => c.Id == Customer1Id);
         TestAssertions.AssertTrue(customerStillExists);
     }
 
@@ -312,9 +313,9 @@ public class CustomerDeleteCommandTests : TenantIsolatedTestBase
     {
         await SeedCustomerTestDataAsync();
 
-        // Verify both customers exist
-        var customer1Exists = await DbContext.Customer.AnyAsync(c => c.Id == Customer1Id && c.TenantId == TenantConstants.TestTenant1Id);
-        var customer3Exists = await DbContext.Customer.AnyAsync(c => c.Id == Customer3Id && c.TenantId == TenantConstants.TestTenant2Id);
+        // Cross-tenant assertions inspect both tenants' rows — bypass the tenant filter.
+        var customer1Exists = await DbContext.Customer.IgnoreQueryFilters().AnyAsync(c => c.Id == Customer1Id && c.TenantId == TenantConstants.TestTenant1Id);
+        var customer3Exists = await DbContext.Customer.IgnoreQueryFilters().AnyAsync(c => c.Id == Customer3Id && c.TenantId == TenantConstants.TestTenant2Id);
         TestAssertions.AssertTrue(customer1Exists);
         TestAssertions.AssertTrue(customer3Exists);
 
@@ -324,7 +325,7 @@ public class CustomerDeleteCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertEqual(HttpStatusCode.NotFound, response1.StatusCode);
 
         // Verify customer 1 still exists
-        customer1Exists = await DbContext.Customer.AnyAsync(c => c.Id == Customer1Id);
+        customer1Exists = await DbContext.Customer.IgnoreQueryFilters().AnyAsync(c => c.Id == Customer1Id);
         TestAssertions.AssertTrue(customer1Exists);
 
         // Verify tenant 2 can delete its own customer
@@ -332,11 +333,11 @@ public class CustomerDeleteCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertEqual(HttpStatusCode.NoContent, response3.StatusCode);
 
         // Verify customer 3 is deleted
-        customer3Exists = await DbContext.Customer.AnyAsync(c => c.Id == Customer3Id);
+        customer3Exists = await DbContext.Customer.IgnoreQueryFilters().AnyAsync(c => c.Id == Customer3Id);
         TestAssertions.AssertFalse(customer3Exists);
 
         // Verify customer 1 still exists
-        customer1Exists = await DbContext.Customer.AnyAsync(c => c.Id == Customer1Id);
+        customer1Exists = await DbContext.Customer.IgnoreQueryFilters().AnyAsync(c => c.Id == Customer1Id);
         TestAssertions.AssertTrue(customer1Exists);
     }
 
@@ -414,7 +415,8 @@ public class CustomerDeleteCommandTests : TenantIsolatedTestBase
 
         TestAssertions.AssertEqual(HttpStatusCode.NotFound, response.StatusCode);
 
-        var customerStillExists = await DbContext.Customer.AnyAsync(c => c.Id == Customer1Id);
+        // The invalid tenant header hides the row from the filtered context — bypass the filter.
+        var customerStillExists = await DbContext.Customer.IgnoreQueryFilters().AnyAsync(c => c.Id == Customer1Id);
         TestAssertions.AssertTrue(customerStillExists);
     }
 

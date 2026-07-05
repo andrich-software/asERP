@@ -42,4 +42,7 @@ public abstract class ConnectorBase : ISalesChannelConnector
 
     public virtual Task<ExportResult> DelistProductAsync(SalesChannelContext context, DelistPayload payload)
         => Task.FromResult(ExportResult.Fail($"{Type} does not support DelistProduct"));
+
+    public virtual Task<ExportResult> CancelSalesAsync(SalesChannelContext context, CancelSalesPayload payload)
+        => Task.FromResult(ExportResult.Fail($"{Type} does not support CancelSales"));
 }
