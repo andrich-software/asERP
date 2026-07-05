@@ -1,15 +1,25 @@
-﻿using System.Linq.Dynamic.Core;
+using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Superadmin;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Superadmin.Queries.SuperadminList;
 
 public class SuperadminListHandler : IRequestHandler<SuperadminListQuery, PaginatedResult<SuperadminTenantListDto>>
 {
+    // Ordering runs on the Tenant entity (before Select). Restrict to safe display columns; the DTO's
+    // sensitive base fields (ConnectionString) are not projected here and are never sortable.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(Domain.Entities.Tenant.Id),
+        nameof(Domain.Entities.Tenant.Name),
+        nameof(Domain.Entities.Tenant.DateCreated),
+        nameof(Domain.Entities.Tenant.DateModified)
+    };
+
     private readonly IAppLogger<SuperadminListHandler> _logger;
     private readonly ITenantRepository _tenantRepository;
 
@@ -40,15 +50,9 @@ public class SuperadminListHandler : IRequestHandler<SuperadminListQuery, Pagina
         }
 
         // Apply salesing
-        if (request.SalesBy.Any())
-        {
-            var salesing = string.Join(",", request.SalesBy);
-            query = query.OrderBy(salesing);
-        }
-        else
-        {
-            query = query.OrderBy(t => t.Name);
-        }
+        query = request.SalesBy.Any()
+            ? query.ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            : query.OrderBy(t => t.Name);
 
         return await query
             .Select(t => new SuperadminTenantListDto

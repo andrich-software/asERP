@@ -1,6 +1,6 @@
-﻿using asERP.Domain.Entities;
-using asERP.Persistence.DatabaseContext;
 using asERP.Application.Contracts.Services;
+using asERP.Domain.Entities;
+using asERP.Persistence.DatabaseContext;
 using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Persistence.Tests;
@@ -15,6 +15,9 @@ public class ApplicationDbContextTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
 
         var mockTenantContext = new TestTenantContext();
+        // A tenant-scoped entity is never persisted without an active tenant context in the real app
+        // (middleware always sets one); SaveChangesAsync now enforces that, so the test mirrors it.
+        mockTenantContext.SetCurrentTenantId(Guid.NewGuid());
 
         _applicationDbContext = new ApplicationDbContext(dbOptions, mockTenantContext);
     }

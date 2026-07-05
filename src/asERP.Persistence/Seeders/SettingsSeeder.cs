@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Persistence.Seeders;
@@ -25,13 +25,13 @@ public static class SettingsSeeder
             new Setting { Id = new Guid("66666666-6666-6666-6666-666666666624"), Key = "Email.SmtpHost", Value = string.Empty },
             new Setting { Id = new Guid("66666666-6666-6666-6666-666666666625"), Key = "Email.SmtpPort", Value = "587" },
             new Setting { Id = new Guid("66666666-6666-6666-6666-666666666626"), Key = "Email.SmtpUsername", Value = string.Empty },
-            new Setting { Id = new Guid("66666666-6666-6666-6666-666666666627"), Key = "Email.SmtpPassword", Value = string.Empty },
+            new Setting { Id = new Guid("66666666-6666-6666-6666-666666666627"), Key = "Email.SmtpPassword", Value = string.Empty, IsEncrypted = true },
             new Setting { Id = new Guid("66666666-6666-6666-6666-666666666628"), Key = "Email.SmtpEnableSsl", Value = "true" },
 
             // Email — Microsoft 365 (Graph API, app-only client credentials)
             new Setting { Id = new Guid("66666666-6666-6666-6666-666666666629"), Key = "Email.M365TenantId", Value = string.Empty },
             new Setting { Id = new Guid("66666666-6666-6666-6666-666666666630"), Key = "Email.M365ClientId", Value = string.Empty },
-            new Setting { Id = new Guid("66666666-6666-6666-6666-666666666631"), Key = "Email.M365ClientSecret", Value = string.Empty },
+            new Setting { Id = new Guid("66666666-6666-6666-6666-666666666631"), Key = "Email.M365ClientSecret", Value = string.Empty, IsEncrypted = true },
             new Setting { Id = new Guid("66666666-6666-6666-6666-666666666632"), Key = "Email.M365SenderAddress", Value = string.Empty },
 
             // Email — From / Reply-To

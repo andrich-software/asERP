@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Customer;
@@ -35,9 +35,9 @@ public class CustomerDedupeHandler : IRequestHandler<CustomerDedupeCommand, Resu
         }
         catch (Exception ex)
         {
-            _logger.LogError("Customer dedupe failed: {Message}", ex.Message);
+            _logger.LogError(ex, "Customer dedupe failed.");
             return Result<CustomerDedupeResultDto>.Fail(ResultStatusCode.InternalServerError,
-                $"Customer dedupe failed: {ex.Message}");
+                "Customer dedupe failed.");
         }
     }
 }

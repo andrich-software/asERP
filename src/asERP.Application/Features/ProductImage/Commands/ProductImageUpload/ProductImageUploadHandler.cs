@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Infrastructure;
+using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
@@ -106,9 +106,9 @@ public class ProductImageUploadHandler : IRequestHandler<ProductImageUploadComma
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error uploading product image: {Message}", ex.Message);
+            _logger.LogError(ex, "Error uploading product image");
             return Result<ProductImageDto>.Fail(ResultStatusCode.InternalServerError,
-                $"An error occurred while uploading the image: {ex.Message}");
+                "An error occurred while uploading the image.");
         }
     }
 }

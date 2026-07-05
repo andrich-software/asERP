@@ -2317,6 +2317,9 @@
   <data name="SalesChannelEditPage.Field.ExportStock.Text" xml:space="preserve">
     <value>Push stock to channel</value>
   </data>
+  <data name="SalesChannelEditPage.Field.PushSalesCancellations.Text" xml:space="preserve">
+    <value>Push cancellations to channel</value>
+  </data>
   <data name="SalesChannelEditPage.Field.ImportStock.Text" xml:space="preserve">
     <value>Mirror stock from channel (shop keeps stock)</value>
   </data>

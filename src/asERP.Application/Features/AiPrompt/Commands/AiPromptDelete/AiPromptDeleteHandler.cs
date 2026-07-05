@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.AiPrompt.Commands.AiPromptDelete;
 
@@ -87,11 +88,9 @@ public class AiPromptDeleteHandler : IRequestHandler<AiPromptDeleteCommand, Resu
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while deleting the AI prompt: {ex.Message}");
-
-            _logger.LogError("Error deleting AI prompt: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while deleting the AI prompt.",
+                "Error deleting AI prompt.");
         }
 
         return result;

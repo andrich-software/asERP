@@ -3,6 +3,7 @@ using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
 using asERP.Application.Features.Shipping.Commands.ShippingCancel;
 using asERP.Application.Mediator;
+using asERP.Application.Notifications;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
@@ -89,6 +90,10 @@ public class SalesCancelHandler : IRequestHandler<SalesCancelCommand, Result<Gui
                 return result;
             }
 
+            // The order status flip, history row and shipment cancels are wrapped in a single
+            // transaction so a failure mid-way cannot leave the order Cancelled with live shipments.
+            await using var transaction = await _salesRepository.BeginTransactionAsync(cancellationToken);
+
             // Cancel the order FIRST: the recompute triggered inside each shipment cancel then
             // sees a protected status and cannot flip the order back to Processing.
             var oldStatus = sales.Status;
@@ -120,6 +125,17 @@ public class SalesCancelHandler : IRequestHandler<SalesCancelCommand, Result<Gui
                 }
             }
 
+            // Published explicitly (not left to the persistence interceptor — its in-save publish
+            // cannot reach the DbContext): with the channel's opt-in PushSalesCancellations the
+            // SalesChannels handler turns this into a CancelSales export to the originating shop.
+            // Fires once after the shipment cancels; their notifications coalesce onto the same
+            // outbox row via the idempotency key.
+            await _mediator.Publish(
+                new SalesChangedNotification(sales.Id, sales.TenantId, SalesChangeKind.Cancelled),
+                cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.Ok;
             result.Data = sales.Id;
@@ -134,9 +150,9 @@ public class SalesCancelHandler : IRequestHandler<SalesCancelCommand, Result<Gui
         {
             result.Succeeded = false;
             result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while cancelling the sales order: {ex.Message}");
+            result.Messages.Add("An error occurred while cancelling the sales order.");
 
-            _logger.LogError("Error cancelling sales order: {Message}", ex.Message);
+            _logger.LogError(ex, "Error cancelling sales order with ID: {Id}", request.Id);
         }
 
         return result;

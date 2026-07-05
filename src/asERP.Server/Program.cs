@@ -18,6 +18,7 @@ using asERP.Persistence.Services;
 using asERP.SalesChannels;
 using asERP.SalesChannels.Logging;
 using asERP.Server;
+using asERP.Server.Infrastructure.Configuration;
 using asERP.Server.Infrastructure.JsonConverters;
 using asERP.Server.Infrastructure.Logging;
 using asERP.Server.ServiceRegistrations;
@@ -26,9 +27,11 @@ using asERP.Shipping;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using OpenTelemetry.Exporter;
@@ -43,7 +46,34 @@ if (args.Length > 0 && args[0] == "cli")
     return await asERP.Server.Cli.CliRunner.RunAsync(args[1..]);
 }
 
-var builder = WebApplication.CreateBuilder(args);
+// Windows services start with CWD = %WINDIR%\System32 and WebApplication.CreateBuilder
+// pins the content root to the CWD at construction time — so the content root (and the
+// process working directory, for any remaining relative-path code) must be redirected
+// to the install directory BEFORE configuration is loaded.
+var runningAsWindowsService = WindowsServiceHelpers.IsWindowsService();
+if (runningAsWindowsService)
+{
+    Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+
+    // As a service there is no console: a crash before/at startup would only surface as a
+    // generic SCM error 1067. Persist the exception so it can be diagnosed.
+    AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        WriteServiceCrashLog(e.ExceptionObject as Exception);
+}
+
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = runningAsWindowsService ? AppContext.BaseDirectory : null
+});
+
+builder.Host.UseWindowsService(options => options.ServiceName = "asERPServer");
+
+// Operator-editable settings (installer / tray app) layered over appsettings.json —
+// must be added before anything below reads configuration. The ProgramData fallback is
+// disabled for Development/Testing so an installed asERP service does not hijack local runs.
+ExternalSettings.AddTo(builder.Configuration,
+    allowProgramDataFallback: !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"));
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -70,6 +100,8 @@ builder.Services.AddDataProtection()
 builder.Services.AddSingleton<ICredentialEncryptor, DataProtectionCredentialEncryptor>();
 
 builder.Services.Configure<DatabaseOptions>(builder.Configuration.GetSection(DatabaseOptions.Section));
+builder.Services.Configure<asERP.Persistence.Services.Backup.BackupOptions>(
+    builder.Configuration.GetSection(asERP.Persistence.Services.Backup.BackupOptions.Section));
 
 // Bootstrap: load Grafana settings from the database before wiring up logging/telemetry.
 // Falls back to safe defaults when persistence is not available (e.g. test environment).
@@ -136,12 +168,26 @@ else
     );
 }
 
+// CORS: in Development any origin is allowed for local tooling; outside Development the
+// policy is restricted to the origins configured under "Cors:AllowedOrigins". If none are
+// configured in a non-Development environment, no cross-origin requests are permitted.
+var corsAllowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(
         policy =>
         {
-            policy.AllowAnyOrigin();
+            if (builder.Environment.IsDevelopment())
+            {
+                policy.AllowAnyOrigin();
+            }
+            else if (corsAllowedOrigins.Length > 0)
+            {
+                policy.WithOrigins(corsAllowedOrigins);
+            }
+
             policy.AllowAnyHeader();
             policy.AllowAnyMethod();
         });
@@ -151,8 +197,7 @@ builder.Services.AddSwaggerServices();
 builder.Services.AddApiVersioningServices(builder.Configuration);
 builder.Services.AddGrafanaTelemetryServices(grafanaSettings, "asERP.Server");
 
-builder.Services.AddControllersWithViews();
-builder.Services.AddControllers().AddJsonOptions(opts =>
+builder.Services.AddControllersWithViews().AddJsonOptions(opts =>
 {
     opts.JsonSerializerOptions.PropertyNamingPolicy = null; // JsonNamingPolicy.CamelCase);
     opts.JsonSerializerOptions.Converters.Add(new StrictEnumConverter<SalesStatus>());
@@ -271,9 +316,12 @@ if (builder.Environment.EnvironmentName != "Testing")
 // and ITenantContext is replaced by TestTenantContext
 
 // Add health checks
-builder.Services.AddHealthChecks()
-    // .AddDbContextCheck<ApplicationDbContext>("Database")
+var healthChecksBuilder = builder.Services.AddHealthChecks()
     .AddCheck("Self", () => HealthCheckResult.Healthy("Service is running."));
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    healthChecksBuilder.AddDbContextCheck<ApplicationDbContext>("Database");
+}
 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<ISettingRepository, SettingRepository>();
@@ -327,6 +375,21 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var dbOptions = scope.ServiceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
 
+    // A relative SQLite path resolves against the install directory when hosted as a
+    // Windows service — almost certainly not what the operator intended (data belongs
+    // in %ProgramData%\asERP). Warn loudly instead of failing.
+    if (runningAsWindowsService && dbOptions.Provider.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        var sqliteDataSource = new SqliteConnectionStringBuilder(dbOptions.ConnectionString).DataSource;
+        if (!Path.IsPathRooted(sqliteDataSource))
+        {
+            app.Logger.LogWarning(
+                "SQLite connection string uses a relative path ('{DataSource}') while running as a Windows service. " +
+                "Use an absolute path (e.g. in %ProgramData%\\asERP\\settings.json) to avoid storing data in the install directory.",
+                sqliteDataSource);
+        }
+    }
+
     if (context.Database.IsRelational() && context.Database.GetPendingMigrations().Any())
     {
         app.Logger.LogInformation("Applying pending migrations for {Provider} database", dbOptions.Provider);
@@ -368,39 +431,7 @@ app.UseCors();
 app.UseStaticFiles();
 app.UseRouting();
 
-// DEBUG: Check BEFORE UseAuthentication
-app.Use(async (context, next) =>
-{
-    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    logger.LogDebug($"🔍 DEBUG BEFORE UseAuthentication:");
-    logger.LogDebug($"   Path: {context.Request.Path}");
-    logger.LogDebug($"   Authorization header: {context.Request.Headers.ContainsKey("Authorization")}");
-    if (context.Request.Headers.ContainsKey("Authorization"))
-    {
-        var authHeader = context.Request.Headers["Authorization"].ToString();
-        logger.LogDebug($"   Auth header value: {authHeader.Substring(0, Math.Min(30, authHeader.Length))}...");
-    }
-    await next();
-});
-
 app.UseAuthentication(); // who are you?
-
-// DEBUG: Check AFTER UseAuthentication
-app.Use(async (context, next) =>
-{
-    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-    logger.LogDebug($"🔍 DEBUG After UseAuthentication:");
-    logger.LogDebug($"   Path: {context.Request.Path}");
-    logger.LogDebug($"   User: {context.User.Identity?.Name ?? "null"}");
-    logger.LogDebug($"   IsAuthenticated: {context.User.Identity?.IsAuthenticated}");
-    logger.LogDebug($"   Claims count: {context.User.Claims.Count()}");
-    if (context.User.Identity?.IsAuthenticated == true)
-    {
-        var roles = context.User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value);
-        logger.LogDebug($"   Roles: {string.Join(", ", roles)}");
-    }
-    await next();
-});
 
 app.UseMiddleware<asERP.Server.Middleware.TenantMiddleware>(); // set tenant context
 app.UseAuthorization(); // what are you allowed to do?
@@ -513,6 +544,22 @@ static IEnumerable<string> ResolveStartupUrls(WebApplication application)
             return url;
         }
     });
+}
+
+static void WriteServiceCrashLog(Exception exception)
+{
+    try
+    {
+        var crashLog = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "asERP", "logs", "startup-crash.log");
+        Directory.CreateDirectory(Path.GetDirectoryName(crashLog)!);
+        File.AppendAllText(crashLog, $"[{DateTime.UtcNow:O}] {exception}\n");
+    }
+    catch
+    {
+        // Last-resort diagnostics only — never mask the original failure.
+    }
 }
 
 static IEnumerable<string> ResolveBoundUrls(WebApplication application)

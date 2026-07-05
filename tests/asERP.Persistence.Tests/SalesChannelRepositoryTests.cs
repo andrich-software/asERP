@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Services;
+using asERP.Application.Contracts.Services;
 using asERP.Domain.Entities;
 using asERP.Persistence.DatabaseContext;
 using asERP.Persistence.Repositories;
@@ -12,19 +12,24 @@ public class SalesChannelRepositoryTests
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(dbName).Options;
-        var db = new ApplicationDbContext(options, new NullTenantContext());
-        var repo = new SalesChannelRepository(db, new NullTenantContext());
+        var db = new ApplicationDbContext(options, new FixedTenantContext());
+        var repo = new SalesChannelRepository(db, new FixedTenantContext());
         return (db, repo);
     }
 
-    private sealed class NullTenantContext : ITenantContext
+    // A fixed, shared tenant so every context over the same store agrees on ownership. Tenant-scoped
+    // entities can no longer be persisted without an active tenant context (SaveChangesAsync enforces
+    // it), so the test uses a real tenant id — the realistic case — instead of a null context.
+    private static readonly Guid TestTenantId = new("11111111-1111-1111-1111-111111111111");
+
+    private sealed class FixedTenantContext : ITenantContext
     {
-        public Guid? GetCurrentTenantId() => null;
+        public Guid? GetCurrentTenantId() => TestTenantId;
         public void SetCurrentTenantId(Guid? tenantId) { }
-        public bool HasTenant() => false;
-        public IReadOnlyCollection<Guid> GetAssignedTenantIds() => Array.Empty<Guid>();
+        public bool HasTenant() => true;
+        public IReadOnlyCollection<Guid> GetAssignedTenantIds() => new[] { TestTenantId };
         public void SetAssignedTenantIds(IEnumerable<Guid> tenantIds) { }
-        public bool IsAssignedToTenant(Guid tenantId) => false;
+        public bool IsAssignedToTenant(Guid tenantId) => tenantId == TestTenantId;
     }
 
     private static Warehouse NewWarehouse(string name)

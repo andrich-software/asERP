@@ -15,7 +15,11 @@ public sealed class AmazonChannelConfig
     [JsonPropertyName("lwaClientId")]
     public string LwaClientId { get; set; } = string.Empty;
 
-    /// <summary>LWA app client secret. Stored encrypted at rest via the same DataProtection key ring.</summary>
+    /// <summary>
+    /// LWA app client secret. NOTE: this is persisted as plain text inside
+    /// <c>SalesChannel.AdditionalConfigJson</c> — it is NOT encrypted at rest. Treat the column
+    /// accordingly (DB-level encryption / access control).
+    /// </summary>
     [JsonPropertyName("lwaClientSecret")]
     public string LwaClientSecret { get; set; } = string.Empty;
 

@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Linq;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
 using asERP.Domain.Wrapper;
-using asERP.Application.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -189,11 +189,9 @@ public class UserDeleteHandler : IRequestHandler<UserDeleteCommand, Result<strin
         catch (Exception ex)
         {
             // Handle any exceptions during user deletion
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while deleting the user: {ex.Message}");
-
-            _logger.LogError("Error deleting user: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while deleting the user.",
+                "Error deleting user {Id}.", request.Id);
         }
 
         return result;

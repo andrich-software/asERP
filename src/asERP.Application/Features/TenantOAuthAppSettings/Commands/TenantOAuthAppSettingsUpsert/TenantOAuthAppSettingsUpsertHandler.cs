@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Mediator;
@@ -89,9 +89,10 @@ public class TenantOAuthAppSettingsUpsertHandler
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error upserting tenant OAuth app settings: {Message}", ex.Message);
+            _logger.LogError(ex, "Error upserting tenant OAuth app settings for tenant {TenantId} provider {Provider}.",
+                tenantId.Value, request.Provider);
             return Result<Guid>.Fail(ResultStatusCode.InternalServerError,
-                $"Error saving tenant OAuth app settings: {ex.Message}");
+                "Error saving tenant OAuth app settings.");
         }
     }
 }

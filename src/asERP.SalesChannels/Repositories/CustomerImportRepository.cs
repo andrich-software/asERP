@@ -61,23 +61,23 @@ public class CustomerImportRepository : ICustomerImportRepository
 
     private async Task ImportOrUpdateCoreAsync(SalesChannel salesChannel, SalesChannelImportCustomer importCustomer)
     {
-        // Überprüfen, ob Kunde bereits existiert (nach Remote-ID suchen)
+        // Look the customer up by remote id first.
         var existingCustomer = await _customerRepository.GetCustomerByRemoteCustomerIdAsync(salesChannel.Id, importCustomer.RemoteCustomerId);
 
-        // Wenn nicht nach Remote-ID gefunden, nach E-Mail suchen
+        // Not found by remote id — fall back to matching on email.
         if (existingCustomer == null && !string.IsNullOrEmpty(importCustomer.Email))
         {
             existingCustomer = await _customerRepository.GetCustomerByEmailAsync(importCustomer.Email);
 
-            // Wenn nach E-Mail gefunden, Verknüpfung mit SalesChannel herstellen
+            // Matched by email — link the existing customer to this sales channel.
             if (existingCustomer != null)
             {
                 AddCustomerSalesChannelLink(existingCustomer.Id, salesChannel.Id, importCustomer.RemoteCustomerId);
-                _logger.LogDebug($"CustomerSalesChannel hinzugefügt für Kunden {existingCustomer.Id}");
+                _logger.LogDebug("CustomerSalesChannel link added for customer {CustomerId}", existingCustomer.Id);
             }
         }
 
-        // Wenn Kunde nicht existiert, neu anlegen
+        // Create the customer when no existing match was found.
         var customerIsNew = existingCustomer == null;
         if (existingCustomer == null)
         {
@@ -100,16 +100,16 @@ public class CustomerImportRepository : ICustomerImportRepository
 
             // Deferred: added to the context now, committed with the link + addresses in one SaveChanges below.
             _dbContext.Customer.Add(newCustomer);
-            _logger.LogDebug($"Kunde {importCustomer.Email} erstellt");
+            _logger.LogDebug("Customer {Email} created", importCustomer.Email);
 
             AddCustomerSalesChannelLink(newCustomer.Id, salesChannel.Id, importCustomer.RemoteCustomerId);
-            _logger.LogDebug($"CustomerSalesChannel hinzugefügt für Kunden {newCustomer.Id}");
+            _logger.LogDebug("CustomerSalesChannel link added for customer {CustomerId}", newCustomer.Id);
 
             existingCustomer = newCustomer;
         }
         else
         {
-            // Bestehenden Kunden aktualisieren
+            // Update the existing customer.
             existingCustomer.Email = !string.IsNullOrEmpty(importCustomer.Email) ? importCustomer.Email : existingCustomer.Email;
             existingCustomer.Firstname = !string.IsNullOrEmpty(importCustomer.Firstname) ? importCustomer.Firstname : existingCustomer.Firstname;
             existingCustomer.Lastname = !string.IsNullOrEmpty(importCustomer.Lastname) ? importCustomer.Lastname : existingCustomer.Lastname;
@@ -129,10 +129,10 @@ public class CustomerImportRepository : ICustomerImportRepository
             }
 
             // Mutation only — the tracked entity is persisted by the single SaveChanges at the end.
-            _logger.LogDebug($"Kunde {existingCustomer.Id} aktualisiert");
+            _logger.LogDebug("Customer {CustomerId} updated", existingCustomer.Id);
         }
 
-        // Adressen verarbeiten (deferred adds)
+        // Process addresses (deferred adds).
         if (importCustomer.BillingAddress != null)
         {
             await ProcessAddress(existingCustomer, importCustomer.BillingAddress, customerIsNew);
@@ -159,11 +159,11 @@ public class CustomerImportRepository : ICustomerImportRepository
             return;
         }
 
-        // Land aus ISO-Code ermitteln
+        // Resolve the country from its ISO code.
         Country? country = await ResolveCountryAsync(address.Country);
         if (country == null)
         {
-            _logger.LogWarning($"Land mit ISO-Code {address.Country} nicht gefunden");
+            _logger.LogWarning("Country with ISO code {IsoCode} not found", address.Country);
             return;
         }
 
@@ -198,7 +198,7 @@ public class CustomerImportRepository : ICustomerImportRepository
 
         // Deferred: committed with the customer graph in the single SaveChanges of the caller.
         _dbContext.CustomerAddress.Add(newAddress);
-        _logger.LogDebug($"Neue Adresse für Kunden {customer.Id} hinzugefügt");
+        _logger.LogDebug("New address added for customer {CustomerId}", customer.Id);
     }
 
     /// <summary>Adds a customer↔sales-channel link to the context (deferred; committed with the customer).</summary>

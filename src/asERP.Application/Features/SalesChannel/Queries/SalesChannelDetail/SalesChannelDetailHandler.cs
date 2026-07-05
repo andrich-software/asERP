@@ -1,9 +1,10 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.SalesChannel;
 using asERP.Domain.Dtos.Warehouse;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.SalesChannel.Queries.SalesChannelDetail;
 
@@ -78,11 +79,9 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
         catch (Exception ex)
         {
             // Handle any other exceptions during sales channel retrieval
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while retrieving the sales channel: {ex.Message}");
-
-            _logger.LogError("Error retrieving sales channel: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while retrieving the sales channel.",
+                "Error retrieving sales channel {Id}.", request.Id);
         }
 
         return result;
@@ -114,6 +113,7 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
             ExportCustomers = entity.ExportCustomers,
             ExportSaless = entity.ExportSaless,
             ExportStock = entity.ExportStock,
+            PushSalesCancellations = entity.PushSalesCancellations,
             ImportStock = entity.ImportStock,
             HasWebhookSecret = !string.IsNullOrEmpty(entity.WebhookSecret),
             Warehouses = entity.Warehouses?.Select(w => new WarehouseDetailDto

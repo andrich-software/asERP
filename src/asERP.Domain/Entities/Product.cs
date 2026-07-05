@@ -1,10 +1,13 @@
-﻿using asERP.Domain.Entities.Common;
+using asERP.Domain.Entities.Common;
 using asERP.Domain.Enums;
 
 namespace asERP.Domain.Entities;
 
-public class Product : BaseEntity, IBaseEntity
+public class Product : BaseEntity, IBaseEntity, IConcurrencyStamped
 {
+    /// <summary>Optimistic-concurrency token; refreshed on every insert/update in SaveChangesAsync.</summary>
+    public Guid ConcurrencyToken { get; set; }
+
     public string Sku { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? NameOptimized { get; set; }

@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Manufacturer;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Manufacturer.Queries.ManufacturerDetail;
 
@@ -63,11 +64,9 @@ public class ManufacturerDetailHandler : IRequestHandler<ManufacturerDetailQuery
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while retrieving the manufacturer: {ex.Message}");
-
-            _logger.LogError("Error retrieving manufacturer: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while retrieving the manufacturer.",
+                "Error retrieving manufacturer.");
         }
 
         return result;

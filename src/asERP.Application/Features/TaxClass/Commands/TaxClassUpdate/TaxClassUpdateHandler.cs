@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.TaxClass.Commands.TaxClassUpdate;
 
@@ -70,11 +71,9 @@ public class TaxClassUpdateHandler : IRequestHandler<TaxClassUpdateCommand, Resu
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the tax class: {ex.Message}");
-
-            _logger.LogError("Error updating tax class: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while updating the tax class.",
+                "Error updating tax class.");
         }
 
         return result;

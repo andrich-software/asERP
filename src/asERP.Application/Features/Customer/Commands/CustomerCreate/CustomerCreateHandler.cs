@@ -1,7 +1,7 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Customer.Commands.CustomerCreate;
 
@@ -54,7 +54,7 @@ public class CustomerCreateHandler : IRequestHandler<CustomerCreateCommand, Resu
         if (!validationResult.IsValid)
         {
             var validationErrors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-            
+
             _logger.LogWarning("Validation errors in create request for {0}: {1}",
                 nameof(CustomerCreateCommand), validationErrors);
 
@@ -83,7 +83,7 @@ public class CustomerCreateHandler : IRequestHandler<CustomerCreateCommand, Resu
             await _customerRepository.CreateAsync(customerToCreate);
 
             _logger.LogInformation("Successfully created customer with ID: {Id}", customerToCreate.Id);
-            
+
             var result = Result<Guid>.Success(customerToCreate.Id);
             result.StatusCode = ResultStatusCode.Created;
             return result;
@@ -91,10 +91,10 @@ public class CustomerCreateHandler : IRequestHandler<CustomerCreateCommand, Resu
         catch (Exception ex)
         {
             // Handle any exceptions during customer creation
-            _logger.LogError("Error creating customer: {Message}", ex.Message);
-            
+            _logger.LogError(ex, "Error creating customer");
+
             return Result<Guid>.Fail(ResultStatusCode.InternalServerError,
-                $"An error occurred while creating the customer: {ex.Message}");
+                "An error occurred while creating the customer.");
         }
     }
 }

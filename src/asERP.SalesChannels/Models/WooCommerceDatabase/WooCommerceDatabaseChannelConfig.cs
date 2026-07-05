@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Net.Sockets;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using asERP.Domain.Entities;
 using MySqlConnector;
@@ -28,6 +30,23 @@ public sealed class WooCommerceDatabaseChannelConfig
     [JsonPropertyName("tablePrefix")]
     public string TablePrefix { get; set; } = "wp_";
 
+    /// <summary>
+    /// Opt-out for the private-range host guard, for genuine self-hosted LAN deployments where the MySQL
+    /// server legitimately sits on a private/internal address. Off by default: a tenant cannot point the
+    /// connector at internal infrastructure (SSRF/port-scan primitive) unless the operator explicitly
+    /// allows it per channel.
+    /// </summary>
+    [JsonPropertyName("allowPrivateHost")]
+    public bool AllowPrivateHost { get; set; }
+
+    /// <summary>
+    /// Opt-out for requiring TLS on the MySQL connection. Off by default, so the connection uses
+    /// <c>SslMode.Required</c> (no silent cleartext downgrade). Set only for a trusted LAN link where the
+    /// server has no certificate.
+    /// </summary>
+    [JsonPropertyName("allowInsecureTransport")]
+    public bool AllowInsecureTransport { get; set; }
+
     public static WooCommerceDatabaseChannelConfig FromSalesChannel(SalesChannel salesChannel)
     {
         var config = string.IsNullOrEmpty(salesChannel.AdditionalConfigJson)
@@ -53,6 +72,11 @@ public sealed class WooCommerceDatabaseChannelConfig
         if (Port is <= 0 or > 65535)
         {
             return $"MySQL port {Port} is out of range";
+        }
+        if (!AllowPrivateHost && ResolvesToBlockedAddress(Host))
+        {
+            return $"MySQL host '{Host}' resolves to a private or reserved address; set allowPrivateHost=true " +
+                   "in AdditionalConfigJson to permit a self-hosted LAN database.";
         }
         if (string.IsNullOrWhiteSpace(Database))
         {
@@ -80,10 +104,33 @@ public sealed class WooCommerceDatabaseChannelConfig
             Database = Database,
             UserID = username,
             Password = password,
-            // Shop databases frequently sit behind a TLS-terminating proxy or on a LAN host without
-            // certificates — prefer TLS but do not require it.
-            SslMode = MySqlSslMode.Preferred,
+            // TLS is required by default so credentials never traverse the wire in cleartext. A trusted
+            // LAN link without a server certificate can opt back down to Preferred per channel.
+            SslMode = AllowInsecureTransport ? MySqlSslMode.Preferred : MySqlSslMode.Required,
             ConnectionTimeout = 15,
             DefaultCommandTimeout = 120,
         }.ConnectionString;
+
+    /// <summary>
+    /// True when the host is a private/reserved IP, or a DNS name that resolves to one — the same guard the
+    /// HTTP channel URLs use, applied to the MySQL host so a tenant cannot repurpose the connector as an
+    /// internal port/credential scanner. Fails closed: an unresolvable host is treated as blocked.
+    /// </summary>
+    private static bool ResolvesToBlockedAddress(string host)
+    {
+        if (IPAddress.TryParse(host, out var literal))
+        {
+            return SalesChannelUrlValidator.IsBlockedAddress(literal);
+        }
+
+        try
+        {
+            var addresses = Dns.GetHostAddresses(host);
+            return addresses.Length == 0 || addresses.Any(SalesChannelUrlValidator.IsBlockedAddress);
+        }
+        catch (SocketException)
+        {
+            return true;
+        }
+    }
 }

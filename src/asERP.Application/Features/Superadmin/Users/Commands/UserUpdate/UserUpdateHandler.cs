@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -71,7 +71,7 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
 
         // Validate incoming data using FluentValidation
         var validator = new UserUpdateValidator();
-            var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
 
         // If validation fails, return a bad request result with validation errors
         if (!validationResult.IsValid)
@@ -106,14 +106,9 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
                 return result;
             }
 
-            if (!currentTenantId.HasValue || currentTenantId.Value == Guid.Empty)
-            {
-                if (request.DefaultTenantId.HasValue && request.DefaultTenantId.Value != Guid.Empty)
-                {
-                    currentTenantId = request.DefaultTenantId.Value;
-                }
-            }
-
+            // The tenant context must come from the server (JWT/tenant middleware or the target
+            // user's own assignments) — never from the client-supplied request.DefaultTenantId,
+            // which would let a caller pick the tenant scope the update runs in.
             if ((!currentTenantId.HasValue || currentTenantId.Value == Guid.Empty) && existingUser.UserTenants != null && existingUser.UserTenants.Any())
             {
                 currentTenantId = existingUser.UserTenants.FirstOrDefault(ut => ut.IsDefault)?.TenantId
@@ -303,12 +298,10 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
         }
         catch (Exception ex)
         {
-            // Handle any exceptions during user update
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the user: {ex.Message}");
-
-            _logger.LogError("Error updating user: {Message}", ex.Message);
+            // Handle any exceptions during user update; never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while updating the user.",
+                "Error updating user with ID: {Id}", request.Id);
         }
 
         return result;

@@ -77,6 +77,10 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
                 return result;
             }
 
+            // The item mutations, status transition and the order-level Returned flip are wrapped
+            // in a single transaction so a failure mid-way cannot leave a partial goods receipt.
+            await using var transaction = await _returnShipmentRepository.BeginTransactionAsync(cancellationToken);
+
             foreach (var receiveItem in request.Items)
             {
                 var item = returnShipment.Items.FirstOrDefault(i => i.Id == receiveItem.ReturnShipmentItemId);
@@ -160,6 +164,8 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
 
             await FlipSalesStatusWhenFullyReturnedAsync(returnShipment.SalesId, cancellationToken);
 
+            await transaction.CommitAsync(cancellationToken);
+
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.Ok;
             result.Data = returnShipment.Id;
@@ -174,9 +180,9 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
         {
             result.Succeeded = false;
             result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while receiving the return: {ex.Message}");
+            result.Messages.Add("An error occurred while receiving the return.");
 
-            _logger.LogError("Error receiving return: {Message}", ex.Message);
+            _logger.LogError(ex, "Error receiving return {Id}", request.Id);
         }
 
         return result;

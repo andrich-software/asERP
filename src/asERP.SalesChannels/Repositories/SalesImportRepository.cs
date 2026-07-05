@@ -12,7 +12,7 @@ namespace asERP.SalesChannels.Repositories;
 
 public class SalesImportRepository : ISalesImportRepository
 {
-    private readonly ILogger<ProductImportRepository> _logger;
+    private readonly ILogger<SalesImportRepository> _logger;
     private readonly ISalesRepository _salesRepository;
     private readonly ICustomerRepository _customerRepository;
     private readonly ICountryRepository _countryRepository;
@@ -40,7 +40,7 @@ public class SalesImportRepository : ISalesImportRepository
     private readonly Dictionary<string, Guid?> _productIdBySkuCache = new();
 
     public SalesImportRepository(
-        ILogger<ProductImportRepository> logger,
+        ILogger<SalesImportRepository> logger,
         ISalesRepository salesRepository,
         ICustomerRepository customerRepository,
         ICountryRepository countryRepository,
@@ -347,14 +347,25 @@ public class SalesImportRepository : ISalesImportRepository
 
             if (existingSales.Status != importSales.Status)
             {
-                _logger.LogInformation("Sales {0}: Status updated, new status is {1}", importSales.RemoteSalesId, importSales.Status);
-                var becameCancelled = !IsCancelledStatus(existingSales.Status) && IsCancelledStatus(importSales.Status);
-                existingSales.Status = importSales.Status;
-                somethingChanged = true;
-
-                if (becameCancelled)
+                // Local terminal states win: a locally cancelled/returned/refunded order must not be
+                // resurrected by a stale remote status — e.g. while a local cancel is still on its way
+                // to the shop via the CancelSales outbox. Otherwise the import and the push ping-pong.
+                if (IsCancelledStatus(existingSales.Status) && !IsCancelledStatus(importSales.Status))
                 {
-                    await BookCancellationMovementsAsync(salesChannel, existingSales);
+                    _logger.LogInformation("Sales {0}: keeping local terminal status {1}, remote reports {2}",
+                        importSales.RemoteSalesId, existingSales.Status, importSales.Status);
+                }
+                else
+                {
+                    _logger.LogInformation("Sales {0}: Status updated, new status is {1}", importSales.RemoteSalesId, importSales.Status);
+                    var becameCancelled = !IsCancelledStatus(existingSales.Status) && IsCancelledStatus(importSales.Status);
+                    existingSales.Status = importSales.Status;
+                    somethingChanged = true;
+
+                    if (becameCancelled)
+                    {
+                        await BookCancellationMovementsAsync(salesChannel, existingSales);
+                    }
                 }
             }
 
@@ -544,14 +555,11 @@ public class SalesImportRepository : ISalesImportRepository
     }
 
     /// <summary>
-    /// Lowers the customer's enrollment date to <paramref name="orderDate"/> when the order predates it, so a
-    /// customer is never recorded as newer than an order they placed. Only ever moves the date earlier
-    /// (converges to the earliest known activity), so it is safe and idempotent across repeated imports.
-    /// </summary>
-    /// <summary>
-    /// Mutates the tracked customer's DateEnrollment down to <paramref name="orderDate"/> when the order
-    /// predates it, and returns whether it changed. Does NOT save — the caller persists it as part of the
-    /// order's single SaveChanges (or an explicit save when the order itself is otherwise unchanged).
+    /// Lowers the tracked customer's DateEnrollment down to <paramref name="orderDate"/> when the order
+    /// predates it (a customer is never newer than an order they placed), and returns whether it changed.
+    /// Only ever moves the date earlier, so it is safe and idempotent across repeated imports. Does NOT
+    /// save — the caller persists it as part of the order's single SaveChanges (or an explicit save when
+    /// the order itself is otherwise unchanged).
     /// </summary>
     private bool FloorCustomerEnrollment(Customer customer, DateTime orderDate)
     {

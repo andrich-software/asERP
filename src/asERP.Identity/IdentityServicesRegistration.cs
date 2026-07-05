@@ -1,10 +1,11 @@
-﻿using System.Text;
+using System.Text;
 using asERP.Application.Contracts.Identity;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Models.Identity;
 using asERP.Identity.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,6 +19,28 @@ public static class IdentityServicesRegistration
     public static IServiceCollection AddIdentityServices(this IServiceCollection services,
         IConfiguration configuration)
     {
+        // Explicit Identity password / lockout policy. AddIdentity (in the persistence layer)
+        // registers the Identity stores; these options are layered on top so the policy is
+        // deliberate rather than relying on framework defaults.
+        services.Configure<IdentityOptions>(options =>
+        {
+            // Account lockout: 5 failed attempts locks the account for 15 minutes.
+            // Effective only because Login passes lockoutOnFailure: true.
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+
+            // Password policy.
+            options.Password.RequiredLength = 8;
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireUppercase = true;
+            options.Password.RequireNonAlphanumeric = true;
+            options.Password.RequiredUniqueChars = 1;
+
+            options.User.RequireUniqueEmail = true;
+        });
+
         // Configure JwtSettings from database
         services.AddScoped<JwtSettings>(serviceProvider =>
         {
@@ -44,12 +67,12 @@ public static class IdentityServicesRegistration
                 var settingsService = scope.ServiceProvider.GetRequiredService<ISettingsService>();
                 var logger = scope.ServiceProvider.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
 
-                logger.LogDebug("🔧 Configuring JWT Bearer (PostConfigure)");
+                logger.LogDebug("Configuring JWT Bearer (PostConfigure)");
 
                 try
                 {
                     var jwtSettings = settingsService.GetJwtSettingsAsync().GetAwaiter().GetResult();
-                    logger.LogDebug($"✅ JWT Settings loaded - Issuer: {jwtSettings.Issuer}, Audience: {jwtSettings.Audience}");
+                    logger.LogDebug("JWT settings loaded - Issuer: {Issuer}, Audience: {Audience}", jwtSettings.Issuer, jwtSettings.Audience);
 
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
@@ -64,35 +87,35 @@ public static class IdentityServicesRegistration
                         RoleClaimType = System.Security.Claims.ClaimTypes.Role
                     };
 
-                    logger.LogDebug("✅ TokenValidationParameters configured");
+                    logger.LogDebug("TokenValidationParameters configured");
 
                     options.Events = new JwtBearerEvents
                     {
                         OnAuthenticationFailed = context =>
                         {
                             var eventLogger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
-                            eventLogger.LogError($"❌ JWT Authentication failed: {context.Exception.Message}");
+                            eventLogger.LogError(context.Exception, "JWT authentication failed");
                             return System.Threading.Tasks.Task.CompletedTask;
                         },
                         OnTokenValidated = context =>
                         {
                             var eventLogger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
-                            eventLogger.LogDebug($"✅ JWT Token validated for: {context.Principal?.Identity?.Name}");
+                            eventLogger.LogDebug("JWT token validated for {Name}", context.Principal?.Identity?.Name);
                             return System.Threading.Tasks.Task.CompletedTask;
                         },
                         OnMessageReceived = context =>
                         {
                             var eventLogger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
-                            eventLogger.LogDebug($"📨 JWT Message received: {context.HttpContext.Request.Path}");
+                            eventLogger.LogDebug("JWT message received for {Path}", context.HttpContext.Request.Path);
                             return System.Threading.Tasks.Task.CompletedTask;
                         }
                     };
 
-                    logger.LogDebug("✅ JWT Bearer Events configured");
+                    logger.LogDebug("JWT Bearer events configured");
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError($"❌ ERROR configuring JWT Bearer: {ex.Message}");
+                    logger.LogError(ex, "Error configuring JWT Bearer");
                     throw;
                 }
             });

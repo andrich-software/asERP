@@ -1,4 +1,3 @@
-﻿using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
@@ -21,12 +20,12 @@ namespace asERP.Persistence.Services;
 public sealed class OAuthAppSettingsService : IOAuthAppSettingsService
 {
     private readonly ApplicationDbContext _context;
-    private readonly ISettingsService _settings;
+    private readonly ICredentialEncryptor _encryptor;
 
-    public OAuthAppSettingsService(ApplicationDbContext context, ISettingsService settings)
+    public OAuthAppSettingsService(ApplicationDbContext context, ICredentialEncryptor encryptor)
     {
         _context = context;
-        _settings = settings;
+        _encryptor = encryptor;
     }
 
     public async Task<Result<OAuthAppCredentials>> GetEffectiveCredentialsAsync(
@@ -49,22 +48,32 @@ public sealed class OAuthAppSettingsService : IOAuthAppSettingsService
 
         var tenantActive = tenantRow is { IsActive: true };
 
-        var clientId       = Pick(tenantActive ? tenantRow!.ClientId : null,
-                                  await _settings.GetSettingValueAsync($"OAuth.{prefix}.ClientId"));
-        var clientSecret   = Pick(tenantActive ? tenantRow!.ClientSecret : null,
-                                  await _settings.GetEncryptedSettingValueAsync($"OAuth.{prefix}.ClientSecret"));
-        var authzEndpoint  = Pick(null, // No tenant override — endpoints are vendor-fixed.
-                                  await _settings.GetSettingValueAsync($"OAuth.{prefix}.AuthorizationEndpoint"));
-        var tokenEndpoint  = Pick(null,
-                                  await _settings.GetSettingValueAsync($"OAuth.{prefix}.TokenEndpoint"));
-        var redirectUri    = Pick(tenantActive ? tenantRow!.RedirectUri : null,
-                                  await _settings.GetSettingValueAsync($"OAuth.{prefix}.RedirectUri"));
-        var ruName         = Pick(tenantActive ? tenantRow!.RuName : null,
-                                  await _settings.GetSettingValueAsync($"OAuth.{prefix}.RuName"));
-        var scopes         = Pick(tenantActive ? tenantRow!.Scopes : null,
-                                  await _settings.GetSettingValueAsync($"OAuth.{prefix}.Scopes"));
-        var useSandbox     = (tenantActive ? tenantRow!.UseSandbox : null)
-                             ?? ParseBool(await _settings.GetSettingValueAsync($"OAuth.{prefix}.UseSandbox"));
+        // Batch-load all system-level OAuth settings for this provider in a single query instead of
+        // issuing one round-trip per key.
+        var keyPrefix = $"OAuth.{prefix}.";
+        var systemSettings = await _context.Setting
+            .AsNoTracking()
+            .Where(s => s.Key.StartsWith(keyPrefix))
+            .ToDictionaryAsync(s => s.Key, s => s, cancellationToken);
+
+        string System(string suffix) => systemSettings.TryGetValue(keyPrefix + suffix, out var s) ? (s.Value ?? string.Empty) : string.Empty;
+        string SystemSecret(string suffix)
+        {
+            if (!systemSettings.TryGetValue(keyPrefix + suffix, out var s)) return string.Empty;
+            var raw = s.Value ?? string.Empty;
+            return s.IsEncrypted ? _encryptor.Decrypt(raw) : raw;
+        }
+
+        var clientId = Pick(tenantActive ? tenantRow!.ClientId : null, System("ClientId"));
+        var clientSecret = Pick(tenantActive ? tenantRow!.ClientSecret : null, SystemSecret("ClientSecret"));
+        var authzEndpoint = Pick(null, // No tenant override — endpoints are vendor-fixed.
+                                  System("AuthorizationEndpoint"));
+        var tokenEndpoint = Pick(null, System("TokenEndpoint"));
+        var redirectUri = Pick(tenantActive ? tenantRow!.RedirectUri : null, System("RedirectUri"));
+        var ruName = Pick(tenantActive ? tenantRow!.RuName : null, System("RuName"));
+        var scopes = Pick(tenantActive ? tenantRow!.Scopes : null, System("Scopes"));
+        var useSandbox = (tenantActive ? tenantRow!.UseSandbox : null)
+                             ?? ParseBool(System("UseSandbox"));
 
         if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
         {

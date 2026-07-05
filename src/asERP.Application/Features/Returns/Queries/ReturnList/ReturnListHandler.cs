@@ -12,6 +12,22 @@ public class ReturnListHandler : IRequestHandler<ReturnListQuery, PaginatedResul
 {
     private const string DefaultSort = "DateCreated Descending";
 
+    // Ordering runs on the projected ReturnShipmentListItemDto; only columns surfaced in the list DTO
+    // are sortable. Client sort terms outside this set are ignored (falling back to no client ordering).
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(ReturnShipmentListItemDto.Id),
+        nameof(ReturnShipmentListItemDto.SalesId),
+        nameof(ReturnShipmentListItemDto.SalesNumber),
+        nameof(ReturnShipmentListItemDto.Status),
+        nameof(ReturnShipmentListItemDto.TrackingNumber),
+        nameof(ReturnShipmentListItemDto.TrackingUrl),
+        nameof(ReturnShipmentListItemDto.ItemCount),
+        nameof(ReturnShipmentListItemDto.HasLabel),
+        nameof(ReturnShipmentListItemDto.ReceivedAt),
+        nameof(ReturnShipmentListItemDto.DateCreated)
+    };
+
     private readonly IAppLogger<ReturnListHandler> _logger;
     private readonly IReturnShipmentRepository _returnShipmentRepository;
 
@@ -60,8 +76,9 @@ public class ReturnListHandler : IRequestHandler<ReturnListQuery, PaginatedResul
             DateCreated = r.DateCreated
         });
 
-        var sort = request.SalesBy.Any() ? string.Join(",", request.SalesBy) : DefaultSort;
-        projected = projected.OrderBy(sort);
+        projected = request.SalesBy.Any()
+            ? projected.ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            : projected.OrderBy(DefaultSort);
 
         return await projected.ToPaginatedListAsync(request.PageNumber, request.PageSize);
     }

@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Superadmin.Commands.SuperadminDelete;
 
@@ -64,11 +65,9 @@ public class SuperadminDeleteHandler : IRequestHandler<SuperadminDeleteCommand, 
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while deleting the tenant: {ex.Message}");
-
-            _logger.LogError("Error deleting tenant: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while deleting the tenant.",
+                "Error deleting tenant {Id}.", request.Id);
         }
 
         return result;

@@ -1,16 +1,26 @@
-﻿using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Application.Specifications;
 using asERP.Domain.Dtos.Customer;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Customer.Queries.CustomerList;
 
 public class CustomerListHandler : IRequestHandler<CustomerListQuery, PaginatedResult<CustomerListDto>>
 {
+    // Only columns exposed in CustomerListDto are sortable; anything else is ignored so clients
+    // cannot sort by (and thereby probe) non-projected or secret entity columns.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(Domain.Entities.Customer.Id),
+        nameof(Domain.Entities.Customer.CustomerId),
+        nameof(Domain.Entities.Customer.Firstname),
+        nameof(Domain.Entities.Customer.Lastname),
+        nameof(Domain.Entities.Customer.DateEnrollment)
+    };
+
     private readonly IAppLogger<CustomerListHandler> _logger;
     private readonly ICustomerRepository _customerRepository;
 
@@ -27,26 +37,9 @@ public class CustomerListHandler : IRequestHandler<CustomerListQuery, PaginatedR
 
         _logger.LogInformation("CustomerListHandler.Handle: Retrieving customers.");
 
-        if (request.SalesBy.Any() != true)
-        {
-            return await _customerRepository.Entities
-               .Specify(customerFilterSpec)
-               .Select(c => new CustomerListDto
-               {
-                   Id = c.Id,
-                   CustomerId = c.CustomerId,
-                   Firstname = c.Firstname,
-                   Lastname = c.Lastname,
-                   DateEnrollment = c.DateEnrollment
-               })
-               .ToPaginatedListAsync(request.PageNumber, request.PageSize);
-        }
-
-        var salesing = string.Join(",", request.SalesBy);
-
         return await _customerRepository.Entities
             .Specify(customerFilterSpec)
-            .OrderBy(salesing)
+            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
             .Select(c => new CustomerListDto
             {
                 Id = c.Id,
@@ -55,6 +48,6 @@ public class CustomerListHandler : IRequestHandler<CustomerListQuery, PaginatedR
                 Lastname = c.Lastname,
                 DateEnrollment = c.DateEnrollment
             })
-            .ToPaginatedListAsync(request.PageNumber, request.PageSize);
+            .ToPaginatedListAsync(request.PageNumber, request.PageSize, cancellationToken);
     }
 }

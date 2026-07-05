@@ -8,6 +8,9 @@ public class ShippingConfiguration : IEntityTypeConfiguration<Shipping>
 {
     public void Configure(EntityTypeBuilder<Shipping> builder)
     {
+        builder.Property(e => e.ConcurrencyToken)
+            .IsConcurrencyToken();
+
         builder.Property(e => e.ShippingCost)
             .HasPrecision(18, 2);
 

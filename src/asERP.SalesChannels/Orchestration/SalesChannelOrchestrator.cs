@@ -153,6 +153,26 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             {
                 _logger.LogWarning("Marked {Count} orphaned sync run(s) as failed on startup", cleaned);
             }
+
+            // Any export outbox row still flagged InFlight at boot is orphaned by the same reasoning: nothing
+            // was actively dispatching it when the process died. Reset to Pending so it re-dispatches instead
+            // of being wedged forever (the enqueuer's stable idempotency key would otherwise route every
+            // future change for that aggregate into the InFlight no-op branch). Age-independent here — at
+            // startup no drain is running — complementing the drainer's staleness sweep during normal ops.
+            var reclaimed = await context.ChannelExportOutbox
+                .IgnoreQueryFilters()
+                .Where(o => o.Status == ChannelOutboxStatus.InFlight)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(o => o.Status, ChannelOutboxStatus.Pending)
+                    .SetProperty(o => o.NextAttemptAt, DateTime.UtcNow)
+                    .SetProperty(o => o.LastError, "Recovered: server restarted while the export was in flight; reset to pending on startup.")
+                    .SetProperty(o => o.DateModified, DateTime.UtcNow),
+                    cancellationToken);
+
+            if (reclaimed > 0)
+            {
+                _logger.LogWarning("Reset {Count} in-flight export outbox row(s) to pending on startup", reclaimed);
+            }
         }
         catch (Exception ex)
         {

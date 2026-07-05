@@ -1,16 +1,29 @@
-﻿using System.Linq.Dynamic.Core;
+using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Application.Specifications;
 using asERP.Domain.Dtos.GoodsReceipt;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.GoodsReceipt.Queries.GoodsReceiptList;
 
 public class GoodsReceiptListHandler : IRequestHandler<GoodsReceiptListQuery, PaginatedResult<GoodsReceiptListDto>>
 {
+    // Restrict client-supplied ordering to the columns surfaced in the list DTO.
+    // ProductName/ProductSku/WarehouseName are navigation-derived and have no direct orderable
+    // entity property, so they are intentionally omitted.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(Domain.Entities.GoodsReceipt.Id),
+        nameof(Domain.Entities.GoodsReceipt.ReceiptDate),
+        nameof(Domain.Entities.GoodsReceipt.Quantity),
+        nameof(Domain.Entities.GoodsReceipt.Supplier),
+        nameof(Domain.Entities.GoodsReceipt.CreatedBy),
+        nameof(Domain.Entities.GoodsReceipt.DateCreated)
+    };
+
     private readonly IAppLogger<GoodsReceiptListHandler> _logger;
     private readonly IGoodsReceiptRepository _goodsReceiptRepository;
 
@@ -28,23 +41,11 @@ public class GoodsReceiptListHandler : IRequestHandler<GoodsReceiptListQuery, Pa
 
         _logger.LogInformation("Handle GoodsReceiptListQuery: {0}", request);
 
-        if (string.IsNullOrEmpty(request.SalesBy))
-        {
-            var goodsReceipts = await _goodsReceiptRepository.Entities
-               .Specify(filterSpec)
-               .Select(gr => MapToGoodsReceiptListDto(gr))
-               .ToPaginatedListAsync(request.PageNumber, request.PageSize);
-
-            return goodsReceipts;
-        }
-
-        var salesedGoodsReceipts = await _goodsReceiptRepository.Entities
+        return await _goodsReceiptRepository.Entities
             .Specify(filterSpec)
-            .OrderBy(request.SalesBy)
+            .ApplySafeOrdering(new[] { request.SalesBy }, AllowedSortFields)
             .Select(gr => MapToGoodsReceiptListDto(gr))
             .ToPaginatedListAsync(request.PageNumber, request.PageSize);
-
-        return salesedGoodsReceipts;
     }
 
     private static GoodsReceiptListDto MapToGoodsReceiptListDto(Domain.Entities.GoodsReceipt goodsReceipt)

@@ -1,13 +1,13 @@
+using System;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using asERP.Domain.Dtos.Shipping;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
 using PdfSharp.Fonts;
 using PdfSharp.Pdf;
-using System;
-using System.Globalization;
-using System.IO;
-using System.Linq;
 
 namespace asERP.Infrastructure.PDF;
 
@@ -21,7 +21,7 @@ public partial class PdfService
     {
         ArgumentNullException.ThrowIfNull(data);
 
-        EnsureCompanySettingsLoaded(data.TenantId);
+        EnsureCompanySettingsLoadedAsync(data.TenantId).GetAwaiter().GetResult();
 
         var document = CreateShippingDocumentShell();
         var section = document.LastSection;
@@ -38,7 +38,7 @@ public partial class PdfService
     {
         ArgumentNullException.ThrowIfNull(data);
 
-        EnsureCompanySettingsLoaded(data.TenantId);
+        EnsureCompanySettingsLoadedAsync(data.TenantId).GetAwaiter().GetResult();
 
         var document = CreateShippingDocumentShell();
         var section = document.LastSection;

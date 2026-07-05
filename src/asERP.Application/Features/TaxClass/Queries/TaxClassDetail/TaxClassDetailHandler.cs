@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.TaxClass;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.TaxClass.Queries.TaxClassDetail;
 
@@ -81,11 +82,9 @@ public class TaxClassDetailHandler : IRequestHandler<TaxClassDetailQuery, Result
         catch (Exception ex)
         {
             // Handle any exceptions during tax class retrieval
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while retrieving the tax class: {ex.Message}");
-
-            _logger.LogError("Error retrieving tax class: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while retrieving the tax class.",
+                "Error retrieving tax class.");
         }
 
         return result;

@@ -62,6 +62,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private bool _exportCustomers;
     private bool _exportSaless;
     private bool _exportStock;
+    private bool _pushSalesCancellations;
     private bool _importStock;
 
     // Initial Status
@@ -487,6 +488,12 @@ public class SalesChannelEditModel : AsyncInitializableModel
         set => SetProperty(ref _exportStock, value);
     }
 
+    public bool PushSalesCancellations
+    {
+        get => _pushSalesCancellations;
+        set => SetProperty(ref _pushSalesCancellations, value);
+    }
+
     public bool ImportStock
     {
         get => _importStock;
@@ -638,6 +645,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
             ExportCustomers = salesChannel.ExportCustomers;
             ExportSaless = salesChannel.ExportSaless;
             ExportStock = salesChannel.ExportStock;
+            PushSalesCancellations = salesChannel.PushSalesCancellations;
             ImportStock = salesChannel.ImportStock;
 
             // Note: InitialProductImportCompleted and InitialProductExportCompleted
@@ -793,6 +801,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 ExportCustomers = ExportCustomers,
                 ExportSaless = ExportSaless,
                 ExportStock = ExportStock,
+                PushSalesCancellations = PushSalesCancellations,
                 ImportStock = ImportStock,
                 InitialProductImportCompleted = InitialProductImportCompleted,
                 InitialProductExportCompleted = InitialProductExportCompleted,

@@ -1,11 +1,11 @@
-﻿using System.Linq.Dynamic.Core;
+using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Application.Specifications;
 using asERP.Domain.Dtos.Invoice;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Invoice.Queries.InvoiceList;
 
@@ -16,6 +16,21 @@ namespace asERP.Application.Features.Invoice.Queries.InvoiceList;
 /// </summary>
 public class InvoiceListHandler : IRequestHandler<InvoiceListQuery, PaginatedResult<InvoiceListDto>>
 {
+    // Restrict client-supplied ordering to the columns surfaced in the list DTO.
+    // SalesNumber is a computed projection of SalesId with no direct entity property, so it is omitted.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(Domain.Entities.Invoice.Id),
+        nameof(Domain.Entities.Invoice.InvoiceNumber),
+        nameof(Domain.Entities.Invoice.InvoiceDate),
+        nameof(Domain.Entities.Invoice.CustomerId),
+        nameof(Domain.Entities.Invoice.SalesId),
+        nameof(Domain.Entities.Invoice.Total),
+        nameof(Domain.Entities.Invoice.PaymentStatus),
+        nameof(Domain.Entities.Invoice.InvoiceStatus),
+        nameof(Domain.Entities.Invoice.PaymentMethod)
+    };
+
     private readonly IAppLogger<InvoiceListHandler> _logger;
     private readonly IInvoiceRepository _invoiceRepository;
     private readonly ICustomerRepository _customerRepository;
@@ -51,33 +66,9 @@ public class InvoiceListHandler : IRequestHandler<InvoiceListQuery, PaginatedRes
         // Get all customers for joining customer names
         var customers = await _customerRepository.GetAllAsync();
 
-        // If no sorting parameters provided
-        if (request.SalesBy.Any() != true)
-        {
-            return await _invoiceRepository.Entities
-               .Specify(invoiceFilterSpec)
-               .Select(i => new InvoiceListDto
-               {
-                   Id = i.Id,
-                   InvoiceNumber = i.InvoiceNumber,
-                   InvoiceDate = i.InvoiceDate,
-                   CustomerId = i.CustomerId,
-                   SalesId = i.SalesId,
-                   SalesNumber = i.SalesId.HasValue ? i.SalesId.Value.ToString() : string.Empty,
-                   Total = i.Total,
-                   PaymentStatus = i.PaymentStatus,
-                   InvoiceStatus = i.InvoiceStatus,
-                   PaymentMethod = i.PaymentMethod
-               })
-               .ToPaginatedListAsync(request.PageNumber, request.PageSize);
-        }
-
-        // If sorting parameters are provided
-        var salesing = string.Join(",", request.SalesBy);
-
         return await _invoiceRepository.Entities
             .Specify(invoiceFilterSpec)
-            .OrderBy(salesing)
+            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
             .Select(i => new InvoiceListDto
             {
                 Id = i.Id,

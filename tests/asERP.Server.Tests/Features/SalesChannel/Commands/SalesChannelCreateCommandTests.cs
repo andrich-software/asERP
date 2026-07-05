@@ -489,6 +489,7 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         salesChannelDto.ExportCustomers = true;
         salesChannelDto.ImportSaless = false;
         salesChannelDto.ExportSaless = true;
+        salesChannelDto.PushSalesCancellations = true;
 
         var response = await PostAsJsonAsync("/api/v1/SalesChannels", salesChannelDto);
 
@@ -508,5 +509,6 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertTrue(salesChannelDetail.Data.ExportCustomers);
         TestAssertions.AssertFalse(salesChannelDetail.Data.ImportSaless);
         TestAssertions.AssertTrue(salesChannelDetail.Data.ExportSaless);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.PushSalesCancellations);
     }
 }

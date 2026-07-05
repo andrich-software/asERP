@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -8,6 +8,9 @@ public class SalesConfiguration : IEntityTypeConfiguration<Sales>
 {
     public void Configure(EntityTypeBuilder<Sales> builder)
     {
+        builder.Property(e => e.ConcurrencyToken)
+            .IsConcurrencyToken();
+
         builder.Property(e => e.Subtotal)
             .HasPrecision(18, 2);
 

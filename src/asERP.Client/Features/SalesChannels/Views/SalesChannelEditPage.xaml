@@ -580,6 +580,25 @@
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0"
+                               x:Uid="SalesChannelEditPage.Field.PushSalesCancellations"
+                               Style="{StaticResource BodyMedium}"
+                               Foreground="{ThemeResource OnSurfaceBrush}"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                    <ToggleSwitch Grid.Column="1"
+                                  IsOn="{Binding PushSalesCancellations, Mode=TwoWay}"
+                                  IsEnabled="{Binding IsNotLoading}"
+                                  MinWidth="0"
+                                  OnContent=""
+                                  OffContent="" />
+                  </Grid>
+
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
                                x:Uid="SalesChannelEditPage.Field.ExportStock"
                                Style="{StaticResource BodyMedium}"
                                Foreground="{ThemeResource OnSurfaceBrush}"

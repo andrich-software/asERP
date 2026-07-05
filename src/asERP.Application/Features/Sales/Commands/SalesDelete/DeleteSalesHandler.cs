@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Sales.Commands.SalesDelete;
 
@@ -60,11 +61,9 @@ public class DeleteSalesHandler : IRequestHandler<DeleteSalesCommand, Result<Gui
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while deleting the sales: {ex.Message}");
-
-            _logger.LogError("Error deleting sales: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while deleting the sales.",
+                "Error deleting sales.");
         }
 
         return result;

@@ -14,17 +14,9 @@ public class ShippingProviderRateRepository : GenericRepository<ShippingProvider
 
     public async Task<ShippingProviderRate?> GetWithCountriesAsync(Guid id)
     {
-        var query = Context.ShippingProviderRate
-            .Where(x => x.Id == id);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query
+        // Tenant isolation via the global query filter.
+        return await Context.ShippingProviderRate
+            .Where(x => x.Id == id)
             .Include(x => x.ShippingProvider)
             .Include(x => x.AllowedCountries)
                 .ThenInclude(c => c.Country)
@@ -34,17 +26,9 @@ public class ShippingProviderRateRepository : GenericRepository<ShippingProvider
 
     public async Task<List<ShippingProviderRate>> GetByProviderAsync(Guid providerId)
     {
-        var query = Context.ShippingProviderRate
-            .Where(x => x.ShippingProviderId == providerId);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query
+        // Tenant isolation via the global query filter.
+        return await Context.ShippingProviderRate
+            .Where(x => x.ShippingProviderId == providerId)
             .Include(x => x.AllowedCountries)
             .OrderBy(x => x.Name)
             .ToListAsync();
@@ -52,19 +36,13 @@ public class ShippingProviderRateRepository : GenericRepository<ShippingProvider
 
     public async Task<bool> IsNameUniqueForProviderAsync(Guid providerId, string name, Guid? excludeId = null)
     {
+        // Tenant isolation via the global query filter.
         var query = Context.ShippingProviderRate
             .Where(x => x.ShippingProviderId == providerId && x.Name == name);
 
         if (excludeId.HasValue)
         {
             query = query.Where(x => x.Id != excludeId.Value);
-        }
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
         }
 
         return !await query.AnyAsync();

@@ -9,6 +9,11 @@ public class EmailTemplateService : IEmailTemplateService
 {
     public Task<string> GeneratePasswordResetEmailAsync(string recipientName, string resetToken, string resetUrl)
     {
+        // Recipient name and URL come from user input — HTML-encode everything interpolated (mirror the shipping templates).
+        var encodedRecipientName = WebUtility.HtmlEncode(recipientName);
+        var encodedResetUrl = WebUtility.HtmlEncode(resetUrl);
+        var encodedToken = WebUtility.HtmlEncode(Uri.EscapeDataString(resetToken));
+
         var html = $@"
 <!DOCTYPE html>
 <html lang='de'>
@@ -21,12 +26,12 @@ public class EmailTemplateService : IEmailTemplateService
     <div style='background-color: #f8f9fa; Border-radius: 10px; padding: 30px;'>
         <h1 style='color: #0066cc; margin-top: 0;'>Passwort zurücksetzen</h1>
 
-        <p>Hallo {recipientName},</p>
+        <p>Hallo {encodedRecipientName},</p>
 
         <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt. Klicken Sie auf die Schaltfläche unten, um Ihr Passwort zurückzusetzen:</p>
 
         <div style='text-align: center; margin: 30px 0;'>
-            <a href='{resetUrl}?token={Uri.EscapeDataString(resetToken)}'
+            <a href='{encodedResetUrl}?token={encodedToken}'
                style='background-color: #0066cc; color: white; padding: 12px 30px; text-decoration: none; Border-radius: 5px; display: inline-block;'>
                 Passwort zurücksetzen
             </a>
@@ -34,7 +39,7 @@ public class EmailTemplateService : IEmailTemplateService
 
         <p style='color: #666; font-size: 14px;'>Falls die Schaltfläche nicht funktioniert, kopieren Sie bitte den folgenden Link in Ihren Browser:</p>
         <p style='background-color: #f1f1f1; padding: 10px; Border-radius: 5px; word-break: break-all; font-size: 12px;'>
-            {resetUrl}?token={Uri.EscapeDataString(resetToken)}
+            {encodedResetUrl}?token={encodedToken}
         </p>
 
         <p style='margin-top: 30px; padding-top: 20px; Border-top: 1px solid #ddd; color: #666; font-size: 14px;'>
@@ -59,6 +64,9 @@ public class EmailTemplateService : IEmailTemplateService
 
     public Task<string> GenerateWelcomeEmailAsync(string recipientName)
     {
+        // Recipient name comes from user input — HTML-encode before interpolating.
+        var encodedRecipientName = WebUtility.HtmlEncode(recipientName);
+
         var html = $@"
 <!DOCTYPE html>
 <html lang='de'>
@@ -71,7 +79,7 @@ public class EmailTemplateService : IEmailTemplateService
     <div style='background-color: #f8f9fa; Border-radius: 10px; padding: 30px;'>
         <h1 style='color: #0066cc; margin-top: 0;'>Willkommen bei asERP!</h1>
 
-        <p>Hallo {recipientName},</p>
+        <p>Hallo {encodedRecipientName},</p>
 
         <p>Vielen Dank für Ihre Registrierung bei asERP. Wir freuen uns, Sie als neuen Benutzer begrüßen zu dürfen!</p>
 
@@ -214,6 +222,11 @@ public class EmailTemplateService : IEmailTemplateService
 
     public Task<string> GenerateEmailConfirmationAsync(string recipientName, string confirmationToken, string confirmationUrl)
     {
+        // Recipient name and URL come from user input — HTML-encode everything interpolated.
+        var encodedRecipientName = WebUtility.HtmlEncode(recipientName);
+        var encodedConfirmationUrl = WebUtility.HtmlEncode(confirmationUrl);
+        var encodedToken = WebUtility.HtmlEncode(Uri.EscapeDataString(confirmationToken));
+
         var html = $@"
 <!DOCTYPE html>
 <html lang='de'>
@@ -226,12 +239,12 @@ public class EmailTemplateService : IEmailTemplateService
     <div style='background-color: #f8f9fa; Border-radius: 10px; padding: 30px;'>
         <h1 style='color: #0066cc; margin-top: 0;'>E-Mail-Adresse bestätigen</h1>
 
-        <p>Hallo {recipientName},</p>
+        <p>Hallo {encodedRecipientName},</p>
 
         <p>Bitte bestätigen Sie Ihre E-Mail-Adresse, indem Sie auf die Schaltfläche unten klicken:</p>
 
         <div style='text-align: center; margin: 30px 0;'>
-            <a href='{confirmationUrl}?token={Uri.EscapeDataString(confirmationToken)}'
+            <a href='{encodedConfirmationUrl}?token={encodedToken}'
                style='background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; Border-radius: 5px; display: inline-block;'>
                 E-Mail bestätigen
             </a>
@@ -239,7 +252,7 @@ public class EmailTemplateService : IEmailTemplateService
 
         <p style='color: #666; font-size: 14px;'>Falls die Schaltfläche nicht funktioniert, kopieren Sie bitte den folgenden Link in Ihren Browser:</p>
         <p style='background-color: #f1f1f1; padding: 10px; Border-radius: 5px; word-break: break-all; font-size: 12px;'>
-            {confirmationUrl}?token={Uri.EscapeDataString(confirmationToken)}
+            {encodedConfirmationUrl}?token={encodedToken}
         </p>
 
         <p style='margin-top: 30px; color: #999; font-size: 12px;'>

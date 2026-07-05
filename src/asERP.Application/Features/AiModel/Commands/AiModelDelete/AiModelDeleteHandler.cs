@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.AiModel.Commands.AiModelDelete;
 
@@ -60,11 +61,10 @@ public class AiModelDeleteHandler : IRequestHandler<AiModelDeleteCommand, Result
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while deleting the AI model: {ex.Message}");
-
-            _logger.LogError("Error deleting AI model: {Message}", ex.Message);
+            // Never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while deleting the AI model.",
+                "Error deleting AI model.");
         }
 
         return result;

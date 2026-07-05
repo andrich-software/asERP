@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Warehouse.Commands.WarehouseCreate;
 
@@ -86,11 +87,9 @@ public class WarehouseCreateHandler : IRequestHandler<WarehouseCreateCommand, Re
         catch (Exception ex)
         {
             // Handle any exceptions during warehouse creation
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the warehouse: {ex.Message}");
-
-            _logger.LogError("Error creating warehouse: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while creating the warehouse.",
+                "Error creating warehouse.");
         }
 
         return result;

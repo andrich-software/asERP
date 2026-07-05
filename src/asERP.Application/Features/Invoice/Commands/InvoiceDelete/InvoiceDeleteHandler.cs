@@ -1,9 +1,10 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Invoice.Commands.InvoiceDelete;
 
@@ -119,11 +120,9 @@ public class InvoiceDeleteHandler : IRequestHandler<InvoiceDeleteCommand, Result
         catch (Exception ex)
         {
             // Handle any exceptions during invoice deletion
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"Ein Fehler ist beim Löschen der Rechnung aufgetreten: {ex.Message}");
-
-            _logger.LogError("Error deleting invoice: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "Ein Fehler ist beim Löschen der Rechnung aufgetreten.",
+                "Error deleting invoice.");
         }
 
         return result;

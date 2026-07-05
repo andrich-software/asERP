@@ -1,7 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Contracts.Services;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.AiPrompt.Commands.AiPromptCreate;
 
@@ -9,13 +11,19 @@ public class AiPromptCreateHandler : IRequestHandler<AiPromptCreateCommand, Resu
 {
     private readonly IAppLogger<AiPromptCreateHandler> _logger;
     private readonly IAiPromptRepository _aIPromptRepository;
+    private readonly IAiModelRepository _aiModelRepository;
+    private readonly ITenantContext _tenantContext;
 
     public AiPromptCreateHandler(
         IAppLogger<AiPromptCreateHandler> logger,
-        IAiPromptRepository aIPromptRepository)
+        IAiPromptRepository aIPromptRepository,
+        IAiModelRepository aiModelRepository,
+        ITenantContext tenantContext)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _aIPromptRepository = aIPromptRepository ?? throw new ArgumentNullException(nameof(aIPromptRepository));
+        _aiModelRepository = aiModelRepository ?? throw new ArgumentNullException(nameof(aiModelRepository));
+        _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
     }
 
     public async Task<Result<Guid>> Handle(AiPromptCreateCommand request, CancellationToken cancellationToken)
@@ -25,7 +33,7 @@ public class AiPromptCreateHandler : IRequestHandler<AiPromptCreateCommand, Resu
         var result = new Result<Guid>();
 
         // Validate incoming data
-        var validator = new AiPromptCreateValidator(_aIPromptRepository);
+        var validator = new AiPromptCreateValidator(_aIPromptRepository, _aiModelRepository, _tenantContext);
         var validationResult = await validator.ValidateAsync(request, cancellationToken);
 
         if (!validationResult.IsValid)
@@ -62,11 +70,10 @@ public class AiPromptCreateHandler : IRequestHandler<AiPromptCreateCommand, Resu
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the AI prompt: {ex.Message}");
-
-            _logger.LogError("Error creating AI prompt: {Message}", ex.Message);
+            // Never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while creating the AI prompt.",
+                "Error creating AI prompt.");
         }
 
         return result;

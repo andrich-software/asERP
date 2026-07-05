@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Infrastructure;
+using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Mediator;
@@ -67,9 +67,9 @@ public class ProductImageDeleteHandler : IRequestHandler<ProductImageDeleteComma
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error deleting product image: {Message}", ex.Message);
+            _logger.LogError(ex, "Error deleting product image");
             return Result<Guid>.Fail(ResultStatusCode.InternalServerError,
-                $"An error occurred while deleting the image: {ex.Message}");
+                "An error occurred while deleting the image.");
         }
     }
 }

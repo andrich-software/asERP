@@ -29,6 +29,9 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.9" />
+    <PackageVersion Include="System.ServiceProcess.ServiceController" Version="10.0.9" />
     <PackageVersion Include="Amazon.SellingPartnerAPIAA" Version="1.2.0" />
     <!-- Uno Platform -->
     <PackageVersion Include="Tmds.DBus.Protocol" Version="0.94.2" />
@@ -74,6 +77,7 @@
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Async" Version="2.1.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Serilog.Sinks.Grafana.Loki" Version="9.0.0" />
     <!-- Testing -->
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
@@ -86,6 +90,7 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <!-- Utilities -->
     <PackageVersion Include="CsvHelper" Version="33.1.0" />
+    <PackageVersion Include="MailKit" Version="4.14.0" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageVersion Include="PDFsharp" Version="6.2.4" />

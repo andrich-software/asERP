@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Country.Commands.CountryDelete;
 
@@ -76,11 +77,9 @@ public class CountryDeleteHandler : IRequestHandler<CountryDeleteCommand, Result
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while deleting the country: {ex.Message}");
-
-            _logger.LogError("Error deleting country: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while deleting the country.",
+                "Error deleting country.");
         }
 
         return result;

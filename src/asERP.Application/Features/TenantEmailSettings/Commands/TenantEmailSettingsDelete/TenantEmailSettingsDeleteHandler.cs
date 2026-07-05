@@ -1,6 +1,7 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -57,10 +58,9 @@ public class TenantEmailSettingsDeleteHandler : IRequestHandler<TenantEmailSetti
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error deleting tenant email settings: {Message}", ex.Message);
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"Error deleting tenant email settings: {ex.Message}");
+            result.FromException(_logger, ex,
+                "Error deleting tenant email settings.",
+                "Error deleting tenant email settings for tenant {TenantId}.", tenantId.Value);
             return result;
         }
     }

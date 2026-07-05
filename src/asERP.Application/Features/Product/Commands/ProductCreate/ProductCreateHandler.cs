@@ -1,10 +1,10 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Features.Product.Shared;
+using asERP.Application.Mediator;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Product.Commands.ProductCreate;
 
@@ -87,7 +87,7 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
         if (!validationResult.IsValid)
         {
             var validationErrors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-            
+
             _logger.LogWarning("Validation errors in create request for {0}: {1}",
                 nameof(ProductCreateCommand), validationErrors);
 
@@ -101,7 +101,7 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
             if (!currentTenantId.HasValue)
             {
                 _logger.LogError("Attempted to create product without tenant context");
-                return Result<Guid>.Fail(ResultStatusCode.BadRequest, 
+                return Result<Guid>.Fail(ResultStatusCode.BadRequest,
                     "Tenant context is not set. Cannot create product without tenant information.");
             }
 
@@ -177,7 +177,7 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
             await _productRepository.CreateAsync(productToCreate);
 
             _logger.LogInformation("Successfully created product with ID: {Id}", productToCreate.Id);
-            
+
             var result = Result<Guid>.Success(productToCreate.Id);
             result.StatusCode = ResultStatusCode.Created;
             return result;
@@ -185,10 +185,10 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
         catch (Exception ex)
         {
             // Handle any exceptions during product creation
-            _logger.LogError("Error creating product: {Message}", ex.Message);
-            
-            return Result<Guid>.Fail(ResultStatusCode.InternalServerError, 
-                $"An error occurred while creating the product: {ex.Message}");
+            _logger.LogError(ex, "Error creating product");
+
+            return Result<Guid>.Fail(ResultStatusCode.InternalServerError,
+                "An error occurred while creating the product.");
         }
     }
 }

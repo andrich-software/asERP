@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -30,5 +30,8 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
             .HasForeignKey(e => e.CustomerId)
             .HasPrincipalKey(c => c.CustomerId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Every query carries the tenant filter — index TenantId so list endpoints don't full-scan.
+        builder.HasIndex(e => e.TenantId);
     }
 }

@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using asERP.Application.Extensions;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
 using asERP.Domain.Wrapper;
@@ -190,11 +190,9 @@ public class UserCreateHandler : IRequestHandler<UserCreateCommand, Result<strin
         catch (Exception ex)
         {
             // Handle any exceptions during user creation
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the user: {ex.Message}");
-
-            _logger.LogError("Error creating user: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while creating the user.",
+                "Error creating user {Email}.", request.Email);
         }
 
         return result;

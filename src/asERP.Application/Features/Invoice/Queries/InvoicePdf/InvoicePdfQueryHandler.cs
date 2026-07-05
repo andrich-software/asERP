@@ -1,6 +1,6 @@
-﻿using asERP.Application.Mediator;
-using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Infrastructure;
+using asERP.Application.Contracts.Persistence;
+using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 using Microsoft.Extensions.Logging;
 
@@ -45,7 +45,7 @@ public class InvoicePdfQueryHandler : IRequestHandler<InvoicePdfQuery, Result<by
         catch (Exception ex)
         {
             _logger.LogError(ex, "Fehler beim Generieren der Rechnungs-PDF für ID {InvoiceId}", request.Id);
-            return await Result<byte[]>.FailAsync(ResultStatusCode.InternalServerError, "Fehler beim Generieren der PDF: " + ex.Message);
+            return await Result<byte[]>.FailAsync(ResultStatusCode.InternalServerError, "Fehler beim Generieren der PDF.");
         }
     }
 

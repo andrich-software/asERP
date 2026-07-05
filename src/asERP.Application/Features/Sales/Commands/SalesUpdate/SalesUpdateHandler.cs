@@ -1,11 +1,11 @@
-﻿using asERP.Application.Contracts.Infrastructure;
+using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
+using asERP.Application.Mediator;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Sales.Commands.SalesUpdate;
 
@@ -81,76 +81,88 @@ public class SalesUpdateHandler : IRequestHandler<SalesUpdateCommand, Result<Gui
             {
                 result.Succeeded = false;
                 result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("Der angegebene Kunde existiert nicht oder gehört nicht zu Ihrem Tenant.");
+                result.Messages.Add("The specified customer does not exist or does not belong to your tenant.");
                 _logger.LogWarning("Cross-tenant customer access attempt for customer {CustomerId}", request.CustomerId);
                 return result;
             }
 
-            // Manuelles Mapping statt AutoMapper
-            var salesToUpdate = new Domain.Entities.Sales
+            // Load the tracked entity and mutate it, so the persistence layer keeps
+            // TenantId/DateCreated intact instead of nulling them on a detached update.
+            var salesToUpdate = await _salesRepository.GetByIdAsync(request.Id);
+            if (salesToUpdate == null)
             {
-                Id = request.Id,
-                SalesId = request.SalesId,
-                SalesChannelId = request.SalesChannelId,
-                RemoteSalesId = request.RemoteSalesId,
-                CustomerId = request.CustomerId,
-                Status = request.Status,
-                PaymentMethod = request.PaymentMethod,
-                PaymentStatus = request.PaymentStatus,
-                PaymentProvider = request.PaymentProvider,
-                PaymentTransactionId = request.PaymentTransactionId,
-                CustomerNote = request.CustomerNote,
-                InternalNote = request.InternalNote,
-                Subtotal = request.Subtotal,
-                ShippingCost = request.ShippingCost,
-                TotalTax = request.TotalTax,
-                Total = request.Total,
-                DeliveryAddressFirstName = request.DeliveryAddressFirstName,
-                DeliveryAddressLastName = request.DeliveryAddressLastName,
-                DeliveryAddressCompanyName = request.DeliveryAddressCompanyName,
-                DeliveryAddressPhone = request.DeliveryAddressPhone,
-                DeliveryAddressStreet = request.DeliveryAddressStreet,
-                DeliveryAddressCity = request.DeliveryAddressCity,
-                DeliveryAddressZip = request.DeliveryAddressZip,
-                DeliveryAddressCountry = request.DeliveryAddressCountry,
-                InvoiceAddressFirstName = request.InvoiceAddressFirstName,
-                InvoiceAddressLastName = request.InvoiceAddressLastName,
-                InvoiceAddressCompanyName = request.InvoiceAddressCompanyName,
-                InvoiceAddressPhone = request.InvoiceAddressPhone,
-                InvoiceAddressStreet = request.InvoiceAddressStreet,
-                InvoiceAddressCity = request.InvoiceAddressCity,
-                InvoiceAddressZip = request.InvoiceAddressZip,
-                InvoiceAddressCountry = request.InvoiceAddressCountry,
-                DateSalesed = request.DateSalesed.Kind == DateTimeKind.Utc
-                    ? request.DateSalesed
-                    : request.DateSalesed.ToUniversalTime()
-                // SalesItems müssten separat gemappt werden
-            };
+                _logger.LogWarning("Cross-tenant access attempt for sales {SalesId}", request.Id);
+                throw new NotFoundException("Sales", request.Id);
+            }
 
-            // Update in database
-            await _salesRepository.UpdateAsync(salesToUpdate);
+            // The multi-step mutation (sales row + invoice) is wrapped in a transaction so a
+            // failure mid-way does not leave a partially updated order.
+            await using var transaction = await _salesRepository.BeginTransactionAsync(cancellationToken);
 
-            // Prüfen, ob eine Rechnung erstellt werden kann
+            salesToUpdate.SalesId = request.SalesId;
+            salesToUpdate.SalesChannelId = request.SalesChannelId;
+            salesToUpdate.RemoteSalesId = request.RemoteSalesId;
+            salesToUpdate.CustomerId = request.CustomerId;
+            salesToUpdate.Status = request.Status;
+            salesToUpdate.PaymentMethod = request.PaymentMethod;
+            salesToUpdate.PaymentStatus = request.PaymentStatus;
+            salesToUpdate.PaymentProvider = request.PaymentProvider;
+            salesToUpdate.PaymentTransactionId = request.PaymentTransactionId;
+            salesToUpdate.CustomerNote = request.CustomerNote;
+            salesToUpdate.InternalNote = request.InternalNote;
+            salesToUpdate.Subtotal = request.Subtotal;
+            salesToUpdate.ShippingCost = request.ShippingCost;
+            salesToUpdate.TotalTax = request.TotalTax;
+            salesToUpdate.Total = request.Total;
+            salesToUpdate.DeliveryAddressFirstName = request.DeliveryAddressFirstName;
+            salesToUpdate.DeliveryAddressLastName = request.DeliveryAddressLastName;
+            salesToUpdate.DeliveryAddressCompanyName = request.DeliveryAddressCompanyName;
+            salesToUpdate.DeliveryAddressPhone = request.DeliveryAddressPhone;
+            salesToUpdate.DeliveryAddressStreet = request.DeliveryAddressStreet;
+            salesToUpdate.DeliveryAddressCity = request.DeliveryAddressCity;
+            salesToUpdate.DeliveryAddressZip = request.DeliveryAddressZip;
+            salesToUpdate.DeliveryAddressCountry = request.DeliveryAddressCountry;
+            salesToUpdate.InvoiceAddressFirstName = request.InvoiceAddressFirstName;
+            salesToUpdate.InvoiceAddressLastName = request.InvoiceAddressLastName;
+            salesToUpdate.InvoiceAddressCompanyName = request.InvoiceAddressCompanyName;
+            salesToUpdate.InvoiceAddressPhone = request.InvoiceAddressPhone;
+            salesToUpdate.InvoiceAddressStreet = request.InvoiceAddressStreet;
+            salesToUpdate.InvoiceAddressCity = request.InvoiceAddressCity;
+            salesToUpdate.InvoiceAddressZip = request.InvoiceAddressZip;
+            salesToUpdate.InvoiceAddressCountry = request.InvoiceAddressCountry;
+            salesToUpdate.DateSalesed = request.DateSalesed.Kind == DateTimeKind.Utc
+                ? request.DateSalesed
+                : request.DateSalesed.ToUniversalTime();
+            // SalesItems would have to be mapped separately.
+
+            // Save changes (entity is already tracked, so just save)
+            await _salesRepository.SaveChangesAsync(cancellationToken);
+
+            // Check whether an invoice can be created for this order.
             bool canCreateInvoice = await _salesRepository.CanCreateInvoice(salesToUpdate.Id);
 
             if (canCreateInvoice)
             {
                 try
                 {
-                    // Verkauf mit Details laden
+                    // Load the sales order with its details.
                     var salesWithDetails = await _salesRepository.GetWithDetailsAsync(salesToUpdate.Id);
 
                     if (salesWithDetails != null)
                     {
-                        // Rechnung erstellen mit der ausgelagerten Methode
                         await _invoiceRepository.CreateInvoiceFromSalesAsync(salesWithDetails);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError("Error creating invoice for sales ID {Id}: {Message}", salesToUpdate.Id, ex.Message);
+                    // Invoice creation must not silently succeed: surface a warning to the caller
+                    // (compliance-relevant in an ERP) and log the full exception server-side.
+                    _logger.LogError(ex, "Error creating invoice for sales ID {Id}", salesToUpdate.Id);
+                    result.Messages.Add("The sales order was updated, but the invoice could not be created. Please create it manually.");
                 }
             }
+
+            await transaction.CommitAsync(cancellationToken);
 
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.Ok;
@@ -167,9 +179,9 @@ public class SalesUpdateHandler : IRequestHandler<SalesUpdateCommand, Result<Gui
         {
             result.Succeeded = false;
             result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the sales: {ex.Message}");
+            result.Messages.Add("An error occurred while updating the sales.");
 
-            _logger.LogError("Error updating sales: {Message}", ex.Message);
+            _logger.LogError(ex, "Error updating sales with ID: {Id}", request.Id);
         }
 
         return result;

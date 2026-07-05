@@ -1,9 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
+using asERP.Application.Mediator;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Product.Commands.ProductVariantGenerate;
 
@@ -171,10 +171,10 @@ public class ProductVariantGenerateHandler : IRequestHandler<ProductVariantGener
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error generating variants: {Message}", ex.Message);
+            _logger.LogError(ex, "Error generating variants");
 
             return Result<List<Guid>>.Fail(ResultStatusCode.InternalServerError,
-                $"An error occurred while generating variants: {ex.Message}");
+                "An error occurred while generating variants.");
         }
     }
 }

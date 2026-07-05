@@ -1,20 +1,23 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.Superadmin.Users.Commands.UserCreate;
 using asERP.Application.Features.Superadmin.Users.Commands.UserDelete;
 using asERP.Application.Features.Superadmin.Users.Commands.UserUpdate;
 using asERP.Application.Features.Superadmin.Users.Queries.UserDetail;
 using asERP.Application.Features.Superadmin.Users.Queries.UserList;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.User;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace asERP.Server.Controllers.Api.V1;
 
+// Every action here dispatches the Superadmin user commands/queries, which perform no
+// tenant filtering. Restrict the whole controller to Superadmin (mirrors SuperadminController)
+// so arbitrary authenticated users cannot enumerate or mutate users across tenants.
 [ApiController]
-[Authorize]
+[Authorize(Roles = "Superadmin")]
 [ApiVersion(1.0)]
 [Route("/api/v{version:apiVersion}/[controller]")]
 public class UsersController(IMediator mediator) : ControllerBase

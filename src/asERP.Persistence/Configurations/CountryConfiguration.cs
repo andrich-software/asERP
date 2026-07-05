@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -20,7 +20,7 @@ public class CountryConfiguration : IEntityTypeConfiguration<Country>
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000009"), CountryCode = "AO", Name = "Angola", TenantId = null },
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000010"), CountryCode = "AX", Name = "Åland Islands", TenantId = null },
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000011"), CountryCode = "AR", Name = "Argentina", TenantId = null },
-            new Country { Id = new Guid("00000000-0000-0000-0000-000000000012"), CountryCode = "AT", Name = "Antarctica", TenantId = null },
+            new Country { Id = new Guid("00000000-0000-0000-0000-000000000012"), CountryCode = "AQ", Name = "Antarctica", TenantId = null },
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000013"), CountryCode = "AU", Name = "Australia", TenantId = null },
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000014"), CountryCode = "AZ", Name = "Azerbaijan", TenantId = null },
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000015"), CountryCode = "BA", Name = "Bosnia and Herzegovina", TenantId = null },
@@ -34,7 +34,7 @@ public class CountryConfiguration : IEntityTypeConfiguration<Country>
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000023"), CountryCode = "BY", Name = "Belarus", TenantId = null },
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000024"), CountryCode = "BZ", Name = "Belize", TenantId = null },
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000025"), CountryCode = "CA", Name = "Canada", TenantId = null },
-            new Country { Id = new Guid("00000000-0000-0000-0000-000000000026"), CountryCode = "CH", Name = "Cocos (Keeling) Islands", TenantId = null },
+            new Country { Id = new Guid("00000000-0000-0000-0000-000000000026"), CountryCode = "CC", Name = "Cocos (Keeling) Islands", TenantId = null },
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000027"), CountryCode = "CI", Name = "Ivory Coast", TenantId = null },
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000028"), CountryCode = "CL", Name = "Chile", TenantId = null },
             new Country { Id = new Guid("00000000-0000-0000-0000-000000000029"), CountryCode = "CN", Name = "China", TenantId = null },
@@ -134,5 +134,9 @@ public class CountryConfiguration : IEntityTypeConfiguration<Country>
         builder.Property(q => q.Name)
             .IsRequired()
             .HasMaxLength(100);
+
+        // ISO codes are unique per tenant scope (global rows share TenantId == null). This also makes
+        // GetCountryByString deterministic: a code resolves to exactly one country.
+        builder.HasIndex(q => new { q.CountryCode, q.TenantId }).IsUnique();
     }
 }

@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Entities;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Customer.Commands.CustomerDelete;
 
@@ -96,11 +97,9 @@ public class CustomerDeleteHandler : IRequestHandler<CustomerDeleteCommand, Resu
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while deleting the customer: {ex.Message}");
-
-            _logger.LogError("Error deleting customer: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while deleting the customer.",
+                "Error deleting customer.");
         }
 
         return result;

@@ -1,6 +1,7 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -91,11 +92,9 @@ public class ShippingProviderRateUpdateHandler : IRequestHandler<ShippingProvide
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the shipping option: {ex.Message}");
-
-            _logger.LogError("Error updating shipping option: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while updating the shipping option.",
+                "Error updating shipping option {Id}.", request.Id);
         }
 
         return result;

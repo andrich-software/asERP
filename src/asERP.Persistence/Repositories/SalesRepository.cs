@@ -35,19 +35,8 @@ public class SalesRepository : GenericRepository<Sales>, ISalesRepository
 
     public async Task<List<SalesHistory>> GetSalesHistoryAsync(Guid salesId)
     {
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        var query = Context.SalesHistory.AsQueryable();
-
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(oh => oh.TenantId == null || oh.TenantId == currentTenantId.Value);
-        }
-        else
-        {
-            query = query.Where(oh => oh.TenantId == null);
-        }
-
-        return await query
+        // Tenant isolation via the global query filter.
+        return await Context.SalesHistory
             .Where(oh => oh.SalesId == salesId)
             .OrderByDescending(oh => oh.DateCreated)
             .ToListAsync();
@@ -55,19 +44,8 @@ public class SalesRepository : GenericRepository<Sales>, ISalesRepository
 
     public async Task<List<SalesHistory>> GetShippingHistoryAsync(Guid shippingId)
     {
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        var query = Context.SalesHistory.AsQueryable();
-
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(oh => oh.TenantId == null || oh.TenantId == currentTenantId.Value);
-        }
-        else
-        {
-            query = query.Where(oh => oh.TenantId == null);
-        }
-
-        return await query
+        // Tenant isolation via the global query filter.
+        return await Context.SalesHistory
             .Where(oh => oh.ShippingId == shippingId)
             .OrderByDescending(oh => oh.DateCreated)
             .ToListAsync();
@@ -133,20 +111,8 @@ public class SalesRepository : GenericRepository<Sales>, ISalesRepository
             return false;
         }
 
-        // Check if an invoice already exists for this sales
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        var invoiceQuery = Context.Invoice.AsQueryable();
-
-        if (currentTenantId.HasValue)
-        {
-            invoiceQuery = invoiceQuery.Where(i => i.TenantId == null || i.TenantId == currentTenantId.Value);
-        }
-        else
-        {
-            invoiceQuery = invoiceQuery.Where(i => i.TenantId == null);
-        }
-
-        var invoiceExists = await invoiceQuery.AnyAsync(i => i.SalesId == salesId);
+        // Check if an invoice already exists for this sales. Tenant isolation via the global filter.
+        var invoiceExists = await Context.Invoice.AnyAsync(i => i.SalesId == salesId);
 
         // Return false if invoice already exists
         return !invoiceExists;

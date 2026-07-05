@@ -1,17 +1,26 @@
-﻿using System.Linq.Dynamic.Core;
+using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Application.Specifications;
 using asERP.Domain.Dtos.Setting;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Setting.Queries.SettingList;
 
 public class SettingListHandler : IRequestHandler<SettingListQuery, PaginatedResult<SettingListDto>>
 {
+    // Restrict client-supplied ordering to the columns surfaced in the list DTO.
+    // Value is excluded: rows flagged IsEncrypted hold secrets at rest, so ordering/probing by
+    // Value would be a leak vector.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(Domain.Entities.Setting.Id),
+        nameof(Domain.Entities.Setting.Key)
+    };
+
     private readonly IAppLogger<SettingListHandler> _logger;
     private readonly ISettingRepository _SettingRepository;
 
@@ -29,13 +38,9 @@ public class SettingListHandler : IRequestHandler<SettingListQuery, PaginatedRes
 
         _logger.LogInformation("Handle SettingListQuery: {0}", request);
 
-        IQueryable<Domain.Entities.Setting> query = _SettingRepository.Entities.Specify(settingFilterSpec);
-
-        if (request.SalesBy.Any())
-        {
-            var salesing = string.Join(",", request.SalesBy);
-            query = query.OrderBy(salesing);
-        }
+        IQueryable<Domain.Entities.Setting> query = _SettingRepository.Entities
+            .Specify(settingFilterSpec)
+            .ApplySafeOrdering(request.SalesBy, AllowedSortFields);
 
         // Use the standard pagination extension which handles zero-based pagination correctly
         var paginatedEntities = await query.ToPaginatedListAsync(request.PageNumber, request.PageSize);

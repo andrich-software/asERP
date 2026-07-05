@@ -1,4 +1,5 @@
-﻿using System.Collections;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Reflection;
 
 namespace asERP.Application.Mediator;
@@ -9,6 +10,11 @@ namespace asERP.Application.Mediator;
 public class CustomMediator : IMediator
 {
     private readonly IServiceProvider _serviceProvider;
+
+    // Resolved handler type + Handle MethodInfo cached per request/notification type to avoid
+    // reflecting (MakeGenericType + GetMethod) on every Send/Publish on the request hot path.
+    private static readonly ConcurrentDictionary<(Type RequestType, Type ResponseType), (Type HandlerType, MethodInfo HandleMethod)> SendCache = new();
+    private static readonly ConcurrentDictionary<Type, (Type HandlerType, Type EnumerableType, MethodInfo HandleMethod)> PublishCache = new();
 
     public CustomMediator(IServiceProvider serviceProvider)
     {
@@ -28,18 +34,18 @@ public class CustomMediator : IMediator
             throw new ArgumentNullException(nameof(request));
 
         var requestType = request.GetType();
-        var handlerType = typeof(IRequestHandler<,>).MakeGenericType(requestType, typeof(TResponse));
+        var (handlerType, handleMethod) = SendCache.GetOrAdd((requestType, typeof(TResponse)), static key =>
+        {
+            var handlerType = typeof(IRequestHandler<,>).MakeGenericType(key.RequestType, key.ResponseType);
+            var handleMethod = handlerType.GetMethod("Handle")
+                ?? throw new InvalidOperationException($"Handle method not found on handler for {key.RequestType.Name}");
+            return (handlerType, handleMethod);
+        });
 
         var handler = _serviceProvider.GetService(handlerType);
         if (handler == null)
         {
             throw new InvalidOperationException($"No handler found for request type {requestType.Name}");
-        }
-
-        var handleMethod = handlerType.GetMethod("Handle");
-        if (handleMethod == null)
-        {
-            throw new InvalidOperationException($"Handle method not found on handler for {requestType.Name}");
         }
 
         var task = (Task<TResponse>)handleMethod.Invoke(handler, new object[] { request, cancellationToken })!;
@@ -59,15 +65,18 @@ public class CustomMediator : IMediator
             throw new ArgumentNullException(nameof(notification));
 
         var notificationType = notification.GetType();
-        var handlerType = typeof(INotificationHandler<>).MakeGenericType(notificationType);
-        var enumerableType = typeof(IEnumerable<>).MakeGenericType(handlerType);
+        var (_, enumerableType, handleMethod) = PublishCache.GetOrAdd(notificationType, static type =>
+        {
+            var handlerType = typeof(INotificationHandler<>).MakeGenericType(type);
+            var enumerableType = typeof(IEnumerable<>).MakeGenericType(handlerType);
+            var handleMethod = handlerType.GetMethod("Handle")
+                ?? throw new InvalidOperationException($"Handle method not found on {handlerType.Name}");
+            return (handlerType, enumerableType, handleMethod);
+        });
 
         var handlers = _serviceProvider.GetService(enumerableType) as IEnumerable;
         if (handlers is null)
             return;
-
-        var handleMethod = handlerType.GetMethod("Handle")
-            ?? throw new InvalidOperationException($"Handle method not found on {handlerType.Name}");
 
         List<Exception>? exceptions = null;
         var args = new object[] { notification, cancellationToken };

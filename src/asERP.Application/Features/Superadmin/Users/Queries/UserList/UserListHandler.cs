@@ -1,6 +1,5 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Linq.Dynamic.Core;
-using System.Linq.Dynamic.Core.Exceptions;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Extensions;
 using asERP.Application.Mediator;
@@ -22,6 +21,17 @@ public class UserListHandler : IRequestHandler<UserListQuery, PaginatedResult<Us
     /// Logger for recording handler operations
     /// </summary>
     private readonly IAppLogger<UserListHandler> _logger;
+
+    // Ordering runs on the projected UserListDto; restrict to display columns so clients cannot sort by
+    // (and thereby probe) secret ApplicationUser columns such as PasswordHash or security tokens.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(UserListDto.Id),
+        nameof(UserListDto.Email),
+        nameof(UserListDto.Firstname),
+        nameof(UserListDto.Lastname),
+        nameof(UserListDto.DateCreated)
+    };
 
     /// <summary>
     /// ASP.NET Identity UserManager for user data operations
@@ -67,18 +77,7 @@ public class UserListHandler : IRequestHandler<UserListQuery, PaginatedResult<Us
                 DateCreated = u.DateCreated
             });
 
-        if (request.SalesBy.Any())
-        {
-            var salesing = string.Join(",", request.SalesBy);
-            try
-            {
-                query = query.OrderBy(salesing);
-            }
-            catch (ParseException ex)
-            {
-                _logger.LogWarning("Invalid salesBy value '{0}' supplied. {1}", salesing, ex.Message);
-            }
-        }
+        query = query.ApplySafeOrdering(request.SalesBy, AllowedSortFields);
 
         var result = await query.ToPaginatedListAsync(pageIndex, sanitizedPageSize);
         result.CurrentPage = sanitizedPage;

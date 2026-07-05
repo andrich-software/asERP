@@ -20,13 +20,19 @@ public class SettingsService : ISettingsService
     {
         _settingRepository = settingRepository;
         // Optional injection: keep CLI/test paths that don't wire DataProtection working with the
-        // identity-function NoOp (same fallback the DbContext uses for design-time scenarios).
+        // identity-function NoOp (same fallback the DbContext uses for design-time scenarios). Warn
+        // loudly if this happens at runtime — secrets would then be stored unencrypted.
+        if (encryptor is null && !DatabaseContext.DesignTimeDetection.IsDesignTime)
+        {
+            System.Diagnostics.Trace.TraceWarning(
+                "ICredentialEncryptor was not provided to SettingsService at runtime — falling back to a no-op encryptor. Secret settings will be stored UNENCRYPTED at rest.");
+        }
         _encryptor = encryptor ?? new NoOpCredentialEncryptor();
     }
 
-    public Task<JwtSettings> GetJwtSettingsAsync()
+    public async Task<JwtSettings> GetJwtSettingsAsync()
     {
-        var settings = _settingRepository.Entities.Where(s => s.Key.StartsWith("Jwt.")).ToList();
+        var settings = await _settingRepository.Entities.Where(s => s.Key.StartsWith("Jwt.")).ToListAsync();
 
         var jwtSettings = new JwtSettings();
 
@@ -58,12 +64,12 @@ public class SettingsService : ISettingsService
             }
         }
 
-        return Task.FromResult(jwtSettings);
+        return jwtSettings;
     }
 
-    public Task<EmailSettings> GetEmailSettingsAsync()
+    public async Task<EmailSettings> GetEmailSettingsAsync()
     {
-        var settings = _settingRepository.Entities.Where(s => s.Key.StartsWith("Email.")).ToList();
+        var settings = await _settingRepository.Entities.Where(s => s.Key.StartsWith("Email.")).ToListAsync();
 
         var emailSettings = new EmailSettings();
 
@@ -120,12 +126,12 @@ public class SettingsService : ISettingsService
             }
         }
 
-        return Task.FromResult(emailSettings);
+        return emailSettings;
     }
 
-    public Task<TelemetrySettings> GetTelemetrySettingsAsync()
+    public async Task<TelemetrySettings> GetTelemetrySettingsAsync()
     {
-        var settings = _settingRepository.Entities.Where(s => s.Key.StartsWith("Telemetry.")).ToList();
+        var settings = await _settingRepository.Entities.Where(s => s.Key.StartsWith("Telemetry.")).ToListAsync();
 
         var telemetrySettings = new TelemetrySettings();
 
@@ -142,12 +148,12 @@ public class SettingsService : ISettingsService
             }
         }
 
-        return Task.FromResult(telemetrySettings);
+        return telemetrySettings;
     }
 
-    public Task<GrafanaSettings> GetGrafanaSettingsAsync()
+    public async Task<GrafanaSettings> GetGrafanaSettingsAsync()
     {
-        var settings = _settingRepository.Entities.Where(s => s.Key.StartsWith("Grafana.")).ToList();
+        var settings = await _settingRepository.Entities.Where(s => s.Key.StartsWith("Grafana.")).ToListAsync();
 
         var grafanaSettings = new GrafanaSettings();
 
@@ -181,12 +187,12 @@ public class SettingsService : ISettingsService
             }
         }
 
-        return Task.FromResult(grafanaSettings);
+        return grafanaSettings;
     }
 
-    public Task<ClickHouseSettings> GetClickHouseSettingsAsync()
+    public async Task<ClickHouseSettings> GetClickHouseSettingsAsync()
     {
-        var settings = _settingRepository.Entities.Where(s => s.Key.StartsWith("ClickHouse.")).ToList();
+        var settings = await _settingRepository.Entities.Where(s => s.Key.StartsWith("ClickHouse.")).ToListAsync();
 
         var clickHouseSettings = new ClickHouseSettings();
 
@@ -219,18 +225,18 @@ public class SettingsService : ISettingsService
             }
         }
 
-        return Task.FromResult(clickHouseSettings);
+        return clickHouseSettings;
     }
 
-    public Task<string> GetSettingValueAsync(string key)
+    public async Task<string> GetSettingValueAsync(string key)
     {
-        var setting = _settingRepository.Entities.FirstOrDefault(s => s.Key == key);
-        return Task.FromResult(setting?.Value ?? string.Empty);
+        var setting = await _settingRepository.Entities.FirstOrDefaultAsync(s => s.Key == key);
+        return setting?.Value ?? string.Empty;
     }
 
     public async Task SetSettingValueAsync(string key, string value)
     {
-        var setting = _settingRepository.Entities.FirstOrDefault(s => s.Key == key);
+        var setting = await _settingRepository.Entities.FirstOrDefaultAsync(s => s.Key == key);
         if (setting != null)
         {
             setting.Value = value;
@@ -243,21 +249,21 @@ public class SettingsService : ISettingsService
         }
     }
 
-    public Task<string> GetEncryptedSettingValueAsync(string key)
+    public async Task<string> GetEncryptedSettingValueAsync(string key)
     {
-        var setting = _settingRepository.Entities.FirstOrDefault(s => s.Key == key);
-        if (setting is null) return Task.FromResult(string.Empty);
+        var setting = await _settingRepository.Entities.FirstOrDefaultAsync(s => s.Key == key);
+        if (setting is null) return string.Empty;
 
         // Plaintext rows pass through unchanged; encrypted rows go through the encryptor whose
         // Decrypt() also passes legacy plaintext through as a safety net.
         var raw = setting.Value ?? string.Empty;
-        return Task.FromResult(setting.IsEncrypted ? _encryptor.Decrypt(raw) : raw);
+        return setting.IsEncrypted ? _encryptor.Decrypt(raw) : raw;
     }
 
     public async Task SetEncryptedSettingValueAsync(string key, string value)
     {
         var ciphertext = string.IsNullOrEmpty(value) ? string.Empty : _encryptor.Encrypt(value);
-        var setting = _settingRepository.Entities.FirstOrDefault(s => s.Key == key);
+        var setting = await _settingRepository.Entities.FirstOrDefaultAsync(s => s.Key == key);
         if (setting is not null)
         {
             setting.Value = ciphertext;

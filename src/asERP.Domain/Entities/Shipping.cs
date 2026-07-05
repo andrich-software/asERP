@@ -7,8 +7,11 @@ namespace asERP.Domain.Entities;
 /// A single parcel of an order. One <see cref="Sales"/> can have many shipments
 /// (partial deliveries); each carries its own tracking number and label.
 /// </summary>
-public class Shipping : BaseEntity, IBaseEntity
+public class Shipping : BaseEntity, IBaseEntity, IConcurrencyStamped
 {
+    /// <summary>Optimistic-concurrency token; refreshed on every insert/update in SaveChangesAsync.</summary>
+    public Guid ConcurrencyToken { get; set; }
+
     public Guid SalesId { get; set; }
 
     // Not auto-initialized — see the phantom-entity note on ProductSalesChannel.

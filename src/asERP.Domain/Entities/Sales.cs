@@ -4,8 +4,11 @@ using asERP.Domain.Enums;
 
 namespace asERP.Domain.Entities;
 
-public class Sales : BaseEntity, IBaseEntity
+public class Sales : BaseEntity, IBaseEntity, IConcurrencyStamped
 {
+    /// <summary>Optimistic-concurrency token; refreshed on every insert/update in SaveChangesAsync.</summary>
+    public Guid ConcurrencyToken { get; set; }
+
     public int SalesId { get; set; }
     public Guid SalesChannelId { get; set; }
     public string RemoteSalesId { get; set; } = string.Empty;

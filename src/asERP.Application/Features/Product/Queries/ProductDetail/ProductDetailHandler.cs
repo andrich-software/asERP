@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Features.ProductImage.Shared;
 using asERP.Application.Mediator;
@@ -142,10 +142,10 @@ public class ProductDetailHandler : IRequestHandler<ProductDetailQuery, Result<P
         catch (Exception ex)
         {
             // Handle any exceptions during product retrieval
-            _logger.LogError("Error retrieving product: {Message}", ex.Message);
+            _logger.LogError(ex, "Error retrieving product");
 
             return Result<ProductDetailDto>.Fail(ResultStatusCode.InternalServerError,
-                $"An error occurred while retrieving the product: {ex.Message}");
+                "An error occurred while retrieving the product.");
         }
     }
 

@@ -25,6 +25,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         : base(options)
     {
         _tenantContext = tenantContext;
+        // The NoOp encryptor (identity function, plaintext at rest) is only acceptable at design-time
+        // (EF migrations / model build). If it is ever the fallback at runtime, secrets would be
+        // stored unencrypted — surface that loudly instead of failing silently.
+        if (credentialEncryptor is null && !DesignTimeDetection.IsDesignTime)
+        {
+            System.Diagnostics.Trace.TraceWarning(
+                "ICredentialEncryptor was not provided to ApplicationDbContext at runtime — falling back to a no-op encryptor. Credentials will be stored UNENCRYPTED at rest.");
+        }
         _credentialEncryptor = credentialEncryptor ?? new NoOpCredentialEncryptor();
     }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -96,8 +104,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<OAuthState>().ToTable("oauth_state");
         modelBuilder.Entity<RefreshToken>().ToTable("refresh_token");
 
-        // modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
-        // modelBuilder.ApplyConfigurationsFromAssembly(typeof(MaErpIdentityDbContext).Assembly);
         modelBuilder.ApplyConfiguration(new RoleConfiguration());
         modelBuilder.ApplyConfiguration(new UserConfiguration());
         modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
@@ -126,6 +132,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<ShippingProvider>().Property(e => e.Password).HasConversion(encryptedConverter);
         modelBuilder.Entity<ShippingProvider>().Property(e => e.ApiKey).HasConversion(encryptedConverter!);
         modelBuilder.Entity<ShippingProvider>().Property(e => e.ApiSecret).HasConversion(encryptedConverter!);
+        // Free-form connector config can carry live OAuth secrets (Shopware6 apiClientSecret,
+        // Amazon lwaClientSecret); encrypt the whole blob at rest with the same key ring.
+        modelBuilder.Entity<SalesChannel>().Property(e => e.AdditionalConfigJson).HasConversion(encryptedConverter!);
+        // Tenant email credentials encrypted at rest with the same key ring.
+        modelBuilder.Entity<TenantEmailSettings>().Property(e => e.SmtpPassword).HasConversion(encryptedConverter!);
+        modelBuilder.Entity<TenantEmailSettings>().Property(e => e.M365ClientSecret).HasConversion(encryptedConverter!);
         modelBuilder.ApplyConfiguration(new TaxClassConfiguration());
         modelBuilder.ApplyConfiguration(new GoodsReceiptConfiguration());
         modelBuilder.ApplyConfiguration(new InvoiceConfiguration());
@@ -189,14 +201,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             }
         }
 
-        // Configure global query filters for multi-tenancy
-        // IMPORTANT: Always apply global filters to ensure tenant isolation, but not in tests
-        // Tests use manual filtering in repositories for better control
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-        if (environment != "Testing")
-        {
-            ConfigureGlobalFilters(modelBuilder);
-        }
+        // Configure global query filters for multi-tenancy.
+        // SECURITY: Always apply the tenant filter — never gate it on an ambient environment
+        // variable, so a production host that accidentally runs with ASPNETCORE_ENVIRONMENT=Testing
+        // cannot end up with cross-tenant reads. Tests that need cross-tenant visibility use
+        // IgnoreQueryFilters() explicitly in their own helpers.
+        ConfigureGlobalFilters(modelBuilder);
     }
 
     public DbSet<AiModel> AiModel { get; set; } = null!;
@@ -247,22 +257,50 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        var currentTenantId = _tenantContext.GetCurrentTenantId();
+
         foreach (var entry in base.ChangeTracker.Entries<BaseEntity>().Where(q => q.State == EntityState.Added || q.State == EntityState.Modified))
         {
             entry.Entity.DateModified = DateTime.UtcNow;
+
+            // Refresh the optimistic-concurrency token on every insert/update. Only entries that are
+            // already Added/Modified reach this loop, so this never spuriously dirties an unchanged row.
+            // On Modified, EF keeps the original token in the UPDATE's WHERE clause, so a concurrent
+            // change (different original token) yields 0 rows affected -> DbUpdateConcurrencyException.
+            if (entry.Entity is IConcurrencyStamped stamped)
+            {
+                stamped.ConcurrencyToken = Guid.NewGuid();
+            }
 
             if (entry.State == EntityState.Added)
             {
                 entry.Entity.DateCreated = DateTime.UtcNow;
 
                 // Set TenantId for new entities if not already set
-                if (entry.Entity.TenantId == null)
+                if (entry.Entity.TenantId == null && currentTenantId.HasValue)
                 {
-                    var currentTenantId = _tenantContext.GetCurrentTenantId();
-                    if (currentTenantId.HasValue)
-                    {
-                        entry.Entity.TenantId = currentTenantId.Value;
-                    }
+                    entry.Entity.TenantId = currentTenantId.Value;
+                }
+
+                // Reject a tenant-scoped row that would be created without any owner (no explicit
+                // TenantId and no ambient tenant context — e.g. background job / OAuth callback / CLI).
+                // Genuinely global entities are allow-listed below.
+                if (entry.Entity.TenantId == null && !IsGloballyOwnedEntity(entry.Entity))
+                {
+                    throw new InvalidOperationException(
+                        $"Refusing to persist tenant-scoped entity '{entry.Entity.GetType().Name}' with a null TenantId and no active tenant context.");
+                }
+            }
+            else // Modified
+            {
+                // SECURITY: never allow an update to null-out an existing row's TenantId (which would
+                // make it visible to every tenant) or to silently move it to another tenant. Restore
+                // the original owner from the tracked snapshot.
+                var originalTenantId = entry.OriginalValues.GetValue<Guid?>(nameof(BaseEntity.TenantId));
+                if (originalTenantId != null && entry.Entity.TenantId != originalTenantId)
+                {
+                    entry.Entity.TenantId = originalTenantId;
+                    entry.Property(nameof(BaseEntity.TenantId)).IsModified = false;
                 }
             }
 
@@ -276,6 +314,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         return base.SaveChangesAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Allow-list of entity types that legitimately live without a tenant (TenantId == null):
+    /// globally seeded reference data shared across all tenants.
+    /// </summary>
+    private static bool IsGloballyOwnedEntity(BaseEntity entity) => entity is Country;
 
     private void ConfigureGlobalFilters(ModelBuilder modelBuilder)
     {

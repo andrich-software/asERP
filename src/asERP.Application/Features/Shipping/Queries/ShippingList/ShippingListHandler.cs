@@ -15,6 +15,26 @@ public class ShippingListHandler : IRequestHandler<ShippingListQuery, PaginatedR
 {
     private const string DefaultSort = "ShippedAt Descending";
 
+    // Ordering runs on the projected ShipmentListItemDto; only columns surfaced in the list DTO are
+    // sortable (including computed IsProblem/RecipientName). Client sort terms outside this set are ignored.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(ShipmentListItemDto.Id),
+        nameof(ShipmentListItemDto.SalesId),
+        nameof(ShipmentListItemDto.SalesNumber),
+        nameof(ShipmentListItemDto.RecipientName),
+        nameof(ShipmentListItemDto.ProviderName),
+        nameof(ShipmentListItemDto.RateName),
+        nameof(ShipmentListItemDto.TrackingNumber),
+        nameof(ShipmentListItemDto.TrackingUrl),
+        nameof(ShipmentListItemDto.Status),
+        nameof(ShipmentListItemDto.ShippedAt),
+        nameof(ShipmentListItemDto.DeliveredAt),
+        nameof(ShipmentListItemDto.HasLabel),
+        nameof(ShipmentListItemDto.IsProblem),
+        nameof(ShipmentListItemDto.DateCreated)
+    };
+
     /// <summary>A shipped, undelivered parcel older than this is flagged as a problem.</summary>
     private static readonly TimeSpan OverdueAfter = TimeSpan.FromDays(4);
 
@@ -83,8 +103,9 @@ public class ShippingListHandler : IRequestHandler<ShippingListQuery, PaginatedR
 
         // Sorting happens after the projection so computed columns (IsProblem, RecipientName)
         // are sortable too.
-        var sort = request.SalesBy.Any() ? string.Join(",", request.SalesBy) : DefaultSort;
-        projected = projected.OrderBy(sort);
+        projected = request.SalesBy.Any()
+            ? projected.ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            : projected.OrderBy(DefaultSort);
 
         return await projected.ToPaginatedListAsync(request.PageNumber, request.PageSize);
     }

@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Customer.Commands.CustomerUpdate;
 
@@ -138,11 +139,10 @@ public class CustomerUpdateHandler : IRequestHandler<CustomerUpdateCommand, Resu
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the customer: {ex.Message}");
-
-            _logger.LogError("Error updating customer: {Message}", ex.Message);
+            // Never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while updating the customer.",
+                "Error updating customer.");
         }
 
         return result;

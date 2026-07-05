@@ -1,5 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Returns;
 using asERP.Domain.Dtos.Sales;
@@ -82,7 +83,7 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
                 return result;
             }
 
-            // Bestellhistorie abrufen
+            // Retrieve the order history.
             var salesHistory = await _salesRepository.GetSalesHistoryAsync(request.Id);
 
             var shippings = await _shippingRepository.GetBySalesIdAsync(sales.Id);
@@ -101,7 +102,19 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
                 CustomerId = sales.Customer.CustomerId,
                 CustomerGuid = sales.Customer.Id,
                 Status = sales.Status,
-                SalesItems = sales.SalesItems.ToList(),
+                SalesItems = sales.SalesItems.Select(i => new SalesItemDto
+                {
+                    Id = i.Id,
+                    SalesId = i.SalesId,
+                    ProductId = i.ProductId,
+                    Quantity = i.Quantity,
+                    Name = i.Name,
+                    Price = i.Price,
+                    TaxRate = i.TaxRate,
+                    MissingProductSku = i.MissingProductSku,
+                    MissingProductEan = i.MissingProductEan,
+                    ShippingId = i.ShippingId
+                }).ToList(),
                 SalesHistory = MapSalesHistoryToDto(salesHistory),
                 PaymentMethod = sales.PaymentMethod,
                 PaymentStatus = sales.PaymentStatus,
@@ -174,22 +187,20 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
         }
         catch (Exception ex)
         {
-            // Handle any exceptions during sales retrieval
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while retrieving the sales: {ex.Message}");
-
-            _logger.LogError("Error retrieving sales: {Message}", ex.Message);
+            // Handle any exceptions during sales retrieval; never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while retrieving the sales.",
+                "Error retrieving sales with ID: {Id}", request.Id);
         }
 
         return result;
     }
 
     /// <summary>
-    /// Konvertiert SalesHistory-Entities in SalesHistoryDto-Objekte
+    /// Maps SalesHistory entities to SalesHistoryDto objects.
     /// </summary>
-    /// <param name="salesHistories">Liste von SalesHistory-Entities</param>
-    /// <returns>Liste von SalesHistoryDto-Objekten</returns>
+    /// <param name="salesHistories">List of SalesHistory entities.</param>
+    /// <returns>List of SalesHistoryDto objects.</returns>
     private List<SalesHistoryDto> MapSalesHistoryToDto(List<Domain.Entities.SalesHistory> salesHistories)
     {
         return salesHistories.Select(history => new SalesHistoryDto

@@ -1,10 +1,10 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Features.Product.Shared;
+using asERP.Application.Mediator;
 using asERP.Application.Notifications;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Product.Commands.ProductUpdate;
 
@@ -44,7 +44,7 @@ public class ProductUpdateHandler : IRequestHandler<ProductUpdateCommand, Result
         if (!validationResult.IsValid)
         {
             var validationErrors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-            
+
             _logger.LogWarning("Validation errors in update request for {0}: {1}",
                 nameof(ProductUpdateCommand), validationErrors);
 
@@ -53,7 +53,7 @@ public class ProductUpdateHandler : IRequestHandler<ProductUpdateCommand, Result
             {
                 return Result<Guid>.Fail(ResultStatusCode.NotFound, validationErrors);
             }
-            
+
             return Result<Guid>.Fail(ResultStatusCode.BadRequest, validationErrors);
         }
 
@@ -202,10 +202,10 @@ public class ProductUpdateHandler : IRequestHandler<ProductUpdateCommand, Result
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error updating product: {Message}", ex.Message);
-            
+            _logger.LogError(ex, "Error updating product");
+
             return Result<Guid>.Fail(ResultStatusCode.InternalServerError,
-                $"An error occurred while updating the product: {ex.Message}");
+                "An error occurred while updating the product.");
         }
     }
 }

@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.ProductAttribute;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.ProductAttribute.Queries.ProductAttributeDetail;
 
@@ -61,11 +62,10 @@ public class ProductAttributeDetailHandler : IRequestHandler<ProductAttributeDet
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while retrieving the product attribute: {ex.Message}");
-
-            _logger.LogError("Error retrieving product attribute: {Message}", ex.Message);
+            // Never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while retrieving the product attribute.",
+                "Error retrieving product attribute.");
         }
 
         return result;

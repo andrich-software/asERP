@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -8,6 +8,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> builder)
     {
+        builder.Property(e => e.ConcurrencyToken)
+            .IsConcurrencyToken();
+
         builder.HasIndex(e => new { e.TenantId, e.Sku })
             .IsUnique();
 

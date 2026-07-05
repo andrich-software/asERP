@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.TaxClass.Commands.TaxClassCreate;
 
@@ -86,11 +87,9 @@ public class TaxClassCreateHandler : IRequestHandler<TaxClassCreateCommand, Resu
         catch (Exception ex)
         {
             // Handle any exceptions during tax class creation
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the tax class: {ex.Message}");
-
-            _logger.LogError("Error creating tax class: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while creating the tax class.",
+                "Error creating tax class.");
         }
 
         return result;

@@ -1,24 +1,24 @@
-﻿using asERP.Application.Contracts.Infrastructure;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Persistence;
 using asERP.Domain.Entities;
-using PdfSharp.Drawing;
-using PdfSharp.Pdf;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
-using System.Globalization;
-using System.IO;
+using PdfSharp.Drawing;
 using PdfSharp.Fonts;
-using System;
-using System.Linq;
-using System.Collections.Generic;
+using PdfSharp.Pdf;
 
 namespace asERP.Infrastructure.PDF;
 
 public partial class PdfService : IPdfService
 {
     private readonly ISettingRepository _settingRepository;
-    private readonly object _settingsLock = new();
+    private readonly SemaphoreSlim _settingsGate = new(1, 1);
     private bool _companySettingsLoaded;
     private Guid? _settingsLoadedForTenantId;
     private string _companyName = string.Empty;
@@ -53,55 +53,83 @@ public partial class PdfService : IPdfService
         }
     }
 
-    private void EnsureCompanySettingsLoaded(Guid? tenantId)
+    // Note: settings are stored as global (non-tenant) entities and ISettingRepository.GetAllAsync()
+    // exposes no per-tenant overload, so the load cannot be scoped to a specific tenantId here — the
+    // parameter only keys the in-memory cache. DB failures now propagate (no silent empty fallback), so a
+    // failed load surfaces via the RFC 7807 filter instead of rendering an invoice with empty company data.
+    private async Task EnsureCompanySettingsLoadedAsync(Guid? tenantId)
     {
         if (_companySettingsLoaded && Nullable.Equals(_settingsLoadedForTenantId, tenantId))
         {
             return;
         }
 
-        lock (_settingsLock)
+        await _settingsGate.WaitAsync().ConfigureAwait(false);
+        try
         {
             if (_companySettingsLoaded && Nullable.Equals(_settingsLoadedForTenantId, tenantId))
             {
                 return;
             }
 
-            ICollection<Setting>? settings;
+            var settings = await _settingRepository.GetAllAsync().ConfigureAwait(false)
+                ?? Array.Empty<Setting>();
 
-            try
-            {
-                settings = _settingRepository.GetAllAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-            }
-            catch
-            {
-                settings = Array.Empty<Setting>();
-            }
-
-            var effectiveSettings = settings ?? Array.Empty<Setting>();
-
-            _companyName = GetSettingValue(effectiveSettings, "Company.Name");
-            _companyAddress = GetSettingValue(effectiveSettings, "Company.Address");
-            _companyZipCity = GetSettingValue(effectiveSettings, "Company.ZipCity");
-            _companyCountry = GetSettingValue(effectiveSettings, "Company.Country");
-            _companyPhone = GetSettingValue(effectiveSettings, "Company.Phone");
-            _companyEmail = GetSettingValue(effectiveSettings, "Company.Email");
-            _companyWebsite = GetSettingValue(effectiveSettings, "Company.Website");
-            _companyTaxId = GetSettingValue(effectiveSettings, "Company.TaxId");
-            _companyVatId = GetSettingValue(effectiveSettings, "Company.VatId");
-            _companyBankName = GetSettingValue(effectiveSettings, "Company.BankName");
-            _companyIban = GetSettingValue(effectiveSettings, "Company.Iban");
-            _companyBic = GetSettingValue(effectiveSettings, "Company.Bic");
-            _logoPath = GetSettingValue(effectiveSettings, "Company.LogoPath");
+            _companyName = GetSettingValue(settings, "Company.Name");
+            _companyAddress = GetSettingValue(settings, "Company.Address");
+            _companyZipCity = GetSettingValue(settings, "Company.ZipCity");
+            _companyCountry = GetSettingValue(settings, "Company.Country");
+            _companyPhone = GetSettingValue(settings, "Company.Phone");
+            _companyEmail = GetSettingValue(settings, "Company.Email");
+            _companyWebsite = GetSettingValue(settings, "Company.Website");
+            _companyTaxId = GetSettingValue(settings, "Company.TaxId");
+            _companyVatId = GetSettingValue(settings, "Company.VatId");
+            _companyBankName = GetSettingValue(settings, "Company.BankName");
+            _companyIban = GetSettingValue(settings, "Company.Iban");
+            _companyBic = GetSettingValue(settings, "Company.Bic");
+            _logoPath = GetSettingValue(settings, "Company.LogoPath");
 
             _companySettingsLoaded = true;
             _settingsLoadedForTenantId = tenantId;
+        }
+        finally
+        {
+            _settingsGate.Release();
         }
     }
 
     private string GetSettingValue(IEnumerable<Setting> settings, string key)
     {
         return settings.FirstOrDefault(s => s.Key == key)?.Value ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Resolves <paramref name="outputPath"/> and verifies it stays inside the process working
+    /// directory, so a caller-supplied path cannot escape via <c>..\</c> traversal to an arbitrary location.
+    /// </summary>
+    private static string ResolveContainedOutputPath(string outputPath)
+    {
+        // An absolute path is an explicit caller choice (e.g. a configured output directory) — honor it.
+        // The traversal risk this guards against is a RELATIVE path using `..` to escape the base
+        // directory, so containment is enforced only for relative inputs.
+        if (Path.IsPathRooted(outputPath))
+        {
+            return Path.GetFullPath(outputPath);
+        }
+
+        var baseDirectory = Path.GetFullPath(Directory.GetCurrentDirectory());
+        var basePrefix = baseDirectory.EndsWith(Path.DirectorySeparatorChar)
+            ? baseDirectory
+            : baseDirectory + Path.DirectorySeparatorChar;
+
+        var fullPath = Path.GetFullPath(Path.Combine(baseDirectory, outputPath));
+
+        if (!fullPath.StartsWith(basePrefix, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("The invoice output path escapes the allowed base directory.");
+        }
+
+        return fullPath;
     }
 
     /// <summary>
@@ -116,7 +144,10 @@ public partial class PdfService : IPdfService
 
         try
         {
-            EnsureCompanySettingsLoaded(invoice.TenantId);
+            // IPdfService.GenerateInvoice is a synchronous contract we do not own; bridge to the async
+            // loader at this single boundary. There is no synchronization context in ASP.NET Core, so this
+            // does not deadlock, and it removes the previous sync-over-async call made while holding a lock.
+            EnsureCompanySettingsLoadedAsync(invoice.TenantId).GetAwaiter().GetResult();
 
             if (GlobalFontSettings.FontResolver == null)
             {
@@ -139,7 +170,7 @@ public partial class PdfService : IPdfService
 
             if (!string.IsNullOrWhiteSpace(outputPath))
             {
-                var fullPath = Path.GetFullPath(outputPath);
+                var fullPath = ResolveContainedOutputPath(outputPath);
                 var directory = Path.GetDirectoryName(fullPath);
                 if (!string.IsNullOrEmpty(directory))
                 {

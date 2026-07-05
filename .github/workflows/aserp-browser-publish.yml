@@ -42,7 +42,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: aserp/browser
+          images: andrichsoftware/client
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -52,4 +52,4 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           labels: ${{ steps.meta.outputs.labels }}
-          tags: aserp/browser:latest
+          tags: andrichsoftware/client:latest

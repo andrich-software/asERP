@@ -523,6 +523,7 @@ public class SalesChannelUpdateCommandTests : TenantIsolatedTestBase
         updateDto.ExportCustomers = false;
         updateDto.ImportSaless = true;
         updateDto.ExportSaless = false;
+        updateDto.PushSalesCancellations = true;
 
         var response = await PutAsJsonAsync($"/api/v1/SalesChannels/{TestSalesChannel1Id}", updateDto);
 
@@ -542,6 +543,7 @@ public class SalesChannelUpdateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertFalse(salesChannelDetail.Data.ExportCustomers);
         TestAssertions.AssertTrue(salesChannelDetail.Data.ImportSaless);
         TestAssertions.AssertFalse(salesChannelDetail.Data.ExportSaless);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.PushSalesCancellations);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 
 namespace asERP.Application.Features.Invoice.Commands.InvoiceDelete;
 
@@ -11,7 +11,7 @@ public class InvoiceDeleteValidator : AbstractValidator<InvoiceDeleteCommand>
     public InvoiceDeleteValidator()
     {
         RuleFor(p => p.Id)
-            .NotNull().WithMessage("{PropertyName} ist erfsaleslich.")
+            .NotNull().WithMessage("{PropertyName} ist erforderlich.")
             .NotEqual(Guid.Empty).WithMessage("{PropertyName} darf nicht leer sein.");
     }
 }

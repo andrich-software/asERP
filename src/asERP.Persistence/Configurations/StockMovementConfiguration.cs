@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -31,6 +31,9 @@ public class StockMovementConfiguration : IEntityTypeConfiguration<StockMovement
 
         // Balance/audit lookups per product (+ warehouse) ordered by time.
         builder.HasIndex(e => new { e.ProductId, e.WarehouseId, e.DateCreated });
+
+        // Every query carries the tenant filter — index TenantId so list endpoints don't full-scan.
+        builder.HasIndex(e => e.TenantId);
 
         builder.Property(e => e.Note).HasMaxLength(500);
     }
