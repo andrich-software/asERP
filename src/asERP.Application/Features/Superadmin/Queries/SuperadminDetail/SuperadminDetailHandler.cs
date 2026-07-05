@@ -24,7 +24,11 @@ public class SuperadminDetailHandler : IRequestHandler<SuperadminDetailQuery, Re
     {
         _logger.LogInformation($"SuperadminDetailHandler.Handle: Retrieving tenant with ID {request.Id}.");
 
+        // Superadmin-only endpoint (enforced in SuperadminController): the UserTenant query filter
+        // must be bypassed explicitly, otherwise the included users are empty because superadmin
+        // requests carry no tenant context.
         var tenant = await _tenantRepository.Entities
+            .IgnoreQueryFilters()
             .Include(t => t.UserTenants!)
                 .ThenInclude(ut => ut.User)
             .AsNoTracking()

@@ -194,7 +194,7 @@ public class StockLedgerTests
     {
         var tenant = new TestTenantContext();
         return new SalesImportRepository(
-            NullLogger<ProductImportRepository>.Instance,
+            NullLogger<SalesImportRepository>.Instance,
             new SalesRepository(ctx, tenant),
             new CustomerRepository(ctx, tenant),
             new CountryRepository(ctx, tenant),
@@ -292,7 +292,9 @@ public class StockLedgerTests
 
     private sealed class TestTenantContext : asERP.Application.Contracts.Services.ITenantContext
     {
-        private Guid? _tenantId;
+        // Production sync always runs under an active tenant (SyncDispatcher sets it); mirror that
+        // with a fixed default so directly-exercised repositories/ledger persist under one owner.
+        private Guid? _tenantId = new Guid("11111111-1111-1111-1111-111111111111");
         private HashSet<Guid> _assigned = new();
         public Guid? GetCurrentTenantId() => _tenantId;
         public void SetCurrentTenantId(Guid? tenantId) => _tenantId = tenantId;

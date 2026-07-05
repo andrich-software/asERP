@@ -23,7 +23,7 @@ public class SalesImportRepositoryTests
 
     private static SalesImportRepository BuildRepository(ApplicationDbContext ctx, ITenantContext tenant) =>
         new(
-            NullLogger<ProductImportRepository>.Instance,
+            NullLogger<SalesImportRepository>.Instance,
             new SalesRepository(ctx, tenant),
             new CustomerRepository(ctx, tenant),
             new CountryRepository(ctx, tenant),
@@ -304,7 +304,9 @@ public class SalesImportRepositoryTests
 
     private sealed class TestTenantContext : ITenantContext
     {
-        private Guid? _tenantId;
+        // Production sync always runs under an active tenant (SyncDispatcher sets it); mirror that
+        // with a fixed default so directly-exercised repositories/ledger persist under one owner.
+        private Guid? _tenantId = new Guid("11111111-1111-1111-1111-111111111111");
         private HashSet<Guid> _assigned = new();
         public Guid? GetCurrentTenantId() => _tenantId;
         public void SetCurrentTenantId(Guid? tenantId) => _tenantId = tenantId;

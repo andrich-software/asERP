@@ -243,7 +243,8 @@ public class CountryListQueryTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<PaginatedResult<CountryListDto>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertTrue(result.Succeeded);
-        TestAssertions.AssertEqual(1000, result.PageSize);
+        // Page size is clamped to the server-side maximum so a client cannot dump the whole table.
+        TestAssertions.AssertEqual(asERP.Application.Extensions.QueryableExtensions.MaxPageSize, result.PageSize);
     }
 
     [Fact]

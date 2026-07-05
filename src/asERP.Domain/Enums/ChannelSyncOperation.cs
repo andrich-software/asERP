@@ -17,4 +17,7 @@ public enum ChannelSyncOperation
     UpdatePrice = 12,
     UpdateSales = 13,
     DelistProduct = 14,
+
+    /// <summary>Push a local order cancellation back to the originating channel.</summary>
+    CancelSales = 15,
 }

@@ -49,6 +49,10 @@ public class InvoiceCreateCommandTests : IDisposable
         Client.DefaultRequestHeaders.Remove("X-Tenant-Id");
         Client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId.ToString());
 
+        // Keep the test scope's tenant context in sync so DbContext assertions see the
+        // same tenant-filtered data as the server (the tenant query filter is always active).
+        TenantContext.SetCurrentTenantId(tenantId);
+
         Task.Delay(10).Wait();
     }
 
@@ -464,8 +468,11 @@ public class InvoiceCreateCommandTests : IDisposable
         var result1 = await ReadResponseAsync<Result<Guid?>>(response1);
         var result2 = await ReadResponseAsync<Result<Guid?>>(response2);
 
-        var createdInvoice1 = await DbContext.Invoice.FindAsync(AssertAndGetInvoiceId(result1));
-        var createdInvoice2 = await DbContext.Invoice.FindAsync(AssertAndGetInvoiceId(result2));
+        // Cross-tenant assertion: inspect both tenants' invoices, so bypass the tenant filter.
+        var invoice1Id = AssertAndGetInvoiceId(result1);
+        var invoice2Id = AssertAndGetInvoiceId(result2);
+        var createdInvoice1 = await DbContext.Invoice.IgnoreQueryFilters().FirstOrDefaultAsync(i => i.Id == invoice1Id);
+        var createdInvoice2 = await DbContext.Invoice.IgnoreQueryFilters().FirstOrDefaultAsync(i => i.Id == invoice2Id);
 
         TestAssertions.AssertNotNull(createdInvoice1);
         TestAssertions.AssertNotNull(createdInvoice2);

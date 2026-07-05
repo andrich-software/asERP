@@ -54,6 +54,10 @@ public class ShippingCustomerNotificationTests : TenantIsolatedTestBase
 
         await DbContext.SaveChangesAsync();
 
+        // Act as the seeded tenant before touching tenant-scoped rows — the tenant query
+        // filter would otherwise hide the customer created above.
+        TenantContext.SetCurrentTenantId(tenant);
+
         if (customerEmail != "unset")
         {
             var customer = await DbContext.Customer.FirstAsync(c => c.CustomerId == customerNumber);
@@ -61,7 +65,6 @@ public class ShippingCustomerNotificationTests : TenantIsolatedTestBase
             await DbContext.SaveChangesAsync();
         }
 
-        TenantContext.SetCurrentTenantId(tenant);
         return shipping;
     }
 

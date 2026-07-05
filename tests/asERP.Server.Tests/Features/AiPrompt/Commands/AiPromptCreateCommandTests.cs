@@ -139,22 +139,22 @@ public class AiPromptCreateCommandTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task CreateAiPrompt_WithInvalidAiModelId_ShouldReturnCreated()
+    public async Task CreateAiPrompt_WithInvalidAiModelId_ShouldReturnBadRequest()
     {
         // Arrange
         await SeedTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
         var promptDto = CreateValidAiPromptDto();
-        promptDto.AiModelId = Guid.Parse("99999999-9999-9999-9999-999999999999"); // Non-existent AI model - but validation might not check this
+        promptDto.AiModelId = Guid.Parse("99999999-9999-9999-9999-999999999999"); // Non-existent AI model
 
         // Act
         var response = await PostAsJsonAsync("/api/v1/AiPrompts", promptDto);
 
-        // Assert
-        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        // Assert - the referenced AI model must exist in the current tenant
+        TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertTrue(result.Succeeded);
+        TestAssertions.AssertFalse(result.Succeeded);
     }
 
     [Fact]
@@ -211,7 +211,7 @@ public class AiPromptCreateCommandTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task CreateAiPrompt_WithoutTenantHeader_ShouldReturnCreated()
+    public async Task CreateAiPrompt_WithoutTenantHeader_ShouldReturnBadRequest()
     {
         // Arrange
         await SeedTestDataAsync();
@@ -222,15 +222,13 @@ public class AiPromptCreateCommandTests : TenantIsolatedTestBase
         // Act
         var response = await PostAsJsonAsync("/api/v1/AiPrompts", promptDto);
 
-        // Assert - AI prompt creation appears to work without tenant header
-        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
-        var result = await ReadResponseAsync<Result<Guid>>(response);
-        TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertTrue(result.Succeeded);
+        // Assert - without a tenant context the referenced AI model cannot be resolved,
+        // so the tenant-scoped create is rejected instead of persisting an ownerless row
+        TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task CreateAiPrompt_WithInvalidTenantHeaderValue_ShouldReturnCreated()
+    public async Task CreateAiPrompt_WithInvalidTenantHeaderValue_ShouldReturnBadRequest()
     {
         // Arrange
         await SeedTestDataAsync();
@@ -241,8 +239,8 @@ public class AiPromptCreateCommandTests : TenantIsolatedTestBase
         // Act
         var response = await PostAsJsonAsync("/api/v1/AiPrompts", promptDto);
 
-        // Assert - AI prompt creation appears to be permissive with tenant validation
-        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        // Assert - the referenced AI model does not exist for the requested tenant
+        TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -257,21 +255,12 @@ public class AiPromptCreateCommandTests : TenantIsolatedTestBase
         // Act
         var response = await PostAsJsonAsync("/api/v1/AiPrompts", promptDto);
 
-        // Assert - Should still create the prompt as AiModelId validation might be flexible
-        // But the created prompt will be isolated to tenant 2
-        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        // Assert - referencing another tenant's AI model is a cross-tenant access attempt
+        // and must be rejected
+        TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertTrue(result.Succeeded);
-
-        // Verify the prompt is only accessible in tenant 2
-        var getResponse = await Client.GetAsync($"/api/v1/AiPrompts/{result.Data}");
-        TestAssertions.AssertHttpSuccess(getResponse);
-
-        // Verify it's not accessible from tenant 1
-        SetTenantHeader(TenantConstants.TestTenant1Id);
-        var getResponseTenant1 = await Client.GetAsync($"/api/v1/AiPrompts/{result.Data}");
-        TestAssertions.AssertHttpStatusCode(getResponseTenant1, HttpStatusCode.NotFound);
+        TestAssertions.AssertFalse(result.Succeeded);
     }
 
     [Fact]
@@ -409,41 +398,35 @@ public class AiPromptCreateCommandTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task CreateAiPrompt_WithZeroAiModelId_ShouldReturnCreated()
+    public async Task CreateAiPrompt_WithZeroAiModelId_ShouldReturnBadRequest()
     {
         // Arrange
         await SeedTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
         var promptDto = CreateValidAiPromptDto();
-        promptDto.AiModelId = Guid.Empty; // Only Identifier is validated, not AiModelId
+        promptDto.AiModelId = Guid.Empty; // AiModelId is validated against the current tenant
 
         // Act
         var response = await PostAsJsonAsync("/api/v1/AiPrompts", promptDto);
 
         // Assert
-        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
-        var result = await ReadResponseAsync<Result<Guid>>(response);
-        TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertTrue(result.Succeeded);
+        TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task CreateAiPrompt_WithNegativeAiModelId_ShouldReturnCreated()
+    public async Task CreateAiPrompt_WithUnknownAiModelId_ShouldReturnBadRequest()
     {
         // Arrange
         await SeedTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
         var promptDto = CreateValidAiPromptDto();
-        promptDto.AiModelId = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"); // Invalid Guid - Only Identifier is validated, not AiModelId
+        promptDto.AiModelId = Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"); // AiModelId is validated against the current tenant
 
         // Act
         var response = await PostAsJsonAsync("/api/v1/AiPrompts", promptDto);
 
         // Assert
-        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
-        var result = await ReadResponseAsync<Result<Guid>>(response);
-        TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertTrue(result.Succeeded);
+        TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]

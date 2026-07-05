@@ -22,4 +22,7 @@ public enum SalesChannelCapabilities
 
     /// <summary>Can mirror the shop's stock levels into a local warehouse (stock-master channels).</summary>
     ImportStock = 1 << 10,
+
+    /// <summary>Can push a local order cancellation back to the shop (dedicated CancelSales export).</summary>
+    CancelSales = 1 << 11,
 }

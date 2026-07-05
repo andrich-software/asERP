@@ -18,6 +18,28 @@ public class AiPromptRepository : GenericRepository<AiPrompt>, IAiPromptReposito
         return await Entities.FirstOrDefaultAsync(p => p.Identifier == identifier);
     }
 
+    public override async Task<bool> IsUniqueAsync(AiPrompt entity, Guid? id = null)
+    {
+        var currentTenantId = TenantContext.GetCurrentTenantId();
+
+        var query = Context.AiPrompt.AsQueryable();
+
+        if (currentTenantId.HasValue)
+        {
+            query = query.Where(p => p.TenantId == currentTenantId.Value);
+        }
+
+        query = query.Where(p => p.Identifier == entity.Identifier);
+
+        if (id.HasValue)
+        {
+            query = query.Where(p => p.Id != id.Value);
+        }
+
+        var exists = await query.AnyAsync();
+        return !exists;
+    }
+
     public async Task SaveChangesAsync()
     {
         await Context.SaveChangesAsync();

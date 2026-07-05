@@ -51,6 +51,10 @@ public class InvoiceUpdateCommandTests : IDisposable
         Client.DefaultRequestHeaders.Remove("X-Tenant-Id");
         Client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId.ToString());
 
+        // Keep the test scope's tenant context in sync so DbContext assertions see the
+        // same tenant-filtered data as the server (the tenant query filter is always active).
+        TenantContext.SetCurrentTenantId(tenantId);
+
         Task.Delay(10).Wait();
     }
 

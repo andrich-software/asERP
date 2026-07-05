@@ -365,6 +365,7 @@ public sealed class SyncDispatcher
         ChannelSyncOperation.UpdatePrice => connector.Capabilities.HasFlag(SalesChannelCapabilities.UpdatePrice),
         ChannelSyncOperation.UpdateSales => connector.Capabilities.HasFlag(SalesChannelCapabilities.UpdateSaless),
         ChannelSyncOperation.DelistProduct => connector.Capabilities.HasFlag(SalesChannelCapabilities.DelistProducts),
+        ChannelSyncOperation.CancelSales => connector.Capabilities.HasFlag(SalesChannelCapabilities.CancelSales),
         _ => false,
     };
 
@@ -383,6 +384,7 @@ public sealed class SyncDispatcher
             ChannelSyncOperation.UpdatePrice => await UpdatePriceAsync(connector, context, outbox, cancellationToken),
             ChannelSyncOperation.UpdateSales => await UpdateSalesAsync(connector, context, outbox, cancellationToken),
             ChannelSyncOperation.DelistProduct => await DelistProductAsync(connector, context, outbox, cancellationToken),
+            ChannelSyncOperation.CancelSales => await CancelSalesAsync(connector, context, outbox, cancellationToken),
             _ => ExportResult.Fail($"Unsupported export operation {outbox.Operation}"),
         };
     }
@@ -492,6 +494,21 @@ public sealed class SyncDispatcher
 
         return await connector.UpdateSalesAsync(context, new SalesUpdatePayload(
             sales.Id, sales.RemoteSalesId, sales.Status.ToString(), null, null));
+    }
+
+    private async Task<ExportResult> CancelSalesAsync(ISalesChannelConnector connector, SalesChannelContext context, ChannelExportOutbox outbox, CancellationToken cancellationToken)
+    {
+        var sales = await _context.Sales
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(o => o.Id == outbox.AggregateId, cancellationToken);
+
+        if (sales is null)
+        {
+            return ExportResult.Fail("Sales not found at dispatch time");
+        }
+
+        return await connector.CancelSalesAsync(context, new CancelSalesPayload(
+            sales.Id, sales.RemoteSalesId));
     }
 
     private async Task<ExportResult> DelistProductAsync(ISalesChannelConnector connector, SalesChannelContext context, ChannelExportOutbox outbox, CancellationToken cancellationToken)

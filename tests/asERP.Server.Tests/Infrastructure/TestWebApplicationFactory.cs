@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using IAuthenticationService = Microsoft.AspNetCore.Authentication.IAuthenticationService;
@@ -52,6 +53,10 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
                 var builder = new DbContextOptionsBuilder<ApplicationDbContext>();
                 builder.UseInMemoryDatabase(testDatabaseName);
                 builder.EnableSensitiveDataLogging(false);
+                // Production handlers wrap multi-step mutations in transactions; the InMemory
+                // provider does not support them and throws by default. Treat them as no-ops
+                // so the transactional handlers stay testable against the InMemory database.
+                builder.ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning));
                 return builder.Options;
             });
 

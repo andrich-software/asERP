@@ -70,7 +70,7 @@ public sealed class SalesChangedNotificationHandler : INotificationHandler<Sales
             }
 
             var connector = _connectorRegistry.Resolve(channel.Type);
-            if (connector is null || !connector.Capabilities.HasFlag(SalesChannelCapabilities.CancelSaless))
+            if (connector is null || !connector.Capabilities.HasFlag(SalesChannelCapabilities.CancelSales))
             {
                 _logger.LogInformation(
                     "Cancellation push for sales {SalesId} skipped: {ChannelType} does not support CancelSales",
