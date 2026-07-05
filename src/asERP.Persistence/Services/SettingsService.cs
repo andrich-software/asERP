@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Persistence;
+using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Models.Analytics;
 using asERP.Application.Models.Email;
@@ -160,6 +160,15 @@ public class SettingsService : ISettingsService
                     break;
                 case "Grafana.LokiEndpoint":
                     grafanaSettings.LokiEndpoint = setting.Value;
+                    break;
+                case "Grafana.LokiUser":
+                    grafanaSettings.LokiUser = setting.Value;
+                    break;
+                case "Grafana.LokiPassword":
+                    grafanaSettings.LokiPassword = setting.IsEncrypted ? _encryptor.Decrypt(setting.Value) : setting.Value;
+                    break;
+                case "Grafana.OtlpEndpoint":
+                    grafanaSettings.OtlpEndpoint = setting.Value;
                     break;
                 case "Grafana.MetricsEnabled":
                     if (bool.TryParse(setting.Value, out var metricsEnabled))

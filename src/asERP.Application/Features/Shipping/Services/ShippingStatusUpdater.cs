@@ -85,6 +85,25 @@ public class ShippingStatusUpdater : IShippingStatusUpdater
             shipping.DeliveredAt = eventTime;
         }
 
+        // Consume the customer-notification slots in the same save as the status change so a
+        // racing second transition can never publish a duplicate "due" event. Stamped regardless
+        // of the tenant opt-in — the handler decides whether a mail actually goes out.
+        ShippingCustomerNotificationKind? customerNotificationDue = null;
+        if (newStatus == ShippingStatus.Delivered && shipping.CustomerDeliveryNotifiedAt == null)
+        {
+            // Skip-ahead (e.g. poller jumps LabelCreated -> Delivered) consumes the shipped slot
+            // too: a late "on the way" mail after delivery would be noise.
+            shipping.CustomerNotifiedAt ??= eventTime;
+            shipping.CustomerDeliveryNotifiedAt = eventTime;
+            customerNotificationDue = ShippingCustomerNotificationKind.Delivered;
+        }
+        else if (shipping.CustomerNotifiedAt == null && newStatus is ShippingStatus.Shipped
+                     or ShippingStatus.InTransit or ShippingStatus.OutForDelivery)
+        {
+            shipping.CustomerNotifiedAt = eventTime;
+            customerNotificationDue = ShippingCustomerNotificationKind.Shipped;
+        }
+
         await _shippingRepository.UpdateAsync(shipping);
 
         await _salesRepository.AddSalesHistoryAsync(new SalesHistory
@@ -104,6 +123,13 @@ public class ShippingStatusUpdater : IShippingStatusUpdater
         await _mediator.Publish(
             new SalesChangedNotification(shipping.SalesId, shipping.TenantId, SalesChangeKind.StatusChanged),
             cancellationToken);
+
+        if (customerNotificationDue is { } notificationKind)
+        {
+            await _mediator.Publish(
+                new ShippingCustomerNotificationDue(shipping.Id, shipping.SalesId, shipping.TenantId, notificationKind),
+                cancellationToken);
+        }
 
         return new Result { Succeeded = true, StatusCode = ResultStatusCode.Ok };
     }

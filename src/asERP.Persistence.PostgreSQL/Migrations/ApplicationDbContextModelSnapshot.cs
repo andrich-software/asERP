@@ -51,14 +51,14 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = "cac43a6e-f7bb-4448-baaf-1add431ccbbf",
-                            ConcurrencyStamp = "4bb15fe9-8e54-457e-9d9e-d752febdf7d2",
+                            ConcurrencyStamp = "729c0cd2-374c-4ee8-aacc-6cd07e99ea45",
                             Name = "User",
                             NormalizedName = "USER"
                         },
                         new
                         {
                             Id = "abc43a7e-f7bb-4447-baaf-1add431ddbdf",
-                            ConcurrencyStamp = "f7eb7358-45b3-4031-8215-5497c104748f",
+                            ConcurrencyStamp = "768b5a5b-a7ad-4cf5-92a1-50ad9ad60b27",
                             Name = "Superadmin",
                             NormalizedName = "SUPERADMIN"
                         });
@@ -363,9 +363,9 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         {
                             Id = "8e445865-a24d-4543-a6c6-9443d048cdb9",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "0626b446-dee4-42e6-9204-7fdfcad23601",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 76, DateTimeKind.Utc).AddTicks(918),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 76, DateTimeKind.Utc).AddTicks(920),
+                            ConcurrencyStamp = "233ceafa-cfa6-4f89-9203-32f83077e7b5",
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 439, DateTimeKind.Utc).AddTicks(7374),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 439, DateTimeKind.Utc).AddTicks(7379),
                             Email = "admin@localhost.com",
                             EmailConfirmed = true,
                             Firstname = "System",
@@ -373,9 +373,9 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@LOCALHOST.COM",
                             NormalizedUserName = "ADMIN@LOCALHOST.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEK0imMei94bqLHdxBFcf7DMSvYrY1uYXOaHIgN/XhlK+G4d5KAet0iRA+Op2ZXbWWw==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEJQVsTPvQlDsxdjN2r5xKTkr0BrsRIr8PMb33F3f87aUx5Bdp4sEF95ak2ejBgYAyQ==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "c061a797-b423-4c40-a81f-5f1ee00ac855",
+                            SecurityStamp = "3455084c-2610-400c-8ef3-41d1a466f7de",
                             TwoFactorEnabled = false,
                             UserName = "admin@localhost.com"
                         });
@@ -586,960 +586,960 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
                             CountryCode = "DE",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4252),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4254),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(3465),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(3467),
                             Name = "Germany"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000002"),
                             CountryCode = "AT",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4932),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4933),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4079),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4079),
                             Name = "Austria"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000003"),
                             CountryCode = "CH",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4936),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4936),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4082),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4083),
                             Name = "Switzerland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000004"),
                             CountryCode = "AD",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4944),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4945),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4084),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4084),
                             Name = "Andorra"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000005"),
                             CountryCode = "AF",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4946),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4946),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4086),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4086),
                             Name = "Afghanistan"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000006"),
                             CountryCode = "AG",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4948),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4948),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4087),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4088),
                             Name = "Antigua and Barbuda"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000007"),
                             CountryCode = "AL",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4950),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4950),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4089),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4089),
                             Name = "Albania"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000008"),
                             CountryCode = "AM",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4952),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4952),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4091),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4091),
                             Name = "Armenia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000009"),
                             CountryCode = "AO",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4954),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4954),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4095),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4095),
                             Name = "Angola"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000010"),
                             CountryCode = "AX",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4955),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4956),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4096),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4096),
                             Name = "Åland Islands"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000011"),
                             CountryCode = "AR",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4957),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4957),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4098),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4098),
                             Name = "Argentina"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000012"),
                             CountryCode = "AT",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4971),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4972),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4099),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4100),
                             Name = "Antarctica"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000013"),
                             CountryCode = "AU",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4974),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4974),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4101),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4101),
                             Name = "Australia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000014"),
                             CountryCode = "AZ",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4976),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4976),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4102),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4103),
                             Name = "Azerbaijan"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000015"),
                             CountryCode = "BA",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4978),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4978),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4104),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4104),
                             Name = "Bosnia and Herzegovina"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000016"),
                             CountryCode = "BB",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4980),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4980),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4105),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4106),
                             Name = "Barbados"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000017"),
                             CountryCode = "BE",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4981),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4982),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4108),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4108),
                             Name = "Belgium"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000018"),
                             CountryCode = "BG",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4983),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4983),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4121),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4121),
                             Name = "Bulgaria"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000019"),
                             CountryCode = "BL",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4985),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4985),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4123),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4123),
                             Name = "Saint Barthélemy"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000020"),
                             CountryCode = "BO",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4988),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4988),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4125),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4125),
                             Name = "Bolivia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000021"),
                             CountryCode = "BR",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4990),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4990),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4127),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4127),
                             Name = "Brazil"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000022"),
                             CountryCode = "BS",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4991),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4992),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4128),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4129),
                             Name = "Bahamas"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000023"),
                             CountryCode = "BY",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4993),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4993),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4130),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4130),
                             Name = "Belarus"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000024"),
                             CountryCode = "BZ",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4995),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4995),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4132),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4132),
                             Name = "Belize"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000025"),
                             CountryCode = "CA",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4996),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4997),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4134),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4135),
                             Name = "Canada"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000026"),
                             CountryCode = "CH",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4998),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(4998),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4136),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4136),
                             Name = "Cocos (Keeling) Islands"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000027"),
                             CountryCode = "CI",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5010),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5010),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4148),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4149),
                             Name = "Ivory Coast"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000028"),
                             CountryCode = "CL",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5023),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5024),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4152),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4152),
                             Name = "Chile"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000029"),
                             CountryCode = "CN",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5026),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5027),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4154),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4154),
                             Name = "China"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000030"),
                             CountryCode = "CO",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5028),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5029),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4155),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4156),
                             Name = "Colombia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000031"),
                             CountryCode = "CR",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5030),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5030),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4157),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4157),
                             Name = "Costa Rica"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000032"),
                             CountryCode = "CU",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5032),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5032),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4158),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4159),
                             Name = "Cuba"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000033"),
                             CountryCode = "CY",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5033),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5034),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4161),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4162),
                             Name = "Cyprus"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000034"),
                             CountryCode = "CZ",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5035),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5035),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4170),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4171),
                             Name = "Czech Republic"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000035"),
                             CountryCode = "DO",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5037),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5037),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4173),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4173),
                             Name = "Dominican Republic"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000036"),
                             CountryCode = "DK",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5040),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5040),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4174),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4174),
                             Name = "Denmark"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000037"),
                             CountryCode = "DZ",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5042),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5042),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4176),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4176),
                             Name = "Algeria"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000038"),
                             CountryCode = "EC",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5043),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5043),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4178),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4178),
                             Name = "Ecuador"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000039"),
                             CountryCode = "EE",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5045),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5045),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4179),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4179),
                             Name = "Estonia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000040"),
                             CountryCode = "EG",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5047),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5047),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4180),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4181),
                             Name = "Egypt"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000041"),
                             CountryCode = "ER",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5049),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5049),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4183),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4183),
                             Name = "Eritrea"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000042"),
                             CountryCode = "ES",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5050),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5051),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4185),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4185),
                             Name = "Spain"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000043"),
                             CountryCode = "ET",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5052),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5052),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4186),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4187),
                             Name = "Ethiopia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000044"),
                             CountryCode = "FI",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5063),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5064),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4188),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4188),
                             Name = "Finland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000045"),
                             CountryCode = "FR",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5066),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5066),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4189),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4190),
                             Name = "France"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000046"),
                             CountryCode = "GB",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5068),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5068),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4191),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4191),
                             Name = "United Kingdom"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000047"),
                             CountryCode = "GE",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5070),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5070),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4192),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4193),
                             Name = "Georgia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000048"),
                             CountryCode = "GF",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5071),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5072),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4194),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4194),
                             Name = "French Guiana"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000049"),
                             CountryCode = "GH",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5073),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5073),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4197),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4197),
                             Name = "Ghana"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000050"),
                             CountryCode = "GL",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5075),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5075),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4205),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4206),
                             Name = "Greenland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000051"),
                             CountryCode = "GP",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5077),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5077),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4208),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4208),
                             Name = "Guadeloupe"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000052"),
                             CountryCode = "GR",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5080),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5080),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4210),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4210),
                             Name = "Greece"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000053"),
                             CountryCode = "GT",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5082),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5082),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4211),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4211),
                             Name = "Guatemala"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000054"),
                             CountryCode = "GY",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5083),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5083),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4213),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4213),
                             Name = "Guyana"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000055"),
                             CountryCode = "HN",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5085),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5085),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4214),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4215),
                             Name = "Honduras"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000056"),
                             CountryCode = "HR",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5087),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5087),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4216),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4216),
                             Name = "Croatia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000057"),
                             CountryCode = "HT",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5088),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5088),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4219),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4219),
                             Name = "Haiti"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000058"),
                             CountryCode = "HU",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5090),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5090),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4220),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4220),
                             Name = "Hungary"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000059"),
                             CountryCode = "ID",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5092),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5092),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4222),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4222),
                             Name = "Indonesia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000060"),
                             CountryCode = "IE",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5102),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5103),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4223),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4224),
                             Name = "Ireland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000061"),
                             CountryCode = "IN",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5105),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5105),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4225),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4225),
                             Name = "India"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000062"),
                             CountryCode = "IR",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5107),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5107),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4226),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4227),
                             Name = "Iran"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000063"),
                             CountryCode = "IS",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5109),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5109),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4228),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4228),
                             Name = "Iceland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000064"),
                             CountryCode = "IT",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5111),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5111),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4229),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4230),
                             Name = "Italy"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000065"),
                             CountryCode = "JM",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5113),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5113),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4232),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4232),
                             Name = "Jamaica"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000066"),
                             CountryCode = "JP",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5115),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5115),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4243),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4243),
                             Name = "Japan"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000067"),
                             CountryCode = "KE",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5125),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5125),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4246),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4246),
                             Name = "Kenya"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000068"),
                             CountryCode = "KG",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5128),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5128),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4247),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4247),
                             Name = "Kyrgyzstan"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000069"),
                             CountryCode = "KR",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5130),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5130),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4249),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4249),
                             Name = "South Korea"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000070"),
                             CountryCode = "KW",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5132),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5132),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4250),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4251),
                             Name = "Kuwait"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000071"),
                             CountryCode = "KZ",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5133),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5134),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4252),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4252),
                             Name = "Kazakhstan"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000072"),
                             CountryCode = "LU",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5135),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5136),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4254),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4254),
                             Name = "Luxembourg"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000073"),
                             CountryCode = "LT",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5137),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5137),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4256),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4257),
                             Name = "Lithuania"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000074"),
                             CountryCode = "LV",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5139),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5139),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4258),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4258),
                             Name = "Latvia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000075"),
                             CountryCode = "MA",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5140),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5141),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4260),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4260),
                             Name = "Morocco"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000076"),
                             CountryCode = "MC",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5152),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5152),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4261),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4261),
                             Name = "Monaco"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000077"),
                             CountryCode = "MD",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5155),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5155),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4263),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4263),
                             Name = "Moldova"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000078"),
                             CountryCode = "MF",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5157),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5157),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4264),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4264),
                             Name = "Saint Martin"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000079"),
                             CountryCode = "MG",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5159),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5159),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4266),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4266),
                             Name = "Madagascar"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000080"),
                             CountryCode = "MQ",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5161),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5161),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4267),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4267),
                             Name = "Martinique"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000081"),
                             CountryCode = "MT",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5162),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5163),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4270),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4270),
                             Name = "Malta"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000082"),
                             CountryCode = "MX",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5164),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5164),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4278),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4279),
                             Name = "Mexico"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000083"),
                             CountryCode = "MY",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5166),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5166),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4280),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4281),
                             Name = "Malaysia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000084"),
                             CountryCode = "NG",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5169),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5169),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4289),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4289),
                             Name = "Nigeria"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000085"),
                             CountryCode = "NI",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5171),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5171),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4291),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4291),
                             Name = "Nicaragua"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000086"),
                             CountryCode = "NL",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5172),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5173),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4292),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4292),
                             Name = "Netherlands"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000087"),
                             CountryCode = "NO",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5174),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5174),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4294),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4294),
                             Name = "Norway"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000088"),
                             CountryCode = "NZ",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5176),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5176),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4295),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4296),
                             Name = "New Zealand"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000089"),
                             CountryCode = "OM",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5177),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5178),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4298),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4298),
                             Name = "Oman"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000090"),
                             CountryCode = "PA",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5179),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5179),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4300),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4300),
                             Name = "Panama"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000091"),
                             CountryCode = "PE",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5181),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5181),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4301),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4302),
                             Name = "Peru"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000092"),
                             CountryCode = "PL",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5191),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5192),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4303),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4303),
                             Name = "Poland"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000093"),
                             CountryCode = "PM",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5194),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5195),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4304),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4305),
                             Name = "Saint Pierre and Miquelon"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000094"),
                             CountryCode = "PR",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5196),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5197),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4306),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4306),
                             Name = "Puerto Rico"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000095"),
                             CountryCode = "PT",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5198),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5198),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4307),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4308),
                             Name = "Portugal"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000096"),
                             CountryCode = "PY",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5200),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5200),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4309),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4309),
                             Name = "Paraguay"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000097"),
                             CountryCode = "QA",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5202),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5202),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4312),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4312),
                             Name = "Qatar"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000098"),
                             CountryCode = "RO",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5204),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5204),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4321),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4321),
                             Name = "Romania"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000099"),
                             CountryCode = "RS",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5206),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5206),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4323),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4324),
                             Name = "Serbia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000100"),
                             CountryCode = "RU",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5209),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5209),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4325),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4325),
                             Name = "Russia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000101"),
                             CountryCode = "SA",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5212),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5212),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4327),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4327),
                             Name = "Saudi Arabia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000102"),
                             CountryCode = "SE",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5214),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5214),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4329),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4329),
                             Name = "Sweden"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000103"),
                             CountryCode = "SG",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5216),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5217),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4331),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4331),
                             Name = "Singapore"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000104"),
                             CountryCode = "SI",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5219),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5219),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4333),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4333),
                             Name = "Slovenia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000105"),
                             CountryCode = "SK",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5221),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5221),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4336),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4336),
                             Name = "Slovakia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000106"),
                             CountryCode = "SN",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5223),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5223),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4338),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4338),
                             Name = "Senegal"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000107"),
                             CountryCode = "SR",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5225),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5225),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4340),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4340),
                             Name = "Suriname"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000108"),
                             CountryCode = "SV",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5228),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5228),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4342),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4342),
                             Name = "El Salvador"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000109"),
                             CountryCode = "TR",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5230),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5231),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4344),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4344),
                             Name = "Turkey"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000110"),
                             CountryCode = "TT",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5232),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5232),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4345),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4346),
                             Name = "Trinidad and Tobago"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000111"),
                             CountryCode = "UA",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5234),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5234),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4347),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4347),
                             Name = "Ukraine"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000112"),
                             CountryCode = "US",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5236),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5236),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4348),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4349),
                             Name = "United States"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000113"),
                             CountryCode = "UY",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5237),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5238),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4351),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4351),
                             Name = "Uruguay"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000114"),
                             CountryCode = "VE",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5239),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5239),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4353),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4353),
                             Name = "Venezuela"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000115"),
                             CountryCode = "VI",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5241),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5241),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4354),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4354),
                             Name = "Virgin Islands"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000116"),
                             CountryCode = "VN",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5244),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5244),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4356),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4356),
                             Name = "Vietnam"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000117"),
                             CountryCode = "YE",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5246),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5246),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4357),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4357),
                             Name = "Yemen"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000118"),
                             CountryCode = "ZA",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5248),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5248),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4359),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4359),
                             Name = "South Africa"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000119"),
                             CountryCode = "ZM",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5250),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5250),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4360),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4360),
                             Name = "Zambia"
                         },
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000120"),
                             CountryCode = "ZW",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5251),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(5252),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4362),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(4362),
                             Name = "Zimbabwe"
                         });
                 });
@@ -2032,8 +2032,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                             Id = new Guid("55555555-5555-5555-5555-555555555555"),
                             City = "Berlin",
                             Country = "Deutschland",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 129, DateTimeKind.Utc).AddTicks(4767),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 129, DateTimeKind.Utc).AddTicks(4768),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 486, DateTimeKind.Utc).AddTicks(4051),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 486, DateTimeKind.Utc).AddTicks(4053),
                             Email = "info@beispiel-hersteller.de",
                             Name = "Beispiel Hersteller GmbH",
                             Phone = "+49 30 12345678",
@@ -2590,6 +2590,211 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                     b.ToTable("refresh_token", (string)null);
                 });
 
+            modelBuilder.Entity("asERP.Domain.Entities.ReturnLabelOutbox", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ReturnShipmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ShippingProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReturnShipmentId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.ToTable("return_label_outbox", (string)null);
+                });
+
+            modelBuilder.Entity("asERP.Domain.Entities.ReturnShipment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CarrierShipmentId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("LabelData")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("LabelFormat")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("LastCarrierStatusRaw")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime?>("LastTrackedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid?>("OriginalShippingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("RefundAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("SalesId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ShippingProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TrackingNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("TrackingUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OriginalShippingId");
+
+                    b.HasIndex("SalesId");
+
+                    b.HasIndex("ShippingProviderId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TrackingNumber", "TenantId");
+
+                    b.ToTable("return_shipment", (string)null);
+                });
+
+            modelBuilder.Entity("asERP.Domain.Entities.ReturnShipmentItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Condition")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double>("Quantity")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReasonText")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("ReturnShipmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SalesItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReturnShipmentId");
+
+                    b.HasIndex("SalesItemId");
+
+                    b.ToTable("return_shipment_item", (string)null);
+                });
+
+            modelBuilder.Entity("asERP.Domain.Entities.ReturnShipmentItemSerialNumber", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DateModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ReturnShipmentItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SerialNumber")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReturnShipmentItemId");
+
+                    b.ToTable("return_shipment_item_serialnumber", (string)null);
+                });
+
             modelBuilder.Entity("asERP.Domain.Entities.Sales", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2878,8 +3083,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         {
                             Id = new Guid("88888888-8888-8888-8888-888888888888"),
                             CustomerImportPageCursor = 0,
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 143, DateTimeKind.Utc).AddTicks(8983),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 143, DateTimeKind.Utc).AddTicks(8986),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 498, DateTimeKind.Utc).AddTicks(9827),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 498, DateTimeKind.Utc).AddTicks(9829),
                             ExportCustomers = false,
                             ExportProducts = false,
                             ExportSaless = false,
@@ -3075,8 +3280,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666615"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(6961),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(6966),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1409),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1412),
                             IsEncrypted = false,
                             Key = "Jwt.Issuer",
                             Value = "asERP.Server"
@@ -3084,8 +3289,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666616"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7323),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7323),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1767),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1767),
                             IsEncrypted = false,
                             Key = "Jwt.Audience",
                             Value = "asERP.Client"
@@ -3093,8 +3298,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666617"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7336),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7336),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1778),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1778),
                             IsEncrypted = false,
                             Key = "Jwt.DurationInMinutes",
                             Value = "60"
@@ -3102,8 +3307,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666618"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7339),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7339),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1780),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1781),
                             IsEncrypted = false,
                             Key = "Jwt.RefreshTokenExpireDays",
                             Value = "7"
@@ -3111,8 +3316,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666619"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7341),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7341),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1782),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1782),
                             IsEncrypted = false,
                             Key = "Email.ProviderType",
                             Value = "Smtp"
@@ -3120,8 +3325,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666624"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7342),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7342),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1783),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1784),
                             IsEncrypted = false,
                             Key = "Email.SmtpHost",
                             Value = ""
@@ -3129,8 +3334,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666625"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7344),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7344),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1785),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1785),
                             IsEncrypted = false,
                             Key = "Email.SmtpPort",
                             Value = "587"
@@ -3138,8 +3343,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666626"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7346),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7346),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1786),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1786),
                             IsEncrypted = false,
                             Key = "Email.SmtpUsername",
                             Value = ""
@@ -3147,8 +3352,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666627"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7348),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7348),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1788),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1788),
                             IsEncrypted = false,
                             Key = "Email.SmtpPassword",
                             Value = ""
@@ -3156,8 +3361,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666628"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7350),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7350),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1789),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1789),
                             IsEncrypted = false,
                             Key = "Email.SmtpEnableSsl",
                             Value = "true"
@@ -3165,8 +3370,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666629"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7353),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7353),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1792),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1793),
                             IsEncrypted = false,
                             Key = "Email.M365TenantId",
                             Value = ""
@@ -3174,8 +3379,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666630"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7354),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7355),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1794),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1794),
                             IsEncrypted = false,
                             Key = "Email.M365ClientId",
                             Value = ""
@@ -3183,8 +3388,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666631"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7356),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7356),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1795),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1795),
                             IsEncrypted = false,
                             Key = "Email.M365ClientSecret",
                             Value = ""
@@ -3192,8 +3397,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666632"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7358),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7358),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1797),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1797),
                             IsEncrypted = false,
                             Key = "Email.M365SenderAddress",
                             Value = ""
@@ -3201,8 +3406,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666620"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7359),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7359),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1798),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1798),
                             IsEncrypted = false,
                             Key = "Email.FromAddress",
                             Value = "no-reply@martin-andrich.de"
@@ -3210,8 +3415,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666621"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7361),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7361),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1799),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1800),
                             IsEncrypted = false,
                             Key = "Email.FromName",
                             Value = "asERP"
@@ -3219,8 +3424,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666633"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7362),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7362),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1801),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1801),
                             IsEncrypted = false,
                             Key = "Email.ReplyToAddress",
                             Value = ""
@@ -3228,8 +3433,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666634"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7363),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7364),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1802),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1802),
                             IsEncrypted = false,
                             Key = "Email.ReplyToName",
                             Value = ""
@@ -3237,8 +3442,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666622"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7366),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7367),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1805),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1805),
                             IsEncrypted = false,
                             Key = "Telemetry.Endpoint",
                             Value = "http://localhost:4317"
@@ -3246,8 +3451,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("66666666-6666-6666-6666-666666666623"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7368),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 164, DateTimeKind.Utc).AddTicks(7368),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1813),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 524, DateTimeKind.Utc).AddTicks(1813),
                             IsEncrypted = false,
                             Key = "Telemetry.ServiceName",
                             Value = "asERP.Server"
@@ -3263,6 +3468,12 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                     b.Property<string>("CarrierShipmentId")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("CustomerDeliveryNotifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CustomerNotifiedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("timestamp with time zone");
@@ -3628,24 +3839,24 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777771"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 145, DateTimeKind.Utc).AddTicks(8213),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 145, DateTimeKind.Utc).AddTicks(8217),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 500, DateTimeKind.Utc).AddTicks(5892),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 500, DateTimeKind.Utc).AddTicks(5893),
                             TaxRate = 19.0,
                             TenantId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
                         },
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777772"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 145, DateTimeKind.Utc).AddTicks(8435),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 145, DateTimeKind.Utc).AddTicks(8435),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 500, DateTimeKind.Utc).AddTicks(6096),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 500, DateTimeKind.Utc).AddTicks(6097),
                             TaxRate = 7.0,
                             TenantId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
                         },
                         new
                         {
                             Id = new Guid("77777777-7777-7777-7777-777777777773"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 145, DateTimeKind.Utc).AddTicks(8438),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 145, DateTimeKind.Utc).AddTicks(8438),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 500, DateTimeKind.Utc).AddTicks(6099),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 500, DateTimeKind.Utc).AddTicks(6099),
                             TaxRate = 0.0,
                             TenantId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
                         });
@@ -3707,6 +3918,12 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<bool>("SendDeliveryNotificationEmails")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("SendShippingNotificationEmails")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("State")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -3732,12 +3949,14 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             ContactEmail = "admin@example.com",
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 121, DateTimeKind.Utc).AddTicks(9256),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 121, DateTimeKind.Utc).AddTicks(9262),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 479, DateTimeKind.Utc).AddTicks(2350),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 479, DateTimeKind.Utc).AddTicks(2355),
                             Description = "Default tenant for initial setup",
                             Name = "Default Tenant",
                             PackingSlipPrintByDefault = false,
-                            PackingSlipShowPrices = false
+                            PackingSlipShowPrices = false,
+                            SendDeliveryNotificationEmails = false,
+                            SendShippingNotificationEmails = false
                         });
                 });
 
@@ -3914,9 +4133,9 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         {
                             UserId = "8e445865-a24d-4543-a6c6-9443d048cdb9",
                             TenantId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 126, DateTimeKind.Utc).AddTicks(3636),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 126, DateTimeKind.Utc).AddTicks(3780),
-                            Id = new Guid("20eca17c-2d7a-43ca-8ed9-98f23709d2d2"),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 483, DateTimeKind.Utc).AddTicks(4167),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 483, DateTimeKind.Utc).AddTicks(4290),
+                            Id = new Guid("9971bf12-acb8-41a3-badd-0792bba64408"),
                             IsDefault = true,
                             RoleManageTenant = true,
                             RoleManageUser = true
@@ -3951,8 +4170,8 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                         new
                         {
                             Id = new Guid("33333333-3333-3333-3333-333333333333"),
-                            DateCreated = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(8190),
-                            DateModified = new DateTime(2026, 7, 4, 10, 11, 7, 128, DateTimeKind.Utc).AddTicks(8191),
+                            DateCreated = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(7527),
+                            DateModified = new DateTime(2026, 7, 4, 20, 54, 32, 485, DateTimeKind.Utc).AddTicks(7528),
                             Name = "Hauptlager",
                             TenantId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
                         });
@@ -4277,6 +4496,70 @@ namespace asERP.Persistence.PostgreSQL.Migrations
                     b.Navigation("ProductAttributeValue");
                 });
 
+            modelBuilder.Entity("asERP.Domain.Entities.ReturnLabelOutbox", b =>
+                {
+                    b.HasOne("asERP.Domain.Entities.ReturnShipment", "ReturnShipment")
+                        .WithMany()
+                        .HasForeignKey("ReturnShipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReturnShipment");
+                });
+
+            modelBuilder.Entity("asERP.Domain.Entities.ReturnShipment", b =>
+                {
+                    b.HasOne("asERP.Domain.Entities.Shipping", "OriginalShipping")
+                        .WithMany()
+                        .HasForeignKey("OriginalShippingId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("asERP.Domain.Entities.Sales", "Sales")
+                        .WithMany()
+                        .HasForeignKey("SalesId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("asERP.Domain.Entities.ShippingProvider", "ShippingProvider")
+                        .WithMany()
+                        .HasForeignKey("ShippingProviderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("OriginalShipping");
+
+                    b.Navigation("Sales");
+
+                    b.Navigation("ShippingProvider");
+                });
+
+            modelBuilder.Entity("asERP.Domain.Entities.ReturnShipmentItem", b =>
+                {
+                    b.HasOne("asERP.Domain.Entities.ReturnShipment", "ReturnShipment")
+                        .WithMany("Items")
+                        .HasForeignKey("ReturnShipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("asERP.Domain.Entities.SalesItem", "SalesItem")
+                        .WithMany()
+                        .HasForeignKey("SalesItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ReturnShipment");
+
+                    b.Navigation("SalesItem");
+                });
+
+            modelBuilder.Entity("asERP.Domain.Entities.ReturnShipmentItemSerialNumber", b =>
+                {
+                    b.HasOne("asERP.Domain.Entities.ReturnShipmentItem", null)
+                        .WithMany("SerialNumbers")
+                        .HasForeignKey("ReturnShipmentItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("asERP.Domain.Entities.Sales", b =>
                 {
                     b.HasOne("asERP.Domain.Entities.Customer", "Customer")
@@ -4466,6 +4749,16 @@ namespace asERP.Persistence.PostgreSQL.Migrations
             modelBuilder.Entity("asERP.Domain.Entities.ProductAttribute", b =>
                 {
                     b.Navigation("Values");
+                });
+
+            modelBuilder.Entity("asERP.Domain.Entities.ReturnShipment", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("asERP.Domain.Entities.ReturnShipmentItem", b =>
+                {
+                    b.Navigation("SerialNumbers");
                 });
 
             modelBuilder.Entity("asERP.Domain.Entities.Sales", b =>

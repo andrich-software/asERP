@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace asERP.Domain.Dtos.Tenant;
 
@@ -15,4 +15,10 @@ public class TenantDetailDto : TenantDtoBase
 
     [JsonPropertyName("packingSlipPrintByDefault")]
     public bool PackingSlipPrintByDefault { get; set; }
+
+    [JsonPropertyName("sendShippingNotificationEmails")]
+    public bool SendShippingNotificationEmails { get; set; }
+
+    [JsonPropertyName("sendDeliveryNotificationEmails")]
+    public bool SendDeliveryNotificationEmails { get; set; }
 }

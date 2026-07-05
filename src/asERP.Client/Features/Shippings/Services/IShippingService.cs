@@ -45,6 +45,13 @@ public interface IShippingService
     Task<List<ShippableSalesItemDto>> GetShippableItemsAsync(Guid salesId, CancellationToken ct = default);
 
     /// <summary>
+    /// Gets the paginated batch-shipping candidates: orders in a shippable status with at
+    /// least one line not yet assigned to a shipment.
+    /// </summary>
+    Task<PaginatedResponse<SalesReadyToShipListDto>> GetReadyToShipSalesAsync(
+        int pageNumber, int pageSize, CancellationToken ct = default);
+
+    /// <summary>
     /// Gets the shipping options applicable to a sales order, sorted by price ascending.
     /// An empty list with populated <see cref="ApiResponse{T}.Messages"/> explains why no
     /// option applies (e.g. destination country not resolvable).

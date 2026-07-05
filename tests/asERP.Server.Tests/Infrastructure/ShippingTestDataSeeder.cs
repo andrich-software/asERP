@@ -270,6 +270,50 @@ public static class ShippingTestDataSeeder
         return product;
     }
 
+    /// <summary>
+    /// Adds a customer return with one item row per given (SalesItemId, Quantity) tuple.
+    /// </summary>
+    public static ReturnShipment AddReturnShipment(
+        ApplicationDbContext context,
+        Sales sales,
+        ReturnShipmentStatus status = ReturnShipmentStatus.Requested,
+        Guid? shippingProviderId = null,
+        Guid? originalShippingId = null,
+        string trackingNumber = "",
+        byte[]? labelData = null,
+        string? labelFormat = null,
+        params (Guid SalesItemId, double Quantity)[] items)
+    {
+        var returnShipment = new ReturnShipment
+        {
+            Id = Guid.NewGuid(),
+            SalesId = sales.Id,
+            ShippingProviderId = shippingProviderId,
+            OriginalShippingId = originalShippingId,
+            Status = status,
+            TrackingNumber = trackingNumber,
+            LabelData = labelData,
+            LabelFormat = labelFormat,
+            TenantId = sales.TenantId
+        };
+
+        foreach (var (salesItemId, quantity) in items)
+        {
+            returnShipment.Items.Add(new ReturnShipmentItem
+            {
+                Id = Guid.NewGuid(),
+                ReturnShipmentId = returnShipment.Id,
+                SalesItemId = salesItemId,
+                Quantity = quantity,
+                Reason = ReturnReason.Unspecified,
+                TenantId = sales.TenantId
+            });
+        }
+
+        context.ReturnShipment.Add(returnShipment);
+        return returnShipment;
+    }
+
     public static SalesItemSerialNumber AddSerialNumber(
         ApplicationDbContext context,
         SalesItem item,

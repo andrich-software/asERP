@@ -207,6 +207,95 @@ public sealed class DpdConnector : ShippingConnectorBase, IShippingCarrierConnec
             return CarrierTrackingResult.Ok(mapped, description);
         }, "DPD");
 
+    public override bool SupportsReturnLabels => true;
+
+    /// <summary>
+    /// DPD return label via the Cloud setOrder call with the return product: the printed label
+    /// carries the customer as sender; the return destination is the cloud account's depot
+    /// address. [verify] Return product availability on the Cloud contract and the exact
+    /// ShipService value (config knob <see cref="DpdCarrierConfig.ReturnProduct"/>).
+    /// </summary>
+    public override Task<CarrierLabelResult> CreateReturnLabelAsync(ShippingCarrierContext context, ReturnLabelRequest request)
+        => ExecuteLabelCallAsync(async () =>
+        {
+            var config = ParseConfig<DpdCarrierConfig>(context);
+
+            var body = new
+            {
+                OrderAction = "startOrder",
+                OrderSettings = new
+                {
+                    ShipDate = DateTime.UtcNow.Date.ToString("yyyy-MM-dd"),
+                    LabelSize = config.LabelSize,
+                    LabelStartPosition = "UpperLeft"
+                },
+                OrderDataList = new[]
+                {
+                    new
+                    {
+                        // For returns the ShipAddress is the pickup side — the customer.
+                        ShipAddress = new
+                        {
+                            Company = request.CustomerCompany,
+                            Name = request.CustomerName,
+                            Street = request.Street,
+                            ZipCode = request.Zip,
+                            City = request.City,
+                            Country = request.CountryIsoCode,
+                            Phone = request.CustomerPhone
+                        },
+                        ParcelData = new
+                        {
+                            ShipService = config.ReturnProduct,
+                            Weight = request.WeightKg.ToString(CultureInfo.InvariantCulture),
+                            Content = $"Return {request.Reference}",
+                            YourInternalID = request.Reference,
+                            Reference1 = request.Reference
+                        }
+                    }
+                }
+            };
+
+            var http = CreateClient(context);
+            var response = await http.PostAsJsonAsync($"{BaseUrlFor(context)}/setOrder", body, JsonOptions, context.CancellationToken);
+            var payload = await response.Content.ReadAsStringAsync(context.CancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = $"DPD return-label creation failed ({(int)response.StatusCode}): {Truncate(payload, 500)}";
+                return IsPermanentStatusCode(response.StatusCode)
+                    ? CarrierLabelResult.Permanent(error)
+                    : CarrierLabelResult.Transient(error);
+            }
+
+            using var doc = JsonDocument.Parse(payload);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("ErrorDataList", out var errors) && errors.ValueKind == JsonValueKind.Array
+                && errors.GetArrayLength() > 0)
+            {
+                return CarrierLabelResult.Permanent($"DPD rejected the return order: {Truncate(errors.ToString(), 500)}");
+            }
+
+            var labelResponse = root.TryGetProperty("LabelResponse", out var lr) ? lr : root;
+            var parcelNo = labelResponse.TryGetProperty("LabelDataList", out var labels) && labels.GetArrayLength() > 0
+                && labels[0].TryGetProperty("ParcelNo", out var p)
+                ? p.GetString()
+                : null;
+            var labelB64 = labelResponse.TryGetProperty("LabelPDF", out var pdf) ? pdf.GetString() : null;
+
+            if (string.IsNullOrEmpty(parcelNo) || string.IsNullOrEmpty(labelB64))
+            {
+                return CarrierLabelResult.Permanent($"DPD return response missing parcel number or label: {Truncate(payload, 300)}");
+            }
+
+            return CarrierLabelResult.Ok(
+                parcelNo,
+                parcelNo,
+                Convert.FromBase64String(labelB64),
+                trackingUrl: $"https://tracking.dpd.de/status/de_DE/parcel/{parcelNo}");
+        }, "DPD");
+
     public Task<CarrierCancelResult> CancelShipmentAsync(ShippingCarrierContext context, string carrierShipmentId)
     {
         // [verify] The DPD Cloud API offers no shipment void — unprinted orders simply expire.

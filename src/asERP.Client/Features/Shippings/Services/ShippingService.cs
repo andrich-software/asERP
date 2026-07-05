@@ -124,6 +124,16 @@ public class ShippingService : IShippingService
         return apiResponse?.Data ?? new List<ShippableSalesItemDto>();
     }
 
+    public async Task<PaginatedResponse<SalesReadyToShipListDto>> GetReadyToShipSalesAsync(
+        int pageNumber, int pageSize, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.Saless.ReadyToShip}?pageNumber={pageNumber}&pageSize={pageSize}";
+        var response = await _httpClient.GetFromJsonAsync(
+            url, AppJsonSerializerContext.Default.PaginatedResponseSalesReadyToShipListDto, ct);
+        return response ?? new PaginatedResponse<SalesReadyToShipListDto>();
+    }
+
     public async Task<ApiResponse<List<ApplicableShippingRateDto>>> GetShippingOptionsAsync(
         Guid salesId,
         CancellationToken ct = default)

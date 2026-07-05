@@ -3676,6 +3676,15 @@
   <data name="TenantEditPage.Field.PackingSlipPrintByDefault.Content" xml:space="preserve">
     <value>Packliste beim Versand standardmäßig mitdrucken</value>
   </data>
+  <data name="TenantEditPage.Section.CustomerNotifications.Text" xml:space="preserve">
+    <value>Kunden-Benachrichtigungen</value>
+  </data>
+  <data name="TenantEditPage.Field.SendShippingNotificationEmails.Content" xml:space="preserve">
+    <value>Kunden bei Versand per E-Mail benachrichtigen</value>
+  </data>
+  <data name="TenantEditPage.Field.SendDeliveryNotificationEmails.Content" xml:space="preserve">
+    <value>Kunden bei Zustellung per E-Mail benachrichtigen</value>
+  </data>
 
   <!-- TenantEditPage - Basic Fields -->
   <data name="TenantEditPage.Field.Name.Header" xml:space="preserve">
@@ -5212,5 +5221,258 @@
   </data>
   <data name="CreateShipmentDialog.Created" xml:space="preserve">
     <value>Sendung erstellt</value>
+  </data>
+  <data name="SalesListPage.HeaderButton.BatchShip.Content" xml:space="preserve">
+    <value>Sammelversand</value>
+  </data>
+  <data name="BatchShipmentDialog.Title.Text" xml:space="preserve">
+    <value>Sammelversand</value>
+  </data>
+  <data name="BatchShipmentDialog.Subtitle.Text" xml:space="preserve">
+    <value>Versandfertige Bestellungen markieren — Sendungen und Labels entstehen in einem Lauf.</value>
+  </data>
+  <data name="BatchShipmentDialog.Empty.Text" xml:space="preserve">
+    <value>Keine versandfertigen Bestellungen vorhanden.</value>
+  </data>
+  <data name="BatchShipmentDialog.SelectAll.Content" xml:space="preserve">
+    <value>Alle auswählen</value>
+  </data>
+  <data name="BatchShipmentDialog.RequestLabel.Header" xml:space="preserve">
+    <value>Labels sofort erstellen</value>
+  </data>
+  <data name="BatchShipmentDialog.PrintAll.Content" xml:space="preserve">
+    <value>Alle Labels drucken</value>
+  </data>
+  <data name="BatchShipmentDialog.SaveAll.Content" xml:space="preserve">
+    <value>Alle Labels speichern</value>
+  </data>
+  <data name="BatchShipmentDialog.DownloadAll.Content" xml:space="preserve">
+    <value>Alle Labels herunterladen</value>
+  </data>
+  <data name="BatchShipmentDialog.PickList.Content" xml:space="preserve">
+    <value>Pickliste</value>
+  </data>
+  <data name="BatchShipmentDialog.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="BatchShipmentDialog.Close.Content" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
+  <data name="BatchShipmentDialog.Start.Content" xml:space="preserve">
+    <value>Versandlauf starten</value>
+  </data>
+  <data name="BatchShipment.StockWarning" xml:space="preserve">
+    <value>Nicht alle Positionen lagernd</value>
+  </data>
+  <data name="BatchShipment.NoRate" xml:space="preserve">
+    <value>Keine passende Versandoption</value>
+  </data>
+  <data name="BatchShipment.SelectionSummary" xml:space="preserve">
+    <value>{0} von {1} ausgewählt</value>
+  </data>
+  <data name="BatchShipment.Progress" xml:space="preserve">
+    <value>{0} von {1} Bestellungen verarbeitet</value>
+  </data>
+  <data name="BatchShipment.StatusCreating" xml:space="preserve">
+    <value>Wird erstellt …</value>
+  </data>
+  <data name="BatchShipment.StatusCreated" xml:space="preserve">
+    <value>Sendung erstellt</value>
+  </data>
+  <data name="BatchShipment.StatusLabelReady" xml:space="preserve">
+    <value>Sendung erstellt, Label bereit</value>
+  </data>
+  <data name="BatchShipment.StatusLabelQueued" xml:space="preserve">
+    <value>Sendung erstellt — Label folgt</value>
+  </data>
+  <data name="BatchShipment.StatusLabelFailed" xml:space="preserve">
+    <value>Label-Erstellung fehlgeschlagen</value>
+  </data>
+  <data name="BatchShipment.StatusSkipped" xml:space="preserve">
+    <value>Übersprungen</value>
+  </data>
+  <data name="BatchShipment.NothingToShip" xml:space="preserve">
+    <value>Keine offenen Positionen mehr</value>
+  </data>
+  <data name="BatchShipment.Summary" xml:space="preserve">
+    <value>{0} Sendungen erstellt ({1} Label folgen), {2} Fehler, {3} übersprungen</value>
+  </data>
+  <data name="BatchShipment.PrintedAll" xml:space="preserve">
+    <value>{0} Labels gedruckt</value>
+  </data>
+  <data name="BatchShipment.SavedAll" xml:space="preserve">
+    <value>{0} Labels gespeichert</value>
+  </data>
+
+  <data name="CreateReturnDialog.Title.Text" xml:space="preserve">
+    <value>Retoure anlegen</value>
+  </data>
+  <data name="CreateReturnDialog.Items.Text" xml:space="preserve">
+    <value>Positionen</value>
+  </data>
+  <data name="CreateReturnDialog.NoItems.Text" xml:space="preserve">
+    <value>Keine retournierbaren Positionen — es wurde noch nichts versendet oder alles ist bereits retourniert.</value>
+  </data>
+  <data name="CreateReturnDialog.Note.Header" xml:space="preserve">
+    <value>Anmerkung</value>
+  </data>
+  <data name="CreateReturnDialog.RequestLabel.Content" xml:space="preserve">
+    <value>Retour-Label erstellen</value>
+  </data>
+  <data name="CreateReturnDialog.Provider.Header" xml:space="preserve">
+    <value>Versanddienstleister</value>
+  </data>
+  <data name="CreateReturnDialog.LabelReady.Text" xml:space="preserve">
+    <value>Retour-Label ist bereit</value>
+  </data>
+  <data name="CreateReturnDialog.QueuedTitle.Text" xml:space="preserve">
+    <value>Retour-Label wird erstellt</value>
+  </data>
+  <data name="CreateReturnDialog.QueuedMessage.Text" xml:space="preserve">
+    <value>Der Carrier war nicht erreichbar — das Label wird im Hintergrund erneut angefordert.</value>
+  </data>
+  <data name="CreateReturnDialog.DeadLetterHint.Text" xml:space="preserve">
+    <value>Die Retoure wurde angelegt. Das Label kann später erneut angefordert werden.</value>
+  </data>
+  <data name="CreateReturnDialog.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="CreateReturnDialog.Done.Content" xml:space="preserve">
+    <value>Fertig</value>
+  </data>
+  <data name="CreateReturnDialog.Create.Content" xml:space="preserve">
+    <value>Retoure anlegen</value>
+  </data>
+  <data name="CreateReturnDialog.Created" xml:space="preserve">
+    <value>Retoure angelegt</value>
+  </data>
+  <data name="ReceiveReturnDialog.Title.Text" xml:space="preserve">
+    <value>Retoure empfangen</value>
+  </data>
+  <data name="ReceiveReturnDialog.RefundAmount.Header" xml:space="preserve">
+    <value>Erstattungsbetrag (optional)</value>
+  </data>
+  <data name="ReceiveReturnDialog.Note.Header" xml:space="preserve">
+    <value>Anmerkung</value>
+  </data>
+  <data name="ReceiveReturnDialog.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="ReceiveReturnDialog.Receive.Content" xml:space="preserve">
+    <value>Empfang buchen</value>
+  </data>
+  <data name="ReceiveReturnDialog.Received" xml:space="preserve">
+    <value>Wareneingang der Retoure gebucht</value>
+  </data>
+  <data name="ReceiveReturnDialog.QuantityFormat" xml:space="preserve">
+    <value>Menge: {0}</value>
+  </data>
+  <data name="SalesDetailPage.HeaderAction.Return.Content" xml:space="preserve">
+    <value>Retoure</value>
+  </data>
+  <data name="SalesDetailPage.ReturnsSection.Text" xml:space="preserve">
+    <value>Retouren</value>
+  </data>
+  <data name="SalesDetailPage.ReturnHeader.Status.Text" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="SalesDetailPage.ReturnHeader.Tracking.Text" xml:space="preserve">
+    <value>Sendungsverfolgung</value>
+  </data>
+  <data name="SalesDetailPage.ReturnHeader.Items.Text" xml:space="preserve">
+    <value>Positionen</value>
+  </data>
+  <data name="SalesDetailPage.ReturnHeader.ReceivedAt.Text" xml:space="preserve">
+    <value>Empfangen</value>
+  </data>
+  <data name="SalesDetailPage.NoReturns.Title" xml:space="preserve">
+    <value>Keine Retouren</value>
+  </data>
+  <data name="SalesDetailPage.NoReturns.Message" xml:space="preserve">
+    <value>Für diese Bestellung wurden noch keine Retouren angelegt.</value>
+  </data>
+  <data name="SalesDetailPage.ShipRowCreateReturn.ToolTip" xml:space="preserve">
+    <value>Paket kam zurück — Retoure anlegen?</value>
+  </data>
+  <data name="SalesDetailPage.ReturnRowLabel.ToolTip" xml:space="preserve">
+    <value>Retour-Label</value>
+  </data>
+  <data name="SalesDetailPage.ReturnRowReceive.ToolTip" xml:space="preserve">
+    <value>Empfang buchen</value>
+  </data>
+  <data name="SalesDetailPage.ReturnRowCancel.ToolTip" xml:space="preserve">
+    <value>Retoure stornieren</value>
+  </data>
+  <data name="SalesDetailPage.CancelReturnConfirmTitle" xml:space="preserve">
+    <value>Retoure stornieren?</value>
+  </data>
+  <data name="SalesDetailPage.CancelReturnConfirmMessage" xml:space="preserve">
+    <value>Die Retoure wird storniert; ein bereits erstelltes Retour-Label wird ungültig.</value>
+  </data>
+  <data name="SalesDetailPage.CancelReturnSuccess" xml:space="preserve">
+    <value>Retoure storniert</value>
+  </data>
+  <data name="ReturnShipmentStatus.Requested" xml:space="preserve">
+    <value>Angefragt</value>
+  </data>
+  <data name="ReturnShipmentStatus.LabelCreated" xml:space="preserve">
+    <value>Label erstellt</value>
+  </data>
+  <data name="ReturnShipmentStatus.InTransit" xml:space="preserve">
+    <value>Unterwegs</value>
+  </data>
+  <data name="ReturnShipmentStatus.Received" xml:space="preserve">
+    <value>Empfangen</value>
+  </data>
+  <data name="ReturnShipmentStatus.Completed" xml:space="preserve">
+    <value>Abgeschlossen</value>
+  </data>
+  <data name="ReturnShipmentStatus.Rejected" xml:space="preserve">
+    <value>Abgelehnt</value>
+  </data>
+  <data name="ReturnShipmentStatus.Cancelled" xml:space="preserve">
+    <value>Storniert</value>
+  </data>
+  <data name="ReturnReason.Unspecified" xml:space="preserve">
+    <value>Kein Grund angegeben</value>
+  </data>
+  <data name="ReturnReason.DoesNotFit" xml:space="preserve">
+    <value>Passt nicht</value>
+  </data>
+  <data name="ReturnReason.NotAsDescribed" xml:space="preserve">
+    <value>Entspricht nicht der Beschreibung</value>
+  </data>
+  <data name="ReturnReason.Defective" xml:space="preserve">
+    <value>Defekt</value>
+  </data>
+  <data name="ReturnReason.WrongItemDelivered" xml:space="preserve">
+    <value>Falscher Artikel geliefert</value>
+  </data>
+  <data name="ReturnReason.ArrivedTooLate" xml:space="preserve">
+    <value>Zu spät geliefert</value>
+  </data>
+  <data name="ReturnReason.ChangedMind" xml:space="preserve">
+    <value>Gefällt nicht</value>
+  </data>
+  <data name="ReturnReason.Other" xml:space="preserve">
+    <value>Sonstiges</value>
+  </data>
+  <data name="ReturnItemCondition.Unknown" xml:space="preserve">
+    <value>Unbekannt</value>
+  </data>
+  <data name="ReturnItemCondition.Resalable" xml:space="preserve">
+    <value>Wiederverkäuflich</value>
+  </data>
+  <data name="ReturnItemCondition.Damaged" xml:space="preserve">
+    <value>Beschädigt</value>
+  </data>
+  <data name="ReturnItemCondition.Defective" xml:space="preserve">
+    <value>Defekt</value>
+  </data>
+  <data name="ReturnItemCondition.Incomplete" xml:space="preserve">
+    <value>Unvollständig</value>
+  </data>
+  <data name="ReturnItemCondition.Disposed" xml:space="preserve">
+    <value>Entsorgt</value>
   </data>
 </root>

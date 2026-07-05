@@ -221,6 +221,130 @@ public sealed class UpsConnector : ShippingConnectorBase, IShippingCarrierConnec
             return CarrierTrackingResult.Ok(mapped, description ?? type);
         }, "UPS");
 
+    public override bool SupportsReturnLabels => true;
+
+    /// <summary>
+    /// UPS return labels use the same Ship API with ReturnService code 9 ("Print Return Label"):
+    /// ShipFrom = customer, ShipTo = the merchant's sender address from the config.
+    /// [verify] ReturnService code and payload against the Ship API docs during the smoke run.
+    /// </summary>
+    public override Task<CarrierLabelResult> CreateReturnLabelAsync(ShippingCarrierContext context, ReturnLabelRequest request)
+        => ExecuteLabelCallAsync(async () =>
+        {
+            var config = ParseConfig<UpsCarrierConfig>(context);
+            config.Sender.EnsureComplete(context.Provider.Name);
+
+            if (string.IsNullOrWhiteSpace(context.AccountNumber))
+            {
+                return CarrierLabelResult.Permanent(
+                    $"Shipping provider '{context.Provider.Name}' has no UPS shipper number (AccountNumber) configured.");
+            }
+
+            var body = new
+            {
+                ShipmentRequest = new
+                {
+                    Shipment = new
+                    {
+                        ReturnService = new { Code = "9" },
+                        Shipper = new
+                        {
+                            Name = config.Sender.Name,
+                            ShipperNumber = context.AccountNumber,
+                            Address = new
+                            {
+                                AddressLine = new[] { config.Sender.Street },
+                                City = config.Sender.City,
+                                PostalCode = config.Sender.Zip,
+                                CountryCode = config.Sender.CountryCode
+                            }
+                        },
+                        ShipTo = new
+                        {
+                            Name = config.Sender.Name,
+                            Address = new
+                            {
+                                AddressLine = new[] { config.Sender.Street },
+                                City = config.Sender.City,
+                                PostalCode = config.Sender.Zip,
+                                CountryCode = config.Sender.CountryCode
+                            }
+                        },
+                        ShipFrom = new
+                        {
+                            Name = request.CustomerName,
+                            AttentionName = request.CustomerCompany ?? request.CustomerName,
+                            Phone = request.CustomerPhone == null ? null : new { Number = request.CustomerPhone },
+                            Address = new
+                            {
+                                AddressLine = new[] { request.Street },
+                                City = request.City,
+                                PostalCode = request.Zip,
+                                CountryCode = request.CountryIsoCode
+                            }
+                        },
+                        PaymentInformation = new
+                        {
+                            ShipmentCharge = new
+                            {
+                                Type = "01",
+                                BillShipper = new { AccountNumber = context.AccountNumber }
+                            }
+                        },
+                        Service = new { Code = config.ServiceCode },
+                        Package = new
+                        {
+                            Description = $"Return {request.Reference}",
+                            Packaging = new { Code = "02" },
+                            PackageWeight = new
+                            {
+                                UnitOfMeasurement = new { Code = "KGS" },
+                                Weight = request.WeightKg.ToString(CultureInfo.InvariantCulture)
+                            }
+                        },
+                        ReferenceNumber = new { Value = request.Reference }
+                    },
+                    LabelSpecification = new
+                    {
+                        LabelImageFormat = new { Code = "GIF" }
+                    }
+                }
+            };
+
+            var http = await CreateClientAsync(context);
+            var url = $"{BaseUrlFor(context)}/api/shipments/{ShipApiVersion}/ship";
+            var response = await http.PostAsJsonAsync(url, body, JsonOptions, context.CancellationToken);
+            var payload = await response.Content.ReadAsStringAsync(context.CancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = $"UPS return-label creation failed ({(int)response.StatusCode}): {Truncate(payload, 500)}";
+                return IsPermanentStatusCode(response.StatusCode)
+                    ? CarrierLabelResult.Permanent(error)
+                    : CarrierLabelResult.Transient(error);
+            }
+
+            using var doc = JsonDocument.Parse(payload);
+            var results = doc.RootElement.GetProperty("ShipmentResponse").GetProperty("ShipmentResults");
+            var shipmentNumber = results.GetProperty("ShipmentIdentificationNumber").GetString();
+
+            var packageResults = results.GetProperty("PackageResults");
+            var firstPackage = packageResults.ValueKind == JsonValueKind.Array ? packageResults[0] : packageResults;
+            var labelB64 = firstPackage.GetProperty("ShippingLabel").GetProperty("GraphicImage").GetString();
+
+            if (string.IsNullOrEmpty(shipmentNumber) || string.IsNullOrEmpty(labelB64))
+            {
+                return CarrierLabelResult.Permanent($"UPS return response missing shipment number or label: {Truncate(payload, 300)}");
+            }
+
+            return CarrierLabelResult.Ok(
+                shipmentNumber,
+                shipmentNumber,
+                Convert.FromBase64String(labelB64),
+                labelFormat: "image/gif",
+                trackingUrl: $"https://www.ups.com/track?tracknum={shipmentNumber}");
+        }, "UPS");
+
     public async Task<CarrierCancelResult> CancelShipmentAsync(ShippingCarrierContext context, string carrierShipmentId)
     {
         var result = await ExecuteLabelCallAsync(async () =>

@@ -19,6 +19,7 @@ public static class ApplicationServiceRegistration
         // Register services
         services.AddScoped<IUserTenantService, UserTenantService>();
         services.AddScoped<IShippingStatusUpdater, ShippingStatusUpdater>();
+        services.AddScoped<IReturnStatusUpdater, Features.Returns.Services.ReturnStatusUpdater>();
         services.AddScoped<ISalesShippingStatusService, SalesShippingStatusService>();
         services.AddScoped<IShippingDestinationResolver, ShippingDestinationResolver>();
         services.AddScoped<IShippingDocumentDataService, ShippingDocumentDataService>();

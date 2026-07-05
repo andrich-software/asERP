@@ -48,6 +48,36 @@ public partial class LabelService
         return true;
     }
 
+    public async Task<bool> SaveAllAsync(IReadOnlyList<LabelFile> labels)
+    {
+        if (labels.Count == 0)
+        {
+            return false;
+        }
+
+        if (labels.Count == 1)
+        {
+            return await SaveAsync(labels[0]);
+        }
+
+        // One folder pick instead of n save dialogs.
+        var picker = new FolderPicker();
+        picker.FileTypeFilter.Add("*");
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder is null)
+        {
+            return false;
+        }
+
+        foreach (var label in labels)
+        {
+            var file = await folder.CreateFileAsync(label.FileName, CreationCollisionOption.GenerateUniqueName);
+            await FileIO.WriteBytesAsync(file, label.Bytes);
+        }
+
+        return true;
+    }
+
     public async Task PrintAsync(LabelFile label, string? printerName)
     {
         if (!OperatingSystem.IsWindows())

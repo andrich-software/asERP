@@ -1,4 +1,6 @@
-﻿namespace asERP.Application.Contracts.Infrastructure;
+using asERP.Application.Models.Email;
+
+namespace asERP.Application.Contracts.Infrastructure;
 
 public interface IEmailTemplateService
 {
@@ -16,4 +18,14 @@ public interface IEmailTemplateService
     /// Generates an email confirmation email HTML
     /// </summary>
     Task<string> GenerateEmailConfirmationAsync(string recipientName, string confirmationToken, string confirmationUrl);
+
+    /// <summary>
+    /// Generates the "your order is on the way" customer notification HTML
+    /// </summary>
+    Task<string> GenerateShippingNotificationEmailAsync(ShippingNotificationEmailData data);
+
+    /// <summary>
+    /// Generates the "your order was delivered" customer notification HTML
+    /// </summary>
+    Task<string> GenerateDeliveryNotificationEmailAsync(ShippingNotificationEmailData data);
 }

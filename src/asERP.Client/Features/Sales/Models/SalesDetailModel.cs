@@ -1,6 +1,7 @@
 using asERP.Client.Core.Exceptions;
 using asERP.Client.Core.Notifications;
 using asERP.Client.Features.Customers;
+using asERP.Client.Features.Returns.Services;
 using asERP.Client.Features.Saless.Services;
 using asERP.Client.Features.Shippings;
 using asERP.Client.Features.Shippings.Services;
@@ -16,6 +17,7 @@ public partial record SalesDetailModel
 {
     private readonly ISalesService _salesService;
     private readonly IShippingService _shippingService;
+    private readonly IReturnService _returnService;
     private readonly INavigator _navigator;
     private readonly INotificationService _notifications;
     private readonly IStringLocalizer _localizer;
@@ -24,6 +26,7 @@ public partial record SalesDetailModel
     public SalesDetailModel(
         ISalesService salesService,
         IShippingService shippingService,
+        IReturnService returnService,
         INavigator navigator,
         INotificationService notifications,
         IStringLocalizer localizer,
@@ -31,6 +34,7 @@ public partial record SalesDetailModel
     {
         _salesService = salesService;
         _shippingService = shippingService;
+        _returnService = returnService;
         _navigator = navigator;
         _notifications = notifications;
         _localizer = localizer;
@@ -117,6 +121,25 @@ public partial record SalesDetailModel
         {
             await _shippingService.CancelShippingAsync(shippingId);
             _notifications.Show(_localizer["ShippingDetailPage.CancelSuccess"].Value, NotificationSeverity.Success);
+            return true;
+        }
+        catch (ApiException ex)
+        {
+            _notifications.Show(ex.CombinedMessage, NotificationSeverity.Error);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Cancels a return of this order before receipt (carrier void runs server-side, best
+    /// effort). Returns true on success so the view can refresh its feed.
+    /// </summary>
+    public async Task<bool> CancelReturn(Guid returnId)
+    {
+        try
+        {
+            await _returnService.CancelReturnAsync(returnId);
+            _notifications.Show(_localizer["SalesDetailPage.CancelReturnSuccess"].Value, NotificationSeverity.Success);
             return true;
         }
         catch (ApiException ex)

@@ -33,6 +33,7 @@ public static class GlobalSettingsRules
         "Email.M365ClientSecret",
         "Email.ApiKey",
         "ClickHouse.Password",
+        "Grafana.LokiPassword",
     };
 
     public static bool IsHidden(string key) =>

@@ -23,8 +23,14 @@ public partial class LabelService : ILabelService
     public Task<LabelFile> FetchLabelAsync(Guid shippingId, CancellationToken ct = default) =>
         FetchAsync(ApiEndpoints.Shippings.Label(shippingId), "label", shippingId, ct);
 
+    public Task<LabelFile> FetchReturnLabelAsync(Guid returnShipmentId, CancellationToken ct = default) =>
+        FetchAsync(ApiEndpoints.Returns.Label(returnShipmentId), "return-label", returnShipmentId, ct);
+
     public Task<LabelFile> FetchPackingSlipAsync(Guid shippingId, CancellationToken ct = default) =>
         FetchAsync(ApiEndpoints.Shippings.PackingSlip(shippingId), "packliste", shippingId, ct);
+
+    public Task<LabelFile> FetchBatchPickListAsync(IReadOnlyCollection<Guid> shippingIds, CancellationToken ct = default) =>
+        FetchAsync(ApiEndpoints.Shippings.BatchPickList(shippingIds), "pickliste-sammel", Guid.Empty, ct);
 
     private async Task<LabelFile> FetchAsync(string relativeUrl, string fallbackPrefix, Guid shippingId, CancellationToken ct)
     {

@@ -150,6 +150,111 @@ public sealed class GlsConnector : ShippingConnectorBase, IShippingCarrierConnec
                 trackingUrl: $"https://gls-group.eu/DE/de/paketverfolgung?match={trackId}");
         }, "GLS");
 
+    public override bool SupportsReturnLabels => true;
+
+    /// <summary>
+    /// GLS ShopReturnService via the same shipments endpoint: the parcel travels from the
+    /// customer (alternative shipper address) back to the merchant (consignee = configured
+    /// sender address). [verify] ShopReturn service name/payload and contract activation —
+    /// the service must be enabled on the GLS contact.
+    /// </summary>
+    public override Task<CarrierLabelResult> CreateReturnLabelAsync(ShippingCarrierContext context, ReturnLabelRequest request)
+        => ExecuteLabelCallAsync(async () =>
+        {
+            var config = ParseConfig<GlsCarrierConfig>(context);
+            config.Sender.EnsureComplete(context.Provider.Name);
+
+            if (string.IsNullOrWhiteSpace(config.ContactId))
+            {
+                return CarrierLabelResult.Permanent(
+                    $"Shipping provider '{context.Provider.Name}' has no GLS ContactId in AdditionalConfigJson.");
+            }
+
+            var body = new
+            {
+                Shipment = new
+                {
+                    Product = config.Product,
+                    ShipmentReference = new[] { request.Reference },
+                    Shipper = new
+                    {
+                        ContactID = config.ContactId,
+                        AlternativeShipperAddress = new
+                        {
+                            Name1 = request.CustomerName,
+                            Name2 = request.CustomerCompany,
+                            Street = request.Street,
+                            ZIPCode = request.Zip,
+                            City = request.City,
+                            CountryCode = request.CountryIsoCode,
+                            FixedLinePhonenumber = request.CustomerPhone
+                        }
+                    },
+                    Consignee = new
+                    {
+                        Address = new
+                        {
+                            Name1 = config.Sender.Name,
+                            Street = config.Sender.Street,
+                            ZIPCode = config.Sender.Zip,
+                            City = config.Sender.City,
+                            CountryCode = config.Sender.CountryCode
+                        }
+                    },
+                    Service = new object[]
+                    {
+                        new { ShopReturn = new { ServiceName = "shopreturnservice", NumberOfLabels = 1 } }
+                    },
+                    ShipmentUnit = new[]
+                    {
+                        new { Weight = request.WeightKg }
+                    }
+                },
+                PrintingOptions = new
+                {
+                    ReturnLabels = new { TemplateSet = "NONE", LabelFormat = "PDF" }
+                }
+            };
+
+            var http = CreateClient(context);
+            var response = await http.PostAsJsonAsync($"{BaseUrlFor(context)}/shipments", body, JsonOptions, context.CancellationToken);
+            var payload = await response.Content.ReadAsStringAsync(context.CancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = $"GLS return-label creation failed ({(int)response.StatusCode}): {Truncate(payload, 500)}";
+                return IsPermanentStatusCode(response.StatusCode)
+                    ? CarrierLabelResult.Permanent(error)
+                    : CarrierLabelResult.Transient(error);
+            }
+
+            using var doc = JsonDocument.Parse(payload);
+            if (!doc.RootElement.TryGetProperty("CreatedShipment", out var created))
+            {
+                return CarrierLabelResult.Permanent("GLS return response contained no CreatedShipment.");
+            }
+
+            var trackId = created.TryGetProperty("ParcelData", out var parcels) && parcels.GetArrayLength() > 0
+                && parcels[0].TryGetProperty("TrackID", out var t)
+                ? t.GetString()
+                : null;
+            var labelB64 = created.TryGetProperty("PrintData", out var prints) && prints.GetArrayLength() > 0
+                && prints[0].TryGetProperty("Data", out var d)
+                ? d.GetString()
+                : null;
+
+            if (string.IsNullOrEmpty(trackId) || string.IsNullOrEmpty(labelB64))
+            {
+                return CarrierLabelResult.Permanent($"GLS return response missing TrackID or label data: {Truncate(payload, 300)}");
+            }
+
+            return CarrierLabelResult.Ok(
+                trackId,
+                trackId,
+                Convert.FromBase64String(labelB64),
+                trackingUrl: $"https://gls-group.eu/DE/de/paketverfolgung?match={trackId}");
+        }, "GLS");
+
     public Task<CarrierTrackingResult> GetTrackingStatusAsync(ShippingCarrierContext context, string trackingNumber)
         => ExecuteTrackingCallAsync(async () =>
         {

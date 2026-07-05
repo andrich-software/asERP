@@ -14,6 +14,8 @@ public partial class LabelService
 
     public Task<bool> SaveAsync(LabelFile label) => Task.FromResult(false);
 
+    public Task<bool> SaveAllAsync(IReadOnlyList<LabelFile> labels) => Task.FromResult(false);
+
     public Task PrintAsync(LabelFile label, string? printerName) => Task.CompletedTask;
 
     public Task OpenWithSystemDefaultAsync(LabelFile label) => Task.CompletedTask;

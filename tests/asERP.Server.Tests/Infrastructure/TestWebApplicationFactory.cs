@@ -1,19 +1,19 @@
-﻿using System.Data.Common;
+using System.Data.Common;
 using System.IO;
-using asERP.Persistence.DatabaseContext;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
 using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Entities;
+using asERP.Persistence.DatabaseContext;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using IAuthenticationService = Microsoft.AspNetCore.Authentication.IAuthenticationService;
 
 namespace asERP.Server.Tests.Infrastructure;
@@ -98,6 +98,11 @@ public class TestWebApplicationFactory<TProgram> : WebApplicationFactory<TProgra
             // no real image decoding). Singleton so stored bytes persist across scopes.
             services.RemoveAll<IProductImageStorage>();
             services.AddSingleton<IProductImageStorage, FakeProductImageStorage>();
+
+            // Replace the tenant-aware email service with a recording fake (no SMTP).
+            // Singleton so tests can assert sent mails after scoped handlers ran.
+            services.RemoveAll<IEmailService>();
+            services.AddSingleton<IEmailService, FakeEmailService>();
 
             // Register Identity Core (UserManager + stores) without touching the auth scheme.
             // AddIdentity (used in production via AddPersistenceServices) would replace the Test

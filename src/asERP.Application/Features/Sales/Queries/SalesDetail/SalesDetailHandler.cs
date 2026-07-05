@@ -1,6 +1,7 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Mediator;
+using asERP.Domain.Dtos.Returns;
 using asERP.Domain.Dtos.Sales;
 using asERP.Domain.Dtos.Shipping;
 using asERP.Domain.Enums;
@@ -31,6 +32,11 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
     private readonly IShippingRepository _shippingRepository;
 
     /// <summary>
+    /// Repository for the customer returns of the sales order
+    /// </summary>
+    private readonly IReturnShipmentRepository _returnShipmentRepository;
+
+    /// <summary>
     /// Constructor that initializes the handler with required dependencies
     /// </summary>
     /// <param name="logger">Logger for recording operations</param>
@@ -39,11 +45,13 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
     public SalesDetailHandler(
         IAppLogger<SalesDetailHandler> logger,
         ISalesRepository salesRepository,
-        IShippingRepository shippingRepository)
+        IShippingRepository shippingRepository,
+        IReturnShipmentRepository returnShipmentRepository)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _salesRepository = salesRepository ?? throw new ArgumentNullException(nameof(salesRepository));
         _shippingRepository = shippingRepository ?? throw new ArgumentNullException(nameof(shippingRepository));
+        _returnShipmentRepository = returnShipmentRepository ?? throw new ArgumentNullException(nameof(returnShipmentRepository));
     }
 
     /// <summary>
@@ -81,6 +89,8 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
             // Legacy single-shipment fields are fed from the newest non-cancelled shipment.
             var latestShipping = shippings.FirstOrDefault(s => s.Status != ShippingStatus.Cancelled);
 
+            var returns = await _returnShipmentRepository.GetBySalesIdAsync(sales.Id);
+
             // Manual mapping from entity to DTO
             var data = new SalesDetailDto
             {
@@ -115,6 +125,19 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
                     ShippedAt = s.ShippedAt,
                     DeliveredAt = s.DeliveredAt,
                     DateCreated = s.DateCreated
+                }).ToList(),
+                Returns = returns.Select(r => new ReturnShipmentListItemDto
+                {
+                    Id = r.Id,
+                    SalesId = r.SalesId,
+                    SalesNumber = sales.SalesId,
+                    Status = r.Status,
+                    TrackingNumber = r.TrackingNumber,
+                    TrackingUrl = r.TrackingUrl,
+                    ItemCount = r.Items.Count,
+                    HasLabel = r.LabelData != null && r.LabelData.Length > 0,
+                    ReceivedAt = r.ReceivedAt,
+                    DateCreated = r.DateCreated
                 }).ToList(),
                 Subtotal = sales.Subtotal,
                 ShippingCost = sales.ShippingCost,

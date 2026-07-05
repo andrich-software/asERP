@@ -8,6 +8,7 @@
       xmlns:utu="using:Uno.Toolkit.UI"
       xmlns:uen="using:Uno.Extensions.Navigation.UI"
       xmlns:controls="using:asERP.Client.Controls"
+      xmlns:shipviews="using:asERP.Client.Features.Shippings.Views"
       Background="{ThemeResource BackgroundBrush}">
 
   <Grid utu:SafeArea.Insets="VisibleBounds">
@@ -29,6 +30,9 @@
                   Command="{Binding Refresh, ElementName=SalessFeedView}">
             <FontIcon Glyph="&#xE72C;" FontSize="16" />
           </Button>
+          <Button x:Uid="SalesListPage.HeaderButton.BatchShip"
+                  Style="{StaticResource OutlinedButtonStyle}"
+                  Click="BatchShipButton_Click" />
           <Button x:Uid="SalesListPage.HeaderButton.New"
                   Style="{StaticResource FilledButtonStyle}"
                   Click="NewSalesButton_Click" />
@@ -292,5 +296,11 @@
         </StackPanel>
       </Grid>
     </Border>
+
+    <!-- Batch-shipping overlay (scrim + centered card); opened from the header action -->
+    <shipviews:BatchShipmentDialog x:Name="BatchDialog"
+                                   Grid.Row="0"
+                                   Grid.RowSpan="4"
+                                   Visibility="Collapsed" />
   </Grid>
 </Page>

@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Constants;
+namespace asERP.Client.Core.Constants;
 
 /// <summary>
 /// Centralized API endpoint paths.
@@ -59,8 +59,10 @@ public static class ApiEndpoints
         public static string ById(Guid id) => $"{Base}/{id}";
         public static string ByCustomer(int customerId) => $"{Base}/customer/{customerId}";
         public static string ShippableItems(Guid id) => $"{Base}/{id}/shippable-items";
+        public static string ReturnableItems(Guid id) => $"{Base}/{id}/returnable-items";
         public static string ShippingOptions(Guid id) => $"{Base}/{id}/shipping-options";
         public static string Cancel(Guid id) => $"{Base}/{id}/cancel";
+        public const string ReadyToShip = $"{Base}/ready-to-ship";
     }
 
     // Shippings
@@ -72,6 +74,20 @@ public static class ApiEndpoints
         public static string LabelRetry(Guid id) => $"{Base}/{id}/label/retry";
         public static string PackingSlip(Guid id) => $"{Base}/{id}/packing-slip";
         public static string Cancel(Guid id) => $"{Base}/{id}/cancel";
+        public static string BatchPickList(IEnumerable<Guid> ids) =>
+            $"{Base}/pick-list?{string.Join("&", ids.Select(id => $"ids={id}"))}";
+    }
+
+    // Returns
+    public static class Returns
+    {
+        public const string Base = $"{ApiBase}/returns";
+        public static string ById(Guid id) => $"{Base}/{id}";
+        public static string Label(Guid id) => $"{Base}/{id}/label";
+        public static string LabelRetry(Guid id) => $"{Base}/{id}/label/retry";
+        public static string Receive(Guid id) => $"{Base}/{id}/receive";
+        public static string Cancel(Guid id) => $"{Base}/{id}/cancel";
+        public static string Complete(Guid id, bool reject) => $"{Base}/{id}/complete?reject={(reject ? "true" : "false")}";
     }
 
     // Products

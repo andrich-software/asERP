@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using asERP.Client.Core.Abstractions;
 using asERP.Client.Core.Exceptions;
 using asERP.Client.Features.Auth.Services;
@@ -45,6 +45,8 @@ public class TenantEditModel : AsyncInitializableModel
     // Shipping documents
     private bool _packingSlipShowPrices;
     private bool _packingSlipPrintByDefault;
+    private bool _sendShippingNotificationEmails;
+    private bool _sendDeliveryNotificationEmails;
 
     // UI State
     private bool _isSaving;
@@ -198,6 +200,18 @@ public class TenantEditModel : AsyncInitializableModel
     {
         get => _packingSlipPrintByDefault;
         set => SetProperty(ref _packingSlipPrintByDefault, value);
+    }
+
+    public bool SendShippingNotificationEmails
+    {
+        get => _sendShippingNotificationEmails;
+        set => SetProperty(ref _sendShippingNotificationEmails, value);
+    }
+
+    public bool SendDeliveryNotificationEmails
+    {
+        get => _sendDeliveryNotificationEmails;
+        set => SetProperty(ref _sendDeliveryNotificationEmails, value);
     }
 
     #endregion
@@ -388,6 +402,10 @@ public class TenantEditModel : AsyncInitializableModel
             // Shipping documents
             PackingSlipShowPrices = tenant.PackingSlipShowPrices;
             PackingSlipPrintByDefault = tenant.PackingSlipPrintByDefault;
+
+            // Customer notifications
+            SendShippingNotificationEmails = tenant.SendShippingNotificationEmails;
+            SendDeliveryNotificationEmails = tenant.SendDeliveryNotificationEmails;
         }
     }
 
@@ -416,7 +434,9 @@ public class TenantEditModel : AsyncInitializableModel
                 Country = string.IsNullOrWhiteSpace(Country) ? null : Country,
                 Iban = string.IsNullOrWhiteSpace(Iban) ? null : Iban,
                 PackingSlipShowPrices = PackingSlipShowPrices,
-                PackingSlipPrintByDefault = PackingSlipPrintByDefault
+                PackingSlipPrintByDefault = PackingSlipPrintByDefault,
+                SendShippingNotificationEmails = SendShippingNotificationEmails,
+                SendDeliveryNotificationEmails = SendDeliveryNotificationEmails
             };
 
             if (_tenantId.HasValue)

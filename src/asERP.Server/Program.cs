@@ -119,6 +119,9 @@ if (grafanaSettings.LogsEnabled && Uri.TryCreate(grafanaSettings.LokiEndpoint, U
         .WriteTo.Sink(new SalesChannelSyncLogSink(services.GetRequiredService<ISalesChannelSyncLogBuffer>()))
         .WriteTo.GrafanaLoki(
             grafanaSettings.LokiEndpoint,
+            credentials: !string.IsNullOrEmpty(grafanaSettings.LokiUser)
+                ? new LokiCredentials { Login = grafanaSettings.LokiUser, Password = grafanaSettings.LokiPassword }
+                : null,
             labels: new[]
             {
                 new LokiLabel { Key = "app", Value = "asERP.Server" },
@@ -294,6 +297,7 @@ builder.Services.AddScoped<IGoodsReceiptRepository, GoodsReceiptRepository>();
 builder.Services.AddScoped<IShippingProviderRepository, ShippingProviderRepository>();
 builder.Services.AddScoped<IShippingProviderRateRepository, ShippingProviderRateRepository>();
 builder.Services.AddScoped<IShippingRepository, ShippingRepository>();
+builder.Services.AddScoped<IReturnShipmentRepository, ReturnShipmentRepository>();
 builder.Services.AddScoped<ITenantRepository, TenantRepository>();
 builder.Services.AddScoped<IUserTenantRepository, UserTenantRepository>();
 builder.Services.AddScoped<ITenantPermissionService, TenantPermissionService>();
@@ -338,6 +342,10 @@ using (var scope = app.Services.CreateScope())
 
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
+
+// Prometheus scrape endpoint (/metrics) — before rate limiting/tenant/auth middleware;
+// the reverse proxy protects it with basic auth in production.
+app.UseGrafanaTelemetry(grafanaSettings);
 
 // Security headers
 app.Use(async (context, next) =>
@@ -404,15 +412,27 @@ if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"
 
     app.Use(async (context, next) =>
     {
-        context.Response.GetTypedHeaders().CacheControl =
-            new CacheControlHeaderValue
-            {
-                Public = true,
-                MaxAge = TimeSpan.FromSeconds(10)
-            };
+        // Authenticated, per-tenant and API responses must never be marked publicly
+        // cacheable: a shared cache (CDN/reverse proxy) keys by path only and would
+        // serve one window's response for a different `hours`/query value, since Vary
+        // cannot express query parameters. Mark those no-store so nothing caches them.
+        if (asERP.Server.Middleware.ResponseCachePolicy.ShouldCachePublicly(context.Request))
+        {
+            context.Response.GetTypedHeaders().CacheControl =
+                new CacheControlHeaderValue
+                {
+                    Public = true,
+                    MaxAge = TimeSpan.FromSeconds(10)
+                };
 
-        context.Response.Headers[HeaderNames.Vary] =
-            new[] { "Accept-Encoding", "X-Tenant-Id" };
+            context.Response.Headers[HeaderNames.Vary] =
+                new[] { "Accept-Encoding", "X-Tenant-Id" };
+        }
+        else
+        {
+            context.Response.GetTypedHeaders().CacheControl =
+                new CacheControlHeaderValue { NoStore = true, NoCache = true };
+        }
 
         await next();
     });

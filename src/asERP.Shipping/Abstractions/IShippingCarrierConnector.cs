@@ -17,4 +17,12 @@ public interface IShippingCarrierConnector
     Task<CarrierTrackingResult> GetTrackingStatusAsync(ShippingCarrierContext context, string trackingNumber);
 
     Task<CarrierCancelResult> CancelShipmentAsync(ShippingCarrierContext context, string carrierShipmentId);
+
+    /// <summary>
+    /// Return labels are separate carrier API products — opt-in per connector. Connectors
+    /// without support report a clean permanent failure from <see cref="CreateReturnLabelAsync"/>.
+    /// </summary>
+    bool SupportsReturnLabels { get; }
+
+    Task<CarrierLabelResult> CreateReturnLabelAsync(ShippingCarrierContext context, ReturnLabelRequest request);
 }

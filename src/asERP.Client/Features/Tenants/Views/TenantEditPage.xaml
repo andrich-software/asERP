@@ -399,6 +399,37 @@
             </StackPanel>
           </Border>
 
+          <!-- Customer Notifications Card -->
+          <Border Background="{ThemeResource SurfaceBrush}"
+                  CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
+                  Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel Spacing="0">
+              <!-- Card Header -->
+              <Grid Padding="16,16,16,8">
+                <StackPanel Orientation="Horizontal">
+                  <FontIcon Glyph="&#xE715;"
+                            FontSize="20"
+                            Foreground="{ThemeResource PrimaryBrush}"
+                            Margin="0,0,12,0" />
+                  <TextBlock x:Uid="TenantEditPage.Section.CustomerNotifications"
+                             Style="{StaticResource TitleMedium}"
+                             Foreground="{ThemeResource OnSurfaceBrush}" />
+                </StackPanel>
+              </Grid>
+
+              <!-- Customer Notification Fields -->
+              <StackPanel Padding="16,0,16,16"
+                          Spacing="12">
+                <CheckBox x:Uid="TenantEditPage.Field.SendShippingNotificationEmails"
+                          IsChecked="{Binding SendShippingNotificationEmails, Mode=TwoWay}"
+                          IsEnabled="{Binding IsNotLoading}" />
+                <CheckBox x:Uid="TenantEditPage.Field.SendDeliveryNotificationEmails"
+                          IsChecked="{Binding SendDeliveryNotificationEmails, Mode=TwoWay}"
+                          IsEnabled="{Binding IsNotLoading}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
           <!-- Description Card -->
           <Border Background="{ThemeResource SurfaceBrush}"
                   CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"

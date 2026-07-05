@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using asERP.Client.Core.Models;
 using asERP.Client.Features.Auth.Models;
 using asERP.Domain.Dtos.Account;
@@ -9,11 +9,12 @@ using asERP.Domain.Dtos.Country;
 using asERP.Domain.Dtos.Customer;
 using asERP.Domain.Dtos.Invoice;
 using asERP.Domain.Dtos.Manufacturer;
-using asERP.Domain.Dtos.Sales;
-using asERP.Domain.Dtos.Search;
 using asERP.Domain.Dtos.Product;
 using asERP.Domain.Dtos.ProductAttribute;
+using asERP.Domain.Dtos.Returns;
+using asERP.Domain.Dtos.Sales;
 using asERP.Domain.Dtos.SalesChannel;
+using asERP.Domain.Dtos.Search;
 using asERP.Domain.Dtos.ServerInfo;
 using asERP.Domain.Dtos.Shipping;
 using asERP.Domain.Dtos.Statistic;
@@ -45,6 +46,8 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(PaginatedResponse<CountryListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<UserListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<ShipmentListItemDto>))]
+[JsonSerializable(typeof(PaginatedResponse<SalesReadyToShipListDto>))]
+[JsonSerializable(typeof(PaginatedResponse<ReturnShipmentListItemDto>))]
 
 // ApiResponse<T> types
 [JsonSerializable(typeof(ApiResponse<TenantDetailDto>))]
@@ -91,6 +94,8 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<ShippingDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<List<ShippableSalesItemDto>>))]
 [JsonSerializable(typeof(ApiResponse<List<ApplicableShippingRateDto>>))]
+[JsonSerializable(typeof(ApiResponse<ReturnShipmentDetailDto>))]
+[JsonSerializable(typeof(ApiResponse<List<ReturnableSalesItemDto>>))]
 
 // Direct response types
 [JsonSerializable(typeof(GlobalSearchResultDto))]
@@ -113,6 +118,8 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(ProductImageReorderDto))]
 [JsonSerializable(typeof(SalesInputDto))]
 [JsonSerializable(typeof(ShippingInputDto))]
+[JsonSerializable(typeof(ReturnShipmentInputDto))]
+[JsonSerializable(typeof(ReturnReceiveInputDto))]
 [JsonSerializable(typeof(ManufacturerInputDto))]
 [JsonSerializable(typeof(CustomerInputDto))]
 [JsonSerializable(typeof(LoginRequestDto))]

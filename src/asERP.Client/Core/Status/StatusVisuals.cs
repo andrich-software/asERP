@@ -84,6 +84,16 @@ public static class StatusVisuals
             ShippingStatus.Lost => Kind.Danger,
             _ => Kind.Neutral, // Open, Cancelled
         }),
+        ReturnShipmentStatus r => (LocalizeEnum(r), r switch
+        {
+            ReturnShipmentStatus.Completed => Kind.Success,
+            ReturnShipmentStatus.Received => Kind.Positive,
+            ReturnShipmentStatus.LabelCreated => Kind.Info,
+            ReturnShipmentStatus.InTransit => Kind.Info,
+            ReturnShipmentStatus.Requested => Kind.Warning,
+            ReturnShipmentStatus.Rejected => Kind.Danger,
+            _ => Kind.Neutral, // Cancelled
+        }),
         ShippingOutboxStatus o => (LocalizeEnum(o), o switch
         {
             ShippingOutboxStatus.Done => Kind.Success,

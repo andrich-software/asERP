@@ -1,12 +1,12 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json;
+using asERP.Domain.Constants;
 using asERP.Domain.Dtos.Tenant;
 using asERP.Domain.Wrapper;
-using asERP.Server.Tests.Infrastructure;
 using asERP.Persistence.DatabaseContext;
+using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using asERP.Domain.Constants;
 
 namespace asERP.Server.Tests.Features.Tenant.Commands;
 
@@ -87,7 +87,9 @@ public class TenantUpdateCommandTests : TenantIsolatedTestBase
             Country = "Updated Country",
             Iban = "DE89370400440532013000",
             PackingSlipShowPrices = true,
-            PackingSlipPrintByDefault = true
+            PackingSlipPrintByDefault = true,
+            SendShippingNotificationEmails = true,
+            SendDeliveryNotificationEmails = true
         };
     }
 
@@ -312,6 +314,8 @@ public class TenantUpdateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertEqual(updateInput.Iban, updatedTenant.Iban);
         TestAssertions.AssertTrue(updatedTenant.PackingSlipShowPrices);
         TestAssertions.AssertTrue(updatedTenant.PackingSlipPrintByDefault);
+        TestAssertions.AssertTrue(updatedTenant.SendShippingNotificationEmails);
+        TestAssertions.AssertTrue(updatedTenant.SendDeliveryNotificationEmails);
     }
 
     [Fact]
@@ -332,6 +336,8 @@ public class TenantUpdateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertNotNull(result.Data);
         TestAssertions.AssertTrue(result.Data!.PackingSlipShowPrices);
         TestAssertions.AssertTrue(result.Data.PackingSlipPrintByDefault);
+        TestAssertions.AssertTrue(result.Data.SendShippingNotificationEmails);
+        TestAssertions.AssertTrue(result.Data.SendDeliveryNotificationEmails);
     }
 
     [Fact]

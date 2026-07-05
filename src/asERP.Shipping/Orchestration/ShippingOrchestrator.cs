@@ -79,6 +79,14 @@ public sealed class ShippingOrchestrator : BackgroundService
         {
             _logger.LogInformation("Label outbox drainer processed {Count} rows", processed);
         }
+
+        var returnDrainer = scope.ServiceProvider.GetRequiredService<ReturnLabelOutboxDrainer>();
+        var returnProcessed = await returnDrainer.DrainOnceAsync(cancellationToken);
+
+        if (returnProcessed > 0)
+        {
+            _logger.LogInformation("Return-label outbox drainer processed {Count} rows", returnProcessed);
+        }
     }
 
     private async Task PollTrackingAsync(CancellationToken cancellationToken)

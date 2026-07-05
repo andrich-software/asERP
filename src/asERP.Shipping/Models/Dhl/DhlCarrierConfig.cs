@@ -21,5 +21,14 @@ public sealed class DhlCarrierConfig
     /// <summary>Separate key for the Unified Tracking API; falls back to the provider ApiKey.</summary>
     public string? TrackingApiKey { get; set; }
 
+    /// <summary>
+    /// Receiver id ("Retourenempfänger") from the DHL business portal — identifies the return
+    /// destination per country. Required for return labels.
+    /// </summary>
+    public string? ReturnReceiverId { get; set; }
+
+    /// <summary>Billing procedure for returns, e.g. "07" (DHL Retoure).</summary>
+    public string ReturnProcedure { get; set; } = "07";
+
     public CarrierSenderAddress Sender { get; set; } = new();
 }

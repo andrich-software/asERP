@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using asERP.Domain.Entities.Common;
 
 namespace asERP.Domain.Entities;
@@ -53,6 +53,11 @@ public class Tenant : BaseEntityWithoutTenant, IBaseEntityWithoutTenant
     public bool PackingSlipShowPrices { get; set; }
 
     public bool PackingSlipPrintByDefault { get; set; }
+
+    // Customer shipping notification emails (opt-in, see ShippingCustomerNotificationHandler)
+    public bool SendShippingNotificationEmails { get; set; }
+
+    public bool SendDeliveryNotificationEmails { get; set; }
 
     // Users with this tenant as their default tenant
     public ICollection<ApplicationUser>? DefaultForUsers { get; set; }
