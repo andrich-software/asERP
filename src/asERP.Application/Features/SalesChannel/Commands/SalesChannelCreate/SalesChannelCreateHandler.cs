@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.SalesChannel.Commands.SalesChannelCreate;
 
@@ -91,11 +92,9 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
         catch (Exception ex)
         {
             // Handle any exceptions during sales channel creation
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the sales channel: {ex.Message}");
-
-            _logger.LogError("Error creating sales channel: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while creating the sales channel.",
+                "Error creating sales channel {Name}.", request.Name);
         }
 
         return result;
@@ -123,6 +122,7 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
             ExportCustomers = command.ExportCustomers,
             ExportSaless = command.ExportSaless,
             ExportStock = command.ExportStock,
+            PushSalesCancellations = command.PushSalesCancellations,
             ImportStock = command.ImportStock,
         };
     }

@@ -1,11 +1,11 @@
-﻿using System.Linq.Dynamic.Core;
+using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Application.Specifications;
 using asERP.Domain.Dtos.Warehouse;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Warehouse.Queries.WarehouseList;
@@ -13,6 +13,13 @@ namespace asERP.Application.Features.Warehouse.Queries.WarehouseList;
 // ReSharper disable once UnusedType.Global
 public class WarehouseListHandler : IRequestHandler<WarehouseListQuery, PaginatedResult<WarehouseListDto>>
 {
+    // Restrict client-supplied ordering to the columns surfaced in the list DTO.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(Domain.Entities.Warehouse.Id),
+        nameof(Domain.Entities.Warehouse.Name)
+    };
+
     private readonly IAppLogger<WarehouseListHandler> _logger;
     private readonly IWarehouseRepository _warehouseRepository;
 
@@ -29,25 +36,10 @@ public class WarehouseListHandler : IRequestHandler<WarehouseListQuery, Paginate
 
         _logger.LogInformation("Handle WarehouseListQuery: {0}", request);
 
-        if (request.SalesBy.Any() != true)
-        {
-            return await _warehouseRepository.Entities
-               .AsNoTracking()
-               .Specify(warehouseFilterSpec)
-               .Select(w => new WarehouseListDto
-               {
-                   Id = w.Id,
-                   Name = w.Name
-               })
-               .ToPaginatedListAsync(request.PageNumber, request.PageSize);
-        }
-
-        var salesing = string.Join(",", request.SalesBy);
-
         return await _warehouseRepository.Entities
             .AsNoTracking()
             .Specify(warehouseFilterSpec)
-            .OrderBy(salesing)
+            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
             .Select(w => new WarehouseListDto
             {
                 Id = w.Id,

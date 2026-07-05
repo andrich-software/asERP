@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Setting;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Setting.Queries.SettingDetail;
 
@@ -77,11 +78,9 @@ public class SettingDetailHandler : IRequestHandler<SettingDetailQuery, Result<S
         catch (Exception ex)
         {
             // Handle any exceptions during setting retrieval
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while retrieving the setting: {ex.Message}");
-
-            _logger.LogError("Error retrieving setting: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while retrieving the setting.",
+                "Error retrieving setting.");
         }
 
         return result;

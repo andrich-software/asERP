@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Infrastructure;
+using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Models.Storage;
 using Microsoft.Extensions.Options;
 using SkiaSharp;
@@ -13,6 +13,10 @@ namespace asERP.Infrastructure.Storage;
 public class ProductImageStorage : IProductImageStorage
 {
     private const string ProductsFolder = "products";
+
+    // Cap the buffered upload before decoding to bound memory usage (a huge "image" would otherwise
+    // be fully buffered into a MemoryStream ahead of the SkiaSharp decode → memory DoS).
+    private const long MaxImageSizeBytes = 20L * 1024 * 1024;
 
     private readonly FileStorageOptions _options;
 
@@ -43,8 +47,9 @@ public class ProductImageStorage : IProductImageStorage
         var thumbnailFullPath = Path.Combine(directory, thumbName);
 
         // Skia decodes synchronously and needs a seekable source, so buffer the upload first.
+        // Enforce the size cap while copying so we abort before buffering an oversized body.
         using var buffer = new MemoryStream();
-        await content.CopyToAsync(buffer, cancellationToken);
+        await CopyWithLimitAsync(content, buffer, MaxImageSizeBytes, cancellationToken);
         buffer.Position = 0;
 
         using var image = SKBitmap.Decode(buffer)
@@ -125,6 +130,46 @@ public class ProductImageStorage : IProductImageStorage
         }
     }
 
+    /// <summary>
+    /// Copies <paramref name="source"/> into <paramref name="destination"/>, aborting as soon as
+    /// more than <paramref name="maxBytes"/> have been read, so an oversized body is never fully buffered.
+    /// </summary>
+    private static async Task CopyWithLimitAsync(Stream source, Stream destination, long maxBytes, CancellationToken cancellationToken)
+    {
+        var bufferArray = new byte[81920];
+        var buffer = bufferArray.AsMemory();
+        long total = 0;
+
+        int read;
+        while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
+        {
+            total += read;
+            if (total > maxBytes)
+            {
+                throw new InvalidOperationException(
+                    $"The uploaded image exceeds the maximum allowed size of {maxBytes} bytes.");
+            }
+
+            await destination.WriteAsync(buffer[..read], cancellationToken);
+        }
+    }
+
     private string ResolveFullPath(string relativePath)
-        => Path.Combine(RootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+    {
+        var combined = Path.Combine(RootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        var fullPath = Path.GetFullPath(combined);
+
+        // Containment check: the resolved path must stay inside RootPath (defence against `..` traversal).
+        var rootFull = Path.GetFullPath(RootPath);
+        var rootPrefix = rootFull.EndsWith(Path.DirectorySeparatorChar)
+            ? rootFull
+            : rootFull + Path.DirectorySeparatorChar;
+
+        if (!fullPath.StartsWith(rootPrefix, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("The resolved path escapes the storage root.");
+        }
+
+        return fullPath;
+    }
 }

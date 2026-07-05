@@ -17,6 +17,13 @@ public sealed class OutboxDrainer
     private const int BatchSize = 100;
     private const int MaxAttempts = 10;
 
+    // A row flipped to InFlight but never closed (process crashed between the InFlight save and the
+    // dispatch result) would otherwise stay InFlight forever: DrainOnceAsync only selects Pending, and
+    // the enqueuer's stable idempotency key routes every future change for that aggregate into the
+    // InFlight no-op branch — silently dropping all further stock/price/product exports. Reclaim rows
+    // older than this back to Pending so they re-dispatch. Exports are idempotent, so re-dispatch is safe.
+    private static readonly TimeSpan InFlightStaleAfter = TimeSpan.FromMinutes(10);
+
     private readonly ApplicationDbContext _context;
     private readonly SyncDispatcher _dispatcher;
     private readonly ILogger<OutboxDrainer> _logger;
@@ -31,6 +38,9 @@ public sealed class OutboxDrainer
     public async Task<int> DrainOnceAsync(CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
+
+        await RecoverStaleInFlightAsync(now, cancellationToken);
+
         var due = await _context.ChannelExportOutbox
             .IgnoreQueryFilters()
             .Where(o => o.Status == ChannelOutboxStatus.Pending && o.NextAttemptAt <= now)
@@ -97,6 +107,33 @@ public sealed class OutboxDrainer
         }
 
         return processed;
+    }
+
+    /// <summary>
+    /// Reclaims outbox rows stuck in <see cref="ChannelOutboxStatus.InFlight"/> past
+    /// <see cref="InFlightStaleAfter"/> — the fingerprint of a process that died between flipping a row
+    /// InFlight and recording the dispatch result. They are reset to Pending (NextAttemptAt = now) so the
+    /// current pass re-dispatches them; exports are idempotent, so re-running one is harmless. Runs across
+    /// all tenants (host-level housekeeping) via <c>IgnoreQueryFilters</c>.
+    /// </summary>
+    private async Task RecoverStaleInFlightAsync(DateTime now, CancellationToken cancellationToken)
+    {
+        var staleBefore = now - InFlightStaleAfter;
+
+        var recovered = await _context.ChannelExportOutbox
+            .IgnoreQueryFilters()
+            .Where(o => o.Status == ChannelOutboxStatus.InFlight && o.DateModified < staleBefore)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(o => o.Status, ChannelOutboxStatus.Pending)
+                .SetProperty(o => o.NextAttemptAt, now)
+                .SetProperty(o => o.LastError, "Recovered: row was left InFlight after a process interruption.")
+                .SetProperty(o => o.DateModified, now),
+                cancellationToken);
+
+        if (recovered > 0)
+        {
+            _logger.LogWarning("Recovered {Count} stale InFlight outbox row(s) back to Pending", recovered);
+        }
     }
 
     private static DateTime ScheduleRetry(int attemptCount)

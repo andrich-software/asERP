@@ -1,9 +1,10 @@
-﻿using asERP.Application.Contracts.Logging;
 using System.Linq;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Invoice.Commands.InvoiceUpdate;
 
@@ -83,7 +84,7 @@ public class InvoiceUpdateHandler : IRequestHandler<InvoiceUpdateCommand, Result
             {
                 result.Succeeded = false;
                 result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("Ein Mandantenkontext ist erfsaleslich.");
+                result.Messages.Add("Ein Mandantenkontext ist erforderlich.");
                 return result;
             }
 
@@ -185,11 +186,9 @@ public class InvoiceUpdateHandler : IRequestHandler<InvoiceUpdateCommand, Result
         catch (Exception ex)
         {
             // Handle any exceptions during invoice update
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the invoice: {ex.Message}");
-
-            _logger.LogError("Error updating invoice: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while updating the invoice.",
+                "Error updating invoice.");
         }
 
         return result;

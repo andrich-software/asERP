@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace asERP.Infrastructure.Logging;
@@ -25,5 +25,10 @@ public class LoggerAdapter<T> : IAppLogger<T>
     public void LogError(string message, params object[] args)
     {
         _logger.LogError(message, args);
+    }
+
+    public void LogError(Exception ex, string message, params object[] args)
+    {
+        _logger.LogError(ex, message, args);
     }
 }

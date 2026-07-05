@@ -1,4 +1,3 @@
-﻿using System.Linq.Expressions;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Entities.Common;
@@ -21,28 +20,9 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
 
     public IQueryable<TCt> GetContext<TCt>() where TCt : class => Context.Set<TCt>();
 
-    public IQueryable<T> Entities
-    {
-        get
-        {
-            IQueryable<T> query = Context.Set<T>().AsNoTracking();
-            var currentTenantId = TenantContext.GetCurrentTenantId();
-
-
-            // Apply tenant filtering - only return entities for current tenant or tenant-agnostic entities
-            if (currentTenantId.HasValue)
-            {
-                query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-            }
-            else
-            {
-                // If no tenant is set, only return tenant-agnostic entities
-                query = query.Where(x => x.TenantId == null);
-            }
-            
-            return query;
-        }
-    }
+    // Tenant isolation is enforced by the global query filter in ApplicationDbContext — do not
+    // re-filter on TenantId here (the filter is the contract).
+    public IQueryable<T> Entities => Context.Set<T>().AsNoTracking();
 
     public void Attach(T entity)
     {
@@ -63,52 +43,46 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
 
     public async Task<ICollection<T>> GetAllAsync()
     {
-        var query = Context.Set<T>().AsQueryable();
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            // Apply manual tenant filtering for both production and test environments
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-        return await query.AsNoTracking().ToListAsync();
+        // Tenant isolation via the global query filter.
+        return await Context.Set<T>().AsNoTracking().ToListAsync();
     }
 
     public async Task<T?> GetByIdAsync(Guid id, bool asNoTracking = false)
     {
-        // Always start with ignoring query filters to ensure fresh database reads
-        // especially important after DELETE operations in tests
-        var query = Context.Set<T>().IgnoreQueryFilters().AsQueryable();
+        // Tenant isolation via the global query filter.
+        var query = Context.Set<T>().Where(x => x.Id == id);
 
-        // Apply manual tenant filtering - crucial for multi-tenant scenarios
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            // Manual tenant filtering for both production and test environments
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-        else
-        {
-            // If no tenant context, only return tenant-agnostic entities
-            query = query.Where(x => x.TenantId == null);
-        }
-
-        // Apply id filter
-        query = query.Where(x => x.Id == id);
-
-        // Always use AsNoTracking to ensure fresh database reads, especially after deletions
         if (asNoTracking)
         {
             return await query.AsNoTracking().FirstOrDefaultAsync();
         }
-        else
-        {
-            // For tracking entities: Load directly for proper Entity Framework tracking
-            return await query.FirstOrDefaultAsync();
-        }
+
+        // For tracking entities: load directly for proper Entity Framework tracking.
+        return await query.FirstOrDefaultAsync();
     }
 
     public virtual async Task UpdateAsync(T entity)
     {
+        // SECURITY: load the existing row's owner and verify tenant ownership before applying any
+        // update. Callers frequently build a fresh detached entity without a TenantId; copying that
+        // over the tracked row would null-out the owner and expose the row to every tenant.
+        // Look up the owner without the query filter so a cross-tenant target is detected and rejected
+        // (rather than silently updating zero rows).
+        var ownerTenantId = await Context.Set<T>()
+            .IgnoreQueryFilters()
+            .Where(e => e.Id == entity.Id)
+            .Select(e => e.TenantId)
+            .FirstOrDefaultAsync();
+
+        var currentTenantId = TenantContext.GetCurrentTenantId();
+        if (ownerTenantId != null && currentTenantId.HasValue && ownerTenantId != currentTenantId)
+        {
+            throw new UnauthorizedAccessException("Cannot update entity from a different tenant");
+        }
+
+        // Never let the incoming entity change the persisted owner.
+        entity.TenantId = ownerTenantId;
+
         // Ensure the entity is being tracked and mark it as modified
         var existingEntry = Context.ChangeTracker.Entries<T>().FirstOrDefault(e => e.Entity.Id == entity.Id);
 
@@ -125,12 +99,15 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
                 Context.Entry(existingEntry.Entity).CurrentValues.SetValues(entity);
                 Context.Entry(existingEntry.Entity).State = EntityState.Modified;
             }
+            // TenantId must never be overwritten by an update.
+            Context.Entry(existingEntry.Entity).Property(e => e.TenantId).IsModified = false;
         }
         else
         {
             // Attach and mark as modified if not already tracked
             Context.Attach(entity);
             Context.Entry(entity).State = EntityState.Modified;
+            Context.Entry(entity).Property(e => e.TenantId).IsModified = false;
         }
 
         await Context.SaveChangesAsync();
@@ -141,50 +118,47 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
         // First verify the entity exists and belongs to the current tenant
         var existingEntity = await Context.Set<T>().IgnoreQueryFilters()
             .FirstOrDefaultAsync(e => e.Id == entity.Id);
-        
+
         if (existingEntity == null)
         {
             throw new InvalidOperationException($"Entity with ID {entity.Id} not found for deletion");
         }
-        
-        // Verify tenant isolation for security
+
+        // SECURITY: verify tenant isolation. A row that has an owner may only be deleted by that
+        // owner; a null tenant context may only delete tenant-agnostic (TenantId == null) rows.
         var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue && existingEntity.TenantId != null && existingEntity.TenantId != currentTenantId)
-        {
-            throw new UnauthorizedAccessException($"Cannot delete entity from different tenant");
-        }
-        
+        EnsureDeletableByCurrentTenant(existingEntity.TenantId, currentTenantId);
+
         // Remove the existing entity (not the passed-in entity which may be incomplete)
         Context.Remove(existingEntity);
         await Context.SaveChangesAsync();
-        
-        // For InMemory database scenarios, ensure the deletion is immediately visible across all scopes
-        // This is essential for tests where multiple HttpClients access the same InMemory database
-        if (Context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+    }
+
+    /// <summary>
+    /// Enforces tenant ownership for deletes: an owned row (<paramref name="rowTenantId"/> set) may
+    /// only be deleted when the current context owns it; a null tenant context may only delete
+    /// tenant-agnostic rows.
+    /// </summary>
+    protected static void EnsureDeletableByCurrentTenant(Guid? rowTenantId, Guid? currentTenantId)
+    {
+        if (rowTenantId != null)
         {
-            // Clear change tracker to ensure fresh reads
-            Context.ChangeTracker.Clear();
-            
-            // Force immediate garbage collection for InMemory database synchronization
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
-            
-            // Additional synchronization: Force a dummy query to refresh the InMemory database state
-            await Context.Set<T>().IgnoreQueryFilters().Where(x => x.Id == Guid.Empty).FirstOrDefaultAsync();
+            if (currentTenantId != rowTenantId)
+            {
+                throw new UnauthorizedAccessException("Cannot delete entity from a different tenant");
+            }
+        }
+        else if (currentTenantId != null)
+        {
+            // A tenant-scoped context must not delete tenant-agnostic (global) rows.
+            throw new UnauthorizedAccessException("Cannot delete a tenant-agnostic entity from a tenant context");
         }
     }
 
     public async Task<bool> ExistsAsync(Guid id)
     {
-        var query = Context.Set<T>().AsQueryable();
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            // Apply manual tenant filtering for both production and test environments
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-        return await query.AsNoTracking().AnyAsync(e => e.Id == id);
+        // Tenant isolation via the global query filter.
+        return await Context.Set<T>().AsNoTracking().AnyAsync(e => e.Id == id);
     }
 
     public async Task<bool> ExistsGloballyAsync(Guid id)
@@ -193,78 +167,13 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
         return await Context.Set<T>().IgnoreQueryFilters().AsNoTracking().AnyAsync(e => e.Id == id);
     }
 
-    public virtual async Task<bool> IsUniqueAsync(T entity, Guid? id = null)
-    {
-        var type = typeof(T);
-        var properties = type.GetProperties();
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-
-        foreach (var property in properties)
-        {
-            // Skip TenantId, DateCreated, DateModified and Id properties for uniqueness check
-            if (property.Name == "TenantId" || property.Name == "DateCreated" ||
-                property.Name == "DateModified" || property.Name == "Id")
-            {
-                continue;
-            }
-
-            var value = property.GetValue(entity);
-
-            // Skip null values and complex types (except string)
-            if (value == null || (value.GetType().IsClass && value.GetType() != typeof(string)))
-            {
-                continue;
-            }
-
-            // Skip empty strings
-            if (string.IsNullOrEmpty(value?.ToString()))
-            {
-                continue;
-            }
-
-            var parameter = Expression.Parameter(type, "e");
-            var propertyExpression = Expression.Property(parameter, property);
-            var constant = Expression.Constant(value, property.PropertyType);
-            var equalityExpression = Expression.Equal(propertyExpression, constant);
-
-            // Build the base lambda expression
-            var lambda = Expression.Lambda<Func<T, bool>>(equalityExpression, parameter);
-
-            // Add tenant isolation
-            if (currentTenantId.HasValue)
-            {
-                var tenantProperty = type.GetProperty("TenantId");
-                if (tenantProperty != null)
-                {
-                    var tenantPropertyExpression = Expression.Property(parameter, tenantProperty);
-                    var tenantConstant = Expression.Constant(currentTenantId.Value, typeof(Guid?));
-                    var tenantEqualityExpression = Expression.Equal(tenantPropertyExpression, tenantConstant);
-
-                    var combinedExpression = Expression.AndAlso(equalityExpression, tenantEqualityExpression);
-                    lambda = Expression.Lambda<Func<T, bool>>(combinedExpression, parameter);
-                }
-            }
-
-            // Exclude entity with provided id
-            if (id.HasValue)
-            {
-                var idProperty = type.GetProperty("Id");
-                var idPropertyExpression = Expression.Property(parameter, idProperty!);
-                var idConstant = Expression.Constant(id.Value);
-                var idEqualityExpression = Expression.NotEqual(idPropertyExpression, idConstant);
-
-                var combinedExpression = Expression.AndAlso(lambda.Body, idEqualityExpression);
-                lambda = Expression.Lambda<Func<T, bool>>(combinedExpression, lambda.Parameters);
-            }
-
-            if (await Context.Set<T>().AnyAsync(lambda))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
+    /// <summary>
+    /// Default uniqueness check is a no-op (always unique). Entity-specific uniqueness is defined by
+    /// the concrete repositories that override this (e.g. ProductRepository checks SKU); the base must
+    /// not guess by reflecting over every scalar property — that produced one round-trip per property
+    /// and wrongly rejected rows that merely shared a value in an unrelated column.
+    /// </summary>
+    public virtual Task<bool> IsUniqueAsync(T entity, Guid? id = null) => Task.FromResult(true);
 
     // Transaction support methods
     public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)

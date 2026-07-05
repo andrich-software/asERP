@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.AiModel.Commands.AiModelUpdate;
 
@@ -44,20 +45,38 @@ public class AiModelUpdateHandler : IRequestHandler<AiModelUpdateCommand, Result
 
         try
         {
-            // Direktes manuelles Mapping ohne Helper-Klasse
-            var aiModelToUpdate = new Domain.Entities.AiModel
+            // Load the tracked entity and mutate it, so the persistence layer keeps
+            // TenantId/DateCreated intact instead of nulling them on a detached update.
+            var aiModelToUpdate = await _aiModelRepository.GetByIdAsync(request.Id);
+            if (aiModelToUpdate == null)
             {
-                Id = request.Id,
-                Name = request.Name,
-                AiModelType = request.AiModelType,
-                ApiUsername = request.ApiUsername,
-                ApiPassword = request.ApiPassword,
-                ApiKey = request.ApiKey,
-                NCtx = request.NCtx
-            };
+                result.Succeeded = false;
+                result.StatusCode = ResultStatusCode.NotFound;
+                result.Messages.Add("AI model not found.");
+                _logger.LogWarning("AI model with ID {Id} not found for update", request.Id);
+                return result;
+            }
 
-            // Update in database
-            await _aiModelRepository.UpdateAsync(aiModelToUpdate);
+            aiModelToUpdate.Name = request.Name;
+            aiModelToUpdate.AiModelType = request.AiModelType;
+            aiModelToUpdate.ApiUrl = request.ApiUrl;
+            aiModelToUpdate.ApiUsername = request.ApiUsername;
+            aiModelToUpdate.NCtx = request.NCtx;
+
+            // Secrets are write-only on the wire: an empty input means "keep the stored value"
+            // so the client never has to resend the credential to change other fields.
+            if (!string.IsNullOrEmpty(request.ApiPassword))
+            {
+                aiModelToUpdate.ApiPassword = request.ApiPassword;
+            }
+
+            if (!string.IsNullOrEmpty(request.ApiKey))
+            {
+                aiModelToUpdate.ApiKey = request.ApiKey;
+            }
+
+            // Save changes (entity is already tracked, so just save)
+            await _aiModelRepository.SaveChangesAsync();
 
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.Ok;
@@ -67,11 +86,10 @@ public class AiModelUpdateHandler : IRequestHandler<AiModelUpdateCommand, Result
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the AI model: {ex.Message}");
-
-            _logger.LogError("Error updating AI model: {Message}", ex.Message);
+            // Never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while updating the AI model.",
+                "Error updating AI model.");
         }
 
         return result;

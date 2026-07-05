@@ -1,22 +1,22 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.Superadmin.Commands.SuperadminCreate;
 using asERP.Application.Features.Superadmin.Commands.SuperadminDelete;
 using asERP.Application.Features.Superadmin.Commands.SuperadminUpdate;
 using asERP.Application.Features.Superadmin.Queries.SuperadminDetail;
 using asERP.Application.Features.Superadmin.Queries.SuperadminList;
-using asERP.Application.Features.Superadmin.UserTenants.Commands.AssignUserToTenant;
-using asERP.Application.Features.Superadmin.UserTenants.Commands.RemoveUserFromTenant;
-using asERP.Application.Features.Superadmin.UserTenants.Queries.GetUserTenants;
 using asERP.Application.Features.Superadmin.Users.Commands.UserCreate;
 using asERP.Application.Features.Superadmin.Users.Commands.UserDelete;
 using asERP.Application.Features.Superadmin.Users.Commands.UserUpdate;
 using asERP.Application.Features.Superadmin.Users.Queries.UserDetail;
 using asERP.Application.Features.Superadmin.Users.Queries.UserList;
+using asERP.Application.Features.Superadmin.UserTenants.Commands.AssignUserToTenant;
+using asERP.Application.Features.Superadmin.UserTenants.Commands.RemoveUserFromTenant;
+using asERP.Application.Features.Superadmin.UserTenants.Queries.GetUserTenants;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Superadmin;
 using asERP.Domain.Dtos.User;
 using asERP.Domain.Wrapper;
-using Microsoft.AspNetCore.Authentication;
+using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -39,7 +39,7 @@ public class SuperadminController(IMediator mediator) : ControllerBase
     [HttpGet("tenants")]
     public async Task<ActionResult<PaginatedResult<SuperadminTenantListDto>>> GetTenants(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
     {
-        var accessCheckResult = await EnsureSuperadminAccessAsync();
+        var accessCheckResult = await this.EnsureSuperadminAccessAsync();
         if (accessCheckResult is not null)
         {
             return accessCheckResult;
@@ -64,7 +64,7 @@ public class SuperadminController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SuperadminTenantDetailDto>> GetTenantDetails(Guid id)
     {
-        var accessCheckResult = await EnsureSuperadminAccessAsync();
+        var accessCheckResult = await this.EnsureSuperadminAccessAsync();
         if (accessCheckResult is not null)
         {
             return accessCheckResult;
@@ -294,57 +294,5 @@ public class SuperadminController(IMediator mediator) : ControllerBase
 
         var response = await mediator.Send(command);
         return StatusCode((int)response.StatusCode, response);
-    }
-
-    private async Task<ActionResult?> EnsureSuperadminAccessAsync()
-    {
-        var logger = HttpContext.RequestServices.GetRequiredService<ILogger<SuperadminController>>();
-
-        logger.LogInformation("🔍 EnsureSuperadminAccessAsync - Starting authentication check");
-        logger.LogInformation($"📋 Authorization header present: {HttpContext.Request.Headers.ContainsKey("Authorization")}");
-
-        var authenticateResult = await HttpContext.AuthenticateAsync();
-        logger.LogInformation($"🔐 AuthenticateAsync result - Succeeded: {authenticateResult.Succeeded}, Principal: {authenticateResult.Principal != null}");
-
-        if (!(authenticateResult.Succeeded && authenticateResult.Principal != null))
-        {
-            try
-            {
-                var testAuthenticateResult = await HttpContext.AuthenticateAsync("Test");
-                if (testAuthenticateResult.Succeeded && testAuthenticateResult.Principal != null)
-                {
-                    logger.LogInformation("✅ Test authentication scheme succeeded");
-                    authenticateResult = testAuthenticateResult;
-                }
-            }
-            catch (System.InvalidOperationException)
-            {
-                logger.LogInformation("ℹ️ Test authentication scheme not available (normal in production)");
-            }
-        }
-
-        if (authenticateResult.Succeeded && authenticateResult.Principal != null)
-        {
-            HttpContext.User = authenticateResult.Principal;
-            logger.LogInformation($"👤 User set - Identity: {HttpContext.User.Identity?.Name}, IsAuthenticated: {HttpContext.User.Identity?.IsAuthenticated}");
-        }
-
-        if (!(User?.Identity?.IsAuthenticated ?? false))
-        {
-            logger.LogWarning("❌ User is not authenticated - returning 401");
-            return StatusCode(StatusCodes.Status401Unauthorized);
-        }
-
-        var roles = User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToList();
-        logger.LogInformation($"🎭 User roles: {string.Join(", ", roles)}");
-
-        if (!User.IsInRole("Superadmin"))
-        {
-            logger.LogWarning($"❌ User does not have Superadmin role - returning 403. Available roles: {string.Join(", ", roles)}");
-            return StatusCode(StatusCodes.Status403Forbidden);
-        }
-
-        logger.LogInformation("✅ Superadmin access granted");
-        return null;
     }
 }

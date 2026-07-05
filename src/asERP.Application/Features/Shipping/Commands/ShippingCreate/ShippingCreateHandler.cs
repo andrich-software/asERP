@@ -145,6 +145,12 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
                 TenantId = sales.TenantId
             };
 
+            // The shipment row, item assignment and history are wrapped in a single transaction
+            // so a failure mid-way cannot leave a shipment without its item assignment. It also
+            // narrows the TOCTOU window on the item.ShippingId assignment (07.3) — the definitive
+            // guard is the conditional UPDATE (WHERE ShippingId IS NULL) in the repository.
+            await using var transaction = await _shippingRepository.BeginTransactionAsync(cancellationToken);
+
             await _shippingRepository.CreateAsync(shippingToCreate);
 
             // The sales aggregate is loaded untracked — stamp the items via a tracked update.
@@ -163,6 +169,8 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
             });
 
             await _salesShippingStatusService.RecomputeAsync(sales.Id, cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
 
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.Created;
@@ -186,9 +194,9 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
         {
             result.Succeeded = false;
             result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the shipment: {ex.Message}");
+            result.Messages.Add("An error occurred while creating the shipment.");
 
-            _logger.LogError("Error creating shipment: {Message}", ex.Message);
+            _logger.LogError(ex, "Error creating shipment for sales {SalesId}", request.SalesId);
         }
 
         return result;

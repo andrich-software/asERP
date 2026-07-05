@@ -1,10 +1,13 @@
-﻿using asERP.Domain.Entities.Common;
+using asERP.Domain.Entities.Common;
 using asERP.Domain.Enums;
 
 namespace asERP.Domain.Entities;
 
-public class SalesChannel : BaseEntity, IBaseEntity
+public class SalesChannel : BaseEntity, IBaseEntity, IConcurrencyStamped
 {
+    /// <summary>Optimistic-concurrency token; refreshed on every insert/update in SaveChangesAsync.</summary>
+    public Guid ConcurrencyToken { get; set; }
+
     public SalesChannelType Type { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
@@ -43,6 +46,13 @@ public class SalesChannel : BaseEntity, IBaseEntity
     /// <see cref="ExportProducts"/> — a channel can receive stock updates without full product exports.
     /// </summary>
     public bool ExportStock { get; set; }
+
+    /// <summary>
+    /// Push local order cancellations back to this channel (dedicated <c>CancelSales</c> export).
+    /// Opt-in per channel, default off — without it a local cancel stays local and the shop keeps
+    /// showing the order as open. Independent of <see cref="ExportSaless"/>.
+    /// </summary>
+    public bool PushSalesCancellations { get; set; }
 
     /// <summary>
     /// This channel is the stock master: its stock levels are mirrored into the linked warehouse

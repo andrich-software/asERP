@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -31,6 +31,12 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
     private readonly IServerInfoService _serverInfoService;
     private readonly ILogger<AuthService> _logger;
 
+    // A precomputed hash of a throwaway password, used to equalize login timing for unknown
+    // emails. Lazily generated from the configured hasher so its format always matches.
+    private readonly Lazy<string> _dummyPasswordHash;
+
+    private string DummyPasswordHash => _dummyPasswordHash.Value;
+
     public AuthService(
         UserManager<ApplicationUser> userManager,
         JwtSettings jwtSettings,
@@ -51,6 +57,8 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
         _emailService = emailService;
         _serverInfoService = serverInfoService;
         _logger = logger;
+        _dummyPasswordHash = new Lazy<string>(() =>
+            _userManager.PasswordHasher.HashPassword(new ApplicationUser(), "timing-equalization-placeholder"));
     }
 
     public async Task<Result<LoginResponseDto>> Login(AuthRequest request)
@@ -59,10 +67,15 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
 
         if (user == null)
         {
+            // Run a dummy password hash so the response time for an unknown email matches the
+            // time for a known one — avoids a timing oracle that would confirm registered accounts.
+            _userManager.PasswordHasher.VerifyHashedPassword(new ApplicationUser(), DummyPasswordHash, request.Password ?? string.Empty);
             return Result<LoginResponseDto>.Fail(ResultStatusCode.Unauthorized, "Ungültige Anmeldedaten.");
         }
 
-        var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
+        // lockoutOnFailure: true enables Identity account lockout (configured in IdentityServicesRegistration)
+        // so an individual account is temporarily locked after repeated failed attempts.
+        var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
 
         if (!result.Succeeded)
         {
@@ -98,14 +111,11 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
 
     public async Task<Result<LoginResponseDto>> Register(RegistrationRequest request)
     {
-        _logger.LogDebug("🟦 AuthService.Register called");
-        _logger.LogDebug("📧 Email: {Email}", request.Email);
-        _logger.LogDebug("👤 Firstname: {Firstname}, Lastname: {Lastname}", request.Firstname, request.Lastname);
-        _logger.LogDebug("🔑 Password length: {PasswordLength}", request.Password?.Length ?? 0);
+        _logger.LogDebug("Register called for {Email}", request.Email);
 
         if (!_serverInfoService.IsRegistrationEnabled)
         {
-            _logger.LogWarning("⛔ Registration attempt rejected — registration is disabled on this server.");
+            _logger.LogWarning("Registration attempt rejected — registration is disabled on this server.");
             return Result<LoginResponseDto>.Fail(ResultStatusCode.Forbidden, "Die Registrierung ist auf diesem Server deaktiviert.");
         }
 
@@ -118,20 +128,13 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
             EmailConfirmed = true
         };
 
-        _logger.LogDebug("👤 Creating ApplicationUser with UserName: {UserName}", user.UserName);
-
         var result = await _userManager.CreateAsync(user, request.Password!);
-
-        _logger.LogDebug("📊 UserManager.CreateAsync result - Succeeded: {Succeeded}", result.Succeeded);
 
         if (result.Succeeded)
         {
-            _logger.LogDebug("✅ User created successfully with Id: {UserId}", user.Id);
-            _logger.LogDebug("🎭 Adding 'User' role to user");
+            _logger.LogDebug("User created successfully with Id: {UserId}", user.Id);
 
             await _userManager.AddToRoleAsync(user, "User");
-
-            _logger.LogDebug("✅ Role added successfully — issuing JWT for auto-login");
 
             var availableTenants = await _userTenantService.GetUserTenantsAsync(user.Id);
             var jwtSecurityToken = await GenerateToken(user, availableTenants, defaultTenantId: null);
@@ -152,19 +155,33 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
             });
         }
 
-        _logger.LogDebug("❌ User creation failed with {ErrorCount} errors", result.Errors.Count());
+        _logger.LogDebug("User creation failed with {ErrorCount} errors", result.Errors.Count());
+
+        // A duplicate email/username must not be revealed to an anonymous caller (account
+        // enumeration). When the only failures are duplicates, return the same neutral result
+        // as a successful registration so an existing account cannot be probed.
+        if (result.Errors.All(e => e.Code is "DuplicateUserName" or "DuplicateEmail"))
+        {
+            return Result<LoginResponseDto>.Success(new LoginResponseDto
+            {
+                Succeeded = true,
+                Message = "Falls die E-Mail-Adresse registrierbar ist, erhalten Sie in Kürze eine Bestätigung.",
+                AvailableTenants = new List<TenantListDto>(),
+                CurrentTenantId = null
+            });
+        }
 
         var stringBuilder = new StringBuilder();
         foreach (var err in result.Errors)
         {
-            _logger.LogDebug("❌ Error: {Code} - {Description}", err.Code, err.Description);
+            _logger.LogDebug("Registration error: {Code} - {Description}", err.Code, err.Description);
 
             // Map common errors to user-friendly German messages
             switch (err.Code)
             {
                 case "DuplicateUserName":
                 case "DuplicateEmail":
-                    stringBuilder.AppendLine("Diese E-Mail-Adresse ist bereits registriert. Bitte verwenden Sie eine andere E-Mail-Adresse oder melden Sie sich an.");
+                    // Handled above via the neutral response; skip to avoid disclosure.
                     break;
                 case "PasswordTooShort":
                     stringBuilder.AppendLine("Das Passwort ist zu kurz. Bitte verwenden Sie mindestens 6 Zeichen.");
@@ -195,8 +212,6 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
         {
             errorMessage = "Registrierung fehlgeschlagen.";
         }
-
-        _logger.LogDebug("❌ Final error message: {ErrorMessage}", errorMessage);
 
         return Result<LoginResponseDto>.Fail(ResultStatusCode.BadRequest, errorMessage);
     }
@@ -356,14 +371,14 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
 
     public async Task<Result<ForgotPasswordResponse>> ForgotPassword(ForgotPasswordRequest request)
     {
-        _logger.LogDebug("🔑 ForgotPassword called for email: {Email}", request.Email);
+        _logger.LogDebug("ForgotPassword called for {Email}", request.Email);
 
         var user = await _userManager.FindByEmailAsync(request.Email);
 
         // Return success even if user not found (security best practice to prevent user enumeration)
         if (user == null)
         {
-            _logger.LogDebug("⚠️ User not found for email: {Email}", request.Email);
+            _logger.LogDebug("ForgotPassword: no account for {Email}", request.Email);
             return Result<ForgotPasswordResponse>.Success(new ForgotPasswordResponse
             {
                 Succeeded = true,
@@ -374,7 +389,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
         // Generate password reset token
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-        _logger.LogDebug("✅ Password reset token generated for user: {UserId}", user.Id);
+        _logger.LogDebug("Password reset token generated for user {UserId}", user.Id);
 
         // Send password reset email
         var emailSent = await _emailService.SendPasswordResetEmailAsync(
@@ -386,11 +401,11 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
 
         if (!emailSent)
         {
-            _logger.LogWarning("⚠️ Failed to send password reset email to {Email}, but returning success for security", request.Email);
+            _logger.LogWarning("Failed to send password reset email to {Email}, but returning success for security", request.Email);
         }
         else
         {
-            _logger.LogInformation("✅ Password reset email sent successfully to {Email}", request.Email);
+            _logger.LogInformation("Password reset email sent successfully to {Email}", request.Email);
         }
 
         return Result<ForgotPasswordResponse>.Success(new ForgotPasswordResponse
@@ -402,13 +417,13 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
 
     public async Task<Result<ResetPasswordResponse>> ResetPassword(ResetPasswordRequest request)
     {
-        _logger.LogDebug("🔄 ResetPassword called for email: {Email}", request.Email);
+        _logger.LogDebug("ResetPassword called for {Email}", request.Email);
 
         var user = await _userManager.FindByEmailAsync(request.Email);
 
         if (user == null)
         {
-            _logger.LogDebug("❌ User not found for email: {Email}", request.Email);
+            _logger.LogDebug("ResetPassword: no account for {Email}", request.Email);
             return Result<ResetPasswordResponse>.Fail(
                 ResultStatusCode.BadRequest,
                 "Das Zurücksetzen des Passworts ist fehlgeschlagen. Bitte überprüfen Sie Ihre Eingaben."
@@ -419,7 +434,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
 
         if (result.Succeeded)
         {
-            _logger.LogDebug("✅ Password reset successful for user: {UserId}", user.Id);
+            _logger.LogDebug("Password reset successful for user {UserId}", user.Id);
             return Result<ResetPasswordResponse>.Success(new ResetPasswordResponse
             {
                 Succeeded = true,
@@ -427,7 +442,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
             });
         }
 
-        _logger.LogDebug("❌ Password reset failed for user: {UserId}. Errors: {Errors}",
+        _logger.LogDebug("Password reset failed for user {UserId}. Errors: {Errors}",
             user.Id,
             string.Join(", ", result.Errors.Select(e => e.Description)));
 

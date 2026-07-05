@@ -1,12 +1,13 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
-using CsvHelper;
-using CsvHelper.Configuration;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
+using CsvHelper;
+using CsvHelper.Configuration;
 
 namespace asERP.Application.Features.ImportExport.Commands.CustomerCsvImport;
 
@@ -85,8 +86,9 @@ public class CustomerCsvImportHandler : IRequestHandler<CustomerCsvImportCommand
                     }
                     catch (Exception ex)
                     {
-                        importResult.Errors.Add($"Row {rowNumber}: Error parsing CSV data - {ex.Message}");
+                        importResult.Errors.Add($"Row {rowNumber}: Error parsing CSV data");
                         importResult.SkippedCount++;
+                        _logger.LogError(ex, "Error parsing CSV data on row {RowNumber}", rowNumber);
                     }
                 }
             }
@@ -94,7 +96,8 @@ public class CustomerCsvImportHandler : IRequestHandler<CustomerCsvImportCommand
             {
                 result.Succeeded = false;
                 result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add($"Error reading CSV file: {ex.Message}");
+                result.Messages.Add("Error reading CSV file.");
+                _logger.LogError(ex, "Error reading CSV file during customer import");
                 return result;
             }
 
@@ -148,9 +151,9 @@ public class CustomerCsvImportHandler : IRequestHandler<CustomerCsvImportCommand
                 }
                 catch (Exception ex)
                 {
-                    importResult.Errors.Add($"Row {csvRecord.RowNumber}: Error processing customer - {ex.Message}");
+                    importResult.Errors.Add($"Row {csvRecord.RowNumber}: Error processing customer");
                     importResult.SkippedCount++;
-                    _logger.LogError("Error processing customer row {RowNumber}: {Message}", csvRecord.RowNumber, ex.Message);
+                    _logger.LogError(ex, "Error processing customer row {RowNumber}", csvRecord.RowNumber);
                 }
             }
 
@@ -163,10 +166,9 @@ public class CustomerCsvImportHandler : IRequestHandler<CustomerCsvImportCommand
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred during CSV import: {ex.Message}");
-            _logger.LogError("Error during CSV import: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred during CSV import.",
+                "Error during CSV import.");
         }
 
         return result;

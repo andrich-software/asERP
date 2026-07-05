@@ -22,4 +22,7 @@
 		<ProjectReference Include="..\asERP.Application\asERP.Application.csproj" />
 		<ProjectReference Include="..\asERP.Identity\asERP.Identity.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="asERP.Persistence.Tests" />
+	</ItemGroup>
 </Project>

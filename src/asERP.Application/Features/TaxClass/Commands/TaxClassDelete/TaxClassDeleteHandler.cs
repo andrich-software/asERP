@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.TaxClass.Commands.TaxClassDelete;
 
@@ -77,11 +78,9 @@ public class TaxClassDeleteHandler : IRequestHandler<TaxClassDeleteCommand, Resu
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while deleting the tax class: {ex.Message}");
-
-            _logger.LogError("Error deleting tax class: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while deleting the tax class.",
+                "Error deleting tax class.");
         }
 
         return result;

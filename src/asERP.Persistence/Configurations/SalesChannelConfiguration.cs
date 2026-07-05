@@ -1,8 +1,8 @@
-﻿using asERP.Domain.Entities;
+using System.Collections.Generic;
+using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using System.Collections.Generic;
 
 namespace asERP.Persistence.Configurations;
 
@@ -44,6 +44,9 @@ public class SalesChannelConfiguration : IEntityTypeConfiguration<SalesChannel>
             }
         );
 
+        builder.Property(q => q.ConcurrencyToken)
+            .IsConcurrencyToken();
+
         builder.Property(q => q.Name)
             .IsRequired()
             .HasMaxLength(100);
@@ -61,5 +64,8 @@ public class SalesChannelConfiguration : IEntityTypeConfiguration<SalesChannel>
         builder.Property(q => q.TrackingToken).HasMaxLength(4096);
         builder.Property(q => q.TrackingTokenHash).HasMaxLength(64);
         builder.HasIndex(q => q.TrackingTokenHash);
+
+        // Every query carries the tenant filter — index TenantId so list endpoints don't full-scan.
+        builder.HasIndex(q => q.TenantId);
     }
 }

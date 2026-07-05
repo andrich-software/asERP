@@ -168,9 +168,9 @@ public class SettingsInitializer
             new Setting { Key = "Email.SmtpHost", Value = "localhost" },
             new Setting { Key = "Email.SmtpPort", Value = "1025" },
             new Setting { Key = "Email.SmtpUsername", Value = "" },
-            new Setting { Key = "Email.SmtpPassword", Value = "" },
+            new Setting { Key = "Email.SmtpPassword", Value = "", IsEncrypted = true },
             new Setting { Key = "Email.SmtpEnableSsl", Value = "False" },
-            new Setting { Key = "Email.ApiKey", Value = "" },
+            new Setting { Key = "Email.ApiKey", Value = "", IsEncrypted = true },
             new Setting { Key = "Email.FromAddress", Value = "noreply@aserp.local" },
             new Setting { Key = "Email.FromName", Value = "asERP System" },
             new Setting { Key = "Email.ReplyToAddress", Value = "" },
@@ -189,14 +189,14 @@ public class SettingsInitializer
 
             // ClickHouse (web analytics). Seeded from environment so docker-compose can point the
             // server at the bundled 'clickhouse' service; defaults to localhost for local dev. These
-            // are the source of truth afterwards — edit them to use an external ClickHouse. The
-            // password is stored plaintext here for the non-secret internal default; switching to an
-            // external server should re-save it via the encrypted settings path.
+            // are the source of truth afterwards — edit them to use an external ClickHouse. No default
+            // credentials are shipped: User/Password default empty (analytics stays off until
+            // configured), and the password is flagged encrypted so writes go through the encryptor.
             new Setting { Key = "ClickHouse.Host", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_HOST") ?? "localhost" },
             new Setting { Key = "ClickHouse.Port", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_PORT") ?? "8123" },
             new Setting { Key = "ClickHouse.Database", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_DB") ?? "aserp_analytics" },
-            new Setting { Key = "ClickHouse.User", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_USER") ?? "aserp" },
-            new Setting { Key = "ClickHouse.Password", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_PASSWORD") ?? "aserp" },
+            new Setting { Key = "ClickHouse.User", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_USER") ?? "" },
+            new Setting { Key = "ClickHouse.Password", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_PASSWORD") ?? "", IsEncrypted = true },
             new Setting { Key = "ClickHouse.UseTls", Value = "False" },
             new Setting { Key = "ClickHouse.Enabled", Value = Environment.GetEnvironmentVariable("CLICKHOUSE_ENABLED") ?? "False" },
 

@@ -68,10 +68,10 @@ public class ShippingProviderRateCreateHandler : IRequestHandler<ShippingProvide
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error creating shipping option: {Message}", ex.Message);
+            _logger.LogError(ex, "Error creating shipping option");
 
             return Result<Guid>.Fail(ResultStatusCode.InternalServerError,
-                $"An error occurred while creating the shipping option: {ex.Message}");
+                "An error occurred while creating the shipping option.");
         }
     }
 }

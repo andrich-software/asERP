@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Contracts.Logging;
+namespace asERP.Application.Contracts.Logging;
 
 // ReSharper disable once UnusedTypeParameter
 public interface IAppLogger<T>
@@ -6,4 +6,5 @@ public interface IAppLogger<T>
     void LogInformation(string message, params object[] args);
     void LogWarning(string message, params object[] args);
     void LogError(string message, params object[] args);
+    void LogError(Exception ex, string message, params object[] args);
 }

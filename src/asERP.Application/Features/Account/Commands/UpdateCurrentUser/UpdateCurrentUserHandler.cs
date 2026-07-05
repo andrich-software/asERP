@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
@@ -102,10 +102,10 @@ public class UpdateCurrentUserHandler : IRequestHandler<UpdateCurrentUserCommand
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the current user: {ex.Message}");
-            _logger.LogError("Error updating current user: {Message}", ex.Message);
+            // Never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while updating the current user.",
+                "Error updating current user.");
         }
 
         return result;

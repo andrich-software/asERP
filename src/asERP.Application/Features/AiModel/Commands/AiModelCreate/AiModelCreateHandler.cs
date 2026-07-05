@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 // using ValidationException = asERP.Application.Exceptions.ValidationException;
 
 namespace asERP.Application.Features.AiModel.Commands.AiModelCreate;
@@ -104,12 +105,10 @@ public class AiModelCreateHandler : IRequestHandler<AiModelCreateCommand, Result
         }
         catch (Exception ex)
         {
-            // Handle any exceptions during AI model creation
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the AI model: {ex.Message}");
-
-            _logger.LogError("Error creating AI model: {Message}", ex.Message);
+            // Handle any exceptions during AI model creation; never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while creating the AI model.",
+                "Error creating AI model.");
         }
 
         return result;

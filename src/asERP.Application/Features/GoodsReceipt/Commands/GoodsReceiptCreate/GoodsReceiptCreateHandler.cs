@@ -1,7 +1,12 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Contracts.Services;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Application.Notifications;
+using asERP.Domain.Wrapper;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.GoodsReceipt.Commands.GoodsReceiptCreate;
 
@@ -11,17 +16,26 @@ public class GoodsReceiptCreateHandler : IRequestHandler<GoodsReceiptCreateComma
     private readonly IGoodsReceiptRepository _goodsReceiptRepository;
     private readonly IProductRepository _productRepository;
     private readonly IWarehouseRepository _warehouseRepository;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ITenantContext _tenantContext;
+    private readonly IMediator _mediator;
 
     public GoodsReceiptCreateHandler(
         IAppLogger<GoodsReceiptCreateHandler> logger,
         IGoodsReceiptRepository goodsReceiptRepository,
         IProductRepository productRepository,
-        IWarehouseRepository warehouseRepository)
+        IWarehouseRepository warehouseRepository,
+        IHttpContextAccessor httpContextAccessor,
+        ITenantContext tenantContext,
+        IMediator mediator)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _goodsReceiptRepository = goodsReceiptRepository ?? throw new ArgumentNullException(nameof(goodsReceiptRepository));
         _productRepository = productRepository ?? throw new ArgumentNullException(nameof(productRepository));
         _warehouseRepository = warehouseRepository ?? throw new ArgumentNullException(nameof(warehouseRepository));
+        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+        _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
     public async Task<Result<Guid>> Handle(GoodsReceiptCreateCommand request, CancellationToken cancellationToken)
@@ -50,6 +64,8 @@ public class GoodsReceiptCreateHandler : IRequestHandler<GoodsReceiptCreateComma
 
         try
         {
+            var createdBy = _httpContextAccessor.HttpContext.GetUserId() ?? "System";
+
             // Manual mapping
             var goodsReceiptToCreate = new Domain.Entities.GoodsReceipt
             {
@@ -59,8 +75,12 @@ public class GoodsReceiptCreateHandler : IRequestHandler<GoodsReceiptCreateComma
                 WarehouseId = request.WarehouseId,
                 Supplier = request.Supplier,
                 Notes = request.Notes,
-                CreatedBy = "System" // TODO: Get from current user context
+                CreatedBy = createdBy
             };
+
+            // The receipt document and the stock update are two separate writes; wrap them in one
+            // transaction so a failure mid-way cannot record a receipt without the stock increment.
+            await using var transaction = await _goodsReceiptRepository.BeginTransactionAsync(cancellationToken);
 
             // Add the new goods receipt to the database
             await _goodsReceiptRepository.CreateAsync(goodsReceiptToCreate);
@@ -68,19 +88,34 @@ public class GoodsReceiptCreateHandler : IRequestHandler<GoodsReceiptCreateComma
             // Update product stock
             await UpdateProductStock(request.ProductId, request.WarehouseId, request.Quantity);
 
+            await transaction.CommitAsync(cancellationToken);
+
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.Created;
             result.Data = goodsReceiptToCreate.Id;
 
             _logger.LogInformation("Successfully created goods receipt with ID: {Id}", goodsReceiptToCreate.Id);
+
+            // Stock changed → let channels mirror the new level. Published after commit so the
+            // export never fires for a rolled-back receipt; a failed enqueue must not fail the receipt.
+            try
+            {
+                await _mediator.Publish(
+                    new StockChangedNotification(request.ProductId, request.WarehouseId, _tenantContext.GetCurrentTenantId()),
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "StockChangedNotification failed for goods receipt {Id}", goodsReceiptToCreate.Id);
+            }
         }
         catch (Exception ex)
         {
             result.Succeeded = false;
             result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the goods receipt: {ex.Message}");
+            result.Messages.Add("An error occurred while creating the goods receipt.");
 
-            _logger.LogError("Error creating goods receipt: {Message}", ex.Message);
+            _logger.LogError(ex, "Error creating goods receipt for product {ProductId}", request.ProductId);
         }
 
         return result;
@@ -90,23 +125,27 @@ public class GoodsReceiptCreateHandler : IRequestHandler<GoodsReceiptCreateComma
     {
         try
         {
-            // Get existing product stock or create new one
-            var existingStock = await _goodsReceiptRepository.GetProductStockAsync(productId, warehouseId);
+            // Atomic DB-side increment avoids the read-modify-write lost-update race when two receipts
+            // book stock for the same (product, warehouse) concurrently.
+            var affected = await _goodsReceiptRepository.IncrementProductStockAsync(productId, warehouseId, quantity);
 
-            if (existingStock != null)
+            if (affected == 0)
             {
-                existingStock.Stock += quantity;
-                await _goodsReceiptRepository.UpdateProductStockAsync(existingStock);
-            }
-            else
-            {
-                var newStock = new Domain.Entities.ProductStock
+                // No stock row yet — create it. A concurrent create can lose the race; on a duplicate,
+                // fall back to the atomic increment so no booked quantity is lost.
+                try
                 {
-                    ProductId = productId,
-                    WarehouseId = warehouseId,
-                    Stock = quantity
-                };
-                await _goodsReceiptRepository.CreateProductStockAsync(newStock);
+                    await _goodsReceiptRepository.CreateProductStockAsync(new Domain.Entities.ProductStock
+                    {
+                        ProductId = productId,
+                        WarehouseId = warehouseId,
+                        Stock = quantity
+                    });
+                }
+                catch (DbUpdateException)
+                {
+                    await _goodsReceiptRepository.IncrementProductStockAsync(productId, warehouseId, quantity);
+                }
             }
 
             _logger.LogInformation("Updated product stock for Product ID: {ProductId}, Warehouse ID: {WarehouseId}, Added Quantity: {Quantity}",
@@ -114,7 +153,7 @@ public class GoodsReceiptCreateHandler : IRequestHandler<GoodsReceiptCreateComma
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error updating product stock: {Message}", ex.Message);
+            _logger.LogError(ex, "Error updating product stock for product {ProductId}", productId);
             throw;
         }
     }

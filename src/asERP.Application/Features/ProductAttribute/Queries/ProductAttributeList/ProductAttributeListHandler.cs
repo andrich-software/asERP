@@ -1,16 +1,24 @@
-﻿using System.Linq.Dynamic.Core;
+using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Application.Specifications;
 using asERP.Domain.Dtos.ProductAttribute;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.ProductAttribute.Queries.ProductAttributeList;
 
 public class ProductAttributeListHandler : IRequestHandler<ProductAttributeListQuery, PaginatedResult<ProductAttributeListDto>>
 {
+    // Restrict client-supplied ordering to columns surfaced in the list DTO.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(Domain.Entities.ProductAttribute.Id),
+        nameof(Domain.Entities.ProductAttribute.Name),
+        nameof(Domain.Entities.ProductAttribute.SortOrder)
+    };
+
     private readonly IAppLogger<ProductAttributeListHandler> _logger;
     private readonly IProductAttributeRepository _productAttributeRepository;
 
@@ -32,8 +40,7 @@ public class ProductAttributeListHandler : IRequestHandler<ProductAttributeListQ
 
         if (request.SalesBy.Any())
         {
-            var salesing = string.Join(",", request.SalesBy);
-            query = query.OrderBy(salesing);
+            query = query.ApplySafeOrdering(request.SalesBy, AllowedSortFields);
         }
         else
         {

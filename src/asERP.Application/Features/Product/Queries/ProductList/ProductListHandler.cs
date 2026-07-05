@@ -1,4 +1,4 @@
-﻿using System.Linq.Dynamic.Core;
+using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
@@ -13,6 +13,21 @@ namespace asERP.Application.Features.Product.Queries.ProductList;
 
 public class ProductListHandler : IRequestHandler<ProductListQuery, PaginatedResult<ProductListDto>>
 {
+    // Ordering runs on the Product entity (before Select). Only DTO columns backed by a direct entity
+    // property are sortable; navigation/computed columns (TaxRate, VariantCount, Manufacturer, PrimaryImageId)
+    // are omitted.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(Domain.Entities.Product.Id),
+        nameof(Domain.Entities.Product.Sku),
+        nameof(Domain.Entities.Product.Name),
+        nameof(Domain.Entities.Product.Description),
+        nameof(Domain.Entities.Product.Ean),
+        nameof(Domain.Entities.Product.Price),
+        nameof(Domain.Entities.Product.Msrp),
+        nameof(Domain.Entities.Product.ProductType)
+    };
+
     private readonly IAppLogger<ProductListHandler> _logger;
     private readonly IProductRepository _productRepository;
 
@@ -30,35 +45,16 @@ public class ProductListHandler : IRequestHandler<ProductListQuery, PaginatedRes
 
         _logger.LogInformation("Handle ProductListQuery: {0}", request);
 
-        if (request.SalesBy.Any() != true)
-        {
-            var products = await _productRepository.Entities
-               .Include(p => p.Manufacturer)
-               .Include(p => p.TaxClass)
-               .Include(p => p.Variants)
-               .Specify(salesFilterSpec)
-               .AsSingleQuery() // Projection reads two collections (Variants, Images); keep one query and silence the multi-collection warning
-               .Select(p => MapToProductListDto(p))
-               .AsNoTracking() // Ensure no EF caching
-               .ToPaginatedListAsync(request.PageNumber, request.PageSize);
-
-            return products;
-        }
-
-        var salesing = string.Join(",", request.SalesBy);
-
-        var salesedProducts = await _productRepository.Entities
+        return await _productRepository.Entities
             .Include(p => p.Manufacturer)
             .Include(p => p.TaxClass)
             .Include(p => p.Variants)
             .Specify(salesFilterSpec)
-            .OrderBy(salesing)
+            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
             .AsSingleQuery() // Projection reads two collections (Variants, Images); keep one query and silence the multi-collection warning
             .Select(p => MapToProductListDto(p))
             .AsNoTracking() // Ensure no EF caching
             .ToPaginatedListAsync(request.PageNumber, request.PageSize);
-
-        return salesedProducts;
     }
 
     private static ProductListDto MapToProductListDto(Domain.Entities.Product product)

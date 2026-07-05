@@ -1,5 +1,6 @@
-﻿using Azure.Identity;
+using System.Collections.Concurrent;
 using asERP.Application.Models.Email;
+using Azure.Identity;
 using Microsoft.Graph;
 using Microsoft.Graph.Users.Item.SendMail;
 using GraphModels = Microsoft.Graph.Models;
@@ -12,14 +13,14 @@ namespace asERP.Infrastructure.EmailService.Providers;
 /// </summary>
 public class GraphMailSender : IGraphMailSender
 {
+    // Azure.Identity caches AAD tokens per credential instance, so a fresh GraphServiceClient per send
+    // forces a new token round-trip every time. Cache the client keyed by (tenant, clientId, secret) so
+    // repeated sends reuse the token cache. A changed secret produces a new key and thus a new client.
+    private static readonly ConcurrentDictionary<(string TenantId, string ClientId, string ClientSecret), GraphServiceClient> ClientCache = new();
+
     public async Task SendAsync(EmailSettings settings, EmailMessage email, CancellationToken cancellationToken = default)
     {
-        var credential = new ClientSecretCredential(
-            settings.M365TenantId,
-            settings.M365ClientId,
-            settings.M365ClientSecret);
-
-        var graphClient = new GraphServiceClient(credential, new[] { "https://graph.microsoft.com/.default" });
+        var graphClient = GetOrCreateClient(settings);
 
         var senderAddress = string.IsNullOrWhiteSpace(settings.M365SenderAddress)
             ? settings.FromAddress
@@ -112,5 +113,19 @@ public class GraphMailSender : IGraphMailSender
         await graphClient.Users[senderAddress]
             .SendMail
             .PostAsync(requestBody, cancellationToken: cancellationToken);
+    }
+
+    private static GraphServiceClient GetOrCreateClient(EmailSettings settings)
+    {
+        var key = (
+            settings.M365TenantId ?? string.Empty,
+            settings.M365ClientId ?? string.Empty,
+            settings.M365ClientSecret ?? string.Empty);
+
+        return ClientCache.GetOrAdd(key, static k =>
+        {
+            var credential = new ClientSecretCredential(k.TenantId, k.ClientId, k.ClientSecret);
+            return new GraphServiceClient(credential, new[] { "https://graph.microsoft.com/.default" });
+        });
     }
 }

@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -43,5 +43,7 @@ public class GoodsReceiptConfiguration : IEntityTypeConfiguration<GoodsReceipt>
         builder.HasIndex(gr => gr.ProductId);
         builder.HasIndex(gr => gr.WarehouseId);
         builder.HasIndex(gr => gr.DateCreated);
+        // Every query carries the tenant filter — index TenantId so list endpoints don't full-scan.
+        builder.HasIndex(gr => gr.TenantId);
     }
 }

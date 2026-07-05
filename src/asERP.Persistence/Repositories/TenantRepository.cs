@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Persistence;
+using asERP.Application.Contracts.Persistence;
 using asERP.Domain.Entities;
 using asERP.Persistence.DatabaseContext;
 using Microsoft.EntityFrameworkCore;
@@ -116,154 +116,231 @@ public class TenantRepository : ITenantRepository
 
         try
         {
-            // Delete all tenant-related data in sales (respecting foreign key constraints)
-            // Using ExecuteDeleteAsync for efficient bulk deletion
+            // Delete all tenant-related data (respecting foreign key constraints — children first).
+            // Cascades are deliberately not configured across the schema, so every dependent set must
+            // be deleted explicitly and in FK-safe order. Uses ExecuteDeleteAsync for bulk deletion.
 
-            // 1. SalesItemSerialNumber
+            // --- Returns (children first) ---
+            await _context.ReturnShipmentItemSerialNumber
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _context.ReturnShipmentItem
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _context.ReturnLabelOutbox
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _context.ReturnShipment
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            // --- Sales items & serials ---
             await _context.SalesItemSerialNumber
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 2. SalesItem
             await _context.SalesItem
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 3. SalesHistory
             await _context.SalesHistory
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 4. Shipping
+            // --- Shipping (labels before shipments) ---
+            await _context.ShippingLabelOutbox
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
             await _context.Shipping
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 5. InvoiceItem
+            // --- Invoices ---
             await _context.InvoiceItem
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 6. Invoice
             await _context.Invoice
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 7. Sales
+            // --- Sales ---
             await _context.Sales
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 8. CustomerSalesChannel
+            // --- Customers ---
             await _context.CustomerSalesChannel
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 9. CustomerAddress
             await _context.CustomerAddress
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 10. Customer
             await _context.Customer
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 11. ProductStock
+            // --- Stock movements (reference sales items/products) ---
+            await _context.StockMovement
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            // --- Product graph (children before Product) ---
+            await _context.ProductImage
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _context.ProductVariantOption
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _context.ProductVariantAxis
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _context.ProductAttributeValue
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _context.ProductAttribute
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
             await _context.ProductStock
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 12. ProductSalesChannel
             await _context.ProductSalesChannel
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 13. GoodsReceipt
             await _context.GoodsReceipt
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 14. Product
             await _context.Product
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 15. SalesChannel
+            // --- Channels (export outbox & sync logs/runs before SalesChannel) ---
+            await _context.ChannelExportOutbox
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _context.ChannelSyncLog
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _context.ChannelSyncRun
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
             await _context.SalesChannel
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 16. Warehouse
+            // --- Warehouse & tax ---
             await _context.Warehouse
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 17. TaxClass
             await _context.TaxClass
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 18. ShippingProviderRate
+            // --- Shipping providers (rate countries & rates before providers) ---
+            await _context.ShippingProviderRateCountry
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
             await _context.ShippingProviderRate
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 19. ShippingProvider
             await _context.ShippingProvider
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 20. AiPrompt
+            // --- AI ---
             await _context.AiPrompt
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 21. AiModel
             await _context.AiModel
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 22. Manufacturer
+            // --- Manufacturer & tenant-scoped countries ---
             await _context.Manufacturer
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 23. Country
             await _context.Country
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 24. UserTenant (cascade delete is configured, but delete explicitly for clarity)
+            // --- Tenant-owned settings (BaseEntityWithoutTenant, explicit TenantId FK) ---
+            await _context.TenantEmailSettings
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _context.TenantOAuthAppSettings
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            // --- UserTenant (cascade delete is configured, but delete explicitly for clarity) ---
             await _context.UserTenant
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            // 25. Tenant (final delete)
+            // --- Tenant (final delete) ---
             await _context.Tenant
                 .IgnoreQueryFilters()
                 .Where(x => x.Id == tenantId)

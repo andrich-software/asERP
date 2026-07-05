@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.GoodsReceipt;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.GoodsReceipt.Queries.GoodsReceiptDetail;
 
@@ -47,11 +48,10 @@ public class GoodsReceiptDetailHandler : IRequestHandler<GoodsReceiptDetailQuery
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while retrieving goods receipt details: {ex.Message}");
-
-            _logger.LogError("Error retrieving goods receipt details for ID {Id}: {Message}", request.Id, ex.Message);
+            // Never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while retrieving goods receipt details.",
+                "Error retrieving goods receipt details for ID {Id}.", request.Id);
         }
 
         return result;

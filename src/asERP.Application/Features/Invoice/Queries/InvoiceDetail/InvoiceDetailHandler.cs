@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Invoice;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Invoice.Queries.InvoiceDetail;
 
@@ -141,11 +142,9 @@ public class InvoiceDetailHandler : IRequestHandler<InvoiceDetailQuery, Result<I
         catch (Exception ex)
         {
             // Handle any exceptions during invoice retrieval
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"Ein Fehler ist beim Abrufen der Rechnungsdetails aufgetreten: {ex.Message}");
-
-            _logger.LogError("Error retrieving invoice details: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "Ein Fehler ist beim Abrufen der Rechnungsdetails aufgetreten.",
+                "Error retrieving invoice details.");
         }
 
         return result;

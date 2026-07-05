@@ -10,5 +10,8 @@ public class SalesHistoryConfiguration : IEntityTypeConfiguration<SalesHistory>
     {
         // Per-shipment timeline lookups on the shipping detail view.
         builder.HasIndex(e => e.ShippingId);
+
+        // Every query carries the tenant filter — index TenantId so list endpoints don't full-scan.
+        builder.HasIndex(e => e.TenantId);
     }
 }

@@ -96,10 +96,12 @@ public sealed class AmazonConnector : ConnectorBase
             var createdAfter = DateTime.UtcNow - ImportWindow;
             string? nextToken = null;
             var baseUrl = config.GetEndpointBaseUrl();
+            // Guard against an endpoint that repeats a page (or a boundary re-read on token reuse).
+            var seen = new HashSet<string>();
 
             do
             {
-                var url = $"{baseUrl}/saless/v0/saless" +
+                var url = $"{baseUrl}/orders/v0/orders" +
                           $"?MarketplaceIds={HttpUtility.UrlEncode(salesChannel.MarketplaceId)}" +
                           $"&CreatedAfter={createdAfter:O}";
                 if (!string.IsNullOrEmpty(nextToken))
@@ -111,7 +113,7 @@ public sealed class AmazonConnector : ConnectorBase
                 if (!response.IsSuccessStatusCode)
                 {
                     var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
-                    _logger.LogError("Amazon saless HTTP {Status}: {Body}", (int)response.StatusCode, Truncate(body, 500));
+                    _logger.LogError("Amazon orders HTTP {Status}: {Body}", (int)response.StatusCode, Truncate(body, 500));
                     failed++;
                     break;
                 }
@@ -123,9 +125,15 @@ public sealed class AmazonConnector : ConnectorBase
 
                 foreach (var sales in payload.Saless)
                 {
+                    if (string.IsNullOrEmpty(sales.AmazonSalesId) || !seen.Add(sales.AmazonSalesId))
+                    {
+                        continue;
+                    }
+
                     try
                     {
-                        var importSales = MapSales(sales);
+                        var items = await FetchSalesItemsAsync(context, baseUrl, sales.AmazonSalesId);
+                        var importSales = MapSales(sales, items);
                         await _salesImportRepository.ImportOrUpdateFromSalesChannel(salesChannel, importSales);
                         processed++;
                     }
@@ -134,6 +142,11 @@ public sealed class AmazonConnector : ConnectorBase
                         failed++;
                         _logger.LogError(ex, "Amazon sales import failed for {Id}", sales.AmazonSalesId);
                     }
+                }
+
+                if (context.ReportProgressAsync is not null)
+                {
+                    await context.ReportProgressAsync(processed, failed, context.CancellationToken);
                 }
 
                 nextToken = payload.NextToken;
@@ -167,33 +180,57 @@ public sealed class AmazonConnector : ConnectorBase
             ConfigureBearer(context, accessToken, config);
 
             var createdAfter = DateTime.UtcNow - ImportWindow;
-            var url = $"{config.GetEndpointBaseUrl()}/saless/v0/saless" +
-                      $"?MarketplaceIds={HttpUtility.UrlEncode(salesChannel.MarketplaceId)}" +
-                      $"&CreatedAfter={createdAfter:O}";
+            var baseUrl = config.GetEndpointBaseUrl();
+            string? nextToken = null;
+            // Buyers derived from orders repeat across pages/orders — keep only the first per remote key.
+            var seenBuyers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var response = await context.HttpClient.GetAsync(url, context.CancellationToken);
-            if (!response.IsSuccessStatusCode) return SyncResult.Failed($"Amazon saless HTTP {(int)response.StatusCode}");
-
-            var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
-            var salessResponse = JsonSerializer.Deserialize<AmazonSalessResponse>(raw);
-            var saless = salessResponse?.Payload?.Saless ?? new List<AmazonSales>();
-
-            foreach (var sales in saless)
+            do
             {
-                if (sales.BuyerInfo is null && sales.ShippingAddress is null) continue;
+                var url = $"{baseUrl}/orders/v0/orders" +
+                          $"?MarketplaceIds={HttpUtility.UrlEncode(salesChannel.MarketplaceId)}" +
+                          $"&CreatedAfter={createdAfter:O}";
+                if (!string.IsNullOrEmpty(nextToken))
+                {
+                    url += $"&NextToken={HttpUtility.UrlEncode(nextToken)}";
+                }
 
-                try
+                var response = await context.HttpClient.GetAsync(url, context.CancellationToken);
+                if (!response.IsSuccessStatusCode)
                 {
-                    var importCustomer = MapCustomer(sales);
-                    await _customerImportRepository.ImportOrUpdateFromSalesChannel(salesChannel, importCustomer);
-                    processed++;
+                    return processed > 0
+                        ? new SyncResult(processed, failed + 1)
+                        : SyncResult.Failed($"Amazon orders HTTP {(int)response.StatusCode}");
                 }
-                catch (Exception ex)
+
+                var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
+                var salessResponse = JsonSerializer.Deserialize<AmazonSalessResponse>(raw);
+                var payload = salessResponse?.Payload;
+                if (payload?.Saless is null || payload.Saless.Count == 0) break;
+
+                foreach (var sales in payload.Saless)
                 {
-                    failed++;
-                    _logger.LogError(ex, "Amazon customer import failed for sales {Id}", sales.AmazonSalesId);
+                    if (sales.BuyerInfo is null && sales.ShippingAddress is null) continue;
+
+                    var buyerKey = sales.BuyerInfo?.BuyerEmail ?? sales.AmazonSalesId;
+                    if (string.IsNullOrEmpty(buyerKey) || !seenBuyers.Add(buyerKey)) continue;
+
+                    try
+                    {
+                        var importCustomer = MapCustomer(sales);
+                        await _customerImportRepository.ImportOrUpdateFromSalesChannel(salesChannel, importCustomer);
+                        processed++;
+                    }
+                    catch (Exception ex)
+                    {
+                        failed++;
+                        _logger.LogError(ex, "Amazon customer import failed for sales {Id}", sales.AmazonSalesId);
+                    }
                 }
+
+                nextToken = payload.NextToken;
             }
+            while (!string.IsNullOrEmpty(nextToken));
         }
         catch (Exception ex)
         {
@@ -321,9 +358,70 @@ public sealed class AmazonConnector : ConnectorBase
         context.HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
-    private static SalesChannelImportSales MapSales(AmazonSales sales)
+    /// <summary>
+    /// Pulls all order-item pages for one order via GET /orders/v0/orders/{id}/orderItems, following
+    /// the payload's NextToken. Order items are a separate SP-API resource — the order list never
+    /// carries them — so each imported order needs this extra call to populate its positions.
+    /// </summary>
+    private async Task<List<AmazonSalesItem>> FetchSalesItemsAsync(SalesChannelContext context, string baseUrl, string amazonOrderId)
+    {
+        var items = new List<AmazonSalesItem>();
+        string? nextToken = null;
+
+        do
+        {
+            var url = $"{baseUrl}/orders/v0/orders/{Uri.EscapeDataString(amazonOrderId)}/orderItems";
+            if (!string.IsNullOrEmpty(nextToken))
+            {
+                url += $"?NextToken={HttpUtility.UrlEncode(nextToken)}";
+            }
+
+            var response = await context.HttpClient.GetAsync(url, context.CancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
+                throw new InvalidOperationException(
+                    $"Amazon orderItems for {amazonOrderId} failed with HTTP {(int)response.StatusCode}: {Truncate(body, 300)}");
+            }
+
+            var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
+            var payload = JsonSerializer.Deserialize<AmazonSalesItemsResponse>(raw)?.Payload;
+            if (payload?.SalesItems is { Count: > 0 })
+            {
+                items.AddRange(payload.SalesItems);
+            }
+
+            nextToken = payload?.NextToken;
+        }
+        while (!string.IsNullOrEmpty(nextToken));
+
+        return items;
+    }
+
+    private static SalesChannelImportSales MapSales(AmazonSales sales, IReadOnlyList<AmazonSalesItem> items)
     {
         var total = decimal.TryParse(sales.SalesTotal?.Amount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var t) ? t : 0m;
+
+        var salesItems = items
+            .Select(i =>
+            {
+                var itemPrice = ParseMoney(i.ItemPrice?.Amount);
+                var itemTax = ParseMoney(i.ItemTax?.Amount);
+                var quantity = i.QuantityOrdered > 0 ? i.QuantityOrdered : 0;
+                return new SalesChannelImportSalesItem
+                {
+                    Sku = i.SellerSku ?? string.Empty,
+                    Name = i.Title ?? i.SellerSku ?? string.Empty,
+                    Ean = string.Empty,
+                    Quantity = quantity,
+                    // ItemPrice is the line total (all units); the import model carries a unit price.
+                    Price = quantity > 0 ? itemPrice / quantity : itemPrice,
+                    TaxRate = ComputeLineTaxRate(itemPrice, itemTax),
+                };
+            })
+            .ToList();
+
+        var itemsTax = items.Sum(i => ParseMoney(i.ItemTax?.Amount));
 
         var billingAddress = sales.ShippingAddress is null
             ? new SalesChannelImportCustomerAddress()
@@ -343,12 +441,12 @@ public sealed class AmazonConnector : ConnectorBase
             PaymentStatus = PaymentStatus.CompletelyPaid,
             PaymentMethod = "Amazon",
             PaymentProvider = "Amazon",
-            Subtotal = total,
+            Subtotal = total - itemsTax,
             Total = total,
             ShippingCost = 0m,
-            TotalTax = 0m,
+            TotalTax = itemsTax,
             CustomerNote = string.Empty,
-            SalesItems = new List<SalesChannelImportSalesItem>(),
+            SalesItems = salesItems,
             Customer = new SalesChannelImportCustomer
             {
                 Email = sales.BuyerInfo?.BuyerEmail ?? string.Empty,
@@ -402,6 +500,22 @@ public sealed class AmazonConnector : ConnectorBase
         "canceled" or "cancelled" => SalesStatus.Cancelled,
         _ => SalesStatus.Unknown,
     };
+
+    private static decimal ParseMoney(string? amount) =>
+        decimal.TryParse(amount, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0m;
+
+    // SP-API exposes a line's tax as a money amount, not a rate — derive the percentage from the
+    // line total. Mirrors the eBay/WooCommerce line-tax computation.
+    private static double ComputeLineTaxRate(decimal lineTotal, decimal lineTax)
+    {
+        var net = lineTotal - lineTax;
+        if (net <= 0m || lineTax <= 0m)
+        {
+            return 0;
+        }
+
+        return (double)Math.Round(lineTax / net * 100m, 0);
+    }
 
     private static string Truncate(string value, int max)
     {

@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Persistence;
+using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
 using asERP.Domain.Entities;
 using asERP.Persistence.DatabaseContext;
@@ -54,8 +54,7 @@ public class UserRepository : IUserRepository
 
     public async Task<IEnumerable<IdentityError>> CreateAsync(ApplicationUser userToCreate, string password)
     {
-        userToCreate.PasswordHash = _userManager.PasswordHasher.HashPassword(userToCreate, password);
-
+        // Do not pre-hash: UserManager.CreateAsync hashes the password itself.
         var result = await _userManager.CreateAsync(userToCreate, password);
 
         if (result.Succeeded)
@@ -82,12 +81,6 @@ public class UserRepository : IUserRepository
             localUser.UserName = userUpdateDto.Email;
             localUser.Firstname = userUpdateDto.Firstname;
             localUser.Lastname = userUpdateDto.Lastname;
-
-            /*
-            if (userUpdateDto.Password.Length > 0)
-            {
-                localUser.PasswordHash = _userManager.PasswordHasher.HashPassword(localUser, userUpdateDto.Password);
-            }*/
 
             await _userManager.UpdateAsync(localUser);
         }
@@ -150,12 +143,17 @@ public class UserRepository : IUserRepository
         var user = await _userManager.FindByIdAsync(userId)
             ?? throw new NotFoundException("User not found", userId);
 
+        // Batch-load the user's existing assignments once instead of querying per tenant in the loop.
+        var existingAssignments = await _dbContext.UserTenant
+            .Where(ut => ut.UserId == userId)
+            .ToListAsync();
+
         // Create user-tenant records for each tenant
         foreach (var tenantId in tenantIds)
         {
             // Check if the assignment already exists
-            var existingAssignment = await _dbContext.UserTenant
-                .FirstOrDefaultAsync(ut => ut.UserId == userId && ut.TenantId == tenantId);
+            var existingAssignment = existingAssignments
+                .FirstOrDefault(ut => ut.TenantId == tenantId);
 
             if (existingAssignment == null)
             {

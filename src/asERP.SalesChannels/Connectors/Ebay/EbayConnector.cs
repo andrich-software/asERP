@@ -34,11 +34,15 @@ public sealed class EbayConnector : ConnectorBase
     private const int InventoryPageSize = 100;
     private const int OrdersPageSize = 100;
 
+    // The per-SKU offer lookup during product import is a sequential N+1 against eBay's rate-limited
+    // Inventory API (100 items/page → 101 calls/page). Fetch a page's offers concurrently under a small
+    // gate so the walk is bounded but far faster; the DB upserts stay sequential on the shared context.
+    private const int OfferFetchParallelism = 4;
+
     private readonly EbayAuthHelper _authHelper;
     private readonly IProductImportRepository _productImportRepository;
     private readonly ISalesImportRepository _salesImportRepository;
     private readonly ICustomerImportRepository _customerImportRepository;
-    private readonly ISalesChannelRepository _salesChannelRepository;
     private readonly ILogger<EbayConnector> _logger;
 
     public EbayConnector(
@@ -46,14 +50,12 @@ public sealed class EbayConnector : ConnectorBase
         IProductImportRepository productImportRepository,
         ISalesImportRepository salesImportRepository,
         ICustomerImportRepository customerImportRepository,
-        ISalesChannelRepository salesChannelRepository,
         ILogger<EbayConnector> logger)
     {
         _authHelper = authHelper;
         _productImportRepository = productImportRepository;
         _salesImportRepository = salesImportRepository;
         _customerImportRepository = customerImportRepository;
-        _salesChannelRepository = salesChannelRepository;
         _logger = logger;
     }
 
@@ -131,26 +133,27 @@ public sealed class EbayConnector : ConnectorBase
                 if (inventoryItems?.InventoryItems is null || inventoryItems.InventoryItems.Length == 0) break;
                 total = inventoryItems.Total;
 
-                foreach (var item in inventoryItems.InventoryItems)
+                // Fetch this page's offers concurrently (bounded), then import sequentially so the shared
+                // DbContext is never touched from multiple tasks. Each result carries the item + its offer
+                // (or an error/no-offer marker) so counts stay identical to the old sequential walk.
+                var pageOffers = await FetchOffersForPageAsync(context, salesChannel.Url, inventoryItems.InventoryItems);
+
+                foreach (var (item, offer, fetchFailed) in pageOffers)
                 {
+                    if (fetchFailed)
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    if (offer is null)
+                    {
+                        // Inventory item without a published offer — nothing to import, not a failure.
+                        continue;
+                    }
+
                     try
                     {
-                        var offerUrl = $"{salesChannel.Url}/sell/inventory/v1/offer?sku={Uri.EscapeDataString(item.Sku)}";
-                        var offerResponse = await context.HttpClient.GetAsync(offerUrl, context.CancellationToken);
-                        if (!offerResponse.IsSuccessStatusCode)
-                        {
-                            failed++;
-                            continue;
-                        }
-
-                        var offerRaw = await offerResponse.Content.ReadAsStringAsync(context.CancellationToken);
-                        var offers = JsonSerializer.Deserialize<EbayOfferResponse>(offerRaw);
-                        if (offers?.Offers is null || offers.Offers.Length == 0)
-                        {
-                            continue;
-                        }
-
-                        var offer = offers.Offers[0];
                         var importProduct = new SalesChannelImportProduct
                         {
                             RemoteProductId = item.Sku,
@@ -158,7 +161,10 @@ public sealed class EbayConnector : ConnectorBase
                             Sku = item.Sku,
                             Ean = item.Product.Ean is { Length: > 0 } ? item.Product.Ean[0] : string.Empty,
                             Price = offer.PricingSummary.Price.Value,
-                            TaxRate = 19,
+                            // eBay's Inventory API exposes no per-product tax rate (VAT is a marketplace/
+                            // account setting), so none is asserted here. Order lines derive their real
+                            // rate from the line taxes via ComputeLineTaxRate.
+                            TaxRate = 0,
                             Description = Truncate(item.Product.Description ?? string.Empty, 4000),
                             Images = MapImages(item.Product.ImageUrls),
                         };
@@ -225,7 +231,9 @@ public sealed class EbayConnector : ConnectorBase
                         RemoteProductId = group.InventoryItemGroupKey,
                         Name = group.Title ?? group.InventoryItemGroupKey,
                         Sku = group.InventoryItemGroupKey,
-                        TaxRate = 19,
+                        // No per-product tax rate is available from eBay's Inventory API (see the flat
+                        // import above); order lines carry the real rate via ComputeLineTaxRate.
+                        TaxRate = 0,
                         Description = Truncate(group.Description ?? string.Empty, 4000),
                         IsVariantParent = true,
                         VariantAxes = axisNames,
@@ -279,13 +287,57 @@ public sealed class EbayConnector : ConnectorBase
             return SyncResult.Failed(ex.Message);
         }
 
-        if (!salesChannel.InitialProductImportCompleted)
-        {
-            salesChannel.InitialProductImportCompleted = true;
-            await _salesChannelRepository.UpdateAsync(salesChannel);
-        }
-
+        // NOTE: InitialProductImportCompleted is intentionally NOT flipped here — the orchestrator flips it
+        // only after a Success/PartialFailure run, so a zero-product run whose first page fetch failed
+        // (failed>0, processed==0 → Failed) does not permanently gate re-import. Mirrors WooCommerce.
         return new SyncResult(processed, failed);
+    }
+
+    /// <summary>
+    /// Fetches the offer for each inventory item on a page concurrently under a small gate, preserving the
+    /// item order. Each result is the item plus its first offer (null when the item has no published
+    /// offer) or a fetch-failure marker — the caller applies the DB upserts sequentially. This replaces
+    /// the former sequential N+1 (one blocking offer GET per item) without touching the shared DbContext
+    /// from multiple threads.
+    /// </summary>
+    private async Task<List<(EbayInventoryItem Item, EbayOffer Offer, bool FetchFailed)>> FetchOffersForPageAsync(
+        SalesChannelContext context, string baseUrl, EbayInventoryItem[] items)
+    {
+        using var gate = new SemaphoreSlim(OfferFetchParallelism, OfferFetchParallelism);
+
+        var tasks = items.Select(async item =>
+        {
+            await gate.WaitAsync(context.CancellationToken);
+            try
+            {
+                var offerUrl = $"{baseUrl}/sell/inventory/v1/offer?sku={Uri.EscapeDataString(item.Sku)}";
+                var offerResponse = await context.HttpClient.GetAsync(offerUrl, context.CancellationToken);
+                if (!offerResponse.IsSuccessStatusCode)
+                {
+                    return (item, (EbayOffer)null, true);
+                }
+
+                var offerRaw = await offerResponse.Content.ReadAsStringAsync(context.CancellationToken);
+                var offers = JsonSerializer.Deserialize<EbayOfferResponse>(offerRaw);
+                var offer = offers?.Offers is { Length: > 0 } ? offers.Offers[0] : null;
+                return (item, offer, false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "eBay offer fetch failed for SKU {Sku}", item.Sku);
+                return (item, (EbayOffer)null, true);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        return (await Task.WhenAll(tasks)).ToList();
     }
 
     public override async Task<SyncResult> ImportSalessAsync(SalesChannelContext context)

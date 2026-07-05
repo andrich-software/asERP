@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Persistence;
+using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Entities;
 using asERP.Persistence.DatabaseContext;
@@ -15,66 +15,37 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
 
     public async Task<Customer?> GetCustomerWithDetails(Guid id)
     {
-        var query = Context.Customer
-            .Where(x => x.Id == id);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query
+        // Tenant isolation via the global query filter.
+        return await Context.Customer
+            .Where(x => x.Id == id)
             .Include(x => x.CustomerAddresses)
             .Include(x => x.Saless)
             .AsSplitQuery()
-            .FirstOrDefaultAsync() ?? null;
+            .FirstOrDefaultAsync();
     }
 
     public async Task<Customer?> GetByCustomerIdAsync(int customerId)
     {
-        var query = Context.Customer
-            .Where(x => x.CustomerId == customerId);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query.FirstOrDefaultAsync() ?? null;
+        // Tenant isolation via the global query filter.
+        return await Context.Customer
+            .Where(x => x.CustomerId == customerId)
+            .FirstOrDefaultAsync();
     }
 
     public async Task<Customer?> GetCustomerByEmailAsync(string email)
     {
-        var query = Context.Customer
-            .Where(x => x.Email == email);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query.FirstOrDefaultAsync() ?? null;
+        // Tenant isolation via the global query filter.
+        return await Context.Customer
+            .Where(x => x.Email == email)
+            .FirstOrDefaultAsync();
     }
 
     public async Task<Customer?> GetCustomerByRemoteCustomerIdAsync(Guid salesChannelId, string remoteCustomerId)
     {
-        var query = Context.Customer
-            .Where(x => x.CustomerSalesChannels!.Any(y => y.SalesChannelId == salesChannelId && y.RemoteCustomerId == remoteCustomerId));
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query.FirstOrDefaultAsync() ?? null;
+        // Tenant isolation via the global query filter.
+        return await Context.Customer
+            .Where(x => x.CustomerSalesChannels!.Any(y => y.SalesChannelId == salesChannelId && y.RemoteCustomerId == remoteCustomerId))
+            .FirstOrDefaultAsync();
     }
 
     public async Task AddCustomerToSalesChannelAsync(Guid customerId, Guid salesChannelId, string remoteCustomerId)
@@ -88,22 +59,14 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
 
         await Context.CustomerSalesChannel.AddAsync(customerSalesChannel);
         await Context.SaveChangesAsync();
-        Console.WriteLine("saved");
     }
 
     public async Task<ICollection<CustomerAddress>> GetCustomerAddressByCustomerIdAsync(Guid customerId)
     {
-        var query = Context.CustomerAddress
-            .Where(x => x.CustomerId == customerId);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query.ToListAsync();
+        // Tenant isolation via the global query filter.
+        return await Context.CustomerAddress
+            .Where(x => x.CustomerId == customerId)
+            .ToListAsync();
     }
 
     public async Task<CustomerAddress> AddCustomerAddressAsync(CustomerAddress customerAddress)

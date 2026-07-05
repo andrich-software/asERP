@@ -1,11 +1,10 @@
-using Asp.Versioning;
 using asERP.Application.Features.GlobalSettings.Commands.GlobalSettingsUpdate;
 using asERP.Application.Features.GlobalSettings.Queries.GlobalSettingsList;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.GlobalSettings;
 using asERP.Domain.Wrapper;
 using asERP.Server.Extensions;
-using Microsoft.AspNetCore.Authentication;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,7 +27,7 @@ public class GlobalSettingsController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Result<List<GlobalSettingDto>>>> GetAll()
     {
-        if (await EnsureSuperadminAccessAsync() is { } accessError)
+        if (await this.EnsureSuperadminAccessAsync() is { } accessError)
         {
             return accessError;
         }
@@ -43,7 +42,7 @@ public class GlobalSettingsController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult> Update([FromBody] GlobalSettingsUpdateInputDto input)
     {
-        if (await EnsureSuperadminAccessAsync() is { } accessError)
+        if (await this.EnsureSuperadminAccessAsync() is { } accessError)
         {
             return accessError;
         }
@@ -53,31 +52,5 @@ public class GlobalSettingsController(IMediator mediator) : ControllerBase
             Settings = input.Settings,
         });
         return response.ToActionResult();
-    }
-
-    /// <summary>
-    /// Explicit in-action role check mirroring <see cref="SuperadminController"/>: the test host
-    /// maps controllers with AllowAnonymous, so the [Authorize] attribute alone is not enforced
-    /// there. Returns null when access is granted.
-    /// </summary>
-    private async Task<ActionResult?> EnsureSuperadminAccessAsync()
-    {
-        var authenticateResult = await HttpContext.AuthenticateAsync();
-        if (authenticateResult is { Succeeded: true, Principal: not null })
-        {
-            HttpContext.User = authenticateResult.Principal;
-        }
-
-        if (!(User?.Identity?.IsAuthenticated ?? false))
-        {
-            return StatusCode(StatusCodes.Status401Unauthorized);
-        }
-
-        if (!User.IsInRole("Superadmin"))
-        {
-            return StatusCode(StatusCodes.Status403Forbidden);
-        }
-
-        return null;
     }
 }

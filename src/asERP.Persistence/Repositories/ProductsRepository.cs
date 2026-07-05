@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Persistence;
+using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Entities;
 using asERP.Persistence.DatabaseContext;
@@ -100,10 +100,7 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
         }
 
         var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue && existingProduct.TenantId != null && existingProduct.TenantId != currentTenantId)
-        {
-            throw new UnauthorizedAccessException("Cannot delete entity from different tenant");
-        }
+        EnsureDeletableByCurrentTenant(existingProduct.TenantId, currentTenantId);
 
         // For variant parents: delete all child variants first
         var variantIds = await Context.Product

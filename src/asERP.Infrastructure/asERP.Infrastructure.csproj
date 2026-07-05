@@ -17,6 +17,7 @@
 		<PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
 		<PackageReference Include="Microsoft.Graph" />
 		<PackageReference Include="Azure.Identity" />
+		<PackageReference Include="MailKit" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\asERP.Application\asERP.Application.csproj" />

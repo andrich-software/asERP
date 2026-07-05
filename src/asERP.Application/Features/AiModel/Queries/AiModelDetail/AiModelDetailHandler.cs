@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.AiModel;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.AiModel.Queries.AiModelDetail;
 
@@ -71,8 +72,11 @@ public class AiModelDetailHandler : IRequestHandler<AiModelDetailQuery, Result<A
                 AiModelType = aiModel.AiModelType,
                 Name = aiModel.Name,
                 ApiUsername = aiModel.ApiUsername,
-                ApiPassword = aiModel.ApiPassword,
-                ApiKey = aiModel.ApiKey,
+                // Secrets are write-only on the wire: expose only whether one is set, never the value.
+                ApiPassword = string.Empty,
+                ApiKey = string.Empty,
+                HasApiPassword = !string.IsNullOrEmpty(aiModel.ApiPassword),
+                HasApiKey = !string.IsNullOrEmpty(aiModel.ApiKey),
                 NCtx = aiModel.NCtx
             };
 
@@ -85,12 +89,10 @@ public class AiModelDetailHandler : IRequestHandler<AiModelDetailQuery, Result<A
         }
         catch (Exception ex)
         {
-            // Handle any exceptions during AI model retrieval
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while retrieving the AI model: {ex.Message}");
-
-            _logger.LogError("Error retrieving AI model: {Message}", ex.Message);
+            // Handle any exceptions during AI model retrieval; never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while retrieving the AI model.",
+                "Error retrieving AI model.");
         }
 
         return result;

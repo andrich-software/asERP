@@ -3,14 +3,19 @@ using asERP.Domain.Entities;
 using asERP.Identity.Services;
 using asERP.Persistence.Configurations.Options;
 using asERP.Persistence.DatabaseContext;
+using asERP.Persistence.Services.Backup;
+using asERP.Server.Infrastructure.Configuration;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace asERP.Server.Cli;
 
@@ -32,6 +37,9 @@ internal static class CliRunner
         }
 
         var hostBuilder = Host.CreateApplicationBuilder();
+        // The CLI must operate on the same database as the service — layer the
+        // operator-editable settings file exactly like Program.cs does.
+        ExternalSettings.AddTo(hostBuilder.Configuration);
         hostBuilder.Logging.ClearProviders();
         hostBuilder.Logging.SetMinimumLevel(LogLevel.Warning);
         hostBuilder.Logging.AddSimpleConsole(o => o.SingleLine = true);
@@ -43,6 +51,9 @@ internal static class CliRunner
         return args[0] switch
         {
             "superadmin" => await HandleSuperadminAsync(host, args[1..]),
+            "backup" => await HandleBackupAsync(host, args[1..]),
+            "restore" => await HandleRestoreAsync(host, args[1..]),
+            "test-connection" => await HandleTestConnectionAsync(args[1..]),
             _ => Fail($"unknown cli command '{args[0]}'")
         };
     }
@@ -76,6 +87,9 @@ internal static class CliRunner
         // filters fall back to "no tenant".
         services.AddScoped<ITenantContext, TenantContext>();
 
+        services.Configure<BackupOptions>(configuration.GetSection(BackupOptions.Section));
+        services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
+
         services.AddDataProtection().SetApplicationName("asERP");
 
         services.AddIdentity<ApplicationUser, IdentityRole>()
@@ -101,6 +115,147 @@ internal static class CliRunner
             "delete" => await DeleteAsync(users, args[1..]),
             _ => Fail($"unknown superadmin subcommand '{args[0]}'.")
         };
+    }
+
+    private static async Task<int> HandleBackupAsync(IHost host, string[] args)
+    {
+        if (args.Length == 0)
+        {
+            return Fail("'backup' requires <targetFile>.");
+        }
+
+        using var scope = host.Services.CreateScope();
+        var backupService = scope.ServiceProvider.GetRequiredService<IDatabaseBackupService>();
+
+        var targetFile = args[0];
+        if (string.IsNullOrEmpty(Path.GetExtension(targetFile)))
+        {
+            targetFile += backupService.BackupFileExtension;
+        }
+
+        try
+        {
+            await backupService.BackupAsync(targetFile);
+        }
+        catch (Exception ex)
+        {
+            return Fail($"backup failed: {ex.Message}");
+        }
+
+        Console.WriteLine($"Backup written to '{Path.GetFullPath(targetFile)}'.");
+        return 0;
+    }
+
+    private static async Task<int> HandleRestoreAsync(IHost host, string[] args)
+    {
+        if (args.Length == 0)
+        {
+            return Fail("'restore' requires <sourceFile>.");
+        }
+
+        var sourceFile = args[0];
+        if (!File.Exists(sourceFile))
+        {
+            return Fail($"backup file '{sourceFile}' does not exist.");
+        }
+
+        using var scope = host.Services.CreateScope();
+        var backupService = scope.ServiceProvider.GetRequiredService<IDatabaseBackupService>();
+
+        try
+        {
+            await backupService.RestoreAsync(sourceFile);
+        }
+        catch (Exception ex)
+        {
+            return Fail($"restore failed: {ex.Message}");
+        }
+
+        // Migrations only run forward: restoring an OLDER backup is the supported path (pending
+        // migrations are applied on the next server start). A backup created by a NEWER asERP
+        // version contains migration ids this binary does not know — warn loudly.
+        try
+        {
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var knownMigrations = context.Database.GetMigrations().ToHashSet();
+            var unknownMigrations = (await context.Database.GetAppliedMigrationsAsync())
+                .Where(migration => !knownMigrations.Contains(migration))
+                .ToList();
+            if (unknownMigrations.Count > 0)
+            {
+                Console.Error.WriteLine(
+                    $"warning: the restored database contains {unknownMigrations.Count} migration(s) unknown to this " +
+                    "asERP version — the backup was created by a newer release. Upgrade asERP before starting the server.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"warning: could not verify the restored database's migration history: {ex.Message}");
+        }
+
+        Console.WriteLine("Restore completed. Pending migrations (if any) are applied on the next server start.");
+        return 0;
+    }
+
+    // Validates candidate settings from the tray's settings dialog WITHOUT persisting them —
+    // the provider/connection string are passed explicitly instead of read from configuration.
+    private static async Task<int> HandleTestConnectionAsync(string[] args)
+    {
+        string? provider = null;
+        string? connectionString = null;
+        for (var i = 0; i < args.Length - 1; i++)
+        {
+            switch (args[i])
+            {
+                case "--provider":
+                    provider = args[++i];
+                    break;
+                case "--connection-string":
+                    connectionString = args[++i];
+                    break;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(provider) || string.IsNullOrWhiteSpace(connectionString))
+        {
+            return Fail("'test-connection' requires --provider <Sqlite|PostgreSQL|MSSQL> and --connection-string <cs>.");
+        }
+
+        try
+        {
+            switch (provider.ToUpperInvariant())
+            {
+                case "SQLITE":
+                    await TestConnectionAsync(new SqliteConnection(connectionString));
+                    break;
+                case "MSSQL":
+                    await TestConnectionAsync(new SqlConnection(connectionString));
+                    break;
+                case "POSTGRESQL":
+                    await TestConnectionAsync(new NpgsqlConnection(connectionString));
+                    break;
+                default:
+                    return Fail($"unsupported database provider '{provider}'.");
+            }
+        }
+        catch (Exception ex)
+        {
+            return Fail($"connection failed: {ex.Message}");
+        }
+
+        Console.WriteLine("Connection successful.");
+        return 0;
+    }
+
+    private static async Task TestConnectionAsync(System.Data.Common.DbConnection connection)
+    {
+        await using (connection)
+        {
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT 1";
+            await command.ExecuteScalarAsync();
+        }
     }
 
     private static async Task<int> CreateAsync(UserManager<ApplicationUser> users, RoleManager<IdentityRole> roles)
@@ -301,5 +456,11 @@ internal static class CliRunner
         Console.Error.WriteLine("                              ASERP_CLI_NEW_EMAIL, ASERP_CLI_FIRSTNAME,");
         Console.Error.WriteLine("                              ASERP_CLI_LASTNAME, ASERP_CLI_PASSWORD");
         Console.Error.WriteLine("  superadmin delete <email>   delete a Superadmin user by email");
+        Console.Error.WriteLine("  backup <targetFile>         write a provider-native database backup");
+        Console.Error.WriteLine("                              (.db for SQLite, .bak for MSSQL, .dump for PostgreSQL)");
+        Console.Error.WriteLine("  restore <sourceFile>        overwrite the database from a backup file;");
+        Console.Error.WriteLine("                              stop the server/service before restoring");
+        Console.Error.WriteLine("  test-connection --provider <Sqlite|PostgreSQL|MSSQL> --connection-string <cs>");
+        Console.Error.WriteLine("                              validate database settings without persisting them");
     }
 }

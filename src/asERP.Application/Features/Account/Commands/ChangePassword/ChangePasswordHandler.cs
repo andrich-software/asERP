@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
@@ -80,10 +80,10 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, Resu
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while changing the password: {ex.Message}");
-            _logger.LogError("Error changing password: {Message}", ex.Message);
+            // Never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while changing the password.",
+                "Error changing password.");
         }
 
         return result;

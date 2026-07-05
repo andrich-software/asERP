@@ -1,4 +1,4 @@
-﻿namespace asERP.Persistence.Configurations.Options;
+namespace asERP.Persistence.Configurations.Options;
 
 public class DatabaseOptions
 {
@@ -6,7 +6,6 @@ public class DatabaseOptions
 
     public string Provider { get; set; } = "SQLite";
     public string ConnectionString { get; set; } = string.Empty;
-    public Dictionary<string, string> ConnectionStringExamples { get; set; } = new();
 
     public string GetConnectionString() => string.IsNullOrEmpty(ConnectionString)
         ? throw new InvalidOperationException("No connection string configured")

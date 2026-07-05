@@ -1,16 +1,26 @@
-﻿using System.Linq.Dynamic.Core;
+using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Tenant;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Tenant.Queries.TenantList;
 
 public class TenantListHandler : IRequestHandler<TenantListQuery, PaginatedResult<TenantListDto>>
 {
+    // Ordering runs on the projected TenantListDto; restrict to safe display columns and never
+    // expose secret-like fields (e.g. ConnectionString) to client-supplied sorting.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(TenantListDto.Id),
+        nameof(TenantListDto.Name),
+        nameof(TenantListDto.DateCreated),
+        nameof(TenantListDto.DateModified)
+    };
+
     private readonly IAppLogger<TenantListHandler> _logger;
     private readonly IUserTenantRepository _userTenantRepository;
 
@@ -67,16 +77,9 @@ public class TenantListHandler : IRequestHandler<TenantListQuery, PaginatedResul
         }
 
         // Apply salesing
-        if (request.SalesBy.Any())
-        {
-            var salesing = string.Join(",", request.SalesBy);
-            query = query.OrderBy(salesing);
-        }
-        else
-        {
-            // Default salesing by Name
-            query = query.OrderBy(t => t.Name);
-        }
+        query = request.SalesBy.Any()
+            ? query.ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            : query.OrderBy(t => t.Name);
 
         // Return paginated result
         var result = await query.ToPaginatedListAsync(request.PageNumber, request.PageSize);

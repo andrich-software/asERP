@@ -1,8 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Statistic;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Statistic.Queries.StatisticMostSellingProducts;
@@ -31,35 +31,26 @@ public class StatisticMostSellingProductsHandler : IRequestHandler<StatisticMost
 
             var statisticDto = new StatisticMostSellingProductsDto();
 
-            // Zeiträume definieren
+            // Define the reporting time ranges.
             var today = DateTime.UtcNow.Date;
             var sevenDaysAgo = today.AddDays(-7);
             var firstDayOfMonth = new DateTime(today.Year, today.Month, 1);
             var firstDayOfYear = new DateTime(today.Year, 1, 1);
 
-            // Die 10 meistverkauften Produkte von heute abrufen
             statisticDto.TopProductsToday = await GetTopSellingProducts(today, today.AddDays(1), cancellationToken);
-
-            // Die 10 meistverkauften Produkte der letzten 7 Tage abrufen
             statisticDto.TopProductsLastSevenDays = await GetTopSellingProducts(sevenDaysAgo, today.AddDays(1), cancellationToken);
-
-            // Die 10 meistverkauften Produkte dieses Monats abrufen
             statisticDto.TopProductsThisMonth = await GetTopSellingProducts(firstDayOfMonth, today.AddDays(1), cancellationToken);
-
-            // Die 10 meistverkauften Produkte dieses Jahres abrufen
             statisticDto.TopProductsThisYear = await GetTopSellingProducts(firstDayOfYear, today.AddDays(1), cancellationToken);
-
-            // Die 10 meistverkauften Produkte aller Zeiten abrufen
             statisticDto.TopProductsAllTime = await GetTopSellingProducts(null, null, cancellationToken);
 
             return Result<StatisticMostSellingProductsDto>.Success(statisticDto);
         }
         catch (Exception ex)
         {
-            _logger.LogError("Fehler beim Ermitteln der meistverkauften Produkte: {0}", ex.Message);
+            _logger.LogError(ex, "Error while determining the most selling products");
             return Result<StatisticMostSellingProductsDto>.Fail(
                 ResultStatusCode.InternalServerError,
-                "Fehler beim Ermitteln der meistverkauften Produkte");
+                "An error occurred while determining the most selling products.");
         }
     }
 
@@ -69,10 +60,9 @@ public class StatisticMostSellingProductsHandler : IRequestHandler<StatisticMost
         CancellationToken cancellationToken)
     {
         var query = _salesRepository.Entities
-            .Include(o => o.SalesItems)
             .Where(o => o.SalesItems.Any());
 
-        // Zeitraum-Filter anwenden, falls vorhanden
+        // Apply the time range filter when present.
         if (startDate.HasValue)
         {
             query = query.Where(o => o.DateSalesed >= startDate.Value);
@@ -83,38 +73,30 @@ public class StatisticMostSellingProductsHandler : IRequestHandler<StatisticMost
             query = query.Where(o => o.DateSalesed < endDate.Value);
         }
 
-        // Verkäufe mit ihren Positionen abrufen und nach Produkt gruppieren
-        var topProducts = await query
+        // Group order lines by product and join the product name/SKU in the same query,
+        // so we no longer issue a per-product GetByIdAsync (N+1) after grouping.
+        var products = _productRepository.Entities;
+
+        return await query
             .SelectMany(o => o.SalesItems)
-            .GroupBy(oi => new { oi.ProductId })
+            .GroupBy(oi => oi.ProductId)
             .Select(g => new
             {
-                ProductId = g.Key.ProductId,
+                ProductId = g.Key,
                 TotalQuantity = g.Sum(oi => oi.Quantity)
             })
             .OrderByDescending(x => x.TotalQuantity)
             .Take(10)
-            .ToListAsync(cancellationToken);
-
-        // Produkt-Informationen anreichern
-        var result = new List<MostSellingProductItem>();
-
-        foreach (var product in topProducts)
-        {
-            var productInfo = await _productRepository.GetByIdAsync(product.ProductId);
-
-            if (productInfo != null)
-            {
-                result.Add(new MostSellingProductItem
+            .Join(products,
+                grouped => grouped.ProductId,
+                product => product.Id,
+                (grouped, product) => new MostSellingProductItem
                 {
-                    ProductId = product.ProductId,
-                    ProductName = productInfo.Name,
-                    ProductSku = productInfo.Sku,
-                    TotalQuantity = product.TotalQuantity
-                });
-            }
-        }
-
-        return result;
+                    ProductId = grouped.ProductId,
+                    ProductName = product.Name,
+                    ProductSku = product.Sku,
+                    TotalQuantity = grouped.TotalQuantity
+                })
+            .ToListAsync(cancellationToken);
     }
 }

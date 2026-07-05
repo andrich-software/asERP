@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Warehouse.Commands.WarehouseUpdate;
 
@@ -44,15 +45,22 @@ public class WarehouseUpdateHandler : IRequestHandler<WarehouseUpdateCommand, Re
 
         try
         {
-            // Manuelles Mapping zur Domain-Entität
-            var warehouseToUpdate = new Domain.Entities.Warehouse
+            // Load the tracked entity and mutate it, so the persistence layer keeps
+            // TenantId/DateCreated intact instead of nulling them on a detached update.
+            var warehouseToUpdate = await _warehouseRepository.GetByIdAsync(request.Id);
+            if (warehouseToUpdate == null)
             {
-                Id = request.Id,
-                Name = request.Name
-            };
+                result.Succeeded = false;
+                result.StatusCode = ResultStatusCode.NotFound;
+                result.Messages.Add("Warehouse not found.");
+                _logger.LogWarning("Warehouse with ID {Id} not found for update", request.Id);
+                return result;
+            }
 
-            // Update in database
-            await _warehouseRepository.UpdateAsync(warehouseToUpdate);
+            warehouseToUpdate.Name = request.Name;
+
+            // Save changes (entity is already tracked, so just save)
+            await _warehouseRepository.SaveChangesAsync();
 
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.Ok;
@@ -62,11 +70,9 @@ public class WarehouseUpdateHandler : IRequestHandler<WarehouseUpdateCommand, Re
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the warehouse: {ex.Message}");
-
-            _logger.LogError("Error updating warehouse: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while updating the warehouse.",
+                "Error updating warehouse.");
         }
 
         return result;

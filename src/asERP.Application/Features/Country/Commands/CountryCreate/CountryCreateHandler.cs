@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Country.Commands.CountryCreate;
 
@@ -69,12 +70,10 @@ public class CountryCreateHandler : IRequestHandler<CountryCreateCommand, Result
         }
         catch (Exception ex)
         {
-            // Handle any exceptions during country creation
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the country: {ex.Message}");
-
-            _logger.LogError("Error creating country: {Message}", ex.Message);
+            // Handle any exceptions during country creation; never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while creating the country.",
+                "Error creating country.");
         }
 
         return result;

@@ -27,6 +27,8 @@ public sealed class Sw6Product
     [JsonPropertyName("name")] public string? Name { get; set; }
     [JsonPropertyName("description")] public string? Description { get; set; }
     [JsonPropertyName("ean")] public string? Ean { get; set; }
+    // Tax class reference; resolved to a percentage via the /api/search/tax entity.
+    [JsonPropertyName("taxId")] public string? TaxId { get; set; }
     [JsonPropertyName("manufacturerNumber")] public string? ManufacturerNumber { get; set; }
     [JsonPropertyName("stock")] public int? Stock { get; set; }
     // Null on variants that inherit the parent price (Shopware field inheritance)
@@ -141,6 +143,20 @@ public sealed class Sw6LineItem
     [JsonPropertyName("quantity")] public int Quantity { get; set; }
     [JsonPropertyName("unitPrice")] public decimal UnitPrice { get; set; }
     [JsonPropertyName("totalPrice")] public decimal TotalPrice { get; set; }
+    // The per-line calculated price carries the applied tax breakdown (the real rate per line).
+    [JsonPropertyName("price")] public Sw6CalculatedPrice? Price { get; set; }
+}
+
+public sealed class Sw6CalculatedPrice
+{
+    [JsonPropertyName("calculatedTaxes")] public List<Sw6CalculatedTax>? CalculatedTaxes { get; set; }
+}
+
+public sealed class Sw6CalculatedTax
+{
+    [JsonPropertyName("taxRate")] public decimal TaxRate { get; set; }
+    [JsonPropertyName("tax")] public decimal Tax { get; set; }
+    [JsonPropertyName("price")] public decimal Price { get; set; }
 }
 
 public sealed class Sw6LineItemPayload
@@ -148,6 +164,21 @@ public sealed class Sw6LineItemPayload
     [JsonPropertyName("productNumber")] public string? ProductNumber { get; set; }
     [JsonPropertyName("ean")] public string? Ean { get; set; }
     [JsonPropertyName("taxId")] public string? TaxId { get; set; }
+}
+
+// /api/search/tax entity: maps a product's taxId to its percentage.
+public sealed class Sw6Tax
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+    [JsonPropertyName("taxRate")] public decimal TaxRate { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
+}
+
+// /api/search/currency entity: resolves the channel currency id by ISO code.
+public sealed class Sw6Currency
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+    [JsonPropertyName("isoCode")] public string? IsoCode { get; set; }
 }
 
 public sealed class Sw6StateMachineState

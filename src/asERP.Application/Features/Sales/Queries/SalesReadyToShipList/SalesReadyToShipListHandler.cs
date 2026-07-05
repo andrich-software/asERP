@@ -1,4 +1,3 @@
-using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
@@ -19,6 +18,17 @@ public class SalesReadyToShipListHandler : IRequestHandler<SalesReadyToShipListQ
         SalesStatus.Processing,
         SalesStatus.ReadyForDelivery,
         SalesStatus.PartiallyDelivered
+    };
+
+    // Restrict client-supplied ordering to the columns surfaced in the list DTO.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(Domain.Entities.Sales.Id),
+        nameof(Domain.Entities.Sales.SalesId),
+        nameof(Domain.Entities.Sales.CustomerId),
+        nameof(Domain.Entities.Sales.Status),
+        nameof(Domain.Entities.Sales.PaymentStatus),
+        nameof(Domain.Entities.Sales.DateSalesed)
     };
 
     private readonly IAppLogger<SalesReadyToShipListHandler> _logger;
@@ -43,10 +53,7 @@ public class SalesReadyToShipListHandler : IRequestHandler<SalesReadyToShipListQ
             .Where(o => ReadyToShipStatuses.Contains(o.Status)
                         && o.SalesItems.Any(i => i.ShippingId == null));
 
-        if (request.SalesBy.Any())
-        {
-            query = query.OrderBy(string.Join(",", request.SalesBy));
-        }
+        query = query.ApplySafeOrdering(request.SalesBy, AllowedSortFields);
 
         var page = await query
             .Select(o => new SalesReadyToShipListDto

@@ -1,6 +1,7 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -75,11 +76,9 @@ public class ShippingProviderDeleteHandler : IRequestHandler<ShippingProviderDel
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while deleting the shipping provider: {ex.Message}");
-
-            _logger.LogError("Error deleting shipping provider: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while deleting the shipping provider.",
+                "Error deleting shipping provider {Id}.", request.Id);
         }
 
         return result;

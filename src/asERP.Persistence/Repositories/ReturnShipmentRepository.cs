@@ -22,17 +22,9 @@ public class ReturnShipmentRepository : GenericRepository<ReturnShipment>, IRetu
 
     public async Task<ReturnShipment?> GetWithDetailsAsync(Guid id)
     {
-        var query = Context.ReturnShipment
-            .Where(x => x.Id == id);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query
+        // Tenant isolation via the global query filter.
+        return await Context.ReturnShipment
+            .Where(x => x.Id == id)
             .Include(x => x.Sales)
             .Include(x => x.ShippingProvider)
             .Include(x => x.Items)
@@ -46,17 +38,9 @@ public class ReturnShipmentRepository : GenericRepository<ReturnShipment>, IRetu
 
     public async Task<List<ReturnShipment>> GetBySalesIdAsync(Guid salesId)
     {
-        var query = Context.ReturnShipment
-            .Where(x => x.SalesId == salesId);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query
+        // Tenant isolation via the global query filter.
+        return await Context.ReturnShipment
+            .Where(x => x.SalesId == salesId)
             .Include(x => x.Items)
             .OrderByDescending(x => x.DateCreated)
             .ToListAsync();
@@ -64,18 +48,10 @@ public class ReturnShipmentRepository : GenericRepository<ReturnShipment>, IRetu
 
     public async Task<Dictionary<Guid, double>> GetReturnedQuantitiesAsync(Guid salesId)
     {
-        var query = Context.ReturnShipmentItem
+        // Tenant isolation via the global query filter.
+        return await Context.ReturnShipmentItem
             .Where(i => i.ReturnShipment.SalesId == salesId
-                        && !NonCountingStatuses.Contains(i.ReturnShipment.Status));
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query
+                        && !NonCountingStatuses.Contains(i.ReturnShipment.Status))
             .GroupBy(i => i.SalesItemId)
             .Select(g => new { g.Key, Quantity = g.Sum(i => i.Quantity) })
             .ToDictionaryAsync(g => g.Key, g => g.Quantity);

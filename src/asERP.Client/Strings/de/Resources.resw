@@ -2317,6 +2317,9 @@
   <data name="SalesChannelEditPage.Field.ExportStock.Text" xml:space="preserve">
     <value>Bestand an Kanal übertragen</value>
   </data>
+  <data name="SalesChannelEditPage.Field.PushSalesCancellations.Text" xml:space="preserve">
+    <value>Storno an Kanal übertragen</value>
+  </data>
   <data name="SalesChannelEditPage.Field.ImportStock.Text" xml:space="preserve">
     <value>Bestand aus Kanal spiegeln (Bestandsführung im Shop)</value>
   </data>

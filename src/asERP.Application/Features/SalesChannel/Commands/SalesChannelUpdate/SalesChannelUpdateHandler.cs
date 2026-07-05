@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.SalesChannel.Commands.SalesChannelUpdate;
 
@@ -87,6 +88,7 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
             existingSalesChannel.ExportCustomers = request.ExportCustomers;
             existingSalesChannel.ExportSaless = request.ExportSaless;
             existingSalesChannel.ExportStock = request.ExportStock;
+            existingSalesChannel.PushSalesCancellations = request.PushSalesCancellations;
             existingSalesChannel.ImportStock = request.ImportStock;
 
             // Update warehouse relationships
@@ -130,11 +132,9 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the sales channel: {ex.Message}");
-
-            _logger.LogError("Error updating sales channel: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while updating the sales channel.",
+                "Error updating sales channel {Id}.", request.Id);
         }
 
         return result;

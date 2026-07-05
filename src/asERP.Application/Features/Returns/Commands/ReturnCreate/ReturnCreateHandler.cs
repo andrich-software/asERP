@@ -1,11 +1,12 @@
 using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Shipping;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Returns.Commands.ReturnCreate;
 
@@ -177,11 +178,9 @@ public class ReturnCreateHandler : IRequestHandler<ReturnCreateCommand, Result<G
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the return: {ex.Message}");
-
-            _logger.LogError("Error creating return: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while creating the return.",
+                "Error creating return for sales {SalesId}.", request.SalesId);
         }
 
         return result;

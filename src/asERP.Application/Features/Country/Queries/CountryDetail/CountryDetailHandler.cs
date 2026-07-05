@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Country;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Country.Queries.CountryDetail;
 
@@ -63,12 +64,10 @@ public class CountryDetailHandler : IRequestHandler<CountryDetailQuery, Result<C
         }
         catch (Exception ex)
         {
-            // Handle any exceptions during country retrieval
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while retrieving the country: {ex.Message}");
-
-            _logger.LogError("Error retrieving country: {Message}", ex.Message);
+            // Handle any exceptions during country retrieval; never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while retrieving the country.",
+                "Error retrieving country.");
         }
 
         return result;

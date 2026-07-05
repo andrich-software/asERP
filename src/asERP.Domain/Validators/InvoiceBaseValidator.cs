@@ -1,7 +1,7 @@
-﻿using System;
-using FluentValidation;
+using System;
 using asERP.Domain.Enums;
 using asERP.Domain.Interfaces;
+using FluentValidation;
 
 namespace asERP.Domain.Validators;
 
@@ -35,43 +35,43 @@ public class InvoiceBaseValidator<T> : AbstractValidator<T> where T : IInvoiceIn
 
         // Invoice address validation
         RuleFor(x => x.InvoiceAddressFirstName)
-            .NotEmpty().WithMessage("Der Vorname für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("Der Vorname für die Rechnungsadresse ist erforderlich.");
 
         RuleFor(x => x.InvoiceAddressLastName)
-            .NotEmpty().WithMessage("Der Nachname für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("Der Nachname für die Rechnungsadresse ist erforderlich.");
 
         RuleFor(x => x.InvoiceAddressStreet)
-            .NotEmpty().WithMessage("Die Straße für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("Die Straße für die Rechnungsadresse ist erforderlich.");
 
         RuleFor(x => x.InvoiceAddressCity)
-            .NotEmpty().WithMessage("Die Stadt für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("Die Stadt für die Rechnungsadresse ist erforderlich.");
 
         RuleFor(x => x.InvoiceAddressZip)
-            .NotEmpty().WithMessage("Die Postleitzahl für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("Die Postleitzahl für die Rechnungsadresse ist erforderlich.");
 
         RuleFor(x => x.InvoiceAddressCountry)
-            .NotEmpty().WithMessage("Das Land für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("Das Land für die Rechnungsadresse ist erforderlich.");
 
         // Delivery address validation - only required if different from invoice address
         When(x => DeliveryAddressDiffersFromInvoice(x), () =>
         {
             RuleFor(x => x.DeliveryAddressFirstName)
-                .NotEmpty().WithMessage("Der Vorname für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("Der Vorname für die Lieferadresse ist erforderlich.");
 
             RuleFor(x => x.DeliveryAddressLastName)
-                .NotEmpty().WithMessage("Der Nachname für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("Der Nachname für die Lieferadresse ist erforderlich.");
 
             RuleFor(x => x.DeliveryAddressStreet)
-                .NotEmpty().WithMessage("Die Straße für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("Die Straße für die Lieferadresse ist erforderlich.");
 
             RuleFor(x => x.DeliveryAddressCity)
-                .NotEmpty().WithMessage("Die Stadt für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("Die Stadt für die Lieferadresse ist erforderlich.");
 
             RuleFor(x => x.DeliveryAddressZip)
-                .NotEmpty().WithMessage("Die Postleitzahl für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("Die Postleitzahl für die Lieferadresse ist erforderlich.");
 
             RuleFor(x => x.DeliveryAddressCountry)
-                .NotEmpty().WithMessage("Das Land für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("Das Land für die Lieferadresse ist erforderlich.");
         });
 
         // Totals validation

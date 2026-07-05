@@ -1,13 +1,13 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
-using CsvHelper;
-using CsvHelper.Configuration;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Application.Specifications;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
+using CsvHelper;
+using CsvHelper.Configuration;
 using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.ImportExport.Queries.CustomerCsvExport;
@@ -43,9 +43,18 @@ public class CustomerCsvExportHandler : IRequestHandler<CustomerCsvExportQuery, 
             var customerFilterSpec = new CustomerFilterSpecification(request.SearchString);
 
             // Get customers from database
-            var customers = await _customerRepository.Entities
+            var query = _customerRepository.Entities
                 .Specify(customerFilterSpec)
-                .Where(c => !request.ActiveCustomersOnly || c.CustomerStatus == Domain.Enums.CustomerStatus.Active)
+                .Where(c => !request.ActiveCustomersOnly || c.CustomerStatus == Domain.Enums.CustomerStatus.Active);
+
+            // Eager-load addresses (and their country) only when the export includes them, so the
+            // per-address rows have real data instead of always falling into the "no address" branch.
+            if (request.IncludeAddresses)
+            {
+                query = query.Include($"{nameof(Domain.Entities.Customer.CustomerAddresses)}.{nameof(Domain.Entities.CustomerAddress.Country)}");
+            }
+
+            var customers = await query
                 .OrderBy(c => c.Lastname)
                 .ThenBy(c => c.Firstname)
                 .ToListAsync(cancellationToken);
@@ -59,7 +68,10 @@ public class CustomerCsvExportHandler : IRequestHandler<CustomerCsvExportQuery, 
             var config = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 HasHeaderRecord = true,
-                ShouldQuote = args => args.Field?.Contains(',') == true || args.Field?.Contains('"') == true || args.Field?.Contains('\n') == true
+                // Prefix cells starting with a formula trigger (= + - @ tab) with an apostrophe so
+                // spreadsheet apps treat them as text (CSV formula injection). Quoting is left to
+                // CsvHelper's defaults, which also handle CR/LF that the custom predicate missed.
+                InjectionOptions = InjectionOptions.Escape
             };
 
             using var csv = new CsvWriter(writer, config);
@@ -100,14 +112,15 @@ public class CustomerCsvExportHandler : IRequestHandler<CustomerCsvExportQuery, 
                     // Export one row per address
                     foreach (var address in customer.CustomerAddresses)
                     {
-                        WriteCustomerRow(csv, customer, address);
+                        WriteCustomerRow(csv, customer, address, request.IncludeAddresses);
                         await csv.NextRecordAsync();
                     }
                 }
                 else
                 {
-                    // Export one row per customer
-                    WriteCustomerRow(csv, customer, null);
+                    // Export one row per customer; when addresses are requested but the customer has
+                    // none, the address columns are still written (empty) so the row width matches the header.
+                    WriteCustomerRow(csv, customer, null, request.IncludeAddresses);
                     await csv.NextRecordAsync();
                 }
             }
@@ -126,16 +139,15 @@ public class CustomerCsvExportHandler : IRequestHandler<CustomerCsvExportQuery, 
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred during CSV export: {ex.Message}");
-            _logger.LogError("Error during CSV export: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred during CSV export.",
+                "Error during customer CSV export");
         }
 
         return result;
     }
 
-    private static void WriteCustomerRow(CsvWriter csv, Domain.Entities.Customer customer, Domain.Entities.CustomerAddress? address)
+    private static void WriteCustomerRow(CsvWriter csv, Domain.Entities.Customer customer, Domain.Entities.CustomerAddress? address, bool includeAddresses)
     {
         csv.WriteField(customer.Firstname);
         csv.WriteField(customer.Lastname);
@@ -148,18 +160,22 @@ public class CustomerCsvExportHandler : IRequestHandler<CustomerCsvExportQuery, 
         csv.WriteField(customer.CustomerStatus.ToString());
         csv.WriteField(customer.DateEnrollment.ToString("yyyy-MM-dd HH:mm:ss zzz"));
 
-        if (address != null)
+        if (!includeAddresses)
         {
-            csv.WriteField(address.Firstname ?? string.Empty);
-            csv.WriteField(address.Lastname ?? string.Empty);
-            csv.WriteField(address.CompanyName ?? string.Empty);
-            csv.WriteField(address.Street ?? string.Empty);
-            csv.WriteField(address.HouseNr ?? string.Empty);
-            csv.WriteField(address.Zip ?? string.Empty);
-            csv.WriteField(address.City ?? string.Empty);
-            csv.WriteField(address.Country?.Name ?? string.Empty);
-            csv.WriteField(address.DefaultDeliveryAddress.ToString());
-            csv.WriteField(address.DefaultInvoiceAddress.ToString());
+            return;
         }
+
+        // Always emit the 10 address columns when addresses are included, so every data row is
+        // exactly as wide as the header even for customers without an address.
+        csv.WriteField(address?.Firstname ?? string.Empty);
+        csv.WriteField(address?.Lastname ?? string.Empty);
+        csv.WriteField(address?.CompanyName ?? string.Empty);
+        csv.WriteField(address?.Street ?? string.Empty);
+        csv.WriteField(address?.HouseNr ?? string.Empty);
+        csv.WriteField(address?.Zip ?? string.Empty);
+        csv.WriteField(address?.City ?? string.Empty);
+        csv.WriteField(address?.Country?.Name ?? string.Empty);
+        csv.WriteField((address?.DefaultDeliveryAddress ?? false).ToString());
+        csv.WriteField((address?.DefaultInvoiceAddress ?? false).ToString());
     }
 }

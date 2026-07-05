@@ -1,5 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
@@ -142,12 +143,9 @@ public class TenantCreateHandler : IRequestHandler<TenantCreateCommand, Result<G
             // Transaction will automatically rollback on dispose if not committed
             await transaction.RollbackAsync(cancellationToken);
 
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the tenant: {ex.Message}");
-
-            _logger.LogError("Error creating tenant for user {UserId}: {Message}",
-                request.UserId, ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while creating the tenant.",
+                "Error creating tenant for user {UserId}.", request.UserId);
         }
 
         return result;

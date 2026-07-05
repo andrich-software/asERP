@@ -1,9 +1,10 @@
-﻿using System.Net;
-using System.Net.Mail;
 using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Models.Email;
 using asERP.Domain.Enums;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Logging;
+using MimeKit;
 
 namespace asERP.Infrastructure.EmailService.Providers;
 
@@ -29,60 +30,25 @@ public class SmtpEmailProvider : IEmailProvider
                 return false;
             }
 
-            using var smtpClient = new SmtpClient(settings.SmtpHost, settings.SmtpPort.Value)
-            {
-                EnableSsl = settings.SmtpEnableSsl,
-                DeliveryMethod = SmtpDeliveryMethod.Network,
-                UseDefaultCredentials = false
-            };
+            using var message = BuildMessage(email, settings);
+
+            using var smtpClient = new SmtpClient();
+
+            // Preserve the legacy semantics of the SmtpEnableSsl flag: when disabled, connect in the clear
+            // (e.g. Mailpit on port 1025); when enabled, let MailKit pick implicit SSL (465) or STARTTLS.
+            var secureSocketOptions = settings.SmtpEnableSsl
+                ? SecureSocketOptions.Auto
+                : SecureSocketOptions.None;
+
+            await smtpClient.ConnectAsync(settings.SmtpHost, settings.SmtpPort.Value, secureSocketOptions);
 
             if (!string.IsNullOrEmpty(settings.SmtpUsername) && !string.IsNullOrEmpty(settings.SmtpPassword))
             {
-                smtpClient.Credentials = new NetworkCredential(settings.SmtpUsername, settings.SmtpPassword);
+                await smtpClient.AuthenticateAsync(settings.SmtpUsername, settings.SmtpPassword);
             }
 
-            using var message = new MailMessage
-            {
-                From = new MailAddress(settings.FromAddress, settings.FromName),
-                Subject = email.Subject,
-                Body = email.Body,
-                IsBodyHtml = email.IsHtml
-            };
-
-            message.To.Add(new MailAddress(email.To, email.ToName ?? email.To));
-
-            // Add CC recipients
-            foreach (var cc in email.Cc)
-            {
-                message.CC.Add(new MailAddress(cc));
-            }
-
-            // Add BCC recipients
-            foreach (var bcc in email.Bcc)
-            {
-                message.Bcc.Add(new MailAddress(bcc));
-            }
-
-            // Add Reply-To if configured
-            if (!string.IsNullOrEmpty(settings.ReplyToAddress))
-            {
-                message.ReplyToList.Add(new MailAddress(settings.ReplyToAddress, settings.ReplyToName ?? settings.ReplyToAddress));
-            }
-
-            // Add attachments
-            foreach (var attachment in email.Attachments)
-            {
-                var stream = new MemoryStream(attachment.Content);
-                message.Attachments.Add(new Attachment(stream, attachment.FileName, attachment.ContentType));
-            }
-
-            // Add custom headers
-            foreach (var header in email.Headers)
-            {
-                message.Headers.Add(header.Key, header.Value);
-            }
-
-            await smtpClient.SendMailAsync(message);
+            await smtpClient.SendAsync(message);
+            await smtpClient.DisconnectAsync(true);
 
             _logger.LogInformation("Email sent successfully via SMTP to {To}", email.To);
             return true;
@@ -93,5 +59,60 @@ public class SmtpEmailProvider : IEmailProvider
                 email.To, ex.Message);
             return false;
         }
+    }
+
+    private static MimeMessage BuildMessage(EmailMessage email, EmailSettings settings)
+    {
+        var message = new MimeMessage
+        {
+            Subject = email.Subject
+        };
+
+        message.From.Add(new MailboxAddress(settings.FromName, settings.FromAddress));
+        message.To.Add(new MailboxAddress(email.ToName ?? email.To, email.To));
+
+        // Add CC recipients
+        foreach (var cc in email.Cc)
+        {
+            message.Cc.Add(MailboxAddress.Parse(cc));
+        }
+
+        // Add BCC recipients
+        foreach (var bcc in email.Bcc)
+        {
+            message.Bcc.Add(MailboxAddress.Parse(bcc));
+        }
+
+        // Add Reply-To if configured
+        if (!string.IsNullOrEmpty(settings.ReplyToAddress))
+        {
+            message.ReplyTo.Add(new MailboxAddress(settings.ReplyToName ?? settings.ReplyToAddress, settings.ReplyToAddress));
+        }
+
+        var bodyBuilder = new BodyBuilder();
+        if (email.IsHtml)
+        {
+            bodyBuilder.HtmlBody = email.Body;
+        }
+        else
+        {
+            bodyBuilder.TextBody = email.Body;
+        }
+
+        // Add attachments
+        foreach (var attachment in email.Attachments)
+        {
+            bodyBuilder.Attachments.Add(attachment.FileName, attachment.Content, ContentType.Parse(attachment.ContentType));
+        }
+
+        message.Body = bodyBuilder.ToMessageBody();
+
+        // Add custom headers
+        foreach (var header in email.Headers)
+        {
+            message.Headers.Add(header.Key, header.Value);
+        }
+
+        return message;
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Wrapper;
+namespace asERP.Domain.Wrapper;
 
 /// <summary>
 /// Class that represents a paginated result
@@ -42,7 +42,8 @@ public class PaginatedResult<T> : Result
     public int TotalCount { get; set; }
     public int PageSize { get; set; }
 
-    public bool HasPreviousPage => CurrentPage > 1;
+    // Paging is zero-based across the project: page 0 is the first page.
+    public bool HasPreviousPage => CurrentPage > 0;
 
-    public bool HasNextPage => CurrentPage < TotalPages;
+    public bool HasNextPage => CurrentPage < TotalPages - 1;
 }

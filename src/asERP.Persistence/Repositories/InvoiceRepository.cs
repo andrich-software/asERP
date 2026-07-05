@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Infrastructure;
+using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Entities;
@@ -33,23 +33,8 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
     /// <returns>The invoice with all related entities or null if not found</returns>
     public async Task<Invoice?> GetInvoiceWithDetailsAsync(Guid id)
     {
-        // Start with ignoring query filters to ensure fresh database reads
-        var query = Context.Set<Invoice>().IgnoreQueryFilters().AsQueryable();
-
-        // Apply manual tenant filtering - crucial for multi-tenant scenarios
-        var currentTenantId = base.TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            // Manual tenant filtering for both production and test environments
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-        else
-        {
-            // If no tenant context, only return tenant-agnostic entities
-            query = query.Where(x => x.TenantId == null);
-        }
-
-        return await query
+        // Tenant isolation via the global query filter.
+        return await Context.Set<Invoice>()
             .Where(x => x.Id == id)
             .Include(x => x.Customer)
             .Include(x => x.Sales)
@@ -93,7 +78,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
 
         try
         {
-            // Rechnung erstellen
+            // Create the invoice
             var invoice = new Invoice
             {
                 InvoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{sales.Id}",
@@ -108,9 +93,9 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
                 InvoiceStatus = InvoiceStatus.Created,
                 PaymentMethod = sales.PaymentMethod,
                 PaymentTransactionId = sales.PaymentTransactionId,
-                Notes = $"Automatisch erstellte Rechnung für Verkauf {sales.Id}",
+                Notes = $"Automatically generated invoice for sales {sales.Id}",
 
-                // Rechnungsadresse
+                // Invoice address
                 InvoiceAddressFirstName = sales.InvoiceAddressFirstName,
                 InvoiceAddressLastName = sales.InvoiceAddressLastName,
                 InvoiceAddressCompanyName = sales.InvoiceAddressCompanyName,
@@ -120,7 +105,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
                 InvoiceAddressZip = sales.InvoiceAddressZip,
                 InvoiceAddressCountry = sales.InvoiceAddressCountry,
 
-                // Lieferadresse
+                // Delivery address
                 DeliveryAddressFirstName = sales.DeliveryAddressFirstName,
                 DeliveryAddressLastName = sales.DeliveryAddressLastName,
                 DeliveryAddressCompanyName = sales.DeliveryAddressCompanyName,
@@ -131,31 +116,37 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
                 DeliveryAddressCountry = sales.DeliveryAddressCountry
             };
 
-            // Rechnungspositionen aus SalesItems erstellen
+            // Create invoice items from sales items. SalesItem.Price is the per-unit net price and
+            // TaxRate is a percentage; derive line total and tax amount from quantity.
             if (sales.SalesItems != null)
             {
                 foreach (var salesItem in sales.SalesItems)
                 {
+                    var quantity = (decimal)salesItem.Quantity;
+                    var totalPrice = salesItem.Price * quantity;
+                    var taxAmount = totalPrice * (decimal)salesItem.TaxRate / 100m;
+
                     var invoiceItem = new InvoiceItem
                     {
                         Name = salesItem.Name,
-                        //SKU = salesItem.SKU,
+                        SKU = salesItem.MissingProductSku,
+                        EAN = salesItem.MissingProductEan,
+                        ProductId = salesItem.ProductId,
                         Quantity = salesItem.Quantity,
-                        // UnitPrice = salesItem.UnitPrice,
+                        UnitPrice = salesItem.Price,
+                        TotalPrice = totalPrice,
                         TaxRate = salesItem.TaxRate,
-                        //TaxAmount = salesItem.TaxAmount,
-                        //Total = salesItem.Total,
-                        //Notes = salesItem.Notes
+                        TaxAmount = taxAmount
                     };
 
                     invoice.InvoiceItems.Add(invoiceItem);
                 }
             }
 
-            // Rechnung in der Datenbank speichern
+            // Persist the invoice
             var createdInvoice = await this.CreateAsync(invoice);
 
-            // PDF-Rechnung erstellen
+            // Generate the PDF invoice
             string outputPath = $"Invoices/INV-{DateTime.UtcNow:yyyyMMdd}-{sales.Id}.pdf";
             _pdfService.GenerateInvoice(invoice, outputPath);
 
@@ -182,10 +173,7 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
         }
 
         var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue && invoice.TenantId != null && invoice.TenantId != currentTenantId)
-        {
-            throw new UnauthorizedAccessException("Cannot delete invoice belonging to a different tenant");
-        }
+        EnsureDeletableByCurrentTenant(invoice.TenantId, currentTenantId);
 
         if (invoice.InvoiceItems?.Any() == true)
         {
@@ -194,16 +182,5 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
 
         Context.Remove(invoice);
         await Context.SaveChangesAsync();
-
-        if (Context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
-        {
-            Context.ChangeTracker.Clear();
-
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
-
-            await Context.Invoice.IgnoreQueryFilters().Where(x => x.Id == Guid.Empty).FirstOrDefaultAsync();
-        }
     }
 }

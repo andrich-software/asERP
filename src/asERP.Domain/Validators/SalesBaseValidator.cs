@@ -1,7 +1,7 @@
-﻿using System;
-using FluentValidation;
+using System;
 using asERP.Domain.Enums;
 using asERP.Domain.Interfaces;
+using FluentValidation;
 
 namespace asERP.Domain.Validators;
 
@@ -11,92 +11,87 @@ public class SalesBaseValidator<T> : AbstractValidator<T> where T : ISalesInputM
     {
         // Basic sales validation
         RuleFor(x => x.CustomerId)
-            .GreaterThanOrEqualTo(1).WithMessage("Bitte wählen Sie einen Kunden aus.");
+            .GreaterThanOrEqualTo(1).WithMessage("Please select a customer.");
 
         RuleFor(x => x.SalesChannelId)
-            .NotEqual(Guid.Empty).WithMessage("Bitte wählen Sie einen Vertriebskanal aus.");
+            .NotEqual(Guid.Empty).WithMessage("Please select a sales channel.");
 
         RuleFor(x => x.Status)
             .NotEqual(SalesStatus.Unknown).When(x => x.Status != SalesStatus.Pending)
-            .WithMessage("Bitte wählen Sie einen gültigen Bestellstatus aus.")
+            .WithMessage("Please select a valid order status.")
             .Must(BeAValidSalesStatus)
-            .WithMessage("Bitte wählen Sie einen gültigen Bestellstatus aus.");
+            .WithMessage("Please select a valid order status.");
 
         RuleFor(x => x.DateSalesed)
-            .NotEmpty().WithMessage("Das Bestelldatum darf nicht leer sein.");
+            .NotEmpty().WithMessage("The order date must not be empty.");
 
         // Payment information validation
         RuleFor(x => x.PaymentStatus)
             .Must(BeAValidPaymentStatus)
-            .WithMessage("Bitte wählen Sie einen gültigen Zahlungsstatus aus.");
+            .WithMessage("Please select a valid payment status.");
 
         RuleFor(x => x.PaymentMethod)
             .NotEmpty().When(x => x.PaymentStatus != PaymentStatus.Unknown)
-            .WithMessage("Bitte geben Sie eine Zahlungsmethode an, wenn ein Zahlungsstatus angegeben ist.");
+            .WithMessage("Please provide a payment method when a payment status is set.");
 
         // Invoice address validation
         RuleFor(x => x.InvoiceAddressFirstName)
-            .NotEmpty().WithMessage("Der Vorname für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("The first name for the invoice address is required.");
 
         RuleFor(x => x.InvoiceAddressLastName)
-            .NotEmpty().WithMessage("Der Nachname für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("The last name for the invoice address is required.");
 
         RuleFor(x => x.InvoiceAddressStreet)
-            .NotEmpty().WithMessage("Die Straße für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("The street for the invoice address is required.");
 
         RuleFor(x => x.InvoiceAddressCity)
-            .NotEmpty().WithMessage("Die Stadt für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("The city for the invoice address is required.");
 
         RuleFor(x => x.InvoiceAddressZip)
-            .NotEmpty().WithMessage("Die Postleitzahl für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("The postal code for the invoice address is required.");
 
         RuleFor(x => x.InvoiceAddressCountry)
-            .NotEmpty().WithMessage("Das Land für die Rechnungsadresse ist erfsaleslich.");
+            .NotEmpty().WithMessage("The country for the invoice address is required.");
 
         // Delivery address validation - only required if different from invoice address
         When(x => DeliveryAddressDiffersFromInvoice(x), () =>
         {
             RuleFor(x => x.DeliveryAddressFirstName)
-                .NotEmpty().WithMessage("Der Vorname für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("The first name for the delivery address is required.");
 
             RuleFor(x => x.DeliveryAddressLastName)
-                .NotEmpty().WithMessage("Der Nachname für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("The last name for the delivery address is required.");
 
             RuleFor(x => x.DeliveryAddressStreet)
-                .NotEmpty().WithMessage("Die Straße für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("The street for the delivery address is required.");
 
             RuleFor(x => x.DeliveryAddressCity)
-                .NotEmpty().WithMessage("Die Stadt für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("The city for the delivery address is required.");
 
             RuleFor(x => x.DeliveryAddressZip)
-                .NotEmpty().WithMessage("Die Postleitzahl für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("The postal code for the delivery address is required.");
 
             RuleFor(x => x.DeliveryAddressCountry)
-                .NotEmpty().WithMessage("Das Land für die Lieferadresse ist erfsaleslich.");
+                .NotEmpty().WithMessage("The country for the delivery address is required.");
         });
 
         // Totals validation
         RuleFor(x => x.Subtotal)
-            .GreaterThanOrEqualTo(0).WithMessage("Die Zwischensumme muss größer oder gleich 0 sein.");
+            .GreaterThanOrEqualTo(0).WithMessage("The subtotal must be greater than or equal to 0.");
 
         RuleFor(x => x.ShippingCost)
-            .GreaterThanOrEqualTo(0).WithMessage("Die Versandkosten müssen größer oder gleich 0 sein.");
+            .GreaterThanOrEqualTo(0).WithMessage("The shipping cost must be greater than or equal to 0.");
 
         RuleFor(x => x.TotalTax)
-            .GreaterThanOrEqualTo(0).WithMessage("Die Mehrwertsteuer muss größer oder gleich 0 sein.");
+            .GreaterThanOrEqualTo(0).WithMessage("The tax amount must be greater than or equal to 0.");
 
         RuleFor(x => x.Total)
-            .GreaterThanOrEqualTo(0).WithMessage("Die Gesamtsumme muss größer oder gleich 0 sein.");
+            .GreaterThanOrEqualTo(0).WithMessage("The total must be greater than or equal to 0.");
 
         // Validate that total equals subtotal + shipping cost + tax
         RuleFor(x => x.Total)
             .Equal(x => x.Subtotal + x.ShippingCost + x.TotalTax)
-            .WithMessage("Die Gesamtsumme entspricht nicht der Summe aus Zwischensumme, Versandkosten und Mehrwertsteuer.");
-
-        // Shipping information validation
-        //RuleFor(x => x.ShippingMethod)
-        //    .NotEmpty().When(x => x.Status == SalesStatus.Processing || x.Status == SalesStatus.ReadyForDelivery || x.Status == SalesStatus.PartiallyDelivered)
-        //    .WithMessage("Eine Versandmethode ist erfsaleslich, wenn die Verkauf in Bearbeitung ist oder versandt wurde.");
+            .WithMessage("The total does not match the sum of subtotal, shipping cost and tax.");
     }
 
     private bool DeliveryAddressDiffersFromInvoice(T model)

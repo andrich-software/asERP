@@ -1,9 +1,10 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Extensions;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Customer;
 using asERP.Domain.Dtos.CustomerAddress;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 
 namespace asERP.Application.Features.Customer.Queries.CustomerDetail;
 
@@ -123,12 +124,10 @@ public class CustomerDetailHandler : IRequestHandler<CustomerDetailQuery, Result
         }
         catch (Exception ex)
         {
-            // Handle any exceptions during customer retrieval
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while retrieving the customer: {ex.Message}");
-
-            _logger.LogError("Error retrieving customer: {Message}", ex.Message);
+            // Handle any exceptions during customer retrieval; never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while retrieving the customer.",
+                "Error retrieving customer.");
         }
 
         return result;

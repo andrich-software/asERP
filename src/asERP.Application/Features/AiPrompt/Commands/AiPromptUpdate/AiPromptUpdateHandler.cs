@@ -1,8 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.AiPrompt.Commands.AiPromptUpdate;
 
@@ -78,11 +79,10 @@ public class AiPromptUpdateHandler : IRequestHandler<AiPromptUpdateCommand, Resu
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the AI prompt: {ex.Message}");
-
-            _logger.LogError("Error updating AI prompt: {Message}", ex.Message);
+            // Never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while updating the AI prompt.",
+                "Error updating AI prompt.");
         }
 
         return result;

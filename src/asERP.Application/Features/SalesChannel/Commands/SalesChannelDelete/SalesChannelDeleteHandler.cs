@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.SalesChannel.Commands.SalesChannelDelete;
 
@@ -83,11 +84,9 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while deleting the sales channel: {ex.Message}");
-
-            _logger.LogError("Error deleting sales channel: {ExceptionType} - {Message}", ex.GetType().Name, ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while deleting the sales channel.",
+                "Error deleting sales channel {Id}.", request.Id);
         }
 
         return result;

@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.Warehouse;
+using asERP.Domain.Dtos.Warehouse;
 using asERP.Domain.Enums;
 using asERP.Domain.Interfaces;
 
@@ -31,6 +31,9 @@ public class SalesChannelInputDto : ISalesChannelInputModel
 
     /// <summary>Receive stock pushes whenever the mirrored warehouse stock changes.</summary>
     public bool ExportStock { get; set; }
+
+    /// <summary>Push local order cancellations back to this channel (opt-in, default off).</summary>
+    public bool PushSalesCancellations { get; set; }
 
     /// <summary>This channel is the stock master — its levels are mirrored into the linked warehouse.</summary>
     public bool ImportStock { get; set; }

@@ -119,6 +119,34 @@ public class SalesImportRepositoryTests
     }
 
     [Fact]
+    public async Task Reimport_DoesNotResurrectLocallyCancelledOrder()
+    {
+        var options = NewOptions();
+        var tenant = new TestTenantContext();
+        await using var ctx = new ApplicationDbContext(options, tenant);
+
+        var channel = NewChannel();
+        ctx.Product.Add(new Product { Id = Guid.NewGuid(), Sku = "SKU-1", Name = "Test Product" });
+        ctx.SalesChannel.Add(channel);
+        await ctx.SaveChangesAsync();
+
+        var repo = BuildRepository(ctx, tenant);
+        await repo.ImportOrUpdateFromSalesChannel(channel, NewImport("1001", "C-1", "buyer@example.de", "SKU-1"));
+
+        // Cancel locally (e.g. via the cancel endpoint, CancelSales push still pending in the outbox).
+        var sales = await ctx.Sales.IgnoreQueryFilters().SingleAsync();
+        sales.Status = SalesStatus.Cancelled;
+        await ctx.SaveChangesAsync();
+
+        // The shop has not processed the cancel yet and still reports Processing — the import
+        // must not flip the local terminal status back, or push and import would ping-pong.
+        await repo.ImportOrUpdateFromSalesChannel(channel, NewImport("1001", "C-1", "buyer@example.de", "SKU-1"));
+
+        var reloaded = await ctx.Sales.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(SalesStatus.Cancelled, reloaded.Status);
+    }
+
+    [Fact]
     public async Task Import_TwoOrdersSameCustomerAndSku_ShareOneCustomer_AndAssignSequentialSalesIds()
     {
         var options = NewOptions();

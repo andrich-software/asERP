@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Persistence;
+using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Entities;
 using asERP.Persistence.DatabaseContext;
@@ -10,13 +10,27 @@ namespace asERP.Persistence.Repositories;
 public class TenantEmailSettingsRepository : ITenantEmailSettingsRepository
 {
     private readonly ApplicationDbContext _context;
+    private readonly ITenantContext _tenantContext;
 
-    public TenantEmailSettingsRepository(ApplicationDbContext context)
+    public TenantEmailSettingsRepository(ApplicationDbContext context, ITenantContext tenantContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
     }
 
-    public IQueryable<TenantEmailSettings> Entities => _context.Set<TenantEmailSettings>().AsNoTracking();
+    // TenantEmailSettings is BaseEntityWithoutTenant, so no global query filter applies. Every read
+    // that could span tenants must be scoped explicitly to the current tenant.
+    public IQueryable<TenantEmailSettings> Entities => ScopedToCurrentTenant().AsNoTracking();
+
+    private IQueryable<TenantEmailSettings> ScopedToCurrentTenant()
+    {
+        var query = _context.Set<TenantEmailSettings>().AsQueryable();
+        var currentTenantId = _tenantContext.GetCurrentTenantId();
+        return currentTenantId.HasValue
+            ? query.Where(s => s.TenantId == currentTenantId.Value)
+            // No tenant context → expose nothing (these rows are always tenant-owned).
+            : query.Where(_ => false);
+    }
 
     public async Task<TenantEmailSettings?> GetByTenantIdAsync(Guid tenantId)
     {
@@ -41,14 +55,16 @@ public class TenantEmailSettingsRepository : ITenantEmailSettingsRepository
 
     public async Task<ICollection<TenantEmailSettings>> GetAllAsync()
     {
-        return await _context.Set<TenantEmailSettings>()
+        // Scoped to the current tenant — never return other tenants' SMTP credentials.
+        return await ScopedToCurrentTenant()
             .AsNoTracking()
             .ToListAsync();
     }
 
     public async Task<TenantEmailSettings?> GetByIdAsync(Guid id, bool asNoTracking = false)
     {
-        var query = _context.Set<TenantEmailSettings>()
+        // Scoped to the current tenant — an id from another tenant resolves to null.
+        var query = ScopedToCurrentTenant()
             .Where(x => x.Id == id);
 
         return asNoTracking

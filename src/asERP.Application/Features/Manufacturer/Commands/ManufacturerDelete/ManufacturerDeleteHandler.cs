@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Manufacturer.Commands.ManufacturerDelete;
 
@@ -70,11 +71,9 @@ public class ManufacturerDeleteHandler : IRequestHandler<ManufacturerDeleteComma
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while deleting the manufacturer: {ex.Message}");
-
-            _logger.LogError("Error deleting manufacturer: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while deleting the manufacturer.",
+                "Error deleting manufacturer.");
         }
 
         return result;

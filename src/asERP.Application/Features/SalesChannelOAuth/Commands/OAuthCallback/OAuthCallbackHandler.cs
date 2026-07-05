@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Mediator;
@@ -109,9 +109,9 @@ public class OAuthCallbackHandler : IRequestHandler<OAuthCallbackCommand, Result
         }
         catch (Exception ex)
         {
-            _logger.LogError("OAuth token exchange failed: {Message}", ex.Message);
-            return Result<OAuthCallbackResultDto>.Fail(ResultStatusCode.BadRequest,
-                $"Token exchange failed: {ex.Message}");
+            // Anonymous callback: never echo the token-endpoint error text to the caller.
+            _logger.LogError(ex, "OAuth token exchange failed for provider {Provider}", request.Provider);
+            return Result<OAuthCallbackResultDto>.Fail(ResultStatusCode.BadRequest, "Token exchange failed.");
         }
 
         var channel = await _salesChannelRepository.GetByIdAsync(state.SalesChannelId);

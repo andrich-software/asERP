@@ -1,9 +1,7 @@
-﻿using FluentValidation;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Validators;
-using asERP.Domain.Constants;
-using Microsoft.EntityFrameworkCore;
+using FluentValidation;
 
 namespace asERP.Application.Features.AiPrompt.Commands.AiPromptUpdate;
 
@@ -23,7 +21,7 @@ public class AiPromptUpdateValidator : AiPromptBaseValidator<AiPromptUpdateComma
             .MustAsync(IsUniqueAsync).WithMessage("AiPrompt with the same name already exists.");
 
         RuleFor(p => p.AiModelId)
-            .Must(ValidateAiModelTenantAccess).WithMessage("AI Model not found or does not belong to current tenant.");
+            .MustAsync(ValidateAiModelTenantAccessAsync).WithMessage("AI Model not found or does not belong to current tenant.");
     }
 
 
@@ -37,36 +35,17 @@ public class AiPromptUpdateValidator : AiPromptBaseValidator<AiPromptUpdateComma
         return await _aIPromptRepository.IsUniqueAsync(aIPrompt, command.Id);
     }
 
-    private bool ValidateAiModelTenantAccess(Guid aiModelId)
+    private async Task<bool> ValidateAiModelTenantAccessAsync(Guid aiModelId, CancellationToken cancellationToken)
     {
+        // The repository read is subject to the global tenant query filter, so a cross-tenant
+        // AiModel resolves to null. When no tenant context is set, defer to the handler.
         var currentTenantId = _tenantContext.GetCurrentTenantId();
-        
-        // If no tenant is set, skip validation - let handler deal with it
         if (!currentTenantId.HasValue)
         {
             return true;
         }
 
-        // For invalid/unassigned tenants, skip validation to allow NotFound
-        // Based on test setup, only specific tenants are valid
-        if (currentTenantId.Value != TenantConstants.TestTenant1Id && currentTenantId.Value != TenantConstants.TestTenant2Id)
-        {
-            return true;
-        }
-
-        // Now validate tenant access for AiModels based on test data:
-        // AiModel 1, 2 belong to tenant 1
-        // AiModel 3 belongs to tenant 2
-        // Any other AiModel ID doesn't exist
-        
-        // Use database query to validate tenant access instead of hardcoded IDs
-        var aiModel = _aiModelRepository.GetByIdAsync(aiModelId).Result;
-        if (aiModel == null)
-        {
-            return false;
-        }
-        
-        // Check if the AI model belongs to the current tenant
-        return aiModel.TenantId == currentTenantId.Value;
+        var aiModel = await _aiModelRepository.GetByIdAsync(aiModelId);
+        return aiModel != null && aiModel.TenantId == currentTenantId.Value;
     }
 }

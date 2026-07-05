@@ -24,20 +24,17 @@ public sealed class Shopware6Connector : ConnectorBase
     private readonly Shopware6AuthHelper _auth;
     private readonly IProductImportRepository _productImportRepository;
     private readonly ISalesImportRepository _salesImportRepository;
-    private readonly ISalesChannelRepository _salesChannelRepository;
     private readonly ILogger<Shopware6Connector> _logger;
 
     public Shopware6Connector(
         Shopware6AuthHelper auth,
         IProductImportRepository productImportRepository,
         ISalesImportRepository salesImportRepository,
-        ISalesChannelRepository salesChannelRepository,
         ILogger<Shopware6Connector> logger)
     {
         _auth = auth;
         _productImportRepository = productImportRepository;
         _salesImportRepository = salesImportRepository;
-        _salesChannelRepository = salesChannelRepository;
         _logger = logger;
     }
 
@@ -92,6 +89,10 @@ public sealed class Shopware6Connector : ConnectorBase
             ConfigureBearer(context, accessToken);
             var baseUrl = salesChannel.Url.TrimEnd('/');
 
+            // Resolve tax-class id → percentage once per run so products carry their real rate instead of a
+            // hard-coded 19. Falls back to the default rate only when the shop exposes no tax entities.
+            var taxRates = await BuildTaxRateMapAsync(context, baseUrl);
+
             while (true)
             {
                 // Walk only top-level products (parentId == null); variants are fetched per parent below
@@ -145,7 +146,7 @@ public sealed class Shopware6Connector : ConnectorBase
                             Name = p.Translated?.Name ?? p.Name ?? string.Empty,
                             Ean = p.Ean ?? string.Empty,
                             Price = p.Price?.FirstOrDefault()?.Net ?? 0m,
-                            TaxRate = 19,
+                            TaxRate = ResolveProductTaxRate(p.TaxId, taxRates),
                             Description = description,
                             IsVariantParent = (p.ChildCount ?? 0) > 0,
                             Images = MapImages(p),
@@ -179,12 +180,10 @@ public sealed class Shopware6Connector : ConnectorBase
             return SyncResult.Failed(ex.Message);
         }
 
-        if (!salesChannel.InitialProductImportCompleted)
-        {
-            salesChannel.InitialProductImportCompleted = true;
-            await _salesChannelRepository.UpdateAsync(salesChannel);
-        }
-
+        // NOTE: InitialProductImportCompleted is intentionally NOT flipped here. The orchestrator flips it
+        // only after a Success/PartialFailure run (SalesChannelOrchestrator.RunChannelOperationAsync), so a
+        // run that imported zero products because the very first page fetch failed (failed>0, processed==0 →
+        // Failed) does not permanently gate the catalogue import. Mirrors the WooCommerce connector.
         return new SyncResult(processed, failed);
     }
 
@@ -605,6 +604,14 @@ public sealed class Shopware6Connector : ConnectorBase
             var (_, accessToken) = await PrepareAsync(context);
             ConfigureBearer(context, accessToken);
 
+            var isoCode = string.IsNullOrEmpty(payload.Currency) ? "EUR" : payload.Currency;
+            var currencyId = await ResolveCurrencyIdAsync(context, isoCode);
+            if (string.IsNullOrEmpty(currencyId))
+            {
+                return ExportResult.Fail(
+                    $"Shopware6 currency '{isoCode}' could not be resolved to a currency id on the shop — cannot set price.");
+            }
+
             var url = context.SalesChannel.Url.TrimEnd('/') + $"/api/product/{Uri.EscapeDataString(payload.RemoteProductId)}";
             var body = new
             {
@@ -615,7 +622,7 @@ public sealed class Shopware6Connector : ConnectorBase
                         gross = payload.Price,
                         net = payload.Price,
                         linked = false,
-                        currencyId = "b7d2554b0ce847cd82f3ac9bd1c0dfca", // Shopware 6 default EUR currency id
+                        currencyId,
                     },
                 },
             };
@@ -710,7 +717,7 @@ public sealed class Shopware6Connector : ConnectorBase
                     Quantity = li.Quantity,
                     Price = li.UnitPrice,
                     Ean = li.Payload?.Ean ?? string.Empty,
-                    TaxRate = 19,
+                    TaxRate = ResolveLineTaxRate(li),
                 }).ToList(),
         };
     }
@@ -751,6 +758,117 @@ public sealed class Shopware6Connector : ConnectorBase
         }
 
         return images;
+    }
+
+    // Last-resort tax rate when the shop exposes no tax entities at all — German standard VAT, matching the
+    // previously hard-coded value so shops without readable tax data behave as before.
+    private const double DefaultTaxRate = 19;
+
+    /// <summary>
+    /// Builds a taxId → percentage map from the shop's <c>/api/search/tax</c> entities, so a product's
+    /// <c>taxId</c> resolves to its real rate instead of an assumed 19. Returns an empty map (callers fall
+    /// back to <see cref="DefaultTaxRate"/>) if the endpoint is unavailable.
+    /// </summary>
+    private async Task<Dictionary<string, double>> BuildTaxRateMapAsync(SalesChannelContext context, string baseUrl)
+    {
+        var map = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var page = 1;
+            while (true)
+            {
+                var requestBody = new { page, limit = PageSize };
+                var url = $"{baseUrl}/api/search/tax";
+                var response = await context.HttpClient.PostAsJsonAsync(url, requestBody, context.CancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
+                    _logger.LogWarning("Shopware6 tax search HTTP {Status}: {Body}; falling back to default tax rate {Rate}",
+                        (int)response.StatusCode, Truncate(body, 300), DefaultTaxRate);
+                    break;
+                }
+
+                var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
+                var result = JsonSerializer.Deserialize<Sw6SearchResult<Sw6Tax>>(raw);
+                if (result?.Data is null || result.Data.Count == 0) break;
+
+                foreach (var tax in result.Data.Where(t => !string.IsNullOrEmpty(t.Id)))
+                {
+                    map[tax.Id] = (double)tax.TaxRate;
+                }
+
+                if (result.Data.Count < PageSize) break;
+                page++;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Shopware6 tax rates could not be fetched; falling back to default tax rate {Rate}", DefaultTaxRate);
+        }
+
+        return map;
+    }
+
+    private static double ResolveProductTaxRate(string? taxId, IReadOnlyDictionary<string, double> taxRates)
+    {
+        if (!string.IsNullOrEmpty(taxId) && taxRates.TryGetValue(taxId, out var rate))
+        {
+            return rate;
+        }
+
+        return DefaultTaxRate;
+    }
+
+    /// <summary>
+    /// Derives an order line's tax percentage from its calculated tax breakdown (the actual rate Shopware
+    /// applied), taking the dominant entry. Falls back to <see cref="DefaultTaxRate"/> when the line has no
+    /// calculated tax (e.g. a tax-free order).
+    /// </summary>
+    private static double ResolveLineTaxRate(Sw6LineItem line)
+    {
+        var taxes = line.Price?.CalculatedTaxes;
+        if (taxes is not { Count: > 0 })
+        {
+            return 0;
+        }
+
+        // The entry carrying the most tax is the representative rate for a mixed line.
+        var dominant = taxes.OrderByDescending(t => t.Tax).First();
+        return (double)Math.Round(dominant.TaxRate, 0);
+    }
+
+    /// <summary>
+    /// Resolves a currency's Shopware id from its ISO code via <c>/api/search/currency</c>. Cached on the
+    /// channel context is unnecessary — this is called at most once per price export — but the id must be
+    /// looked up rather than hard-coded: the default-install EUR id is not stable across shops that
+    /// regenerated their currencies.
+    /// </summary>
+    private async Task<string?> ResolveCurrencyIdAsync(SalesChannelContext context, string isoCode)
+    {
+        var url = context.SalesChannel.Url.TrimEnd('/') + "/api/search/currency";
+        var requestBody = new
+        {
+            page = 1,
+            limit = 1,
+            filter = new object[]
+            {
+                new { type = "equals", field = "isoCode", value = isoCode },
+            },
+        };
+
+        var response = await context.HttpClient.PostAsJsonAsync(url, requestBody, context.CancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
+        var result = JsonSerializer.Deserialize<Sw6SearchResult<Sw6Currency>>(raw);
+        return result?.Data?.FirstOrDefault()?.Id;
     }
 
     private static SalesStatus MapSalesStatus(string? technicalName) => technicalName switch

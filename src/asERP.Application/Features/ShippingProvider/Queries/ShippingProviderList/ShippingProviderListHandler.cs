@@ -1,4 +1,3 @@
-using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
@@ -11,6 +10,16 @@ namespace asERP.Application.Features.ShippingProvider.Queries.ShippingProviderLi
 
 public class ShippingProviderListHandler : IRequestHandler<ShippingProviderListQuery, PaginatedResult<ShippingProviderListDto>>
 {
+    // Restrict client-supplied ordering to the columns surfaced in the list DTO.
+    private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
+    {
+        nameof(Domain.Entities.ShippingProvider.Id),
+        nameof(Domain.Entities.ShippingProvider.Name),
+        nameof(Domain.Entities.ShippingProvider.Type),
+        nameof(Domain.Entities.ShippingProvider.IsEnabled),
+        nameof(Domain.Entities.ShippingProvider.UseSandbox)
+    };
+
     private readonly IAppLogger<ShippingProviderListHandler> _logger;
     private readonly IShippingProviderRepository _shippingProviderRepository;
 
@@ -29,12 +38,8 @@ public class ShippingProviderListHandler : IRequestHandler<ShippingProviderListQ
         _logger.LogInformation("ShippingProviderListHandler.Handle: Retrieving shipping providers.");
 
         var query = _shippingProviderRepository.Entities
-            .Specify(filterSpec);
-
-        if (request.SalesBy.Any())
-        {
-            query = query.OrderBy(string.Join(",", request.SalesBy));
-        }
+            .Specify(filterSpec)
+            .ApplySafeOrdering(request.SalesBy, AllowedSortFields);
 
         return await query
             .Select(p => new ShippingProviderListDto

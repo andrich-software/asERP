@@ -125,11 +125,11 @@ public class TenantDetailHandler : IRequestHandler<TenantDetailQuery, Result<Ten
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error retrieving tenant {Id} for user {UserId}: {Message}",
-                request.Id, request.UserId, ex.Message);
+            _logger.LogError(ex, "Error retrieving tenant {Id} for user {UserId}.",
+                request.Id, request.UserId);
 
             return Result<TenantDetailDto>.Fail(ResultStatusCode.InternalServerError,
-                $"An error occurred while retrieving the tenant: {ex.Message}");
+                "An error occurred while retrieving the tenant.");
         }
     }
 }

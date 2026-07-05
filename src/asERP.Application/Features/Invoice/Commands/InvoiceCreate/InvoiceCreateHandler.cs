@@ -1,9 +1,10 @@
-﻿using asERP.Application.Contracts.Logging;
 using System.Linq;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Invoice.Commands.InvoiceCreate;
 
@@ -83,7 +84,7 @@ public class InvoiceCreateHandler : IRequestHandler<InvoiceCreateCommand, Result
             {
                 result.Succeeded = false;
                 result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("Ein Mandantenkontext ist erfsaleslich.");
+                result.Messages.Add("Ein Mandantenkontext ist erforderlich.");
                 return result;
             }
 
@@ -174,11 +175,9 @@ public class InvoiceCreateHandler : IRequestHandler<InvoiceCreateCommand, Result
         catch (Exception ex)
         {
             // Handle any exceptions during invoice creation
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while creating the invoice: {ex.Message}");
-
-            _logger.LogError("Error creating invoice: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while creating the invoice.",
+                "Error creating invoice.");
         }
 
         return result;

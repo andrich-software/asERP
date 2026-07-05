@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -181,11 +181,9 @@ public class UserDetailHandler : IRequestHandler<UserDetailQuery, Result<UserDet
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while retrieving the user: {ex.Message}");
-
-            _logger.LogError("Error retrieving user: {Message}", ex.Message);
+            result.FromException(_logger, ex,
+                "An error occurred while retrieving the user.",
+                "Error retrieving user {Id}.", request.Id);
         }
 
         return result;

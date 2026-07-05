@@ -1,4 +1,3 @@
-﻿using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 
@@ -6,8 +5,6 @@ namespace asERP.Application.Extensions;
 
 public static class UserContextExtensions
 {
-    private const string TestUserIdHeader = "X-Test-UserId";
-
     public static string? GetUserId(this HttpContext? context)
     {
         if (context == null)
@@ -19,20 +16,6 @@ public static class UserContextExtensions
         var userId = user?.FindFirst("uid")?.Value
                      ?? user?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        if (!string.IsNullOrWhiteSpace(userId))
-        {
-            return userId;
-        }
-
-        if (context.Request?.Headers.TryGetValue(TestUserIdHeader, out var headerValues) == true)
-        {
-            var headerUserId = headerValues.FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(headerUserId))
-            {
-                return headerUserId;
-            }
-        }
-
-        return null;
+        return string.IsNullOrWhiteSpace(userId) ? null : userId;
     }
 }

@@ -111,6 +111,20 @@ public class ProductImageImportService : IProductImageImportService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            // Image URLs come verbatim from the remote shop's API response (attacker-influenceable), so
+            // run each through the same SSRF guard the channel base URL uses (scheme + private-range +
+            // DNS-resolution check) before the download. The HttpClient also carries a connect-time IP
+            // guard as defense-in-depth; this pre-flight check rejects obviously-bad URLs cheaply.
+            try
+            {
+                SalesChannelUrlValidator.Validate(image.Url);
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning("Skipping image {Url} for product {ProductId}: {Reason}", image.Url, productId, ex.Message);
+                continue;
+            }
+
             try
             {
                 using var response = await client.GetAsync(image.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);

@@ -1,7 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
+using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.ProductAttribute.Commands.ProductAttributeUpdate;
 
@@ -116,11 +117,10 @@ public class ProductAttributeUpdateHandler : IRequestHandler<ProductAttributeUpd
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add($"An error occurred while updating the product attribute: {ex.Message}");
-
-            _logger.LogError("Error updating product attribute: {Message}", ex.Message);
+            // Never leak the raw exception text.
+            result.FromException(_logger, ex,
+                "An error occurred while updating the product attribute.",
+                "Error updating product attribute.");
         }
 
         return result;

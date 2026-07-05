@@ -1,6 +1,5 @@
 using asERP.Domain.Dtos.Returns;
 using asERP.Domain.Dtos.Shipping;
-using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 
 namespace asERP.Domain.Dtos.Sales;
@@ -17,7 +16,7 @@ public class SalesDetailDto
     public Guid CustomerGuid { get; set; }
 
     public SalesStatus Status { get; set; }
-    public List<SalesItem> SalesItems { get; set; } = new List<SalesItem>();
+    public List<SalesItemDto> SalesItems { get; set; } = new List<SalesItemDto>();
     public List<SalesHistoryDto> SalesHistory { get; set; } = new List<SalesHistoryDto>();
 
     public string PaymentMethod { get; set; } = string.Empty;

@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Infrastructure;
+using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Mediator;
@@ -95,10 +95,10 @@ public class ProductDeleteHandler : IRequestHandler<ProductDeleteCommand, Result
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error deleting product: {Message}", ex.Message);
+            _logger.LogError(ex, "Error deleting product");
 
             return Result<Guid>.Fail(ResultStatusCode.InternalServerError,
-                $"An error occurred while deleting the product: {ex.Message}");
+                "An error occurred while deleting the product.");
         }
     }
 }

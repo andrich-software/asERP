@@ -15,17 +15,9 @@ public class ShippingRepository : GenericRepository<Shipping>, IShippingReposito
 
     public async Task<Shipping?> GetWithDetailsAsync(Guid id)
     {
-        var query = Context.Shipping
-            .Where(x => x.Id == id);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query
+        // Tenant isolation via the global query filter.
+        return await Context.Shipping
+            .Where(x => x.Id == id)
             .Include(x => x.ShippingProvider)
             .Include(x => x.ShippingProviderRate)
             .Include(x => x.Sales)
@@ -35,17 +27,9 @@ public class ShippingRepository : GenericRepository<Shipping>, IShippingReposito
 
     public async Task<List<Shipping>> GetBySalesIdAsync(Guid salesId)
     {
-        var query = Context.Shipping
-            .Where(x => x.SalesId == salesId);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query
+        // Tenant isolation via the global query filter.
+        return await Context.Shipping
+            .Where(x => x.SalesId == salesId)
             .Include(x => x.ShippingProvider)
             .Include(x => x.ShippingProviderRate)
             .OrderByDescending(x => x.DateCreated)
@@ -79,6 +63,19 @@ public class ShippingRepository : GenericRepository<Shipping>, IShippingReposito
         var items = await Context.SalesItem
             .Where(i => itemIds.Contains(i.Id))
             .ToListAsync();
+
+        // TOCTOU guard: refuse items already claimed by another shipment. The caller runs this inside
+        // a transaction, so a concurrent create that committed first is observed here and rejected
+        // (surfaced as a conflict) instead of silently double-assigning the same line.
+        var alreadyAssigned = items
+            .Where(i => i.ShippingId != null && i.ShippingId != shippingId)
+            .Select(i => i.Id)
+            .ToList();
+        if (alreadyAssigned.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Sales item(s) [{string.Join(", ", alreadyAssigned)}] are already assigned to another shipment.");
+        }
 
         foreach (var assignment in assignments)
         {
@@ -122,32 +119,17 @@ public class ShippingRepository : GenericRepository<Shipping>, IShippingReposito
 
     public async Task<List<SalesItem>> GetAssignedSalesItemsAsync(Guid shippingId)
     {
-        var query = Context.SalesItem
-            .Where(x => x.ShippingId == shippingId);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query.ToListAsync();
+        // Tenant isolation via the global query filter.
+        return await Context.SalesItem
+            .Where(x => x.ShippingId == shippingId)
+            .ToListAsync();
     }
 
     public async Task<List<SalesItem>> GetAssignedSalesItemsWithSerialsAsync(Guid shippingId)
     {
-        var query = Context.SalesItem
-            .Where(x => x.ShippingId == shippingId);
-
-        // Apply manual tenant filtering
-        var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (currentTenantId.HasValue)
-        {
-            query = query.Where(x => x.TenantId == null || x.TenantId == currentTenantId.Value);
-        }
-
-        return await query
+        // Tenant isolation via the global query filter.
+        return await Context.SalesItem
+            .Where(x => x.ShippingId == shippingId)
             .Include(x => x.SerialNumbers)
             .ToListAsync();
     }
