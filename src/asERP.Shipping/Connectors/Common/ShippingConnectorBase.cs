@@ -96,4 +96,11 @@ public abstract class ShippingConnectorBase
 
     protected static string Truncate(string value, int maxLength)
         => value.Length <= maxLength ? value : value[..maxLength];
+
+    /// <summary>Opt-in default for the return-label capability — connectors override per carrier.</summary>
+    public virtual bool SupportsReturnLabels => false;
+
+    public virtual Task<CarrierLabelResult> CreateReturnLabelAsync(ShippingCarrierContext context, ReturnLabelRequest request)
+        => Task.FromResult(CarrierLabelResult.Permanent(
+            $"Return labels are not supported for carrier {context.Provider.Type} yet."));
 }

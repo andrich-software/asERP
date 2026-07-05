@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Infrastructure;
+using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Models.Email;
@@ -208,5 +208,7 @@ public class TenantAwareEmailServiceFallbackTest
         public Task<string> GeneratePasswordResetEmailAsync(string toName, string resetToken, string resetUrl) => Task.FromResult(string.Empty);
         public Task<string> GenerateWelcomeEmailAsync(string toName) => Task.FromResult(string.Empty);
         public Task<string> GenerateEmailConfirmationAsync(string toName, string confirmationToken, string confirmationUrl) => Task.FromResult(string.Empty);
+        public Task<string> GenerateShippingNotificationEmailAsync(ShippingNotificationEmailData data) => Task.FromResult(string.Empty);
+        public Task<string> GenerateDeliveryNotificationEmailAsync(ShippingNotificationEmailData data) => Task.FromResult(string.Empty);
     }
 }

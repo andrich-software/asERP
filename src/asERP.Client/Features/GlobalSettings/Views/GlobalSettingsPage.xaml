@@ -24,7 +24,14 @@
 
         <TextBox Grid.Column="1"
                  Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                 Visibility="{Binding IsSecret, Converter={StaticResource BoolToInverseVisibilityConverter}}" />
+                 Visibility="{Binding IsPlainText, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+        <ToggleSwitch Grid.Column="1"
+                      IsOn="{Binding BoolValue, Mode=TwoWay}"
+                      OnContent=""
+                      OffContent=""
+                      MinWidth="0"
+                      Visibility="{Binding IsBoolean, Converter={StaticResource BoolToVisibilityConverter}}" />
 
         <StackPanel Grid.Column="1"
                     Spacing="4"

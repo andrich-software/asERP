@@ -44,6 +44,10 @@ public static class ShippingServiceRegistration
         services.AddScoped<ShippingCarrierService>();
         services.AddScoped<IShippingCarrierService>(sp => sp.GetRequiredService<ShippingCarrierService>());
         services.AddScoped<ShippingLabelOutboxDrainer>();
+        services.AddScoped<ReturnLabelOutboxEnqueuer>();
+        services.AddScoped<ReturnCarrierService>();
+        services.AddScoped<IReturnCarrierService>(sp => sp.GetRequiredService<ReturnCarrierService>());
+        services.AddScoped<ReturnLabelOutboxDrainer>();
         services.AddScoped<ShippingTrackingPoller>();
 
         if (includeBackgroundServices)

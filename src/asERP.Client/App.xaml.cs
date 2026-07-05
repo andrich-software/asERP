@@ -7,6 +7,7 @@ using asERP.Client.Features.Statistics;
 using asERP.Client.Features.Dashboard.Models;
 using asERP.Client.Features.Invoices;
 using asERP.Client.Features.Manufacturers;
+using asERP.Client.Features.Returns;
 using asERP.Client.Features.Saless;
 using asERP.Client.Features.Shippings;
 using asERP.Client.Features.Search;
@@ -381,6 +382,7 @@ public partial class App : Application
         CustomersModule.RegisterServices(services);
         SalessModule.RegisterServices(services);
         ShippingsModule.RegisterServices(services);
+        ReturnsModule.RegisterServices(services);
         ProductsModule.RegisterServices(services);
         ManufacturersModule.RegisterServices(services);
         InvoicesModule.RegisterServices(services);

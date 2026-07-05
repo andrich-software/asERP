@@ -35,8 +35,14 @@ public interface ILabelService
     /// <summary>Downloads the label of a shipment from the API.</summary>
     Task<LabelFile> FetchLabelAsync(Guid shippingId, CancellationToken ct = default);
 
+    /// <summary>Downloads the return label of a customer return (RMA) from the API.</summary>
+    Task<LabelFile> FetchReturnLabelAsync(Guid returnShipmentId, CancellationToken ct = default);
+
     /// <summary>Downloads the packing-slip PDF of a shipment from the API.</summary>
     Task<LabelFile> FetchPackingSlipAsync(Guid shippingId, CancellationToken ct = default);
+
+    /// <summary>Downloads the combined pick-list PDF over several shipments (batch run).</summary>
+    Task<LabelFile> FetchBatchPickListAsync(IReadOnlyCollection<Guid> shippingIds, CancellationToken ct = default);
 
     /// <summary>Installed printer names; empty when the platform cannot enumerate printers.</summary>
     Task<IReadOnlyList<string>> GetPrinterNamesAsync();
@@ -44,6 +50,11 @@ public interface ILabelService
     /// <summary>Saves via the platform's file-save mechanism. Returns false when the user
     /// cancelled the picker.</summary>
     Task<bool> SaveAsync(LabelFile label);
+
+    /// <summary>Saves several files with a single user interaction where the platform allows
+    /// it (Desktop: one folder picker; WASM: sequential downloads). Returns false when the
+    /// user cancelled or the platform has no save/download capability.</summary>
+    Task<bool> SaveAllAsync(IReadOnlyList<LabelFile> labels);
 
     /// <summary>Prints the label; <paramref name="printerName"/> null means the default printer.</summary>
     Task PrintAsync(LabelFile label, string? printerName);

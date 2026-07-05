@@ -20,6 +20,8 @@ public sealed partial class SalesDetailPage : Page
     {
         this.InitializeComponent();
         ShipmentDialog.ShipmentCreated += OnShipmentCreated;
+        ReturnDialog.ReturnCreated += OnReturnChanged;
+        ReceiveDialog.ReturnReceived += OnReturnChanged;
     }
 
     private async void BackButton_Click(object sender, RoutedEventArgs e)
@@ -52,6 +54,61 @@ public sealed partial class SalesDetailPage : Page
         if (sender is Button { CommandParameter: Guid salesId })
         {
             await ShipmentDialog.OpenAsync(salesId);
+        }
+    }
+
+    private async void ReturnButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { CommandParameter: Guid salesId })
+        {
+            await ReturnDialog.OpenAsync(salesId);
+        }
+    }
+
+    private async void ShipmentCreateReturn_Click(object sender, RoutedEventArgs e)
+    {
+        // Hint on a ReturnedToSender parcel: "parcel came back — create a return?"
+        if (sender is Button { CommandParameter: Guid salesId })
+        {
+            await ReturnDialog.OpenAsync(salesId);
+        }
+    }
+
+    private async void ReturnLabel_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { CommandParameter: Guid returnId })
+        {
+            // One click: remembered preference first, platform default otherwise (toasts inside).
+            await LabelActionRunner.RunReturnQuickAsync(returnId);
+        }
+    }
+
+    private async void ReturnReceive_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { CommandParameter: Guid returnId })
+        {
+            await ReceiveDialog.OpenAsync(returnId);
+        }
+    }
+
+    private async void ReturnCancel_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { CommandParameter: Guid returnId } ||
+            DataContext is not SalesDetailModel model ||
+            this.XamlRoot is not { } xamlRoot)
+        {
+            return;
+        }
+
+        var confirmed = await ConfirmDialog.ShowAsync(
+            xamlRoot,
+            "SalesDetailPage.CancelReturnConfirmTitle",
+            "SalesDetailPage.CancelReturnConfirmMessage",
+            confirmKey: "Common.Confirm");
+
+        if (confirmed && await model.CancelReturn(returnId))
+        {
+            RefreshFeed();
         }
     }
 
@@ -133,6 +190,13 @@ public sealed partial class SalesDetailPage : Page
     private Task OnShipmentCreated()
     {
         // Status may have moved to PartiallyDelivered/Completed and the shipments tab gained a row.
+        RefreshFeed();
+        return Task.CompletedTask;
+    }
+
+    private Task OnReturnChanged()
+    {
+        // The returns section gained a row, or a receipt may have flipped the order to Returned.
         RefreshFeed();
         return Task.CompletedTask;
     }

@@ -21,6 +21,18 @@ public partial class LabelService
         return Task.FromResult(true);
     }
 
+    public async Task<bool> SaveAllAsync(IReadOnlyList<LabelFile> labels)
+    {
+        foreach (var label in labels)
+        {
+            await SaveAsync(label);
+            // Small gap between anchor-click downloads so browsers don't coalesce or block them.
+            await Task.Delay(300);
+        }
+
+        return labels.Count > 0;
+    }
+
     public Task PrintAsync(LabelFile label, string? printerName)
     {
         LabelInterop.Print(label.ContentType, Convert.ToBase64String(label.Bytes));

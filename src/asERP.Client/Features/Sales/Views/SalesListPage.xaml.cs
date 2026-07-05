@@ -12,6 +12,12 @@ public sealed partial class SalesListPage : Page
     {
         this.InitializeComponent();
         this.Loaded += OnLoaded;
+
+        BatchDialog.RunCompleted += () =>
+        {
+            SalessFeedView.Refresh?.Execute(null);
+            return Task.CompletedTask;
+        };
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -36,6 +42,11 @@ public sealed partial class SalesListPage : Page
         {
             await model.ToggleSort(field);
         }
+    }
+
+    private async void BatchShipButton_Click(object sender, RoutedEventArgs e)
+    {
+        await BatchDialog.OpenAsync();
     }
 
     private async void NewSalesButton_Click(object sender, RoutedEventArgs e)

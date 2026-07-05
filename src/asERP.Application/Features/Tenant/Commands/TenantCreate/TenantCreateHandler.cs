@@ -1,9 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Tenant.Commands.TenantCreate;
 
@@ -77,7 +77,9 @@ public class TenantCreateHandler : IRequestHandler<TenantCreateCommand, Result<G
                 Country = request.Country,
                 Iban = request.Iban,
                 PackingSlipShowPrices = request.PackingSlipShowPrices,
-                PackingSlipPrintByDefault = request.PackingSlipPrintByDefault
+                PackingSlipPrintByDefault = request.PackingSlipPrintByDefault,
+                SendShippingNotificationEmails = request.SendShippingNotificationEmails,
+                SendDeliveryNotificationEmails = request.SendDeliveryNotificationEmails
             };
 
             // Add tenant to context without saving

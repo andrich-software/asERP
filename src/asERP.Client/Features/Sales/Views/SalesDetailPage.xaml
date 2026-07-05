@@ -7,6 +7,9 @@
       xmlns:shipmodels="using:asERP.Client.Features.Shippings.Models"
       xmlns:shipviews="using:asERP.Client.Features.Shippings.Views"
       xmlns:shipdtos="using:asERP.Domain.Dtos.Shipping"
+      xmlns:returns="using:asERP.Client.Features.Returns"
+      xmlns:returnviews="using:asERP.Client.Features.Returns.Views"
+      xmlns:returndtos="using:asERP.Domain.Dtos.Returns"
       xmlns:mvux="using:Uno.Extensions.Reactive.UI"
       xmlns:utu="using:Uno.Toolkit.UI"
       xmlns:controls="using:asERP.Client.Controls"
@@ -17,6 +20,10 @@
     <shippings:SalesStatusToShipVisibilityConverter x:Key="SalesStatusToShipVisibilityConverter" />
     <shippings:SalesStatusToCancelVisibilityConverter x:Key="SalesStatusToCancelVisibilityConverter" />
     <shippings:CanCancelShipmentToVisibilityConverter x:Key="CanCancelShipmentToVisibilityConverter" />
+    <returns:CanCreateReturnToVisibilityConverter x:Key="CanCreateReturnToVisibilityConverter" />
+    <returns:CanReceiveReturnToVisibilityConverter x:Key="CanReceiveReturnToVisibilityConverter" />
+    <returns:CanCancelReturnToVisibilityConverter x:Key="CanCancelReturnToVisibilityConverter" />
+    <returns:ReturnedToSenderToVisibilityConverter x:Key="ReturnedToSenderToVisibilityConverter" />
   </Page.Resources>
 
   <Grid utu:SafeArea.Insets="VisibleBounds">
@@ -161,6 +168,11 @@
                           CommandParameter="{Binding Data.Id}"
                           Style="{StaticResource FilledButtonStyle}"
                           Visibility="{Binding Data.Status, Converter={StaticResource SalesStatusToShipVisibilityConverter}}" />
+                  <Button x:Uid="SalesDetailPage.HeaderAction.Return"
+                          Click="ReturnButton_Click"
+                          CommandParameter="{Binding Data.Id}"
+                          Style="{StaticResource OutlinedButtonStyle}"
+                          Visibility="{Binding Data, Converter={StaticResource CanCreateReturnToVisibilityConverter}}" />
                   <Button x:Uid="SalesDetailPage.HeaderAction.Edit"
                           Click="EditButton_Click"
                           Style="{StaticResource OutlinedButtonStyle}" />
@@ -543,6 +555,14 @@
                                             FontSize="14" />
                                 </Button>
                                 <Button Style="{StaticResource IconButtonStyle}"
+                                        x:Uid="SalesDetailPage.ShipRowCreateReturn"
+                                        Click="ShipmentCreateReturn_Click"
+                                        CommandParameter="{x:Bind SalesId}"
+                                        Visibility="{x:Bind Status, Converter={StaticResource ReturnedToSenderToVisibilityConverter}}">
+                                  <FontIcon Glyph="&#xE7A7;"
+                                            FontSize="14" />
+                                </Button>
+                                <Button Style="{StaticResource IconButtonStyle}"
                                         x:Uid="SalesDetailPage.ShipRowCancel"
                                         Click="ShipmentCancel_Click"
                                         CommandParameter="{x:Bind Id}"
@@ -561,6 +581,140 @@
                                            Glyph="&#xE7B8;"
                                            Background="Transparent"
                                            Visibility="{Binding Data.Shippings.Count, Converter={StaticResource ZeroToVisibilityConverter}}" />
+                    </StackPanel>
+                  </Border>
+
+                  <!-- Returns (RMA) of this order -->
+                  <TextBlock x:Uid="SalesDetailPage.ReturnsSection"
+                             Style="{StaticResource LabelMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                             Margin="0,24,0,8" />
+                  <Border Style="{StaticResource TableCardStyle}">
+                    <StackPanel>
+                      <Grid Padding="16,12"
+                            Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="8,8,0,0">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="140" />
+                          <ColumnDefinition Width="*" MinWidth="140" />
+                          <ColumnDefinition Width="90" />
+                          <ColumnDefinition Width="110" />
+                          <ColumnDefinition Width="128" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   x:Uid="SalesDetailPage.ReturnHeader.Status"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="1"
+                                   x:Uid="SalesDetailPage.ReturnHeader.Tracking"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="2"
+                                   x:Uid="SalesDetailPage.ReturnHeader.Items"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="3"
+                                   x:Uid="SalesDetailPage.ReturnHeader.ReceivedAt"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                      </Grid>
+
+                      <ItemsRepeater ItemsSource="{Binding Data.Returns}">
+                        <ItemsRepeater.Layout>
+                          <StackLayout Orientation="Vertical" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                          <DataTemplate x:DataType="returndtos:ReturnShipmentListItemDto">
+                            <Grid Padding="16,8"
+                                  Background="Transparent"
+                                  BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                  BorderThickness="0,1,0,0">
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="*" MinWidth="140" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="128" />
+                              </Grid.ColumnDefinitions>
+
+                              <controls:StatusBadge Grid.Column="0"
+                                                    Status="{x:Bind Status}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center" />
+
+                              <!-- Tracking number: link when a tracking URL exists, plain text otherwise -->
+                              <Grid Grid.Column="1"
+                                    VerticalAlignment="Center">
+                                <Button Style="{StaticResource TextButtonStyle}"
+                                        Padding="4,2"
+                                        Background="Transparent"
+                                        HorizontalAlignment="Left"
+                                        Click="ShipmentTracking_Click"
+                                        CommandParameter="{x:Bind TrackingUrl}"
+                                        Visibility="{x:Bind shipmodels:ShippingRowVisuals.HasText(TrackingUrl)}">
+                                  <TextBlock Text="{x:Bind TrackingNumber}"
+                                             Style="{StaticResource BodyMedium}"
+                                             Foreground="{ThemeResource PrimaryBrush}" />
+                                </Button>
+                                <TextBlock Text="{x:Bind TrackingNumber}"
+                                           Style="{StaticResource BodyMedium}"
+                                           Foreground="{ThemeResource OnSurfaceBrush}"
+                                           VerticalAlignment="Center"
+                                           Visibility="{x:Bind shipmodels:ShippingRowVisuals.NoText(TrackingUrl)}" />
+                              </Grid>
+
+                              <TextBlock Grid.Column="2"
+                                         Text="{x:Bind ItemCount}"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceBrush}"
+                                         VerticalAlignment="Center" />
+
+                              <TextBlock Grid.Column="3"
+                                         Text="{x:Bind shipmodels:ShippingRowVisuals.FormatDate(ReceivedAt)}"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceBrush}"
+                                         VerticalAlignment="Center" />
+
+                              <StackPanel Grid.Column="4"
+                                          Orientation="Horizontal"
+                                          Spacing="4"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Center">
+                                <Button Style="{StaticResource IconButtonStyle}"
+                                        x:Uid="SalesDetailPage.ReturnRowLabel"
+                                        Click="ReturnLabel_Click"
+                                        CommandParameter="{x:Bind Id}"
+                                        Visibility="{x:Bind shipmodels:ShippingRowVisuals.Visible(HasLabel)}">
+                                  <FontIcon Glyph="&#xE7BA;"
+                                            FontSize="14" />
+                                </Button>
+                                <Button Style="{StaticResource IconButtonStyle}"
+                                        x:Uid="SalesDetailPage.ReturnRowReceive"
+                                        Click="ReturnReceive_Click"
+                                        CommandParameter="{x:Bind Id}"
+                                        Visibility="{x:Bind Status, Converter={StaticResource CanReceiveReturnToVisibilityConverter}}">
+                                  <FontIcon Glyph="&#xE73E;"
+                                            FontSize="14" />
+                                </Button>
+                                <Button Style="{StaticResource IconButtonStyle}"
+                                        x:Uid="SalesDetailPage.ReturnRowCancel"
+                                        Click="ReturnCancel_Click"
+                                        CommandParameter="{x:Bind Id}"
+                                        Visibility="{x:Bind Status, Converter={StaticResource CanCancelReturnToVisibilityConverter}}">
+                                  <FontIcon Glyph="&#xE711;"
+                                            FontSize="14"
+                                            Foreground="{ThemeResource ErrorBrush}" />
+                                </Button>
+                              </StackPanel>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                      </ItemsRepeater>
+
+                      <controls:EmptyState x:Uid="SalesDetailPage.NoReturns"
+                                           Glyph="&#xE7A7;"
+                                           Background="Transparent"
+                                           Visibility="{Binding Data.Returns.Count, Converter={StaticResource ZeroToVisibilityConverter}}" />
                     </StackPanel>
                   </Border>
                 </StackPanel>
@@ -770,5 +924,17 @@
                                     Grid.Row="0"
                                     Grid.RowSpan="2"
                                     Visibility="Collapsed" />
+
+    <!-- Create-return overlay; opened from the "Return" header action or the returned-parcel hint -->
+    <returnviews:CreateReturnDialog x:Name="ReturnDialog"
+                                    Grid.Row="0"
+                                    Grid.RowSpan="2"
+                                    Visibility="Collapsed" />
+
+    <!-- Receive-return overlay; opened from the returns section -->
+    <returnviews:ReceiveReturnDialog x:Name="ReceiveDialog"
+                                     Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Visibility="Collapsed" />
   </Grid>
 </Page>

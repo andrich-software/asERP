@@ -73,6 +73,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<ProductSalesChannel>().ToTable("product_saleschannel");
         modelBuilder.Entity<ProductStock>().ToTable("product_stock");
         modelBuilder.Entity<SalesChannel>().ToTable("saleschannel");
+        modelBuilder.Entity<ReturnShipment>().ToTable("return_shipment");
+        modelBuilder.Entity<ReturnShipmentItem>().ToTable("return_shipment_item");
+        modelBuilder.Entity<ReturnShipmentItemSerialNumber>().ToTable("return_shipment_item_serialnumber");
+        modelBuilder.Entity<ReturnLabelOutbox>().ToTable("return_label_outbox");
         modelBuilder.Entity<Setting>().ToTable("setting");
         modelBuilder.Entity<Shipping>().ToTable("shipping");
         modelBuilder.Entity<ShippingProvider>().ToTable("shipping_provider");
@@ -141,6 +145,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new ShippingProviderRateCountryConfiguration());
         modelBuilder.ApplyConfiguration(new ShippingConfiguration());
         modelBuilder.ApplyConfiguration(new ShippingLabelOutboxConfiguration());
+        modelBuilder.ApplyConfiguration(new ReturnShipmentConfiguration());
+        modelBuilder.ApplyConfiguration(new ReturnShipmentItemConfiguration());
+        modelBuilder.ApplyConfiguration(new ReturnShipmentItemSerialNumberConfiguration());
+        modelBuilder.ApplyConfiguration(new ReturnLabelOutboxConfiguration());
         modelBuilder.ApplyConfiguration(new SalesHistoryConfiguration());
         modelBuilder.ApplyConfiguration(new TenantEmailSettingsConfiguration());
         modelBuilder.ApplyConfiguration(new ChannelSyncRunConfiguration());
@@ -218,6 +226,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ShippingProviderRate> ShippingProviderRate { get; set; } = null!;
     public DbSet<ShippingProviderRateCountry> ShippingProviderRateCountry { get; set; } = null!;
     public DbSet<ShippingLabelOutbox> ShippingLabelOutbox { get; set; } = null!;
+    public DbSet<ReturnShipment> ReturnShipment { get; set; } = null!;
+    public DbSet<ReturnShipmentItem> ReturnShipmentItem { get; set; } = null!;
+    public DbSet<ReturnShipmentItemSerialNumber> ReturnShipmentItemSerialNumber { get; set; } = null!;
+    public DbSet<ReturnLabelOutbox> ReturnLabelOutbox { get; set; } = null!;
     public DbSet<TaxClass> TaxClass { get; set; } = null!;
     public DbSet<Warehouse> Warehouse { get; set; } = null!;
     public DbSet<Manufacturer> Manufacturer { get; set; } = null!;

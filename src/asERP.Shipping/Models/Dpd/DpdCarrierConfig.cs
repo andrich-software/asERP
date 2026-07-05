@@ -16,5 +16,8 @@ public sealed class DpdCarrierConfig
     /// <summary>Label size for the PDF, e.g. "PDF_A6" or "PDF_A4".</summary>
     public string LabelSize { get; set; } = "PDF_A6";
 
+    /// <summary>DPD return product/parcel type. [verify] exact ShipService value per contract.</summary>
+    public string ReturnProduct { get; set; } = "Returns";
+
     public CarrierSenderAddress Sender { get; set; } = new();
 }

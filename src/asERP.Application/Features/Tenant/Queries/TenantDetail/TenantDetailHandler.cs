@@ -1,9 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Tenant;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Tenant.Queries.TenantDetail;
@@ -113,7 +113,9 @@ public class TenantDetailHandler : IRequestHandler<TenantDetailQuery, Result<Ten
                 UserCount = userCount,
                 CanManageTenant = canManageTenant,
                 PackingSlipShowPrices = tenant.PackingSlipShowPrices,
-                PackingSlipPrintByDefault = tenant.PackingSlipPrintByDefault
+                PackingSlipPrintByDefault = tenant.PackingSlipPrintByDefault,
+                SendShippingNotificationEmails = tenant.SendShippingNotificationEmails,
+                SendDeliveryNotificationEmails = tenant.SendDeliveryNotificationEmails
             };
 
             _logger.LogInformation("Tenant with ID {Id} retrieved successfully for user {UserId}",

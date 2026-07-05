@@ -35,8 +35,36 @@ public static class LabelActionRunner
         await RunAsync(shippingId, pref.Action, pref.PrinterName);
     }
 
+    /// <summary>
+    /// One-click return-label action — same behavior as <see cref="RunQuickAsync"/> but
+    /// fetches from the returns label endpoint.
+    /// </summary>
+    public static async Task RunReturnQuickAsync(Guid returnShipmentId)
+    {
+        if (Services is not { } services)
+        {
+            return;
+        }
+
+        var labelService = services.GetRequiredService<ILabelService>();
+        var preferences = services.GetRequiredService<IShippingPreferences>();
+        var tokenStorage = services.GetRequiredService<ITokenStorageService>();
+
+        var tenantId = await tokenStorage.GetCurrentTenantIdAsync() ?? Guid.Empty;
+        var pref = preferences.GetLabelAction(tenantId) ?? DefaultAction(labelService.Capabilities);
+
+        await RunReturnAsync(returnShipmentId, pref.Action, pref.PrinterName);
+    }
+
+    /// <summary>Fetches the return label and executes the given action, surfacing toasts.</summary>
+    public static Task RunReturnAsync(Guid returnShipmentId, LabelAction action, string? printerName) =>
+        RunCoreAsync(service => service.FetchReturnLabelAsync(returnShipmentId), action, printerName);
+
     /// <summary>Fetches the label and executes the given action, surfacing toasts.</summary>
-    public static async Task RunAsync(Guid shippingId, LabelAction action, string? printerName)
+    public static Task RunAsync(Guid shippingId, LabelAction action, string? printerName) =>
+        RunCoreAsync(service => service.FetchLabelAsync(shippingId), action, printerName);
+
+    private static async Task RunCoreAsync(Func<ILabelService, Task<LabelFile>> fetch, LabelAction action, string? printerName)
     {
         if (Services is not { } services)
         {
@@ -49,7 +77,7 @@ public static class LabelActionRunner
 
         try
         {
-            var label = await labelService.FetchLabelAsync(shippingId);
+            var label = await fetch(labelService);
             var capabilities = labelService.Capabilities;
 
             if (action is LabelAction.Save or LabelAction.Download

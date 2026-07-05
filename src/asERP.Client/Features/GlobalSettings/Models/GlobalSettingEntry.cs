@@ -18,6 +18,7 @@ public class GlobalSettingEntry : INotifyPropertyChanged
         _value = value;
         IsSecret = isSecret;
         HasStoredValue = hasStoredValue;
+        IsBoolean = !isSecret && bool.TryParse(value, out _);
 
         var separator = key.IndexOf('.');
         Label = separator > 0 ? key[(separator + 1)..] : key;
@@ -32,6 +33,20 @@ public class GlobalSettingEntry : INotifyPropertyChanged
     public bool HasStoredValue { get; }
     public bool ShowSecretHint => IsSecret && HasStoredValue;
 
+    /// <summary>
+    /// True/False rows render as a ToggleSwitch instead of a free-text box. Detected once
+    /// from the stored value so a non-boolean row can never be locked out of free editing.
+    /// </summary>
+    public bool IsBoolean { get; }
+    public bool IsPlainText => !IsSecret && !IsBoolean;
+
+    /// <summary>ToggleSwitch binding; writes back the canonical "True"/"False" strings.</summary>
+    public bool BoolValue
+    {
+        get => bool.TryParse(_value, out var parsed) && parsed;
+        set => Value = value ? "True" : "False";
+    }
+
     public string Value
     {
         get => _value;
@@ -40,6 +55,7 @@ public class GlobalSettingEntry : INotifyPropertyChanged
             if (_value == value) return;
             _value = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(BoolValue));
         }
     }
 

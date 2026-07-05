@@ -1,8 +1,8 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
-using asERP.Domain.Wrapper;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Tenant.Commands.TenantUpdate;
 
@@ -75,6 +75,8 @@ public class TenantUpdateHandler : IRequestHandler<TenantUpdateCommand, Result<G
             tenantToUpdate.Iban = request.Iban;
             tenantToUpdate.PackingSlipShowPrices = request.PackingSlipShowPrices;
             tenantToUpdate.PackingSlipPrintByDefault = request.PackingSlipPrintByDefault;
+            tenantToUpdate.SendShippingNotificationEmails = request.SendShippingNotificationEmails;
+            tenantToUpdate.SendDeliveryNotificationEmails = request.SendDeliveryNotificationEmails;
 
             await _tenantRepository.UpdateAsync(tenantToUpdate);
 

@@ -17,21 +17,6 @@ namespace asERP.Client.Features.GlobalSettings.Models;
 /// </summary>
 public class GlobalSettingsModel : AsyncInitializableModel
 {
-    /// <summary>Key prefix → tab. Prefixes not listed here land on the "General" tab.</summary>
-    private static readonly Dictionary<string, SettingsTab> TabByPrefix = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Email"] = SettingsTab.Email,
-        ["Jwt"] = SettingsTab.Authentication,
-        ["Telemetry"] = SettingsTab.Observability,
-        ["Grafana"] = SettingsTab.Observability,
-        ["ClickHouse"] = SettingsTab.Observability,
-    };
-
-    /// <summary>Fixed group order on the "General" tab; unknown prefixes follow alphabetically.</summary>
-    private static readonly string[] GeneralGroupOrder = ["Company", "System", "Invoice", "Sales", "Notification"];
-
-    private enum SettingsTab { General, Email, Authentication, Observability }
-
     private readonly IGlobalSettingsService _globalSettingsService;
     private readonly ISystemOAuthSettingsService _oauthService;
     private readonly INavigator _navigator;
@@ -201,22 +186,9 @@ public class GlobalSettingsModel : AsyncInitializableModel
         await _navigator.NavigateBackAsync(this);
     }
 
-    private GlobalSettingsUpdateInputDto BuildUpdateInput()
-    {
-        var input = new GlobalSettingsUpdateInputDto();
-        var groups = GeneralGroups.Concat(EmailGroups).Concat(AuthenticationGroups).Concat(ObservabilityGroups);
-        foreach (var entry in groups.SelectMany(g => g.Entries))
-        {
-            // Secrets are write-only: an empty field means "keep the stored value", so it is
-            // not sent at all. Non-secrets are sent as-is; the server skips unchanged values.
-            if (entry.IsSecret && entry.Value.Length == 0)
-            {
-                continue;
-            }
-            input.Settings.Add(new GlobalSettingValueInputDto { Key = entry.Key, Value = entry.Value });
-        }
-        return input;
-    }
+    private GlobalSettingsUpdateInputDto BuildUpdateInput() =>
+        GlobalSettingsLogic.BuildUpdateInput(
+            GeneralGroups.Concat(EmailGroups).Concat(AuthenticationGroups).Concat(ObservabilityGroups));
 
     private async Task LoadOAuthAsync(CancellationToken ct)
     {
@@ -252,55 +224,16 @@ public class GlobalSettingsModel : AsyncInitializableModel
             var settings = await _globalSettingsService.GetAllAsync(ct);
             if (settings is null) return;
 
-            var groups = settings
-                .GroupBy(GroupPrefix, StringComparer.OrdinalIgnoreCase)
-                .Select(g => new
-                {
-                    Prefix = g.Key,
-                    Group = new GlobalSettingGroup(
-                        ResolveGroupTitle(g.Key),
-                        g.OrderBy(s => s.Key, StringComparer.OrdinalIgnoreCase)
-                            .Select(s => new GlobalSettingEntry(s.Key, s.Value, s.IsSecret, s.HasValue))
-                            .ToList()),
-                })
-                .ToList();
-
-            GeneralGroups = groups
-                .Where(g => ResolveTab(g.Prefix) == SettingsTab.General)
-                .OrderBy(g => GeneralOrderIndex(g.Prefix))
-                .ThenBy(g => g.Prefix, StringComparer.OrdinalIgnoreCase)
-                .Select(g => g.Group)
-                .ToList();
-            EmailGroups = TabGroups(SettingsTab.Email);
-            AuthenticationGroups = TabGroups(SettingsTab.Authentication);
-            ObservabilityGroups = TabGroups(SettingsTab.Observability);
-
-            IReadOnlyList<GlobalSettingGroup> TabGroups(SettingsTab tab) => groups
-                .Where(g => ResolveTab(g.Prefix) == tab)
-                .OrderBy(g => g.Prefix, StringComparer.OrdinalIgnoreCase)
-                .Select(g => g.Group)
-                .ToList();
+            var tabs = GlobalSettingsLogic.BuildTabGroups(settings, ResolveGroupTitle);
+            GeneralGroups = tabs[GlobalSettingsLogic.Tab.General];
+            EmailGroups = tabs[GlobalSettingsLogic.Tab.Email];
+            AuthenticationGroups = tabs[GlobalSettingsLogic.Tab.Authentication];
+            ObservabilityGroups = tabs[GlobalSettingsLogic.Tab.Observability];
         }
         catch (ApiException ex)
         {
             ErrorMessage = ex.CombinedMessage;
         }
-    }
-
-    private static string GroupPrefix(GlobalSettingDto dto)
-    {
-        var separator = dto.Key.IndexOf('.');
-        return separator > 0 ? dto.Key[..separator] : dto.Key;
-    }
-
-    private static SettingsTab ResolveTab(string prefix) =>
-        TabByPrefix.TryGetValue(prefix, out var tab) ? tab : SettingsTab.General;
-
-    private static int GeneralOrderIndex(string prefix)
-    {
-        var index = Array.FindIndex(GeneralGroupOrder,
-            p => p.Equals(prefix, StringComparison.OrdinalIgnoreCase));
-        return index >= 0 ? index : GeneralGroupOrder.Length;
     }
 
     private string ResolveGroupTitle(string prefix)

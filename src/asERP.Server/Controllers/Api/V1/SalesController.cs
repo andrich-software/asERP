@@ -1,4 +1,3 @@
-using Asp.Versioning;
 using asERP.Application.Features.Sales.Commands.SalesCancel;
 using asERP.Application.Features.Sales.Commands.SalesCreate;
 using asERP.Application.Features.Sales.Commands.SalesDelete;
@@ -8,12 +7,16 @@ using asERP.Application.Features.Sales.Queries.SalesDetail;
 using asERP.Application.Features.Sales.Queries.SalesList;
 using asERP.Application.Features.Sales.Queries.SalesNotPaidList;
 using asERP.Application.Features.Sales.Queries.SalesReadyForDeliveryList;
+using asERP.Application.Features.Sales.Queries.SalesReadyToShipList;
+using asERP.Application.Features.Sales.Queries.SalesReturnableItems;
 using asERP.Application.Features.Sales.Queries.SalesShippableItems;
 using asERP.Application.Features.Shipping.Queries.ShippingOptionsForSales;
 using asERP.Application.Mediator;
+using asERP.Domain.Dtos.Returns;
 using asERP.Domain.Dtos.Sales;
 using asERP.Domain.Dtos.Shipping;
 using asERP.Domain.Wrapper;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -64,6 +67,19 @@ public class SalessController(IMediator mediator) : ControllerBase
         return Ok(saless);
     }
 
+    // GET: api/v1/<SalessController>/ready-to-ship
+    [HttpGet("ready-to-ship")]
+    public async Task<ActionResult<PaginatedResult<SalesReadyToShipListDto>>> GetReadyToShip(int pageNumber = 0, int pageSize = 10, string salesBy = "")
+    {
+        if (string.IsNullOrEmpty(salesBy))
+        {
+            salesBy = "DateSalesed Descending";
+        }
+
+        var saless = await mediator.Send(new SalesReadyToShipListQuery(pageNumber, pageSize, salesBy));
+        return Ok(saless);
+    }
+
     // GET: api/v1/<SalessController>/not-paid
     [HttpGet("not-paid")]
     public async Task<ActionResult<PaginatedResult<SalesListDto>>> GetNotPaid(int pageNumber = 0, int pageSize = 10, string salesBy = "")
@@ -94,6 +110,16 @@ public class SalessController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<List<ShippableSalesItemDto>>> GetShippableItems(Guid id)
     {
         var response = await mediator.Send(new SalesShippableItemsQuery { Id = id });
+        return StatusCode((int)response.StatusCode, response);
+    }
+
+    // GET: api/v1/<SalessController>/5/returnable-items
+    [HttpGet("{id:guid}/returnable-items")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<ReturnableSalesItemDto>>> GetReturnableItems(Guid id)
+    {
+        var response = await mediator.Send(new SalesReturnableItemsQuery { Id = id });
         return StatusCode((int)response.StatusCode, response);
     }
 

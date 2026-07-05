@@ -1,9 +1,9 @@
-using Asp.Versioning;
 using asERP.Application.Features.Shipping.Commands.ShippingCancel;
 using asERP.Application.Features.Shipping.Commands.ShippingCreate;
 using asERP.Application.Features.Shipping.Commands.ShippingDelete;
 using asERP.Application.Features.Shipping.Commands.ShippingLabelRetry;
 using asERP.Application.Features.Shipping.Commands.ShippingUpdate;
+using asERP.Application.Features.Shipping.Queries.ShippingBatchPickList;
 using asERP.Application.Features.Shipping.Queries.ShippingDetail;
 using asERP.Application.Features.Shipping.Queries.ShippingLabel;
 using asERP.Application.Features.Shipping.Queries.ShippingList;
@@ -14,6 +14,7 @@ using asERP.Domain.Dtos.Shipping;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -93,6 +94,23 @@ public class ShippingsController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetPickList(Guid id)
     {
         var response = await mediator.Send(new ShippingPickListQuery { Id = id });
+
+        if (!response.Succeeded || response.Data == null)
+        {
+            return response.ToActionResult();
+        }
+
+        return File(response.Data.Data, response.Data.ContentType, response.Data.FileName);
+    }
+
+    // GET: api/v1/<ShippingsController>/pick-list?ids=...&ids=... (combined pick list, unknown ids skipped)
+    [HttpGet("pick-list")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBatchPickList([FromQuery] Guid[] ids)
+    {
+        var response = await mediator.Send(new ShippingBatchPickListQuery { Ids = ids ?? Array.Empty<Guid>() });
 
         if (!response.Succeeded || response.Data == null)
         {

@@ -229,6 +229,85 @@ public sealed class DhlConnector : ShippingConnectorBase, IShippingCarrierConnec
         return result.Success ? CarrierCancelResult.Ok() : CarrierCancelResult.Failed(result.ErrorMessage ?? "unknown");
     }
 
+    public override bool SupportsReturnLabels => true;
+
+    /// <summary>
+    /// DHL Parcel DE Returns API v1 — a separate API product next to the shipping API; the
+    /// business-portal credentials and dhl-api-key are shared. The return destination is the
+    /// configured "Retourenempfänger" (<see cref="DhlCarrierConfig.ReturnReceiverId"/>).
+    /// [verify] Returns-API subscription, receiverId values and sandbox behavior during the smoke run.
+    /// </summary>
+    public override Task<CarrierLabelResult> CreateReturnLabelAsync(ShippingCarrierContext context, ReturnLabelRequest request)
+        => ExecuteLabelCallAsync(async () =>
+        {
+            var config = ParseConfig<DhlCarrierConfig>(context);
+
+            if (string.IsNullOrWhiteSpace(config.ReturnReceiverId))
+            {
+                return CarrierLabelResult.Permanent(
+                    $"Shipping provider '{context.Provider.Name}' has no ReturnReceiverId in AdditionalConfigJson — required for DHL return labels.");
+            }
+
+            if (string.IsNullOrWhiteSpace(context.AccountNumber))
+            {
+                return CarrierLabelResult.Permanent(
+                    $"Shipping provider '{context.Provider.Name}' has no EKP (AccountNumber) configured.");
+            }
+
+            var body = new
+            {
+                receiverId = config.ReturnReceiverId,
+                customerReference = request.Reference,
+                shipper = new
+                {
+                    name1 = request.CustomerName,
+                    name2 = request.CustomerCompany,
+                    addressStreet = request.Street,
+                    postalCode = request.Zip,
+                    city = request.City,
+                    country = ToIso3(request.CountryIsoCode),
+                    phone = request.CustomerPhone
+                },
+                itemWeight = new { uom = "kg", value = request.WeightKg }
+            };
+
+            var http = CreateShippingClient(context);
+            var url = $"{ReturnsBaseUrlFor(context)}/orders?labelType=BOTH";
+            var response = await http.PostAsJsonAsync(url, body, JsonOptions, context.CancellationToken);
+            var payload = await response.Content.ReadAsStringAsync(context.CancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = $"DHL return-label creation failed ({(int)response.StatusCode}): {Truncate(payload, 500)}";
+                return IsPermanentStatusCode(response.StatusCode)
+                    ? CarrierLabelResult.Permanent(error)
+                    : CarrierLabelResult.Transient(error);
+            }
+
+            using var doc = JsonDocument.Parse(payload);
+            var root = doc.RootElement;
+            var shipmentNo = root.TryGetProperty("shipmentNo", out var no) ? no.GetString() : null;
+            var labelB64 = root.TryGetProperty("label", out var label) && label.TryGetProperty("b64", out var b64)
+                ? b64.GetString()
+                : null;
+
+            if (string.IsNullOrEmpty(shipmentNo) || string.IsNullOrEmpty(labelB64))
+            {
+                return CarrierLabelResult.Permanent($"DHL return response missing shipment number or label: {Truncate(payload, 300)}");
+            }
+
+            return CarrierLabelResult.Ok(
+                shipmentNo,
+                shipmentNo,
+                Convert.FromBase64String(labelB64),
+                trackingUrl: $"https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode={shipmentNo}");
+        }, "DHL");
+
+    private static string ReturnsBaseUrlFor(ShippingCarrierContext context)
+        => context.UseSandbox
+            ? "https://api-sandbox.dhl.com/parcel/de/shipping/returns/v1"
+            : "https://api-eu.dhl.com/parcel/de/shipping/returns/v1";
+
     /// <summary>DHL Parcel DE expects ISO 3166-1 alpha-3 country codes.</summary>
     private static string ToIso3(string iso2)
     {

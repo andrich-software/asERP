@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using asERP.Domain.Interfaces;
 
 namespace asERP.Domain.Dtos.Tenant;
@@ -53,4 +53,8 @@ public class TenantInputDto : ITenantInputModel
     public bool PackingSlipShowPrices { get; set; }
 
     public bool PackingSlipPrintByDefault { get; set; }
+
+    public bool SendShippingNotificationEmails { get; set; }
+
+    public bool SendDeliveryNotificationEmails { get; set; }
 }

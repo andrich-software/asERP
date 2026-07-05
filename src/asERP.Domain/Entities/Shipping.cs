@@ -55,4 +55,14 @@ public class Shipping : BaseEntity, IBaseEntity
 
     /// <summary>Verbatim status text from the carrier's last tracking response.</summary>
     public string? LastCarrierStatusRaw { get; set; }
+
+    /// <summary>
+    /// UTC time the "on the way" customer-notification slot was consumed (first transition to
+    /// Shipped/InTransit/OutForDelivery, or Delivered on skip-ahead). Stamped even when the tenant
+    /// toggle is off or the send fails, so enabling the toggle later never mails in-flight shipments.
+    /// </summary>
+    public DateTime? CustomerNotifiedAt { get; set; }
+
+    /// <summary>UTC time the delivered customer-notification slot was consumed — same semantics as <see cref="CustomerNotifiedAt"/>.</summary>
+    public DateTime? CustomerDeliveryNotifiedAt { get; set; }
 }

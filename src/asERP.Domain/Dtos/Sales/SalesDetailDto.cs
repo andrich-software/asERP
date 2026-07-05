@@ -1,3 +1,4 @@
+using asERP.Domain.Dtos.Returns;
 using asERP.Domain.Dtos.Shipping;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
@@ -32,6 +33,9 @@ public class SalesDetailDto
     public string ShippingTrackingId { get; set; } = string.Empty;
 
     public List<ShippingListDto> Shippings { get; set; } = new List<ShippingListDto>();
+
+    /// <summary>Customer returns (RMA) of this order, newest first.</summary>
+    public List<ReturnShipmentListItemDto> Returns { get; set; } = new List<ReturnShipmentListItemDto>();
 
     public decimal Subtotal { get; set; }
     public decimal ShippingCost { get; set; }
