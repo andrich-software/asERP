@@ -20,7 +20,6 @@ dotnet publish (Join-Path $repoRoot 'src\asERP.Client\asERP.Client.csproj') `
     --framework net10.0-desktop `
     --runtime win-x64 `
     --self-contained true `
-    -p:TargetFrameworks=net10.0-desktop `
     -p:UseMonoRuntime=false `
     -p:Version=$Version `
     -p:AssemblyVersion=$Version `
