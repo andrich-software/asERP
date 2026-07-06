@@ -112,8 +112,18 @@ jobs:
       run: |
         $installer = "installer/output/asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe"
 
-        # Materialize the signing certificate from the base64 secret.
-        $certBytes = [System.Convert]::FromBase64String($env:SIGN_CERT_BASE64)
+        # Materialize the signing certificate from the base64 secret. Strip any
+        # whitespace/line breaks first (wrapped `base64` output is a common gotcha).
+        # A non-base64 value is treated as a placeholder: warn and skip signing so
+        # a dummy secret doesn't break the pipeline. A real cert that then fails in
+        # signtool below still fails the job.
+        $clean = ($env:SIGN_CERT_BASE64 -replace '\s','')
+        try {
+          $certBytes = [System.Convert]::FromBase64String($clean)
+        } catch {
+          Write-Warning "WINDOWS_CERTIFICATE_BASE64 is not valid base64 (placeholder?) - skipping signing. The installer will be UNSIGNED and the Store will reject it at certification."
+          exit 0
+        }
         $certPath = "${{ github.workspace }}\certificate.pfx"
         [System.IO.File]::WriteAllBytes($certPath, $certBytes)
 
