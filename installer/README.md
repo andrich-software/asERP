@@ -1,4 +1,24 @@
-# asERP Server — Windows Installer
+# asERP Windows Installers
+
+This folder holds two Inno Setup installers:
+
+| Installer | Script | Built by |
+|---|---|---|
+| **Server** (Windows service + tray) | `asERP.Server.Setup.iss` | `aserp-server-setup-release.yml` |
+| **Desktop client** (Uno app, Microsoft Store) | `asERP.Client.Setup.iss` | `aserp-desktop-release-win-store.yml` |
+
+The desktop-client installer is what the **Microsoft Store** distributes: the Store
+product for the client is an *EXE/MSI app* (Partner Center `dashboard/win32apps/...`),
+not an MSIX/UWP package, so it is fed a signed `.exe` installer hosted at a public
+HTTPS URL and submitted via the Microsoft Store Submission API v2. See the header
+comment of `aserp-desktop-release-win-store.yml` for the required repository secrets
+(`STORE_*`, and optionally `WINDOWS_CERTIFICATE_*` for code signing).
+
+Build the client installer locally with `.\build-client-installer.ps1 -Version 2026.07.06.1`.
+
+---
+
+## asERP Server — Windows Installer
 
 Inno Setup installer that ships the asERP server as a **Windows service** plus a
 **tray app** (status, start/stop/restart, settings, database backup/restore).
