@@ -18,15 +18,22 @@ name: Release asERP.Client to Windows Store
 #   MICROSOFT_STORE_TENANT_ID     Microsoft Entra ID tenant id associated with Partner Center
 #   MICROSOFT_STORE_CLIENT_ID     Entra ID app (Manager role) client id
 #   MICROSOFT_STORE_CLIENT_SECRET Entra ID app client secret
-# Optional (installer code signing; required for Store certification to pass):
-#   WINDOWS_CERTIFICATE_BASE64      base64 of a .pfx whose cert chains to a
-#                                   Microsoft Trusted Root Program CA
-#   WINDOWS_CERTIFICATE_PASSWORD    the .pfx password
+# Installer code signing via Azure Artifact Signing (formerly Trusted Signing);
+# required for Store certification to pass. Secrets (service principal that holds
+# the "Artifact Signing Certificate Profile Signer" role on the signing account):
+#   AZURE_TENANT_ID     Entra tenant of the signing service principal
+#   AZURE_CLIENT_ID     signing service principal (app registration) client id
+#   AZURE_CLIENT_SECRET signing service principal client secret
+# Non-secret config as repository *variables* (Settings > Secrets and variables >
+# Actions > Variables):
+#   TRUSTED_SIGNING_ENDPOINT   region endpoint, e.g. https://weu.codesigning.azure.net/
+#   TRUSTED_SIGNING_ACCOUNT    the Artifact/Trusted Signing account name
+#   TRUSTED_SIGNING_PROFILE    the certificate profile name (public trust)
 #
 # Without the MICROSOFT_STORE_* secrets the job still builds, signs and releases the
-# installer; it just skips the Store submission steps. Without the certificate
-# secrets it skips signing (fine for testing, but the Store will reject an
-# unsigned installer at certification).
+# installer; it just skips the Store submission steps. Without the AZURE_* secrets it
+# skips signing (fine for testing, but the Store will reject an unsigned installer at
+# certification).
 #
 # The 'auto_publish' input controls the final submit: leave it false (default) to
 # only push the package into the draft — you then review and click Submit in Partner
@@ -55,8 +62,9 @@ jobs:
     permissions:
       contents: write
     env:
-      SIGN_CERT_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
-      SIGN_CERT_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
       STORE_SELLER_ID: ${{ secrets.MICROSOFT_STORE_SELLER_ID }}
       STORE_PRODUCT_ID: ${{ secrets.MICROSOFT_STORE_PRODUCT_ID }}
       STORE_TENANT_ID: ${{ secrets.MICROSOFT_STORE_TENANT_ID }}
@@ -114,47 +122,23 @@ jobs:
           /DClientPublishDir=..\publish\client `
           installer\asERP.Client.Setup.iss
 
-    - name: Sign installer
-      if: env.SIGN_CERT_BASE64 != ''
-      shell: pwsh
-      run: |
-        $installer = "installer/output/asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe"
-
-        # Materialize the signing certificate from the base64 secret. Strip any
-        # whitespace/line breaks first (wrapped `base64` output is a common gotcha).
-        # A non-base64 value is treated as a placeholder: warn and skip signing so
-        # a dummy secret doesn't break the pipeline. A real cert that then fails in
-        # signtool below still fails the job.
-        $clean = ($env:SIGN_CERT_BASE64 -replace '\s','')
-        try {
-          $certBytes = [System.Convert]::FromBase64String($clean)
-        } catch {
-          Write-Warning "WINDOWS_CERTIFICATE_BASE64 is not valid base64 (placeholder?) - skipping signing. The installer will be UNSIGNED and the Store will reject it at certification."
-          exit 0
-        }
-        $certPath = "${{ github.workspace }}\certificate.pfx"
-        [System.IO.File]::WriteAllBytes($certPath, $certBytes)
-
-        # Find the latest signtool.exe in the installed Windows SDKs.
-        $winKitsPath = "C:\Program Files (x86)\Windows Kits\10\bin"
-        $signtool = Get-ChildItem -Path $winKitsPath -Directory |
-          Where-Object { $_.Name -match "^10\.0\.\d+\.\d+$" } |
-          Sort-Object { [version]($_.Name -replace "^10\.0\.","") } -Descending |
-          ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" } |
-          Where-Object { Test-Path $_ } |
-          Select-Object -First 1
-        if (-not $signtool) { Write-Error "signtool.exe not found in any Windows SDK."; exit 1 }
-
-        & $signtool sign `
-          /f $certPath `
-          /p $env:SIGN_CERT_PASSWORD `
-          /fd SHA256 `
-          /tr http://timestamp.digicert.com `
-          /td SHA256 `
-          $installer
-        if ($LASTEXITCODE -ne 0) { Write-Error "signtool sign failed."; exit 1 }
-
-        Remove-Item $certPath -Force -ErrorAction SilentlyContinue
+    # Sign with Azure Artifact Signing (cloud HSM, no .pfx). Skipped until the
+    # AZURE_* secrets are configured, so the pipeline still builds/releases before
+    # then — but an unsigned installer will be rejected at Store certification.
+    - name: Sign installer (Azure Artifact Signing)
+      if: env.AZURE_CLIENT_ID != ''
+      uses: azure/artifact-signing-action@v2
+      with:
+        azure-tenant-id: ${{ env.AZURE_TENANT_ID }}
+        azure-client-id: ${{ env.AZURE_CLIENT_ID }}
+        azure-client-secret: ${{ env.AZURE_CLIENT_SECRET }}
+        endpoint: ${{ vars.TRUSTED_SIGNING_ENDPOINT }}
+        signing-account-name: ${{ vars.TRUSTED_SIGNING_ACCOUNT }}
+        certificate-profile-name: ${{ vars.TRUSTED_SIGNING_PROFILE }}
+        files: ${{ github.workspace }}\installer\output\asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe
+        file-digest: SHA256
+        timestamp-rfc3161: http://timestamp.acs.microsoft.com
+        timestamp-digest: SHA256
 
     - name: Create GitHub Release with installer
       uses: softprops/action-gh-release@v2
