@@ -1,11 +1,59 @@
-﻿name: Release asERP.Client to Windows Store
+name: Release asERP.Client to Windows Store
+
+# The Microsoft Store product for the desktop client is an "EXE/MSI app"
+# (Partner Center dashboard/win32apps/...), NOT an MSIX/UWP package. That product
+# type is fed with a signed .exe installer hosted at a public HTTPS URL, and is
+# submitted through the Microsoft Store Submission API v2 (via the official
+# microsoft/store-submission action). This workflow therefore:
+#   1. builds a self-contained desktop client,
+#   2. packages it into an Inno Setup installer (installer/asERP.Client.Setup.iss),
+#   3. (optionally) code-signs the installer,
+#   4. publishes it as a GitHub Release (public repo -> stable packageUrl),
+#   5. creates & publishes a Store submission that points at that packageUrl.
+#
+# Required repository secrets (MICROSOFT_ prefix keeps them apart from a future
+# Apple App Store set):
+#   MICROSOFT_STORE_SELLER_ID     Partner Center seller id (Account settings > Legal info)
+#   MICROSOFT_STORE_PRODUCT_ID    the app's product id (6f124749-737c-4b56-872c-a4dc844e98d0)
+#   MICROSOFT_STORE_TENANT_ID     Microsoft Entra ID tenant id associated with Partner Center
+#   MICROSOFT_STORE_CLIENT_ID     Entra ID app (Manager role) client id
+#   MICROSOFT_STORE_CLIENT_SECRET Entra ID app client secret
+# Optional (installer code signing; required for Store certification to pass):
+#   WINDOWS_CERTIFICATE_BASE64      base64 of a .pfx whose cert chains to a
+#                                   Microsoft Trusted Root Program CA
+#   WINDOWS_CERTIFICATE_PASSWORD    the .pfx password
+#
+# Without the MICROSOFT_STORE_* secrets the job still builds, signs and releases the
+# installer; it just skips the Store submission steps. Without the certificate
+# secrets it skips signing (fine for testing, but the Store will reject an
+# unsigned installer at certification).
+#
+# The 'auto_publish' input controls the final submit: leave it false (default) to
+# only push the package into the draft — you then review and click Submit in Partner
+# Center (recommended for the very first submission). Set it true for hands-off
+# publishing on later releases.
 
 on:
   workflow_dispatch:
+    inputs:
+      auto_publish:
+        description: 'Submit the Store submission automatically (else only update the draft package)'
+        type: boolean
+        default: false
 
 jobs:
   windows-store-release:
     runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      SIGN_CERT_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+      SIGN_CERT_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      STORE_SELLER_ID: ${{ secrets.MICROSOFT_STORE_SELLER_ID }}
+      STORE_PRODUCT_ID: ${{ secrets.MICROSOFT_STORE_PRODUCT_ID }}
+      STORE_TENANT_ID: ${{ secrets.MICROSOFT_STORE_TENANT_ID }}
+      STORE_CLIENT_ID: ${{ secrets.MICROSOFT_STORE_CLIENT_ID }}
+      STORE_CLIENT_SECRET: ${{ secrets.MICROSOFT_STORE_CLIENT_SECRET }}
 
     steps:
     - name: Checkout code
@@ -18,175 +66,78 @@ jobs:
       with:
         dotnet-version: '10.x'
 
-    - name: Restore workloads
-      run: dotnet workload restore src/asERP.Client/asERP.Client.csproj
-
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-
     - name: Generate version
       id: version
       shell: pwsh
       run: |
-        # Generate version in format: MAJOR.MINOR.BUILD.0 (Windows Store compliant)
-        # Each part must be between 0-65535, last part reserved for Store (0)
-        $year = Get-Date -Format "yyyy"
-        $month = Get-Date -Format "MM"
-        $day = Get-Date -Format "dd"
-        $build = if ($env:GITHUB_RUN_NUMBER) { $env:GITHUB_RUN_NUMBER } else { "1" }
+        # YYYY.MM.DD.RunNumber — identical scheme to the other release workflows.
+        # Each part stays < 65536, so it is also a valid Win32 file version.
+        $version = "{0}.{1}" -f (Get-Date -Format 'yyyy.MM.dd'), $env:GITHUB_RUN_NUMBER
+        "VERSION=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        Write-Host "Generated version: $version"
 
-        # Calculate a Windows Store compliant version
-        # Use year offset from 2020 to keep numbers small
-        $yearOffset = [int]$year - 2020
-        $majorVersion = $yearOffset
-        $minorVersion = [int]$month * 100 + [int]$day  # MMDD format (e.g., 927 for Sept 27)
-        $buildVersion = [int]$build
-        $revisionVersion = 0  # Reserved for Store
+    - name: Restore workloads
+      run: dotnet workload restore src/asERP.Client/asERP.Client.csproj
 
-        $version = "$majorVersion.$minorVersion.$buildVersion.$revisionVersion"
-        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-        echo "Generated version: $version (Year offset: $yearOffset, Month-Day: $minorVersion, Build: $buildVersion)"
-
-    - name: Restore dependencies
-      run: dotnet restore src/asERP.Client/asERP.Client.csproj
-
-    - name: Decode certificate
+    - name: Publish client (self-contained win-x64)
       shell: pwsh
       run: |
-        $certBytes = [System.Convert]::FromBase64String("${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}")
-        [System.IO.File]::WriteAllBytes("${{ github.workspace }}\certificate.pfx", $certBytes)
+        dotnet publish src/asERP.Client/asERP.Client.csproj `
+          --configuration Release `
+          --framework net10.0-desktop `
+          --runtime win-x64 `
+          --self-contained true `
+          -p:Version=${{ steps.version.outputs.VERSION }} `
+          -p:AssemblyVersion=${{ steps.version.outputs.VERSION }} `
+          -p:FileVersion=${{ steps.version.outputs.VERSION }} `
+          --output ./publish/client
 
-    - name: Build for Windows Store (MSIX)
+    - name: Compile installer (Inno Setup)
       shell: pwsh
       run: |
-        dotnet publish src/asERP.Client/asERP.Client.csproj --configuration Release --framework net10.0-desktop --runtime win-x64 --self-contained false --output ./publish/msix -p:PublishSingleFile=false -p:PublishReadyToRun=false -p:Version="${{ steps.version.outputs.VERSION }}" -p:AssemblyVersion="${{ steps.version.outputs.VERSION }}" -p:FileVersion="${{ steps.version.outputs.VERSION }}" -p:UseAppHost=true
+        # Inno Setup 6 is preinstalled on windows-latest images; fall back to choco.
+        $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+        if (-not (Test-Path $iscc)) {
+          choco install innosetup -y --no-progress
+        }
+        & $iscc `
+          /DAppVersion=${{ steps.version.outputs.VERSION }} `
+          /DClientPublishDir=..\publish\client `
+          installer\asERP.Client.Setup.iss
 
-    - name: Create MSIX Package
+    - name: Sign installer
+      if: env.SIGN_CERT_BASE64 != ''
       shell: pwsh
       run: |
-        # Find the latest version of makeappx.exe in Windows SDK
+        $installer = "installer/output/asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe"
+
+        # Materialize the signing certificate from the base64 secret.
+        $certBytes = [System.Convert]::FromBase64String($env:SIGN_CERT_BASE64)
+        $certPath = "${{ github.workspace }}\certificate.pfx"
+        [System.IO.File]::WriteAllBytes($certPath, $certBytes)
+
+        # Find the latest signtool.exe in the installed Windows SDKs.
         $winKitsPath = "C:\Program Files (x86)\Windows Kits\10\bin"
-        if (-not (Test-Path $winKitsPath)) {
-          Write-Error "Windows SDK path not found: $winKitsPath"
-          exit 1
-        }
+        $signtool = Get-ChildItem -Path $winKitsPath -Directory |
+          Where-Object { $_.Name -match "^10\.0\.\d+\.\d+$" } |
+          Sort-Object { [version]($_.Name -replace "^10\.0\.","") } -Descending |
+          ForEach-Object { Join-Path $_.FullName "x64\signtool.exe" } |
+          Where-Object { Test-Path $_ } |
+          Select-Object -First 1
+        if (-not $signtool) { Write-Error "signtool.exe not found in any Windows SDK."; exit 1 }
 
-        # Get all available SDK versions and find the latest one with makeappx.exe
-        $sdkVersions = Get-ChildItem -Path $winKitsPath -Directory |
-                      Where-Object { $_.Name -match "^10\.0\.\d+\.\d+$" } |
-                      Sort-Object { [version]($_.Name -replace "^10\.0\.","") } -Descending
+        & $signtool sign `
+          /f $certPath `
+          /p $env:SIGN_CERT_PASSWORD `
+          /fd SHA256 `
+          /tr http://timestamp.digicert.com `
+          /td SHA256 `
+          $installer
+        if ($LASTEXITCODE -ne 0) { Write-Error "signtool sign failed."; exit 1 }
 
-        $fullMakeappxPath = $null
-        foreach ($version in $sdkVersions) {
-          $makeappxPath = Join-Path $version.FullName "x64\makeappx.exe"
-          if (Test-Path $makeappxPath) {
-            $fullMakeappxPath = $makeappxPath
-            Write-Host "Found makeappx.exe at: $fullMakeappxPath (SDK version: $($version.Name))"
-            break
-          }
-        }
+        Remove-Item $certPath -Force -ErrorAction SilentlyContinue
 
-        if (-not $fullMakeappxPath) {
-          Write-Error "makeappx.exe not found in any Windows SDK version. Available SDK versions:"
-          $sdkVersions | ForEach-Object { Write-Host "  - $($_.Name)" }
-          exit 1
-        }
-
-        # Copy MSIX logo assets (checked in under assets/msix, rendered from the SVG logos)
-        New-Item -Path "./publish/msix/Assets" -ItemType Directory -Force
-        Copy-Item -Path "./assets/msix/StoreLogo.png","./assets/msix/Square150x150Logo.png","./assets/msix/Square44x44Logo.png","./assets/msix/Wide310x150Logo.png" -Destination "./publish/msix/Assets/" -Force
-
-        # Create package manifest as AppxManifest.xml (required by MakeAppx)
-        $manifestContent = @"
-        <?xml version="1.0" encoding="utf-8"?>
-        <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
-                 xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
-                 xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
-          <Identity Name="MartinAndrich.asERP"
-                    Publisher="CN=Martin Andrich"
-                    Version="${{ steps.version.outputs.VERSION }}" />
-          <Properties>
-            <DisplayName>asERP</DisplayName>
-            <PublisherDisplayName>Martin Andrich</PublisherDisplayName>
-            <Logo>Assets\StoreLogo.png</Logo>
-            <Description>Cross-platform ERP system powered by Uno Platform</Description>
-          </Properties>
-          <Dependencies>
-            <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22000.0" />
-          </Dependencies>
-          <Applications>
-            <Application Id="asERP" Executable="asERP.Client.exe" EntryPoint="Windows.FullTrustApplication">
-              <uap:VisualElements DisplayName="asERP"
-                                  Description="Cross-platform ERP system powered by Uno Platform"
-                                  BackgroundColor="transparent"
-                                  Square150x150Logo="Assets\Square150x150Logo.png"
-                                  Square44x44Logo="Assets\Square44x44Logo.png">
-                <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
-              </uap:VisualElements>
-            </Application>
-          </Applications>
-          <Capabilities>
-            <rescap:Capability Name="runFullTrust" />
-          </Capabilities>
-        </Package>
-        "@
-
-        $manifestContent | Out-File -FilePath "./publish/msix/AppxManifest.xml" -Encoding UTF8
-
-        # Create MSIX package
-        & $fullMakeappxPath pack /d "./publish/msix" /p "./asERP-${{ steps.version.outputs.VERSION }}.msix"
-
-    - name: Sign MSIX Package
-      shell: pwsh
-      run: |
-        # Find the latest version of signtool.exe in Windows SDK
-        $winKitsPath = "C:\Program Files (x86)\Windows Kits\10\bin"
-        if (-not (Test-Path $winKitsPath)) {
-          Write-Error "Windows SDK path not found: $winKitsPath"
-          exit 1
-        }
-
-        # Get all available SDK versions and find the latest one with signtool.exe
-        $sdkVersions = Get-ChildItem -Path $winKitsPath -Directory |
-                      Where-Object { $_.Name -match "^10\.0\.\d+\.\d+$" } |
-                      Sort-Object { [version]($_.Name -replace "^10\.0\.","") } -Descending
-
-        $fullSigntoolPath = $null
-        foreach ($version in $sdkVersions) {
-          $signtoolPath = Join-Path $version.FullName "x64\signtool.exe"
-          if (Test-Path $signtoolPath) {
-            $fullSigntoolPath = $signtoolPath
-            Write-Host "Found signtool.exe at: $fullSigntoolPath (SDK version: $($version.Name))"
-            break
-          }
-        }
-
-        if (-not $fullSigntoolPath) {
-          Write-Error "signtool.exe not found in any Windows SDK version. Available SDK versions:"
-          $sdkVersions | ForEach-Object { Write-Host "  - $($_.Name)" }
-          exit 1
-        }
-
-        # Sign the package
-        & $fullSigntoolPath sign /f "${{ github.workspace }}\certificate.pfx" /p "${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}" /fd SHA256 "./asERP-${{ steps.version.outputs.VERSION }}.msix"
-
-    - name: Store Upload (Manual Process)
-      shell: pwsh
-      run: |
-        Write-Host "=== MSIX Package Ready for Manual Store Submission ==="
-        Write-Host "Package Location: ${{ github.workspace }}/asERP-${{ steps.version.outputs.VERSION }}.msix"
-        Write-Host ""
-        Write-Host "Manual Steps Required:"
-        Write-Host "1. Download the MSIX package from GitHub Release"
-        Write-Host "2. Sign in to Microsoft Partner Center"
-        Write-Host "3. Navigate to your asERP app submission"
-        Write-Host "4. Upload the MSIX package"
-        Write-Host "5. Complete certification and publishing process"
-        Write-Host ""
-        Write-Host "Note: Automated Store API integration requires additional setup"
-        Write-Host "and Microsoft Partner Center API credentials configuration."
-
-    - name: Create GitHub Release with MSIX
+    - name: Create GitHub Release with installer
       uses: softprops/action-gh-release@v2
       with:
         tag_name: store-v${{ steps.version.outputs.VERSION }}
@@ -194,24 +145,48 @@ jobs:
         body: |
           ## asERP Windows Store Release v${{ steps.version.outputs.VERSION }}
 
-          Automatisch erstelltes Windows Store Release der asERP Desktop-Anwendung (Uno Platform).
+          Signed Windows installer of the asERP desktop client (Uno Platform),
+          submitted to the Microsoft Store (EXE/MSI app).
 
-          ### MSIX Package
-          - **Windows Store Package**: `asERP-${{ steps.version.outputs.VERSION }}.msix`
+          ### Installer
+          - **Windows (x64)**: `asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe`
 
-          ### Installation
-          Das Package wurde automatisch an den Microsoft Store übermittelt.
+          The installer is self-contained — no .NET runtime required. This same
+          asset is the package the Microsoft Store submission points at.
 
           ---
 
-          🤖 Automatisch erstellt durch GitHub Actions
+          🤖 Automatically built by GitHub Actions
         draft: false
         prerelease: false
         files: |
-          asERP-${{ steps.version.outputs.VERSION }}.msix
+          installer/output/asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe
         token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Cleanup
-      shell: pwsh
-      run: |
-        Remove-Item "${{ github.workspace }}\certificate.pfx" -Force -ErrorAction SilentlyContinue
+    - name: Configure Store credentials
+      if: env.STORE_CLIENT_ID != ''
+      uses: microsoft/store-submission@v1
+      with:
+        command: configure
+        type: win32
+        seller-id: ${{ env.STORE_SELLER_ID }}
+        product-id: ${{ env.STORE_PRODUCT_ID }}
+        tenant-id: ${{ env.STORE_TENANT_ID }}
+        client-id: ${{ env.STORE_CLIENT_ID }}
+        client-secret: ${{ env.STORE_CLIENT_SECRET }}
+
+    - name: Update Store draft submission
+      if: env.STORE_CLIENT_ID != ''
+      uses: microsoft/store-submission@v1
+      with:
+        command: update
+        type: win32
+        product-update: >-
+          {"packages":[{"packageUrl":"https://github.com/${{ github.repository }}/releases/download/store-v${{ steps.version.outputs.VERSION }}/asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe","languages":["de","en"],"architectures":["X64"],"packageType":"exe","isSilentInstall":true,"installerParameters":"/VERYSILENT /SUPPRESSMSGBOXES /NORESTART"}]}
+
+    - name: Publish Store submission
+      if: ${{ env.STORE_CLIENT_ID != '' && inputs.auto_publish }}
+      uses: microsoft/store-submission@v1
+      with:
+        command: publish
+        type: win32
