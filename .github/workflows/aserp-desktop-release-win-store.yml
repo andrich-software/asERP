@@ -32,6 +32,14 @@ name: Release asERP.Client to Windows Store
 # only push the package into the draft — you then review and click Submit in Partner
 # Center (recommended for the very first submission). Set it true for hands-off
 # publishing on later releases.
+#
+# IMPORTANT prerequisites for the Store submission steps to work (they otherwise
+# fail on the 'update' step with {"errors":[{"message":"Not found"}]}):
+#   - The app's VERY FIRST submission must be created manually in Partner Center
+#     (add the package under the Packages step, then Submit). The Submission API
+#     cannot bootstrap the first submission; it only updates subsequent ones.
+#   - The product must be FREE — the Store Developer CLI update/publish operations
+#     currently support free products only.
 
 on:
   workflow_dispatch:
