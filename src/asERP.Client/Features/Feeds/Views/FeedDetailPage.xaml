@@ -1,0 +1,527 @@
+<Page x:Class="asERP.Client.Features.Feeds.Views.FeedDetailPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:local="using:asERP.Client.Features.Feeds.Views"
+      xmlns:models="using:asERP.Client.Features.Feeds.Models"
+      xmlns:dtos="using:asERP.Domain.Dtos.Feed"
+      xmlns:mvux="using:Uno.Extensions.Reactive.UI"
+      xmlns:utu="using:Uno.Toolkit.UI"
+      xmlns:controls="using:asERP.Client.Controls"
+      Background="{ThemeResource BackgroundBrush}">
+
+  <Grid utu:SafeArea.Insets="VisibleBounds">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <!-- Header with back button -->
+    <utu:NavigationBar Grid.Row="0" x:Uid="FeedDetailPage.NavigationBar">
+      <utu:NavigationBar.MainCommand>
+        <AppBarButton Icon="Back"
+                      x:Uid="FeedDetailPage.AppBarButton.Back"
+                      Click="BackButton_Click" />
+      </utu:NavigationBar.MainCommand>
+    </utu:NavigationBar>
+
+    <!-- Feed Details Content -->
+    <mvux:FeedView x:Name="FeedFeedView"
+                   Grid.Row="1"
+                   Source="{Binding FeedDetail}">
+      <mvux:FeedView.ValueTemplate>
+        <DataTemplate>
+          <Grid MaxWidth="1400"
+                Padding="24,16,24,0">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Page header: name + template/currency + status badge + actions -->
+            <controls:DetailPageHeader Grid.Row="0"
+                                       Glyph="&#xE704;">
+              <controls:DetailPageHeader.Title>
+                <TextBlock Text="{Binding Data.Name}"
+                           Style="{StaticResource TitleLarge}"
+                           Foreground="{ThemeResource OnSurfaceBrush}"
+                           TextWrapping="Wrap" />
+              </controls:DetailPageHeader.Title>
+              <controls:DetailPageHeader.Subtitle>
+                <TextBlock Style="{StaticResource BodyMedium}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}">
+                  <Run Text="{Binding Data.Template}" /><Run Text=" · " /><Run Text="{Binding Data.Currency}" />
+                </TextBlock>
+              </controls:DetailPageHeader.Subtitle>
+              <controls:DetailPageHeader.Badges>
+                <controls:StatusBadge Status="{Binding Data.IsEnabled}" />
+              </controls:DetailPageHeader.Badges>
+              <controls:DetailPageHeader.Actions>
+                <StackPanel Orientation="Horizontal"
+                            Spacing="8">
+                  <Button x:Uid="FeedDetailPage.HeaderAction.Edit"
+                          Click="EditButton_Click"
+                          Style="{StaticResource OutlinedButtonStyle}" />
+                  <Button x:Uid="FeedDetailPage.HeaderAction.Delete"
+                          Click="DeleteButton_Click"
+                          Style="{StaticResource OutlinedButtonStyle}"
+                          Foreground="{ThemeResource ErrorBrush}" />
+                </StackPanel>
+              </controls:DetailPageHeader.Actions>
+            </controls:DetailPageHeader>
+
+            <!-- Tabs -->
+            <utu:TabBar x:Name="DetailTabs"
+                        Grid.Row="1"
+                        Margin="0,16,0,0"
+                        HorizontalAlignment="Left"
+                        Style="{StaticResource MaterialTopTabBarStyle}"
+                        Loaded="DetailTabs_Loaded"
+                        SelectionChanged="DetailTabs_SelectionChanged">
+              <utu:TabBar.Items>
+                <utu:TabBarItem x:Uid="FeedDetailPage.TabOverview"
+                                Style="{StaticResource MaterialTopTabBarItemStyle}"
+                                IsSelected="True" />
+                <utu:TabBarItem x:Uid="FeedDetailPage.TabLog"
+                                Style="{StaticResource MaterialTopTabBarItemStyle}" />
+                <utu:TabBarItem x:Uid="FeedDetailPage.TabProducts"
+                                Style="{StaticResource MaterialTopTabBarItemStyle}" />
+              </utu:TabBar.Items>
+            </utu:TabBar>
+
+            <!-- Tab content -->
+            <Grid Grid.Row="2">
+
+              <!-- Tab: Overview -->
+              <ScrollViewer x:Name="OverviewTab"
+                            VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="24"
+                            Padding="0,20,0,24">
+
+                  <!-- Public feed URL + copy -->
+                  <controls:SectionCard x:Uid="FeedDetailPage.Section.PublicUrl"
+                                        HeaderGlyph="&#xE71B;">
+                    <StackPanel Spacing="8">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding Data.PublicUrl}"
+                                   Style="{StaticResource BodyMedium}"
+                                   Foreground="{ThemeResource PrimaryBrush}"
+                                   IsTextSelectionEnabled="True"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                x:Uid="FeedDetailPage.CopyUrl"
+                                Style="{StaticResource IconButtonStyle}"
+                                Margin="8,0,0,0"
+                                Click="CopyPublicUrl_Click"
+                                CommandParameter="{Binding Data.PublicUrl}">
+                          <FontIcon Glyph="&#xE8C8;" FontSize="16" />
+                        </Button>
+                      </Grid>
+                    </StackPanel>
+                  </controls:SectionCard>
+
+                  <!-- Feed properties -->
+                  <controls:SectionCard x:Uid="FeedDetailPage.Section.Overview"
+                                        HeaderGlyph="&#xE9F9;">
+                    <StackPanel Spacing="12">
+                      <controls:LabeledField x:Uid="FeedDetailPage.Field.Template"
+                                             Style="{StaticResource LabeledFieldKeyValueStyle}"
+                                             Value="{Binding Data.Template}" />
+                      <controls:LabeledField x:Uid="FeedDetailPage.Field.Currency"
+                                             Style="{StaticResource LabeledFieldKeyValueStyle}"
+                                             Value="{Binding Data.Currency}" />
+                      <controls:LabeledField x:Uid="FeedDetailPage.Field.SalesChannel"
+                                             Style="{StaticResource LabeledFieldKeyValueStyle}"
+                                             Value="{Binding Data.SalesChannelName}" />
+                      <controls:LabeledField x:Uid="FeedDetailPage.Field.ProductCount"
+                                             Style="{StaticResource LabeledFieldKeyValueStyle}"
+                                             Value="{Binding Data.ProductCount}" />
+                      <controls:LabeledField x:Uid="FeedDetailPage.Field.LastAccessed"
+                                             Style="{StaticResource LabeledFieldKeyValueStyle}"
+                                             Value="{Binding Data.LastAccessedAt, Converter={StaticResource DateOnlyConverter}}" />
+
+                      <Border Height="1"
+                              Background="{ThemeResource OutlineVariantBrush}"
+                              Margin="0,4" />
+
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   x:Uid="FeedDetailPage.Field.Enabled"
+                                   Style="{StaticResource BodyMedium}"
+                                   Foreground="{ThemeResource OnSurfaceBrush}"
+                                   VerticalAlignment="Center" />
+                        <controls:StatusBadge Grid.Column="1"
+                                              Status="{Binding Data.IsEnabled}" />
+                      </Grid>
+                    </StackPanel>
+                  </controls:SectionCard>
+                </StackPanel>
+              </ScrollViewer>
+
+              <!-- Tab: Log -->
+              <Grid x:Name="LogTab"
+                    Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="*" />
+                  <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Margin="0,20,0,0"
+                        Style="{StaticResource TableCardStyle}">
+                  <Grid>
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="Auto" />
+                      <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <Border Grid.Row="0"
+                            Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="8,8,0,0"
+                            BorderBrush="{ThemeResource OutlineVariantBrush}"
+                            BorderThickness="0,0,0,1">
+                      <Grid Padding="16,12">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="160" />
+                          <ColumnDefinition Width="160" />
+                          <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   x:Uid="FeedDetailPage.LogHeader.Time"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="1"
+                                   x:Uid="FeedDetailPage.LogHeader.Ip"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="2"
+                                   x:Uid="FeedDetailPage.LogHeader.UserAgent"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                      </Grid>
+                    </Border>
+
+                    <!-- Body -->
+                    <mvux:FeedView Grid.Row="1"
+                                   Source="{Binding Logs}">
+                      <mvux:FeedView.ValueTemplate>
+                        <DataTemplate>
+                          <ListView ItemsSource="{Binding Data}"
+                                    Style="{StaticResource TableListViewStyle}"
+                                    ItemContainerStyle="{StaticResource TableItemContainerStyle}"
+                                    SelectionMode="None">
+                            <ListView.ItemTemplate>
+                              <DataTemplate x:DataType="dtos:FeedLogDto">
+                                <Grid BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                      BorderThickness="0,0,0,1">
+                                  <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="*" />
+                                  </Grid.ColumnDefinitions>
+                                  <TextBlock Grid.Column="0"
+                                             Text="{x:Bind DateCreated, Converter={StaticResource DateOnlyConverter}}"
+                                             Style="{StaticResource BodyMedium}"
+                                             Foreground="{ThemeResource OnSurfaceBrush}"
+                                             VerticalAlignment="Center"
+                                             Padding="16,12" />
+                                  <TextBlock Grid.Column="1"
+                                             Text="{x:Bind IpAddress}"
+                                             Style="{StaticResource BodyMedium}"
+                                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                             VerticalAlignment="Center"
+                                             Padding="16,12" />
+                                  <TextBlock Grid.Column="2"
+                                             Text="{x:Bind UserAgent}"
+                                             Style="{StaticResource BodyMedium}"
+                                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                             VerticalAlignment="Center"
+                                             Padding="16,12"
+                                             TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                              </DataTemplate>
+                            </ListView.ItemTemplate>
+                          </ListView>
+                        </DataTemplate>
+                      </mvux:FeedView.ValueTemplate>
+
+                      <mvux:FeedView.ProgressTemplate>
+                        <DataTemplate>
+                          <ProgressRing IsActive="True"
+                                        Width="40"
+                                        Height="40"
+                                        Margin="32" />
+                        </DataTemplate>
+                      </mvux:FeedView.ProgressTemplate>
+
+                      <mvux:FeedView.NoneTemplate>
+                        <DataTemplate>
+                          <controls:EmptyState x:Uid="FeedDetailPage.NoLogs"
+                                               Glyph="&#xE9D9;"
+                                               Background="Transparent"
+                                               VerticalAlignment="Center" />
+                        </DataTemplate>
+                      </mvux:FeedView.NoneTemplate>
+                    </mvux:FeedView>
+                  </Grid>
+                </Border>
+
+                <!-- Log pagination -->
+                <StackPanel Grid.Row="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Spacing="8"
+                            Margin="0,12,0,16">
+                  <Button Style="{StaticResource IconButtonStyle}"
+                          x:Uid="FeedDetailPage.PreviousPage"
+                          Click="PreviousLogPage_Click">
+                    <FontIcon Glyph="&#xE76B;" FontSize="16" />
+                  </Button>
+                  <mvux:FeedView Source="{Binding LogPagination}">
+                    <mvux:FeedView.ValueTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding Data.PageInfo}"
+                                   Style="{StaticResource BodyMedium}"
+                                   VerticalAlignment="Center"
+                                   MinWidth="100"
+                                   TextAlignment="Center" />
+                      </DataTemplate>
+                    </mvux:FeedView.ValueTemplate>
+                  </mvux:FeedView>
+                  <Button Style="{StaticResource IconButtonStyle}"
+                          x:Uid="FeedDetailPage.NextPage"
+                          Click="NextLogPage_Click">
+                    <FontIcon Glyph="&#xE76C;" FontSize="16" />
+                  </Button>
+                </StackPanel>
+              </Grid>
+
+              <!-- Tab: Products -->
+              <Grid x:Name="ProductsTab"
+                    Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="*" />
+                  <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Search -->
+                <Grid Grid.Row="0"
+                      Margin="0,20,0,8">
+                  <TextBox x:Name="ProductSearchBox"
+                           x:Uid="FeedDetailPage.ProductSearch"
+                           TextChanged="ProductSearchBox_TextChanged"
+                           Padding="40,0,12,0" />
+                  <FontIcon Glyph="&#xE721;"
+                            FontSize="16"
+                            Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Margin="12,0,0,0"
+                            IsHitTestVisible="False" />
+                </Grid>
+
+                <Border Grid.Row="1"
+                        Style="{StaticResource TableCardStyle}">
+                  <Grid>
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="Auto" />
+                      <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <Border Grid.Row="0"
+                            Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="8,8,0,0"
+                            BorderBrush="{ThemeResource OutlineVariantBrush}"
+                            BorderThickness="0,0,0,1">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="150" />
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="120" />
+                          <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <controls:SortHeaderButton Grid.Column="0"
+                                                   x:Uid="FeedDetailPage.ProductHeader.Sku"
+                                                   SortField="Sku"
+                                                   ActiveSortField="{Binding ProductActiveSortField}"
+                                                   SortAscending="{Binding ProductSortAscending}"
+                                                   Click="ProductSortHeader_Click" />
+                        <controls:SortHeaderButton Grid.Column="1"
+                                                   x:Uid="FeedDetailPage.ProductHeader.Name"
+                                                   SortField="Name"
+                                                   ActiveSortField="{Binding ProductActiveSortField}"
+                                                   SortAscending="{Binding ProductSortAscending}"
+                                                   Click="ProductSortHeader_Click" />
+                        <controls:SortHeaderButton Grid.Column="2"
+                                                   x:Uid="FeedDetailPage.ProductHeader.Price"
+                                                   SortField="Price"
+                                                   ActiveSortField="{Binding ProductActiveSortField}"
+                                                   SortAscending="{Binding ProductSortAscending}"
+                                                   Click="ProductSortHeader_Click" />
+                        <TextBlock Grid.Column="3"
+                                   x:Uid="FeedDetailPage.ProductHeader.Status"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                   VerticalAlignment="Center"
+                                   Padding="16,14" />
+                      </Grid>
+                    </Border>
+
+                    <!-- Body -->
+                    <mvux:FeedView Grid.Row="1"
+                                   Source="{Binding Products}">
+                      <mvux:FeedView.ValueTemplate>
+                        <DataTemplate>
+                          <ListView ItemsSource="{Binding Data}"
+                                    Style="{StaticResource TableListViewStyle}"
+                                    ItemContainerStyle="{StaticResource TableItemContainerStyle}"
+                                    SelectionMode="None">
+                            <ListView.ItemTemplate>
+                              <DataTemplate x:DataType="dtos:FeedProductSelectionDto">
+                                <Grid BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                      BorderThickness="0,0,0,1">
+                                  <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="120" />
+                                  </Grid.ColumnDefinitions>
+                                  <TextBlock Grid.Column="0"
+                                             Text="{x:Bind Sku}"
+                                             Style="{StaticResource BodyMedium}"
+                                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                             VerticalAlignment="Center"
+                                             Padding="16,12"
+                                             TextTrimming="CharacterEllipsis" />
+                                  <TextBlock Grid.Column="1"
+                                             Text="{x:Bind Name}"
+                                             Style="{StaticResource BodyMedium}"
+                                             Foreground="{ThemeResource OnSurfaceBrush}"
+                                             VerticalAlignment="Center"
+                                             Padding="16,12"
+                                             TextTrimming="CharacterEllipsis" />
+                                  <TextBlock Grid.Column="2"
+                                             Text="{x:Bind Price, Converter={StaticResource CurrencyConverter}}"
+                                             Style="{StaticResource BodyMedium}"
+                                             Foreground="{ThemeResource OnSurfaceBrush}"
+                                             VerticalAlignment="Center"
+                                             Padding="16,12" />
+                                  <controls:StatusBadge Grid.Column="3"
+                                                        Status="{x:Bind IsActive}"
+                                                        HorizontalAlignment="Left"
+                                                        VerticalAlignment="Center"
+                                                        Margin="16,0" />
+                                </Grid>
+                              </DataTemplate>
+                            </ListView.ItemTemplate>
+                          </ListView>
+                        </DataTemplate>
+                      </mvux:FeedView.ValueTemplate>
+
+                      <mvux:FeedView.ProgressTemplate>
+                        <DataTemplate>
+                          <ProgressRing IsActive="True"
+                                        Width="40"
+                                        Height="40"
+                                        Margin="32" />
+                        </DataTemplate>
+                      </mvux:FeedView.ProgressTemplate>
+
+                      <mvux:FeedView.NoneTemplate>
+                        <DataTemplate>
+                          <controls:EmptyState x:Uid="FeedDetailPage.NoProducts"
+                                               Glyph="&#xE7BF;"
+                                               Background="Transparent"
+                                               VerticalAlignment="Center" />
+                        </DataTemplate>
+                      </mvux:FeedView.NoneTemplate>
+                    </mvux:FeedView>
+                  </Grid>
+                </Border>
+
+                <!-- Product pagination -->
+                <StackPanel Grid.Row="2"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Spacing="8"
+                            Margin="0,12,0,16">
+                  <Button Style="{StaticResource IconButtonStyle}"
+                          x:Uid="FeedDetailPage.PreviousPage"
+                          Click="PreviousProductPage_Click">
+                    <FontIcon Glyph="&#xE76B;" FontSize="16" />
+                  </Button>
+                  <mvux:FeedView Source="{Binding ProductPagination}">
+                    <mvux:FeedView.ValueTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding Data.PageInfo}"
+                                   Style="{StaticResource BodyMedium}"
+                                   VerticalAlignment="Center"
+                                   MinWidth="100"
+                                   TextAlignment="Center" />
+                      </DataTemplate>
+                    </mvux:FeedView.ValueTemplate>
+                  </mvux:FeedView>
+                  <Button Style="{StaticResource IconButtonStyle}"
+                          x:Uid="FeedDetailPage.NextPage"
+                          Click="NextProductPage_Click">
+                    <FontIcon Glyph="&#xE76C;" FontSize="16" />
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </Grid>
+          </Grid>
+        </DataTemplate>
+      </mvux:FeedView.ValueTemplate>
+
+      <mvux:FeedView.ProgressTemplate>
+        <DataTemplate>
+          <Grid HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <StackPanel Spacing="16">
+              <ProgressRing IsActive="True"
+                            Width="48"
+                            Height="48" />
+              <TextBlock x:Uid="Common.Loading"
+                         Style="{StaticResource BodyMedium}"
+                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                         HorizontalAlignment="Center" />
+            </StackPanel>
+          </Grid>
+        </DataTemplate>
+      </mvux:FeedView.ProgressTemplate>
+
+      <mvux:FeedView.ErrorTemplate>
+        <DataTemplate>
+          <Grid HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <StackPanel Spacing="16">
+              <FontIcon Glyph="&#xE783;"
+                        FontSize="48"
+                        Foreground="{ThemeResource ErrorBrush}" />
+              <TextBlock x:Uid="FeedDetailPage.LoadError"
+                         Style="{StaticResource BodyMedium}"
+                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                         HorizontalAlignment="Center" />
+              <Button x:Uid="Common.Retry"
+                      Style="{StaticResource FilledButtonStyle}"
+                      HorizontalAlignment="Center" />
+            </StackPanel>
+          </Grid>
+        </DataTemplate>
+      </mvux:FeedView.ErrorTemplate>
+    </mvux:FeedView>
+  </Grid>
+</Page>

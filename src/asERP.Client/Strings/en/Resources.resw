@@ -5479,4 +5479,264 @@
   <data name="ReturnItemCondition.Disposed" xml:space="preserve">
     <value>Disposed</value>
   </data>
+
+  <!-- Feeds -->
+  <data name="Shell.NavItem.Feeds.Text" xml:space="preserve">
+    <value>Feeds</value>
+  </data>
+  <data name="Pagination.FeedsSingular" xml:space="preserve">
+    <value>1 feed</value>
+  </data>
+  <data name="Pagination.FeedsPlural" xml:space="preserve">
+    <value>{0} feeds</value>
+  </data>
+  <data name="FeedTemplate.GoogleProducts" xml:space="preserve">
+    <value>Google Products</value>
+  </data>
+  <data name="FeedTemplate.Idealo" xml:space="preserve">
+    <value>Idealo</value>
+  </data>
+  <data name="FeedTemplate.Pinterest" xml:space="preserve">
+    <value>Pinterest</value>
+  </data>
+
+  <!-- FeedListPage -->
+  <data name="FeedListPage.PageHeader.Title" xml:space="preserve">
+    <value>Feeds</value>
+  </data>
+  <data name="FeedListPage.PageHeader.Description" xml:space="preserve">
+    <value>Manage product feeds for Google, Idealo and Pinterest</value>
+  </data>
+  <data name="FeedListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Create feed</value>
+  </data>
+  <data name="FeedListPage.SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search feeds...</value>
+  </data>
+  <data name="FeedListPage.Header.Name.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="FeedListPage.Header.Template.Text" xml:space="preserve">
+    <value>Template</value>
+  </data>
+  <data name="FeedListPage.Header.SalesChannel.Text" xml:space="preserve">
+    <value>Sales channel</value>
+  </data>
+  <data name="FeedListPage.Header.Enabled.Text" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="FeedListPage.Header.DateCreated.Text" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="FeedListPage.NoFeeds.Title" xml:space="preserve">
+    <value>No feeds</value>
+  </data>
+  <data name="FeedListPage.NoFeeds.Message" xml:space="preserve">
+    <value>No feeds created yet</value>
+  </data>
+  <data name="FeedListPage.LoadError.Title" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="FeedListPage.LoadError.Message" xml:space="preserve">
+    <value>Failed to load feeds</value>
+  </data>
+  <data name="FeedListPage.PreviousPage.ToolTip" xml:space="preserve">
+    <value>Previous page</value>
+  </data>
+  <data name="FeedListPage.NextPage.ToolTip" xml:space="preserve">
+    <value>Next page</value>
+  </data>
+  <data name="FeedListPage.ItemsPerPage.Text" xml:space="preserve">
+    <value>Items per page:</value>
+  </data>
+
+  <!-- FeedDetailPage -->
+  <data name="FeedDetailPage.NavigationBar.Content" xml:space="preserve">
+    <value>Feed</value>
+  </data>
+  <data name="FeedDetailPage.AppBarButton.Back.Label" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="FeedDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="FeedDetailPage.HeaderAction.Delete.Content" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="FeedDetailPage.TabOverview.Content" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="FeedDetailPage.TabLog.Content" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="FeedDetailPage.TabProducts.Content" xml:space="preserve">
+    <value>Products</value>
+  </data>
+  <data name="FeedDetailPage.Section.PublicUrl.Header" xml:space="preserve">
+    <value>Feed URL</value>
+  </data>
+  <data name="FeedDetailPage.CopyUrl.ToolTip" xml:space="preserve">
+    <value>Copy URL</value>
+  </data>
+  <data name="FeedDetailPage.Section.Overview.Header" xml:space="preserve">
+    <value>Properties</value>
+  </data>
+  <data name="FeedDetailPage.Field.Template.Text" xml:space="preserve">
+    <value>Template</value>
+  </data>
+  <data name="FeedDetailPage.Field.Currency.Text" xml:space="preserve">
+    <value>Currency</value>
+  </data>
+  <data name="FeedDetailPage.Field.SalesChannel.Text" xml:space="preserve">
+    <value>Sales channel</value>
+  </data>
+  <data name="FeedDetailPage.Field.ProductCount.Text" xml:space="preserve">
+    <value>Products</value>
+  </data>
+  <data name="FeedDetailPage.Field.LastAccessed.Text" xml:space="preserve">
+    <value>Last accessed</value>
+  </data>
+  <data name="FeedDetailPage.Field.Enabled.Text" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="FeedDetailPage.LogHeader.Time.Text" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="FeedDetailPage.LogHeader.Ip.Text" xml:space="preserve">
+    <value>IP address</value>
+  </data>
+  <data name="FeedDetailPage.LogHeader.UserAgent.Text" xml:space="preserve">
+    <value>User agent</value>
+  </data>
+  <data name="FeedDetailPage.NoLogs.Title" xml:space="preserve">
+    <value>No accesses</value>
+  </data>
+  <data name="FeedDetailPage.NoLogs.Message" xml:space="preserve">
+    <value>No accesses have been logged for this feed yet</value>
+  </data>
+  <data name="FeedDetailPage.PreviousPage.ToolTip" xml:space="preserve">
+    <value>Previous page</value>
+  </data>
+  <data name="FeedDetailPage.NextPage.ToolTip" xml:space="preserve">
+    <value>Next page</value>
+  </data>
+  <data name="FeedDetailPage.ProductSearch.PlaceholderText" xml:space="preserve">
+    <value>Search products...</value>
+  </data>
+  <data name="FeedDetailPage.ProductHeader.Sku.Text" xml:space="preserve">
+    <value>SKU</value>
+  </data>
+  <data name="FeedDetailPage.ProductHeader.Name.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="FeedDetailPage.ProductHeader.Price.Text" xml:space="preserve">
+    <value>Price</value>
+  </data>
+  <data name="FeedDetailPage.ProductHeader.Status.Text" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="FeedDetailPage.NoProducts.Title" xml:space="preserve">
+    <value>No products</value>
+  </data>
+  <data name="FeedDetailPage.NoProducts.Message" xml:space="preserve">
+    <value>No products found</value>
+  </data>
+  <data name="FeedDetailPage.LoadError.Text" xml:space="preserve">
+    <value>Failed to load feed</value>
+  </data>
+  <data name="FeedDetailPage.DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete feed</value>
+  </data>
+  <data name="FeedDetailPage.DeleteConfirmMessage" xml:space="preserve">
+    <value>Really delete this feed? This cannot be undone.</value>
+  </data>
+  <data name="FeedDetailPage.DeleteSuccess" xml:space="preserve">
+    <value>Feed deleted</value>
+  </data>
+  <data name="FeedDetailPage.UrlCopied" xml:space="preserve">
+    <value>Feed URL copied to clipboard</value>
+  </data>
+
+  <!-- FeedEditPage -->
+  <data name="FeedEditPage.AppBarButton.Cancel.Label" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="FeedEditPage.AppBarButton.Save.Label" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="FeedEditPage.Section.Basic.Text" xml:space="preserve">
+    <value>Basic information</value>
+  </data>
+  <data name="FeedEditPage.Field.Name.Header" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="FeedEditPage.Field.Name.PlaceholderText" xml:space="preserve">
+    <value>e.g. Google Shopping</value>
+  </data>
+  <data name="FeedEditPage.Field.Template.Text" xml:space="preserve">
+    <value>Template</value>
+  </data>
+  <data name="FeedEditPage.Field.Currency.Header" xml:space="preserve">
+    <value>Currency</value>
+  </data>
+  <data name="FeedEditPage.Field.SalesChannel.Text" xml:space="preserve">
+    <value>Sales channel (optional)</value>
+  </data>
+  <data name="FeedEditPage.Field.Enabled.Text" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="FeedEditPage.Section.Idealo.Text" xml:space="preserve">
+    <value>idealo settings</value>
+  </data>
+  <data name="FeedEditPage.Field.DeliveryTime.Header" xml:space="preserve">
+    <value>Delivery time</value>
+  </data>
+  <data name="FeedEditPage.Field.ShippingCost.Header" xml:space="preserve">
+    <value>Shipping cost</value>
+  </data>
+  <data name="FeedEditPage.Section.Products.Text" xml:space="preserve">
+    <value>Products</value>
+  </data>
+  <data name="FeedEditPage.SaveFirstHint.Text" xml:space="preserve">
+    <value>Save the feed first to configure its products.</value>
+  </data>
+  <data name="FeedEditPage.ProductSearch.PlaceholderText" xml:space="preserve">
+    <value>Search products...</value>
+  </data>
+  <data name="FeedEditPage.SearchButton.Content" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="FeedEditPage.Header.Product.Text" xml:space="preserve">
+    <value>Product</value>
+  </data>
+  <data name="FeedEditPage.Header.Price.Text" xml:space="preserve">
+    <value>Price</value>
+  </data>
+  <data name="FeedEditPage.NoProducts.Text" xml:space="preserve">
+    <value>No products found</value>
+  </data>
+  <data name="FeedEditPage.PreviousPage.ToolTip" xml:space="preserve">
+    <value>Previous page</value>
+  </data>
+  <data name="FeedEditPage.NextPage.ToolTip" xml:space="preserve">
+    <value>Next page</value>
+  </data>
+  <data name="FeedEditPage.TitleEdit" xml:space="preserve">
+    <value>Edit feed</value>
+  </data>
+  <data name="FeedEditPage.TitleNew" xml:space="preserve">
+    <value>Create feed</value>
+  </data>
+  <data name="FeedEditPage.NoSalesChannel" xml:space="preserve">
+    <value>No sales channel</value>
+  </data>
+  <data name="FeedEditPage.ToastCreated" xml:space="preserve">
+    <value>Feed "{0}" created</value>
+  </data>
+  <data name="FeedEditPage.ToastUpdated" xml:space="preserve">
+    <value>Feed "{0}" updated</value>
+  </data>
+  <data name="FeedEditPage.SaveFailed" xml:space="preserve">
+    <value>Save failed: {0}</value>
+  </data>
 </root>

@@ -545,6 +545,18 @@
                            VerticalAlignment="Center" />
               </StackPanel>
             </Button>
+
+            <Button x:Name="NavItemFeeds"
+                    Style="{StaticResource SidebarNavItemStyle}"
+                    Tag="Feeds"
+                    Click="OnNavItemClick">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <FontIcon Glyph="&#xE704;" FontSize="16" />
+                <TextBlock x:Uid="Shell.NavItem.Feeds"
+                           Style="{StaticResource BodyMedium}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
           </StackPanel>
 
           <!-- SUPERADMIN -->

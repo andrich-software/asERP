@@ -1,5 +1,4 @@
 ﻿using asERP.Domain.Entities;
-using asERP.Domain.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,16 +8,6 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 {
     public void Configure(EntityTypeBuilder<Tenant> builder)
     {
-        builder.HasData(
-            new Tenant
-            {
-                Id = TenantConstants.DefaultTenantId,
-                Name = "Default Tenant",
-                Description = "Default tenant for initial setup",
-                ContactEmail = "admin@example.com"
-            }
-        );
-
         builder.Property(q => q.Name)
             .IsRequired()
             .HasMaxLength(100);

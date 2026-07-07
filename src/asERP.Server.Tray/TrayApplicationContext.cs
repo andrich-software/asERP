@@ -64,6 +64,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         menu.Items.Add(_restartItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Settings…", null, (_, _) => ShowSettings()));
+        menu.Items.Add(new ToolStripMenuItem("Manage superadmins…", null, (_, _) => ShowSuperadmins()));
         menu.Items.Add(new ToolStripMenuItem("Create backup…", null, (_, _) => CreateBackup()));
         menu.Items.Add(new ToolStripMenuItem("Restore backup…", null, (_, _) => RestoreBackup()));
         menu.Items.Add(new ToolStripSeparator());
@@ -225,6 +226,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             _ = RunServiceActionAsync(_service.RestartAsync, "restart");
         }
+    }
+
+    private void ShowSuperadmins()
+    {
+        using var form = new SuperadminsForm();
+        form.ShowDialog();
     }
 
     private void CreateBackup()

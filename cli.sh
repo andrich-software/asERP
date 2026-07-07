@@ -3,8 +3,8 @@
 # asERP CLI — manage Server and WASM containers via docker compose profiles.
 #
 # Usage:
-#   ./cli.sh deploy server         git pull, pull image from registry & (re)start the server stack
-#   ./cli.sh deploy wasm           git pull, pull image from registry & (re)start the WASM stack
+#   ./cli.sh deploy server         pull image from registry & (re)start the server stack
+#   ./cli.sh deploy wasm           pull image from registry & (re)start the WASM stack
 #   ./cli.sh build-deploy server   git pull, build image locally & (re)start the server stack
 #   ./cli.sh build-deploy wasm     git pull, build image locally & (re)start the WASM stack
 #   ./cli.sh start  server         Start the server stack (server + postgres if internal)
@@ -246,14 +246,13 @@ pg_run() {
 # --- Commands ----------------------------------------------------------------
 
 # Pull the pre-built image from the registry (built & pushed by CI) instead of
-# building it on this host. WASM/desktop image builds are memory-hungry and can
+# building it on this host. WASM image builds are memory-hungry and can
 # thrash a small server into swap — pulling keeps the deploy host lightweight.
 cmd_deploy() {
     local target="${1:-}"
     require_target deploy "$target"
     case "$target" in
         server|wasm)
-            git_pull
             local -a profiles
             mapfile -t profiles < <(profile_args "$target")
             echo ">>> Pulling '${target}' image(s) from registry"

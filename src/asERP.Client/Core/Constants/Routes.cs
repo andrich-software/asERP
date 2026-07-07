@@ -62,6 +62,11 @@ public static class Routes
     public const string SalesChannelDetail = "SalesChannelDetail";
     public const string SalesChannelEdit = "SalesChannelEdit";
 
+    // Feeds (product feeds)
+    public const string FeedList = "Feeds";
+    public const string FeedDetail = "FeedDetail";
+    public const string FeedEdit = "FeedEdit";
+
     // SalesChannel Dashboards
     public const string PosDashboard = "PosDashboard";
     public const string SalesChannelDashboard = "SalesChannelDashboard";

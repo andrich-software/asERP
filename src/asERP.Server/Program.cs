@@ -4,6 +4,7 @@ using System.Threading.RateLimiting;
 using asERP.Analytics;
 using asERP.Application;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Feeds.Rendering;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Models.Grafana;
 using asERP.Domain.Enums;
@@ -204,6 +205,7 @@ builder.Services.AddControllersWithViews().AddJsonOptions(opts =>
     opts.JsonSerializerOptions.Converters.Add(new StrictEnumConverter<PaymentStatus>());
     opts.JsonSerializerOptions.Converters.Add(new StrictEnumConverter<CustomerStatus>());
     opts.JsonSerializerOptions.Converters.Add(new StrictEnumConverter<WebAnalyticsEventType>());
+    opts.JsonSerializerOptions.Converters.Add(new StrictEnumConverter<FeedTemplate>());
 });
 
 // Configure API behavior to return consistent Result<T> format for validation errors
@@ -357,6 +359,13 @@ builder.Services.AddScoped<IOAuthStateRepository, OAuthStateRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IOAuthTokenExchanger, HttpOAuthTokenExchanger>();
 builder.Services.AddScoped<ITenantEmailSettingsRepository, TenantEmailSettingsRepository>();
+builder.Services.AddScoped<IFeedRepository, FeedRepository>();
+
+// Feed renderers (stateless) + resolver for the public feed endpoint.
+builder.Services.AddSingleton<IFeedRenderer, GoogleProductsFeedRenderer>();
+builder.Services.AddSingleton<IFeedRenderer, PinterestFeedRenderer>();
+builder.Services.AddSingleton<IFeedRenderer, IdealoFeedRenderer>();
+builder.Services.AddSingleton<IFeedRendererResolver, FeedRendererResolver>();
 
 // OAuth-state cleanup runs only outside the test host; the test factory owns its own lifecycle.
 if (!builder.Environment.IsEnvironment("Testing"))

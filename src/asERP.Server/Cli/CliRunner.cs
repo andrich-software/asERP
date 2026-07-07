@@ -16,6 +16,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using System.Text.Json;
 
 namespace asERP.Server.Cli;
 
@@ -101,7 +102,7 @@ internal static class CliRunner
     {
         if (args.Length == 0)
         {
-            return Fail("'superadmin' requires a subcommand (create|delete).");
+            return Fail("'superadmin' requires a subcommand (create|update|delete|list).");
         }
 
         using var scope = host.Services.CreateScope();
@@ -113,6 +114,7 @@ internal static class CliRunner
             "create" => await CreateAsync(users, roles),
             "update" => await UpdateAsync(users, args[1..]),
             "delete" => await DeleteAsync(users, args[1..]),
+            "list" => await ListAsync(users),
             _ => Fail($"unknown superadmin subcommand '{args[0]}'.")
         };
     }
@@ -438,6 +440,27 @@ internal static class CliRunner
         return 0;
     }
 
+    // Emits one JSON object per line (JSONL) so callers — e.g. the tray's superadmin
+    // window — can parse each row without the human-readable log lines the other
+    // subcommands print interfering.
+    private static async Task<int> ListAsync(UserManager<ApplicationUser> users)
+    {
+        var superadmins = await users.GetUsersInRoleAsync(SuperadminRole);
+        foreach (var user in superadmins.OrderBy(u => u.Email, StringComparer.OrdinalIgnoreCase))
+        {
+            var line = JsonSerializer.Serialize(new
+            {
+                id = user.Id,
+                email = user.Email,
+                firstname = user.Firstname,
+                lastname = user.Lastname
+            });
+            Console.WriteLine(line);
+        }
+
+        return 0;
+    }
+
     private static string Describe(IdentityResult result) =>
         string.Join("; ", result.Errors.Select(e => $"{e.Code}: {e.Description}"));
 
@@ -456,6 +479,7 @@ internal static class CliRunner
         Console.Error.WriteLine("                              ASERP_CLI_NEW_EMAIL, ASERP_CLI_FIRSTNAME,");
         Console.Error.WriteLine("                              ASERP_CLI_LASTNAME, ASERP_CLI_PASSWORD");
         Console.Error.WriteLine("  superadmin delete <email>   delete a Superadmin user by email");
+        Console.Error.WriteLine("  superadmin list             list Superadmin users as JSON (one object per line)");
         Console.Error.WriteLine("  backup <targetFile>         write a provider-native database backup");
         Console.Error.WriteLine("                              (.db for SQLite, .bak for MSSQL, .dump for PostgreSQL)");
         Console.Error.WriteLine("  restore <sourceFile>        overwrite the database from a backup file;");

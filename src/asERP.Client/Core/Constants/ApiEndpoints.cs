@@ -142,6 +142,15 @@ public static class ApiEndpoints
         public static string OAuthDisconnect(Guid id, string provider) => $"{Base}/{id}/oauth/{provider}/disconnect";
     }
 
+    // Feeds (product feeds: Google Products / Idealo / Pinterest)
+    public static class Feeds
+    {
+        public const string Base = $"{ApiBase}/feeds";
+        public static string ById(Guid id) => $"{Base}/{id}";
+        public static string Logs(Guid id) => $"{Base}/{id}/logs";
+        public static string Products(Guid id) => $"{Base}/{id}/products";
+    }
+
     public static class TenantOAuthAppSettings
     {
         public const string Base = $"{ApiBase}/tenant/oauth-app-settings";

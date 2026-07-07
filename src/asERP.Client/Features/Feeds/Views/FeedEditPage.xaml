@@ -1,0 +1,397 @@
+<Page x:Class="asERP.Client.Features.Feeds.Views.FeedEditPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:local="using:asERP.Client.Features.Feeds.Views"
+      xmlns:models="using:asERP.Client.Features.Feeds.Models"
+      xmlns:utu="using:Uno.Toolkit.UI"
+      Background="{ThemeResource BackgroundBrush}">
+
+  <Grid utu:SafeArea.Insets="VisibleBounds">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <!-- Header with NavigationBar -->
+    <utu:NavigationBar Grid.Row="0"
+                       Content="{Binding Title}">
+      <utu:NavigationBar.PrimaryCommands>
+        <AppBarButton x:Uid="FeedEditPage.AppBarButton.Cancel"
+                      Click="CancelButton_Click">
+          <AppBarButton.Icon>
+            <FontIcon Glyph="&#xE711;" />
+          </AppBarButton.Icon>
+        </AppBarButton>
+        <AppBarButton x:Uid="FeedEditPage.AppBarButton.Save"
+                      Click="SaveButton_Click"
+                      IsEnabled="{Binding CanSave}">
+          <AppBarButton.Icon>
+            <FontIcon Glyph="&#xE74E;" />
+          </AppBarButton.Icon>
+        </AppBarButton>
+      </utu:NavigationBar.PrimaryCommands>
+    </utu:NavigationBar>
+
+    <!-- Form Content -->
+    <ScrollViewer Grid.Row="1"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel Padding="24"
+                  Spacing="24"
+                  MaxWidth="820"
+                  HorizontalAlignment="Stretch">
+
+        <!-- Error Message Banner -->
+        <Border Background="{ThemeResource ErrorContainerBrush}"
+                CornerRadius="8"
+                Padding="16"
+                Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}, FallbackValue=Collapsed}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <FontIcon Grid.Column="0"
+                      Glyph="&#xE783;"
+                      FontSize="20"
+                      Foreground="{ThemeResource OnErrorContainerBrush}"
+                      Margin="0,0,12,0"
+                      VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding ErrorMessage}"
+                       Style="{StaticResource BodyMedium}"
+                       Foreground="{ThemeResource OnErrorContainerBrush}"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+
+        <!-- Loading Overlay -->
+        <Border Background="{ThemeResource SurfaceBrush}"
+                CornerRadius="8"
+                Padding="24"
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+          <StackPanel HorizontalAlignment="Center"
+                      Spacing="16">
+            <ProgressRing IsActive="True"
+                          Width="48"
+                          Height="48" />
+            <TextBlock x:Uid="Common.Loading"
+                       Style="{StaticResource BodyMedium}"
+                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                       HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
+
+        <!-- Basic Information Card -->
+        <Border Background="{ThemeResource SurfaceBrush}"
+                CornerRadius="8"
+                BorderBrush="{ThemeResource OutlineVariantBrush}"
+                BorderThickness="1"
+                Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+          <StackPanel Spacing="0">
+            <Grid Padding="16,16,16,8">
+              <StackPanel Orientation="Horizontal">
+                <FontIcon Glyph="&#xE8F1;"
+                          FontSize="20"
+                          Foreground="{ThemeResource PrimaryBrush}"
+                          Margin="0,0,12,0" />
+                <TextBlock x:Uid="FeedEditPage.Section.Basic"
+                           Style="{StaticResource TitleMedium}"
+                           Foreground="{ThemeResource OnSurfaceBrush}" />
+              </StackPanel>
+            </Grid>
+
+            <StackPanel Padding="16,0,16,16"
+                        Spacing="16">
+              <!-- Name -->
+              <TextBox x:Uid="FeedEditPage.Field.Name"
+                       Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       IsEnabled="{Binding IsNotLoading}" />
+
+              <!-- Template -->
+              <StackPanel Spacing="4">
+                <TextBlock x:Uid="FeedEditPage.Field.Template"
+                           Style="{StaticResource LabelMedium}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                <ComboBox HorizontalAlignment="Stretch"
+                          ItemsSource="{Binding TemplateOptions}"
+                          SelectedValue="{Binding Template, Mode=TwoWay}"
+                          SelectedValuePath="Value"
+                          IsEnabled="{Binding IsNotLoading}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Display}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </StackPanel>
+
+              <!-- Currency -->
+              <TextBox x:Uid="FeedEditPage.Field.Currency"
+                       Text="{Binding Currency, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       IsEnabled="{Binding IsNotLoading}" />
+
+              <!-- Sales Channel (optional) -->
+              <StackPanel Spacing="4">
+                <TextBlock x:Uid="FeedEditPage.Field.SalesChannel"
+                           Style="{StaticResource LabelMedium}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                <ComboBox HorizontalAlignment="Stretch"
+                          ItemsSource="{Binding SalesChannelOptions}"
+                          SelectedValue="{Binding SelectedSalesChannelId, Mode=TwoWay}"
+                          SelectedValuePath="Id"
+                          IsEnabled="{Binding IsNotLoading}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </StackPanel>
+
+              <!-- Enabled -->
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           x:Uid="FeedEditPage.Field.Enabled"
+                           Style="{StaticResource BodyMedium}"
+                           Foreground="{ThemeResource OnSurfaceBrush}"
+                           VerticalAlignment="Center" />
+                <ToggleSwitch Grid.Column="1"
+                              IsOn="{Binding IsEnabled, Mode=TwoWay}"
+                              IsEnabled="{Binding IsNotLoading}"
+                              MinWidth="0"
+                              OnContent=""
+                              OffContent="" />
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- idealo defaults (only for the idealo template) -->
+        <Border Background="{ThemeResource SurfaceBrush}"
+                CornerRadius="8"
+                BorderBrush="{ThemeResource OutlineVariantBrush}"
+                BorderThickness="1"
+                Visibility="{Binding ShowIdealoSettings, Converter={StaticResource BoolToVisibilityConverter}}">
+          <StackPanel Spacing="0">
+            <Grid Padding="16,16,16,8">
+              <StackPanel Orientation="Horizontal">
+                <FontIcon Glyph="&#xE7B8;"
+                          FontSize="20"
+                          Foreground="{ThemeResource SecondaryBrush}"
+                          Margin="0,0,12,0" />
+                <TextBlock x:Uid="FeedEditPage.Section.Idealo"
+                           Style="{StaticResource TitleMedium}"
+                           Foreground="{ThemeResource OnSurfaceBrush}" />
+              </StackPanel>
+            </Grid>
+
+            <StackPanel Padding="16,0,16,16"
+                        Spacing="16">
+              <TextBox x:Uid="FeedEditPage.Field.DeliveryTime"
+                       Text="{Binding DefaultDeliveryTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       IsEnabled="{Binding IsNotLoading}" />
+              <TextBox x:Uid="FeedEditPage.Field.ShippingCost"
+                       Text="{Binding DefaultShippingCost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       InputScope="Number"
+                       IsEnabled="{Binding IsNotLoading}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Products section header -->
+        <StackPanel Orientation="Horizontal"
+                    Spacing="12"
+                    Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+          <FontIcon Glyph="&#xE7BF;"
+                    FontSize="20"
+                    Foreground="{ThemeResource SecondaryBrush}" />
+          <TextBlock x:Uid="FeedEditPage.Section.Products"
+                     Style="{StaticResource TitleMedium}"
+                     Foreground="{ThemeResource OnSurfaceBrush}"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+
+        <!-- Create mode: prompt to save first -->
+        <Border Background="{ThemeResource SecondaryContainerBrush}"
+                CornerRadius="8"
+                Padding="16"
+                Visibility="{Binding ShowProductsSaveFirstHint, Converter={StaticResource BoolToVisibilityConverter}}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <FontIcon Grid.Column="0"
+                      Glyph="&#xE946;"
+                      FontSize="20"
+                      Foreground="{ThemeResource OnSecondaryContainerBrush}"
+                      Margin="0,0,12,0"
+                      VerticalAlignment="Top" />
+            <TextBlock Grid.Column="1"
+                       x:Uid="FeedEditPage.SaveFirstHint"
+                       Style="{StaticResource BodyMedium}"
+                       Foreground="{ThemeResource OnSecondaryContainerBrush}"
+                       TextWrapping="Wrap" />
+          </Grid>
+        </Border>
+
+        <!-- Edit mode: paged, searchable product selection -->
+        <StackPanel Spacing="12"
+                    Visibility="{Binding ShowProducts, Converter={StaticResource BoolToVisibilityConverter}}">
+
+          <!-- Search -->
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0"
+                     x:Uid="FeedEditPage.ProductSearch"
+                     Text="{Binding ProductSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     IsEnabled="{Binding IsNotLoading}" />
+            <Button Grid.Column="1"
+                    x:Uid="FeedEditPage.SearchButton"
+                    Style="{StaticResource OutlinedButtonStyle}"
+                    Margin="8,0,0,0"
+                    Click="SearchProducts_Click" />
+          </Grid>
+
+          <!-- Product selection table -->
+          <Border CornerRadius="8"
+                  BorderBrush="{ThemeResource OutlineVariantBrush}"
+                  BorderThickness="1"
+                  Background="{ThemeResource SurfaceBrush}"
+                  Visibility="{Binding HasProducts, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+
+              <!-- Header with select-all -->
+              <Border Grid.Row="0"
+                      Background="{ThemeResource SurfaceBrush}"
+                      CornerRadius="8,8,0,0"
+                      BorderBrush="{ThemeResource OutlineVariantBrush}"
+                      BorderThickness="0,0,0,1">
+                <Grid Padding="16,12">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="120" />
+                  </Grid.ColumnDefinitions>
+                  <CheckBox Grid.Column="0"
+                            x:Name="SelectAllCheckBox"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            Checked="SelectAllCheckBox_Checked"
+                            Unchecked="SelectAllCheckBox_Unchecked" />
+                  <TextBlock Grid.Column="1"
+                             x:Uid="FeedEditPage.Header.Product"
+                             Style="{StaticResource LabelLarge}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                             VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2"
+                             x:Uid="FeedEditPage.Header.Price"
+                             Style="{StaticResource LabelLarge}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                             VerticalAlignment="Center" />
+                </Grid>
+              </Border>
+
+              <!-- Rows -->
+              <ScrollViewer Grid.Row="1"
+                            MaxHeight="420"
+                            VerticalScrollBarVisibility="Auto"
+                            HorizontalScrollBarVisibility="Disabled">
+                <ItemsRepeater ItemsSource="{Binding Products}">
+                  <ItemsRepeater.Layout>
+                    <StackLayout Orientation="Vertical" Spacing="0" />
+                  </ItemsRepeater.Layout>
+                  <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="models:SelectableFeedProduct">
+                      <Grid Padding="16,10"
+                            BorderBrush="{ThemeResource OutlineVariantBrush}"
+                            BorderThickness="0,0,0,1"
+                            Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="Auto" />
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox Grid.Column="0"
+                                  IsChecked="{Binding IsActive, Mode=TwoWay}"
+                                  Margin="0,0,12,0"
+                                  VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1"
+                                    Spacing="2"
+                                    VerticalAlignment="Center">
+                          <TextBlock Text="{x:Bind Name}"
+                                     Style="{StaticResource BodyMedium}"
+                                     Foreground="{ThemeResource OnSurfaceBrush}"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{x:Bind Sku}"
+                                     Style="{StaticResource LabelSmall}"
+                                     Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="2"
+                                   Text="{x:Bind Price, Converter={StaticResource CurrencyConverter}}"
+                                   Style="{StaticResource BodyMedium}"
+                                   Foreground="{ThemeResource OnSurfaceBrush}"
+                                   VerticalAlignment="Center" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+              </ScrollViewer>
+            </Grid>
+          </Border>
+
+          <!-- Products empty placeholder -->
+          <Border Background="{ThemeResource SurfaceVariantBrush}"
+                  CornerRadius="8"
+                  Padding="24"
+                  Visibility="{Binding HasProducts, Converter={StaticResource BoolToInverseVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center"
+                        Spacing="8">
+              <FontIcon Glyph="&#xE7BF;"
+                        FontSize="32"
+                        Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+              <TextBlock x:Uid="FeedEditPage.NoProducts"
+                         Style="{StaticResource BodyMedium}"
+                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                         HorizontalAlignment="Center" />
+            </StackPanel>
+          </Border>
+
+          <!-- Product pagination -->
+          <StackPanel Orientation="Horizontal"
+                      HorizontalAlignment="Center"
+                      Spacing="8">
+            <Button Style="{StaticResource IconButtonStyle}"
+                    x:Uid="FeedEditPage.PreviousPage"
+                    Click="PreviousProductPage_Click">
+              <FontIcon Glyph="&#xE76B;" FontSize="16" />
+            </Button>
+            <TextBlock Text="{Binding ProductPageInfo}"
+                       Style="{StaticResource BodyMedium}"
+                       VerticalAlignment="Center"
+                       MinWidth="100"
+                       TextAlignment="Center" />
+            <Button Style="{StaticResource IconButtonStyle}"
+                    x:Uid="FeedEditPage.NextPage"
+                    Click="NextProductPage_Click">
+              <FontIcon Glyph="&#xE76C;" FontSize="16" />
+            </Button>
+          </StackPanel>
+        </StackPanel>
+
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</Page>

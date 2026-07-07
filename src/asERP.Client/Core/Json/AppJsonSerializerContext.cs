@@ -7,6 +7,7 @@ using asERP.Domain.Dtos.AiPrompt;
 using asERP.Domain.Dtos.Auth;
 using asERP.Domain.Dtos.Country;
 using asERP.Domain.Dtos.Customer;
+using asERP.Domain.Dtos.Feed;
 using asERP.Domain.Dtos.Invoice;
 using asERP.Domain.Dtos.Manufacturer;
 using asERP.Domain.Dtos.Product;
@@ -43,6 +44,9 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(PaginatedResponse<SalesListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<ManufacturerListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<SalesChannelListDto>))]
+[JsonSerializable(typeof(PaginatedResponse<FeedListDto>))]
+[JsonSerializable(typeof(PaginatedResponse<FeedLogDto>))]
+[JsonSerializable(typeof(PaginatedResponse<FeedProductSelectionDto>))]
 [JsonSerializable(typeof(PaginatedResponse<CountryListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<UserListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<ShipmentListItemDto>))]
@@ -73,6 +77,7 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<WebTopProductsDto>))]
 [JsonSerializable(typeof(ApiResponse<SalesDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<SalesChannelDetailDto>))]
+[JsonSerializable(typeof(ApiResponse<FeedDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<asERP.Domain.Dtos.SalesChannelOAuth.OAuthStartResponseDto>))]
 [JsonSerializable(typeof(ApiResponse<asERP.Domain.Dtos.SystemOAuthSettings.SystemOAuthSettingsDto>))]
 [JsonSerializable(typeof(asERP.Domain.Dtos.SystemOAuthSettings.SystemOAuthSettingsInputDto))]
@@ -113,6 +118,8 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(TaxClassInputDto))]
 [JsonSerializable(typeof(ProductAttributeInputDto))]
 [JsonSerializable(typeof(SalesChannelInputDto))]
+[JsonSerializable(typeof(FeedInputDto))]
+[JsonSerializable(typeof(FeedProductSelectionUpdateDto))]
 [JsonSerializable(typeof(ProductInputDto))]
 [JsonSerializable(typeof(ProductVariantGenerateDto))]
 [JsonSerializable(typeof(ProductImageReorderDto))]

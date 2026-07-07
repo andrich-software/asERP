@@ -103,10 +103,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<TenantOAuthAppSettings>().ToTable("tenant_oauth_app_settings");
         modelBuilder.Entity<OAuthState>().ToTable("oauth_state");
         modelBuilder.Entity<RefreshToken>().ToTable("refresh_token");
+        modelBuilder.Entity<Feed>().ToTable("feed");
+        modelBuilder.Entity<FeedProduct>().ToTable("feed_product");
+        modelBuilder.Entity<FeedLog>().ToTable("feed_log");
 
         modelBuilder.ApplyConfiguration(new RoleConfiguration());
-        modelBuilder.ApplyConfiguration(new UserConfiguration());
-        modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
         modelBuilder.ApplyConfiguration(new TenantConfiguration());
         modelBuilder.ApplyConfiguration(new UserTenantConfiguration());
         modelBuilder.ApplyConfiguration(new CountryConfiguration());
@@ -175,6 +176,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new TenantOAuthAppSettingsConfiguration());
         modelBuilder.ApplyConfiguration(new OAuthStateConfiguration());
         modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
+        modelBuilder.ApplyConfiguration(new FeedConfiguration());
+        modelBuilder.ApplyConfiguration(new FeedProductConfiguration());
+        modelBuilder.ApplyConfiguration(new FeedLogConfiguration());
 
         modelBuilder.SeedSettings();
 
@@ -254,6 +258,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<TenantOAuthAppSettings> TenantOAuthAppSettings { get; set; } = null!;
     public DbSet<OAuthState> OAuthState { get; set; } = null!;
     public DbSet<RefreshToken> RefreshToken { get; set; } = null!;
+    public DbSet<Feed> Feed { get; set; } = null!;
+    public DbSet<FeedProduct> FeedProduct { get; set; } = null!;
+    public DbSet<FeedLog> FeedLog { get; set; } = null!;
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
