@@ -10,7 +10,7 @@ public sealed class ServerProfile
     public static readonly Guid BuiltInId = new("11111111-1111-1111-1111-111111111111");
 
     /// <summary>Url of the built-in asERP Cloud server.</summary>
-    public const string BuiltInUrl = "https://www.aserp.de";
+    public const string BuiltInUrl = "https://www.as-erp.de";
 
     /// <summary>Display name of the built-in asERP Cloud server.</summary>
     public const string BuiltInName = "asERP Cloud";

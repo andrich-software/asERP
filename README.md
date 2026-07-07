@@ -298,4 +298,4 @@ sudo docker-compose ps
 ## Nützliche Ressourcen
 - GitHub-Repository: https://github.com/asERP/asERP
 - Docker Hub: https://hub.docker.com/u/aserp
-- Live-Frontend zur Benutzung mit beliebigen asERP.Server-Instanzen: https://www.aserp.de
+- Live-Frontend zur Benutzung mit beliebigen asERP.Server-Instanzen: https://www.as-erp.de

@@ -85,7 +85,7 @@ Bevor du einen Pull Request erstellst, stelle bitte sicher, dass:
 Wenn du Fragen hast oder weitere Hilfe benötigst, zögere nicht, uns zu kontaktieren:
 
 - [GitHub Issues](https://github.com/asERP/asERP/issues)
-- E-Mail: [info@asERP.de](mailto:info@asERP.de)
+- E-Mail: [info@as-erp.de](mailto:info@as-erp.de)
 
 Vielen Dank für deinen Beitrag!
 

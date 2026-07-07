@@ -13,7 +13,7 @@ internal sealed record ReleaseInfo(Version Version, string AssetName, string Dow
 /// </summary>
 internal sealed class UpdateChecker
 {
-    private const string Owner = "asERP";
+    private const string Owner = "andrich-software";
     private const string Repository = "asERP";
     private const string TagPrefix = "server-v";
 

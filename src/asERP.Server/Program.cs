@@ -617,7 +617,7 @@ if (app.Environment.IsDevelopment())
     Console.WriteLine($"Swagger UI: /swagger");
 }
 Console.WriteLine("Health Check: /health");
-Console.WriteLine("Free Web-UI: https://www.aserp.de/");
+Console.WriteLine("Free Web-UI: https://www.as-erp.de/");
 Console.WriteLine("========================================");
 Console.WriteLine();
 
