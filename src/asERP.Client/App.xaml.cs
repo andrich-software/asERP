@@ -214,6 +214,7 @@ public partial class App : Application
                 .UseNavigation(RegisterRoutes)
             );
         MainWindow = builder.Window;
+        MainWindow.Title = "asERP - Enterprise Resource Planning";
 
 #if DEBUG
         // MainWindow.UseStudio();

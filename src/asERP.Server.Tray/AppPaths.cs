@@ -5,7 +5,7 @@ namespace asERP.Server.Tray;
 /// <summary>
 /// Well-known paths of an installed asERP server. Data lives in %ProgramData%\asERP
 /// (created by the installer with Users-Modify ACLs); binaries live under
-/// {ProgramFiles}\asERP\Server next to this tray app's ..\Tray folder.
+/// {ProgramFiles}\asERP Server\Server next to this tray app's ..\Tray folder.
 /// </summary>
 internal static class AppPaths
 {

@@ -14,7 +14,7 @@ name: aserp
 services:
   server:
     profiles: ["server"]
-    image: ${DOCKER_REGISTRY-}aserp/server
+    image: ${DOCKER_REGISTRY-}andrichsoftware/aserp-server:latest
     container_name: aserp-server
     build:
       context: .
@@ -136,7 +136,7 @@ services:
 
   wasm:
     profiles: ["wasm"]
-    image: ${DOCKER_REGISTRY-}aserp/wasm
+    image: ${DOCKER_REGISTRY-}andrichsoftware/aserp-web:latest
     container_name: aserp-wasm
     build:
       context: .

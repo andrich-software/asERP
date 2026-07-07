@@ -40,8 +40,11 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=andrich software
 AppPublisherURL=https://www.aserp.de/
-DefaultDirName={autopf}\asERP
-DefaultGroupName=asERP
+; Own folder, deliberately separate from the desktop installer ({autopf}\asERP Desktop) —
+; sharing {autopf}\asERP caused conflicts when both products were installed on one machine.
+; Existing installs keep their previous folder (Inno's UsePreviousAppDir default).
+DefaultDirName={autopf}\asERP Server
+DefaultGroupName=asERP Server
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
@@ -60,6 +63,14 @@ DisableProgramGroupPage=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 
+[Tasks]
+; Autostart is on by default (matches the pre-checkbox behavior); silent upgrades
+; keep the user's previous choice (UsePreviousTasks default).
+Name: "autostart"; Description: "{cm:AutoStartProgram,asERP Server Tray}"; \
+  GroupDescription: "{cm:AutoStartProgramGroupDescription}"
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; \
+  GroupDescription: "{cm:AdditionalIcons}"
+
 [Files]
 Source: "{#ServerPublishDir}\*"; DestDir: "{app}\Server"; Flags: recursesubdirs ignoreversion
 Source: "{#TrayPublishDir}\*"; DestDir: "{app}\Tray"; Flags: recursesubdirs ignoreversion
@@ -77,17 +88,23 @@ Name: "{commonappdata}\asERP\dp-keys"; Permissions: users-modify
 [Icons]
 Name: "{group}\asERP Server Tray"; Filename: "{app}\Tray\{#TrayExeName}"
 Name: "{group}\asERP Data Folder"; Filename: "{commonappdata}\asERP"
+Name: "{autodesktop}\asERP Server Tray"; Filename: "{app}\Tray\{#TrayExeName}"; Tasks: desktopicon
 
 [Registry]
-; Tray autostart for the installing user.
+; Tray autostart for the installing user (opt-out via the "autostart" task).
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; ValueName: "asERP Server Tray"; \
-  ValueData: """{app}\Tray\{#TrayExeName}"""; Flags: uninsdeletevalue
-; Discovery info for the tray and its update checker.
+  ValueData: """{app}\Tray\{#TrayExeName}"""; Flags: uninsdeletevalue; Tasks: autostart
+; Remove a previously configured autostart when the task is unchecked on an upgrade.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
+  ValueType: none; ValueName: "asERP Server Tray"; Flags: deletevalue; \
+  Check: not WizardIsTaskSelected('autostart')
+; Discovery info for the tray and its update checker. Delete only our own values on
+; uninstall — SOFTWARE\asERP\Client belongs to the desktop installer and must survive.
 Root: HKLM; Subkey: "SOFTWARE\asERP"; ValueType: string; ValueName: "InstallDir"; \
-  ValueData: "{app}"; Flags: uninsdeletekey
+  ValueData: "{app}"; Flags: uninsdeletevalue uninsdeletekeyifempty
 Root: HKLM; Subkey: "SOFTWARE\asERP"; ValueType: string; ValueName: "Version"; \
-  ValueData: "{#AppVersion}"
+  ValueData: "{#AppVersion}"; Flags: uninsdeletevalue uninsdeletekeyifempty
 
 [Run]
 ; Create the service on first install; on upgrades just re-apply the binPath/start config.

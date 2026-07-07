@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using asERP.Server.Tray.Forms;
@@ -79,6 +80,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
             Visible = true
         };
         _icon.BalloonTipClicked += OnBalloonTipClicked;
+        _icon.MouseClick += OnIconMouseClick;
 
         _pollTimer.Tick += async (_, _) => await RefreshStatusAsync();
         _pollTimer.Start();
@@ -356,6 +358,20 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
     }
 
+    // WinForms only opens the ContextMenuStrip on right-click; mirror it onto left-click.
+    // Reuse NotifyIcon's private ShowContextMenu so positioning and click-away dismissal match the native menu.
+    private void OnIconMouseClick(object? sender, MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left)
+        {
+            return;
+        }
+
+        typeof(NotifyIcon)
+            .GetMethod("ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.Invoke(_icon, null);
+    }
+
     private void OfferUpdate(ReleaseInfo release)
     {
         var install = MessageBox.Show(
@@ -394,17 +410,52 @@ internal sealed class TrayApplicationContext : ApplicationContext
         ExitThread();
     }
 
+    // Branded status icon: a rounded tile in the status color carries the server state at a glance,
+    // while the white "a" glyph + orange accent dot keep the asERP identity. Rendered at 32px so it
+    // stays crisp on high-DPI taskbars and reads clearly on dark Windows themes.
     private static Icon CreateStatusIcon(Color color)
     {
-        using var bitmap = new Bitmap(16, 16);
+        const int s = 32;
+        using var bitmap = new Bitmap(s, s);
         using (var graphics = Graphics.FromImage(bitmap))
         {
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
             graphics.Clear(Color.Transparent);
-            using var brush = new SolidBrush(color);
-            graphics.FillEllipse(brush, 1, 1, 14, 14);
-            using var pen = new Pen(Color.FromArgb(90, 0, 0, 0));
-            graphics.DrawEllipse(pen, 1, 1, 14, 14);
+
+            // Rounded status tile with a subtle hairline for definition on light and dark taskbars.
+            var tile = new Rectangle(1, 1, s - 2, s - 2);
+            using (var tilePath = RoundedRect(tile, (int)(s * 0.22f)))
+            {
+                using var fill = new SolidBrush(color);
+                graphics.FillPath(fill, tilePath);
+                using var border = new Pen(Color.FromArgb(70, 0, 0, 0));
+                graphics.DrawPath(border, tilePath);
+            }
+
+            // White "a" monogram, nudged up-left to leave room for the accent dot.
+            using (var font = new Font("Segoe UI", s * 0.62f, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (var textBrush = new SolidBrush(Color.White))
+            using (var format = new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center
+            })
+            {
+                var textRect = new RectangleF(-s * 0.10f, -s * 0.06f, s, s);
+                graphics.DrawString("a", font, textBrush, textRect, format);
+            }
+
+            // Orange accent dot with a white ring so it stays visible on any status color.
+            float r = s * 0.15f;
+            float cx = s * 0.72f;
+            float cy = s * 0.70f;
+            using (var dot = new SolidBrush(Color.FromArgb(0xF9, 0x73, 0x16)))
+            using (var ring = new Pen(Color.White, Math.Max(1f, s * 0.045f)))
+            {
+                graphics.DrawEllipse(ring, cx - r, cy - r, r * 2, r * 2);
+                graphics.FillEllipse(dot, cx - r, cy - r, r * 2, r * 2);
+            }
         }
 
         var iconHandle = bitmap.GetHicon();
@@ -417,6 +468,18 @@ internal sealed class TrayApplicationContext : ApplicationContext
         {
             DestroyIcon(iconHandle);
         }
+    }
+
+    private static GraphicsPath RoundedRect(Rectangle bounds, int radius)
+    {
+        int d = radius * 2;
+        var path = new GraphicsPath();
+        path.AddArc(bounds.X, bounds.Y, d, d, 180, 90);
+        path.AddArc(bounds.Right - d, bounds.Y, d, d, 270, 90);
+        path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
+        path.AddArc(bounds.X, bounds.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     [DllImport("user32.dll", SetLastError = true)]

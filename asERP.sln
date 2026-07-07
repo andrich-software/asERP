@@ -14,8 +14,17 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{BADA71DC-7FFD-4EDC-9F28-FB74AEADC713}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		.env.example = .env.example
 		.gitignore = .gitignore
 		.vsconfig = .vsconfig
+		.github\workflows\aserp-browser-aserp_de-deploy.yml = .github\workflows\aserp-browser-aserp_de-deploy.yml
+		.github\workflows\aserp-browser-publish.yml = .github\workflows\aserp-browser-publish.yml
+		.github\workflows\aserp-browser-test.yml = .github\workflows\aserp-browser-test.yml
+		.github\workflows\aserp-desktop-setup-release.yml = .github\workflows\aserp-desktop-setup-release.yml
+		.github\workflows\aserp-desktop-release.yml = .github\workflows\aserp-desktop-release.yml
+		.github\workflows\aserp-server-publish.yml = .github\workflows\aserp-server-publish.yml
+		.github\workflows\aserp-server-test.yml = .github\workflows\aserp-server-test.yml
+		asERP.sln.DotSettings.user = asERP.sln.DotSettings.user
 		.github\workflows\ci.yml = .github\workflows\ci.yml
 		CLAUDE.md = CLAUDE.md
 		.github\workflows\codeql.yml = .github\workflows\codeql.yml
@@ -35,18 +44,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		EMAIL-TESTING.md = EMAIL-TESTING.md
 		global.json = global.json
 		LICENSE.txt = LICENSE.txt
-		.github\workflows\aserp-browser-aserp_de-deploy.yml = .github\workflows\aserp-browser-aserp_de-deploy.yml
-		.github\workflows\aserp-browser-publish.yml = .github\workflows\aserp-browser-publish.yml
-		.github\workflows\aserp-browser-test.yml = .github\workflows\aserp-browser-test.yml
-		.github\workflows\aserp-desktop-release-win-store.yml = .github\workflows\aserp-desktop-release-win-store.yml
-		.github\workflows\aserp-desktop-release.yml = .github\workflows\aserp-desktop-release.yml
-		.github\workflows\aserp-server-publish.yml = .github\workflows\aserp-server-publish.yml
-		.github\workflows\aserp-server-test.yml = .github\workflows\aserp-server-test.yml
-		asERP.sln.DotSettings.user = asERP.sln.DotSettings.user
+		NuGet.config = NuGet.config
 		README.md = README.md
 		SECURITY.md = SECURITY.md
-		NuGet.config = NuGet.config
-		.env.example = .env.example
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "asERP.Analytics", "src\asERP.Analytics\asERP.Analytics.csproj", "{828D8D50-6862-449B-A546-CB4096618BFA}"
@@ -78,8 +78,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{5E6F08F8-FEB9-4598-A61A-B4AFFE96126B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{A6B87991-F62D-4961-8B89-C879DD6CFA4B}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "asERP.Shipping", "src\asERP.Shipping\asERP.Shipping.csproj", "{43B422C3-4701-446B-A592-87706D8CE9B2}"
 EndProject
@@ -615,8 +613,8 @@ Global
 		{0BDDCC43-485A-45B6-8E8A-E1E3115F0B45} = {64D6DC3D-980F-4AE0-8C83-5D9746386E14}
 		{5E6F08F8-FEB9-4598-A61A-B4AFFE96126B} = {9763EA40-6A05-47E7-A7D9-EECDA9C1CD65}
 		{A6B87991-F62D-4961-8B89-C879DD6CFA4B} = {9763EA40-6A05-47E7-A7D9-EECDA9C1CD65}
-		{43B422C3-4701-446B-A592-87706D8CE9B2} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
-		{85BF512A-818C-441C-BB5A-E4E034C80EDE} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{43B422C3-4701-446B-A592-87706D8CE9B2} = {A6B87991-F62D-4961-8B89-C879DD6CFA4B}
+		{85BF512A-818C-441C-BB5A-E4E034C80EDE} = {9763EA40-6A05-47E7-A7D9-EECDA9C1CD65}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {17AB04C6-B194-48A3-A767-BF77F7934376}

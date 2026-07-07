@@ -9,7 +9,7 @@ name: aserp-mssql
 
 services:
   server:
-    image: ${DOCKER_REGISTRY-}aserp/server
+    image: ${DOCKER_REGISTRY-}andrichsoftware/aserp-server:latest
     build:
       context: .
       dockerfile: src/asERP.Server/Dockerfile
@@ -50,7 +50,7 @@ services:
 
   wasm:
     profiles: ["wasm"]
-    image: ${DOCKER_REGISTRY-}aserp/wasm
+    image: ${DOCKER_REGISTRY-}andrichsoftware/aserp-web:latest
     build:
       context: .
       dockerfile: src/asERP.Client/Dockerfile

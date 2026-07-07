@@ -3,8 +3,10 @@
 # asERP CLI — manage Server and WASM containers via docker compose profiles.
 #
 # Usage:
-#   ./cli.sh deploy server         git pull, build & (re)start the server stack
-#   ./cli.sh deploy wasm           git pull, build & (re)start the WASM stack
+#   ./cli.sh deploy server         git pull, pull image from registry & (re)start the server stack
+#   ./cli.sh deploy wasm           git pull, pull image from registry & (re)start the WASM stack
+#   ./cli.sh build-deploy server   git pull, build image locally & (re)start the server stack
+#   ./cli.sh build-deploy wasm     git pull, build image locally & (re)start the WASM stack
 #   ./cli.sh start  server         Start the server stack (server + postgres if internal)
 #   ./cli.sh start  wasm           Start the WASM stack
 #   ./cli.sh stop   server         Stop the server stack
@@ -56,7 +58,7 @@ fi
 COMPOSE=("${COMPOSE_BIN[@]}")
 
 usage() {
-    sed -n '3,33p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '3,35p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # Print an error message followed by the full usage block, then exit 1.
@@ -243,9 +245,33 @@ pg_run() {
 
 # --- Commands ----------------------------------------------------------------
 
+# Pull the pre-built image from the registry (built & pushed by CI) instead of
+# building it on this host. WASM/desktop image builds are memory-hungry and can
+# thrash a small server into swap — pulling keeps the deploy host lightweight.
 cmd_deploy() {
     local target="${1:-}"
     require_target deploy "$target"
+    case "$target" in
+        server|wasm)
+            git_pull
+            local -a profiles
+            mapfile -t profiles < <(profile_args "$target")
+            echo ">>> Pulling '${target}' image(s) from registry"
+            "${COMPOSE[@]}" "${profiles[@]}" pull
+            echo ">>> Starting '${target}' stack (db mode: ${DB_MODE})"
+            "${COMPOSE[@]}" "${profiles[@]}" up -d
+            ;;
+        *)
+            die_usage "unknown deploy target '$target' (expected: server|wasm)."
+            ;;
+    esac
+}
+
+# Build the image locally, then (re)start the stack. This is the former
+# 'deploy' behaviour, kept for hosts that build from source instead of pulling.
+cmd_build_deploy() {
+    local target="${1:-}"
+    require_target build-deploy "$target"
     case "$target" in
         server|wasm)
             git_pull
@@ -256,7 +282,7 @@ cmd_deploy() {
             "${COMPOSE[@]}" "${profiles[@]}" up -d
             ;;
         *)
-            die_usage "unknown deploy target '$target' (expected: server|wasm)."
+            die_usage "unknown build-deploy target '$target' (expected: server|wasm)."
             ;;
     esac
 }
@@ -490,14 +516,15 @@ main() {
     load_env
 
     case "$command" in
-        deploy)     cmd_deploy     "$@" ;;
-        start)      cmd_start      "$@" ;;
-        stop)       cmd_stop       "$@" ;;
-        logs)       cmd_logs       "$@" ;;
-        db)         cmd_db         "$@" ;;
-        superadmin) cmd_superadmin "$@" ;;
+        deploy)       cmd_deploy       "$@" ;;
+        build-deploy) cmd_build_deploy "$@" ;;
+        start)        cmd_start        "$@" ;;
+        stop)         cmd_stop         "$@" ;;
+        logs)         cmd_logs         "$@" ;;
+        db)           cmd_db           "$@" ;;
+        superadmin)   cmd_superadmin   "$@" ;;
         *)
-            die_usage "unknown command '$command' (expected: deploy|start|stop|logs|db|superadmin)."
+            die_usage "unknown command '$command' (expected: deploy|build-deploy|start|stop|logs|db|superadmin)."
             ;;
     esac
 }

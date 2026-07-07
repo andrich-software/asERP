@@ -30,7 +30,7 @@ internal sealed class SettingsForm : Form
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(560, 262);
+        ClientSize = new Size(760, 262);
 
         _lastProvider = settings.Provider;
 
@@ -50,7 +50,7 @@ internal sealed class SettingsForm : Form
         _connectionStringBox = new TextBox
         {
             Location = new Point(170, 48),
-            Size = new Size(378, 24),
+            Size = new Size(578, 24),
             Text = settings.ConnectionString
         };
         _testConnectionButton = new Button
@@ -65,13 +65,13 @@ internal sealed class SettingsForm : Form
         _storagePathBox = new TextBox
         {
             Location = new Point(170, 120),
-            Size = new Size(340, 24),
+            Size = new Size(540, 24),
             Text = settings.FileStorageRootPath
         };
         var browseButton = new Button
         {
             Text = "…",
-            Location = new Point(516, 119),
+            Location = new Point(716, 119),
             Size = new Size(32, 26)
         };
         browseButton.Click += OnBrowseStoragePath;
@@ -97,7 +97,7 @@ internal sealed class SettingsForm : Form
         var saveButton = new Button
         {
             Text = "Save",
-            Location = new Point(374, 224),
+            Location = new Point(574, 224),
             Size = new Size(87, 27)
         };
         saveButton.Click += OnSave;
@@ -105,7 +105,7 @@ internal sealed class SettingsForm : Form
         {
             Text = "Cancel",
             DialogResult = DialogResult.Cancel,
-            Location = new Point(467, 224),
+            Location = new Point(667, 224),
             Size = new Size(87, 27)
         };
 
