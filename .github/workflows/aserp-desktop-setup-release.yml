@@ -161,10 +161,6 @@ jobs:
           - **Windows (x64)**: `asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe`
 
           The installer is self-contained — no .NET runtime required.
-
-          ---
-
-          🤖 Automatically built by GitHub Actions
         draft: false
         prerelease: false
         files: |

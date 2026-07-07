@@ -440,6 +440,8 @@
   <!-- EmptyState: centered icon + optional title + message + optional action -->
   <Style TargetType="controls:EmptyState">
     <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource OutlineVariantBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="24" />
     <Setter Property="IsTabStop" Value="False" />
@@ -449,8 +451,8 @@
         <ControlTemplate TargetType="controls:EmptyState">
           <Border Background="{TemplateBinding Background}"
                   CornerRadius="{TemplateBinding CornerRadius}"
-                  BorderBrush="{ThemeResource OutlineVariantBrush}"
-                  BorderThickness="1"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}"
                   Padding="{TemplateBinding Padding}">
             <StackPanel HorizontalAlignment="Center"
                         Spacing="8">

@@ -20,9 +20,13 @@ asERP richtet sich an Einzelhändler:innen sowie an Integrator:innen und IT-Dien
 
 asERP bietet verschiedene Installationsmöglichkeiten für unterschiedliche Anwendungsfälle und Infrastrukturen.
 
-**Standard-Zugangsdaten**
-- E-Mail: `admin@localhost.com`
-- Passwort: `P@ssword1`
+**Ersten Superadmin anlegen**
+Es werden keine Standard-Zugangsdaten mehr ausgeliefert. Lege nach der Installation den ersten Superadmin an – unter Windows über die Tray-Anwendung (*„Manage superadmins…"*) oder plattformübergreifend per CLI:
+
+```bash
+ASERP_CLI_EMAIL="admin@example.com" ASERP_CLI_PASSWORD="<sicheres-Passwort>" \
+  dotnet asERP.Server.dll cli superadmin create
+```
 
 ## 1. Installation per Docker Compose
 

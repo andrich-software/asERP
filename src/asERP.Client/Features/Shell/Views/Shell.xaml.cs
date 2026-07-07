@@ -68,7 +68,10 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         TabBarNav.SelectionChanged += OnTabBarSelectionChanged;
         this.Loaded += OnShellLoaded;
 
-        // Ctrl+K focuses the sidebar quick search (asERP-style shortcut)
+        // Ctrl+K focuses the sidebar quick search (asERP-style shortcut).
+        // Suppress WinUI's automatic accelerator tooltip — otherwise "Ctrl + K" hovers over the
+        // whole Shell background, since the accelerator is owned by the root page.
+        KeyboardAcceleratorPlacementMode = Microsoft.UI.Xaml.Input.KeyboardAcceleratorPlacementMode.Hidden;
         var quickSearchAccelerator = new Microsoft.UI.Xaml.Input.KeyboardAccelerator
         {
             Key = Windows.System.VirtualKey.K,
@@ -103,6 +106,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             { "StatisticsRevenue", NavItemRevenue },
             { "SalesChannelOverview", NavItemSalesChannels },
             { "SalesChannels", NavItemSalesChannelList },
+            { "Feeds", NavItemFeeds },
             { "TaxClasses", NavItemTaxClasses },
             { "ProductAttributes", NavItemProductAttributes },
             { "Warehouses", NavItemWarehouses },
@@ -353,6 +357,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         NavItemAiPrompts.Visibility = Visibility.Visible;
         NavItemTenantOAuthSettings.Visibility = Visibility.Visible;
         NavItemSalesChannelList.Visibility = Visibility.Visible;
+        NavItemFeeds.Visibility = Visibility.Visible;
 
         TabItemDashboard.Visibility = Visibility.Visible;
         TabItemCustomers.Visibility = Visibility.Visible;
@@ -597,6 +602,9 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                     break;
                 case "SalesChannels":
                     await navigator.NavigateViewModelAsync<SalesChannelListModel>(this);
+                    break;
+                case "Feeds":
+                    await navigator.NavigateViewModelAsync<asERP.Client.Features.Feeds.Models.FeedListModel>(this);
                     break;
                 case "TaxClasses":
                     await navigator.NavigateViewModelAsync<TaxClassListModel>(this);

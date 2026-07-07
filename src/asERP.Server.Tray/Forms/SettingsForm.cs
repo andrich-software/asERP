@@ -25,6 +25,11 @@ internal sealed class SettingsForm : Form
 
     public SettingsForm(ServerSettings settings)
     {
+        // The layout below uses fixed 96-DPI pixel coordinates; declare that baseline so WinForms
+        // auto-scales the whole dialog (and its fonts) on high-DPI displays (e.g. a 150 % laptop).
+        AutoScaleDimensions = new SizeF(96F, 96F);
+        AutoScaleMode = AutoScaleMode.Dpi;
+
         Text = "asERP Server Settings";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;

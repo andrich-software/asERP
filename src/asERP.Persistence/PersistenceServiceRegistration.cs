@@ -23,13 +23,12 @@ public static class PersistenceServiceRegistration
             var dbOptions = serviceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
             var connectionString = dbOptions.GetConnectionString();
 
-            // NOTE: This suppression cannot be removed yet. The admin-user seed in
-            // asERP.Identity's UserConfiguration.HasData computes PasswordHash via
-            // PasswordHasher.HashPassword(...), which uses a fresh random salt on every model build,
-            // so EF always sees the User model as "changed" and would otherwise raise
-            // PendingModelChangesWarning on startup. The Persistence-owned seeds (Setting, Country,
-            // UserTenant) are already compile-time constants; removing this line is blocked solely on
-            // making the user-seed hash deterministic (out of scope — that seed is intentionally kept).
+            // NOTE: This suppression is required. Reference-data seeds (Country, Manufacturer, Warehouse,
+            // TaxClass, Setting, SalesChannel) set DateCreated/DateModified (and IdentityRole its
+            // ConcurrencyStamp) to non-deterministic values on every model build, so EF always sees the
+            // model as diverging from the last migration and would otherwise raise
+            // PendingModelChangesWarning on startup. The removed default-data seeds (admin user, default
+            // tenant, user↔tenant/role links) are not the cause and do not appear in that diff.
             options.ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
             options.AddInterceptors(serviceProvider.GetRequiredService<ChannelExportNotificationInterceptor>());
 

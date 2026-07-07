@@ -12,6 +12,10 @@ internal sealed class ProgressForm : Form
 
     private ProgressForm(string title)
     {
+        // Fixed 96-DPI pixel layout — declare the baseline so WinForms auto-scales on high-DPI displays.
+        AutoScaleDimensions = new SizeF(96F, 96F);
+        AutoScaleMode = AutoScaleMode.Dpi;
+
         Text = title;
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;

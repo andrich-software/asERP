@@ -9,8 +9,17 @@ namespace asERP.Server.Tray.Services;
 /// </summary>
 internal static class ServerCliRunner
 {
-    public static async Task<(int ExitCode, string Output)> RunAsync(
+    public static Task<(int ExitCode, string Output)> RunAsync(
         IProgress<string>? progress, params string[] cliArguments)
+        => RunAsync(progress, environment: null, cliArguments);
+
+    /// <summary>
+    /// Runs a CLI command, optionally injecting extra environment variables into the
+    /// child process. Used to pass secrets (e.g. superadmin email/password) out of band
+    /// so they never appear in the process command line.
+    /// </summary>
+    public static async Task<(int ExitCode, string Output)> RunAsync(
+        IProgress<string>? progress, IReadOnlyDictionary<string, string>? environment, params string[] cliArguments)
     {
         if (!File.Exists(AppPaths.ServerExePath))
         {
@@ -32,6 +41,13 @@ internal static class ServerCliRunner
             startInfo.ArgumentList.Add(argument);
         }
         startInfo.Environment["DOTNET_ENVIRONMENT"] = "Production";
+        if (environment is not null)
+        {
+            foreach (var (key, value) in environment)
+            {
+                startInfo.Environment[key] = value;
+            }
+        }
 
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException("Failed to start the asERP server binary.");

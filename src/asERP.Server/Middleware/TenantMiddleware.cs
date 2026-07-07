@@ -47,10 +47,14 @@ public class TenantMiddleware
         // it carries no X-Tenant-Id. The tenant is resolved server-side from the token inside the ingest
         // pipeline. Without this skip the middleware would 401 every beacon before the controller runs.
         var isStorefrontIngest = pathLower != null && pathLower.Contains("/storefront/");
+        // Public feed delivery (/feed/{guid} and its image sub-route) is anonymous; the tenant is
+        // resolved server-side from the feed row inside the controller (SetCurrentTenantId). It carries
+        // no X-Tenant-Id header, so skip tenant validation here — otherwise every feed fetch would 401.
+        var isFeedPublic = pathLower != null && pathLower.StartsWith("/feed/");
 
         logger.LogDebug($"🔍 TenantMiddleware - isAuthEndpoint: {isAuthEndpoint}, isSuperadminEndpoint: {isSuperadminEndpoint}, isSwaggerEndpoint: {isSwaggerEndpoint}, isOAuthCallback: {isOAuthCallback}");
 
-        if (isAuthEndpoint || isSuperadminEndpoint || isSwaggerEndpoint || isHealthEndpoint || isServerInfoEndpoint || isOAuthCallback || isStorefrontIngest)
+        if (isAuthEndpoint || isSuperadminEndpoint || isSwaggerEndpoint || isHealthEndpoint || isServerInfoEndpoint || isOAuthCallback || isStorefrontIngest || isFeedPublic)
         {
             logger.LogDebug($"✅  TenantMiddleware - Skipping tenant validation for: {path}");
             await _next(context);
