@@ -2,19 +2,22 @@
 
 This folder holds two Inno Setup installers:
 
-| Installer | Script | Built by |
-|---|---|---|
-| **Server** (Windows service + tray) | `asERP.Server.Setup.iss` | `aserp-server-setup-release.yml` |
-| **Desktop client** (Uno app, Microsoft Store) | `asERP.Client.Setup.iss` | `aserp-desktop-release-win-store.yml` |
+| Installer | Product name | Script | Built by |
+|---|---|---|---|
+| **asERP Server** (Windows service + tray) | `asERP Server` | `asERP.Server.Setup.iss` | `aserp-server-setup-release.yml` |
+| **asERP Desktop** (Uno app) | `asERP Desktop` | `asERP.Client.Setup.iss` | `aserp-desktop-setup-release.yml` |
 
-The desktop-client installer is what the **Microsoft Store** distributes: the Store
-product for the client is an *EXE/MSI app* (Partner Center `dashboard/win32apps/...`),
-not an MSIX/UWP package, so it is fed a signed `.exe` installer hosted at a public
-HTTPS URL and submitted via the Microsoft Store Submission API v2. See the header
-comment of `aserp-desktop-release-win-store.yml` for the required repository secrets
-(`STORE_*`, and optionally `WINDOWS_CERTIFICATE_*` for code signing).
+Both products install side by side on one machine: `C:\Program Files\asERP Desktop`
+and `C:\Program Files\asERP Server`. (They used to share `C:\Program Files\asERP`,
+which prevented installing both — existing installs keep their old folder until a
+fresh install.)
 
-Build the client installer locally with `.\build-client-installer.ps1 -Version 2026.07.06.1`.
+The desktop installer is also what the Microsoft Store distributes (EXE/MSI app,
+submitted via the Store Submission API — see the header comment of
+`aserp-desktop-setup-release.yml` for the required secrets). Store wording is kept
+out of all user-facing texts because it confused users.
+
+Build the desktop installer locally with `.\build-client-installer.ps1 -Version 2026.07.06.1`.
 
 ---
 
@@ -27,8 +30,8 @@ Inno Setup installer that ships the asERP server as a **Windows service** plus a
 
 | Location | Content |
 |---|---|
-| `C:\Program Files\asERP\Server` | self-contained server (`asERP.Server.exe`, runs as service `asERPServer`) |
-| `C:\Program Files\asERP\Tray` | tray app (`asERP.Server.Tray.exe`, autostart via HKCU Run key) |
+| `C:\Program Files\asERP Server\Server` | self-contained server (`asERP.Server.exe`, runs as service `asERPServer`) |
+| `C:\Program Files\asERP Server\Tray` | tray app (`asERP.Server.Tray.exe`; autostart via HKCU Run key — checkbox in setup, on by default; desktop icon checkbox, on by default) |
 | `C:\ProgramData\asERP` | all data: `settings.json`, `aserp.db`, `files\`, `dp-keys\`, `logs\`, `backups\` |
 
 `settings.json` is an operator-editable configuration layer read by the server

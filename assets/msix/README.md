@@ -1,7 +1,7 @@
 # MSIX logo assets
 
-Pre-rendered PNG assets for the Windows Store MSIX package, copied by
-`.github/workflows/aserp-desktop-release-win-store.yml` into the package's
+Pre-rendered PNG assets for the MSIX package, copied by
+`.github/workflows/aserp-desktop-setup-release.yml` into the package's
 `Assets/` folder.
 
 | File | Size | Source |

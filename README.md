@@ -94,7 +94,7 @@ docker run -d \
   -e DatabaseConfig__Provider=SQLite \
   -e DatabaseConfig__ConnectionString="Data Source=/data/aserp.db" \
   -v aserp-sqlite-data:/data \
-  aserp/server:latest
+  andrichsoftware/aserp-server:latest
 ```
 
 **PostgreSQL (externe Datenbank)**
@@ -104,7 +104,7 @@ docker run -d \
   -p 8080:80 \
   -e DatabaseConfig__Provider=PostgreSQL \
   -e DatabaseConfig__ConnectionString="Host=postgres-host;Port=5432;Database=aserp;Username=aserp;Password=aserp;" \
-  aserp/server:latest
+  andrichsoftware/aserp-server:latest
 ```
 
 **Microsoft SQL Server (externe Datenbank)**
@@ -114,7 +114,7 @@ docker run -d \
   -p 8080:80 \
   -e DatabaseConfig__Provider=MSSQL \
   -e DatabaseConfig__ConnectionString="Server=sqlserver-host;Database=aserp;User Id=aserp;Password=aserp;TrustServerCertificate=True;" \
-  aserp/server:latest
+  andrichsoftware/aserp-server:latest
 ```
 
 ## 3. Installation auf Synology NAS
@@ -142,7 +142,7 @@ name: aserp
 
 services:
   aserp.server:
-    image: aserp/server:latest
+    image: andrichsoftware/aserp-server:latest
     container_name: aserp-server
     environment:
       - DatabaseConfig__Provider=Sqlite
@@ -155,7 +155,7 @@ services:
     restart: unless-stopped
 
   aserp.browser:
-    image: aserp/browser:latest
+    image: andrichsoftware/aserp-web:latest
     container_name: aserp-browser
     environment:
       - ASERP_SERVER_BASE_URL=http://localhost:8443
@@ -172,7 +172,7 @@ name: aserp-postgresql
 
 services:
   aserp.server:
-    image: aserp/server:latest
+    image: andrichsoftware/aserp-server:latest
     container_name: aserp-server
     environment:
       - DatabaseConfig__Provider=PostgreSQL
@@ -186,7 +186,7 @@ services:
     restart: unless-stopped
 
   aserp.browser:
-    image: aserp/browser:latest
+    image: andrichsoftware/aserp-web:latest
     container_name: aserp-browser
     environment:
       - ASERP_SERVER_BASE_URL=http://localhost:8443
@@ -248,7 +248,7 @@ name: aserp
 
 services:
   aserp.server:
-    image: aserp/server:latest
+    image: andrichsoftware/aserp-server:latest
     container_name: aserp-server
     environment:
       - DatabaseConfig__Provider=Sqlite
@@ -261,7 +261,7 @@ services:
     restart: unless-stopped
 
   aserp.browser:
-    image: aserp/browser:latest
+    image: andrichsoftware/aserp-web:latest
     container_name: aserp-browser
     environment:
       - ASERP_SERVER_BASE_URL=http://localhost:8443

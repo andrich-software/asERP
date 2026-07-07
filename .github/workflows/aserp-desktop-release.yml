@@ -1,4 +1,4 @@
-﻿name: Release asERP.Desktop
+﻿name: Release asERP Desktop
 
 on:
   push:

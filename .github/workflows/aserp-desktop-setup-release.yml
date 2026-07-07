@@ -1,5 +1,10 @@
-name: Release asERP.Client to Windows Store
+name: Release asERP Desktop Setup (Windows)
 
+# Builds the Windows installer for asERP Desktop and (when the MICROSOFT_STORE_*
+# secrets are present) also feeds it to the Microsoft Store. Store wording is kept
+# out of all user-facing texts (release title/body, tags) on purpose — it confused
+# users; the Store plumbing below is internal.
+#
 # The Microsoft Store product for the desktop client is an "EXE/MSI app"
 # (Partner Center dashboard/win32apps/...), NOT an MSIX/UWP package. That product
 # type is fed with a signed .exe installer hosted at a public HTTPS URL, and is
@@ -143,19 +148,19 @@ jobs:
     - name: Create GitHub Release with installer
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: store-v${{ steps.version.outputs.VERSION }}
-        name: asERP Windows Store v${{ steps.version.outputs.VERSION }}
+        # "setup-v" prefix keeps installer releases apart from the desktop zip
+        # releases ("v...") and the server installer releases ("server-v...").
+        tag_name: setup-v${{ steps.version.outputs.VERSION }}
+        name: asERP Desktop Setup v${{ steps.version.outputs.VERSION }}
         body: |
-          ## asERP Windows Store Release v${{ steps.version.outputs.VERSION }}
+          ## asERP Desktop Setup v${{ steps.version.outputs.VERSION }}
 
-          Signed Windows installer of the asERP desktop client (Uno Platform),
-          submitted to the Microsoft Store (EXE/MSI app).
+          Signed Windows installer of asERP Desktop (Uno Platform).
 
           ### Installer
           - **Windows (x64)**: `asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe`
 
-          The installer is self-contained — no .NET runtime required. This same
-          asset is the package the Microsoft Store submission points at.
+          The installer is self-contained — no .NET runtime required.
 
           ---
 
@@ -185,7 +190,7 @@ jobs:
         command: update
         type: win32
         product-update: >-
-          {"packages":[{"packageUrl":"https://github.com/${{ github.repository }}/releases/download/store-v${{ steps.version.outputs.VERSION }}/asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe","languages":["de","en"],"architectures":["X64"],"packageType":"exe","isSilentInstall":true,"installerParameters":"/VERYSILENT /SUPPRESSMSGBOXES /NORESTART"}]}
+          {"packages":[{"packageUrl":"https://github.com/${{ github.repository }}/releases/download/setup-v${{ steps.version.outputs.VERSION }}/asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe","languages":["de","en"],"architectures":["X64"],"packageType":"exe","isSilentInstall":true,"installerParameters":"/VERYSILENT /SUPPRESSMSGBOXES /NORESTART"}]}
 
     - name: Publish Store submission
       if: ${{ env.STORE_CLIENT_ID != '' && inputs.auto_publish }}

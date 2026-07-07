@@ -21,7 +21,7 @@
   #define ClientPublishDir "..\publish\client"
 #endif
 
-#define AppName "asERP"
+#define AppName "asERP Desktop"
 #define ClientExeName "asERP.Client.exe"
 
 [Setup]
@@ -31,9 +31,11 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=andrich software
 AppPublisherURL=https://www.aserp.de/
-; Share the parent folder with the server installer ({autopf}\asERP\{Server,Tray,Client}).
-DefaultDirName={autopf}\asERP
-DefaultGroupName=asERP
+; Own folder, deliberately separate from the server installer ({autopf}\asERP Server) —
+; sharing {autopf}\asERP caused conflicts when both products were installed on one machine.
+; Existing installs keep their previous folder (Inno's UsePreviousAppDir default).
+DefaultDirName={autopf}\asERP Desktop
+DefaultGroupName=asERP Desktop
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
@@ -52,15 +54,15 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 Source: "{#ClientPublishDir}\*"; DestDir: "{app}\Client"; Flags: recursesubdirs ignoreversion
 
 [Icons]
-Name: "{group}\asERP"; Filename: "{app}\Client\{#ClientExeName}"
-Name: "{group}\Uninstall asERP"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\asERP"; Filename: "{app}\Client\{#ClientExeName}"; Tasks: desktopicon
+Name: "{group}\asERP Desktop"; Filename: "{app}\Client\{#ClientExeName}"
+Name: "{group}\Uninstall asERP Desktop"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\asERP Desktop"; Filename: "{app}\Client\{#ClientExeName}"; Tasks: desktopicon
 
 [Registry]
 ; Discovery info (mirrors the server installer's SOFTWARE\asERP layout).
@@ -71,5 +73,5 @@ Root: HKLM; Subkey: "SOFTWARE\asERP\Client"; ValueType: string; ValueName: "Vers
 
 [Run]
 ; Offer to launch after an interactive install; skipped for the Store's silent run.
-Filename: "{app}\Client\{#ClientExeName}"; Description: "{cm:LaunchProgram,asERP}"; \
+Filename: "{app}\Client\{#ClientExeName}"; Description: "{cm:LaunchProgram,asERP Desktop}"; \
   Flags: nowait postinstall skipifsilent runasoriginaluser
