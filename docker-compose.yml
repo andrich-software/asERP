@@ -64,6 +64,11 @@ services:
       clickhouse:
         condition: service_healthy
         required: false
+    # Lets the server reach a Postgres/MSSQL running on the Docker host
+    # (DB_MODE=postgres|mssql with DB_HOST=host.docker.internal). On Linux this
+    # name only resolves when explicitly mapped to the host gateway.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - backend
     restart: unless-stopped

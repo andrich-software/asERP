@@ -33,10 +33,10 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
                 TenantId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), // Demo tenant ID
                 Firstname = "Max",
                 Lastname = "Mustermann",
-                Email = "max.mustermann@aserp.de",
+                Email = "max.mustermann@as-erp.de",
                 CompanyName = "asERP",
                 Phone = "0123456789",
-                Website = "https://www.aserp.de/",
+                Website = "https://www.as-erp.de/",
                 VatNumber = "DE123456789",
                 CustomerStatus = CustomerStatus.Active,
                 Note = "This is a note",

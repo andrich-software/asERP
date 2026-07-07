@@ -31,6 +31,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private readonly INavigator _navigator;
     private readonly IStringLocalizer _localizer;
     private readonly INotificationService _notifications;
+    private readonly ILogger<SalesChannelEditModel> _logger;
     private readonly Guid? _salesChannelId;
 
     // Snapshot of ImportProducts as loaded from the server (edit mode) — lets us detect when the
@@ -72,6 +73,10 @@ public class SalesChannelEditModel : AsyncInitializableModel
 
     // Warehouses
     private ObservableCollection<SelectableWarehouse> _warehouses = new();
+    // Selected warehouse ids captured from the channel (edit mode) — applied once the (background-
+    // loaded) warehouse list has arrived, so channel loading no longer waits on the warehouse query.
+    private IReadOnlyCollection<Guid> _selectedWarehouseIds = Array.Empty<Guid>();
+    private bool _isWarehousesLoading;
 
     // OAuth state — populated for eBay / Amazon channels after the channel has been saved.
     private bool _hasRefreshToken;
@@ -98,6 +103,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
         _navigator = navigator;
         _localizer = localizer;
         _notifications = notifications;
+        _logger = logger;
         _salesChannelId = data?.SalesChannelId;
 
         // Start async initialization with proper error handling
@@ -107,28 +113,53 @@ public class SalesChannelEditModel : AsyncInitializableModel
     /// <inheritdoc />
     protected override async Task InitializeCoreAsync(CancellationToken ct)
     {
-        await LoadWarehousesAsync(ct);
-
+        // Only the channel data (edit mode) gates the form — it populates the visible fields. The
+        // warehouse multi-select is optional and loads in the background so a slow warehouse query
+        // never blocks the create/edit form behind the loading overlay (previously a slow warehouse
+        // response left "Neuer Vertriebskanal" stuck on a spinner).
         if (_salesChannelId.HasValue)
         {
             await LoadSalesChannelAsync(ct);
         }
+
+        _ = LoadWarehousesAsync(ct);
     }
 
     private async Task LoadWarehousesAsync(CancellationToken ct)
     {
-        var parameters = new Core.Models.QueryParameters { PageSize = 1000 };
-        var response = await _warehouseService.GetWarehousesAsync(parameters, ct);
-
-        Warehouses.Clear();
-        foreach (var warehouse in response.Data)
+        IsWarehousesLoading = true;
+        try
         {
-            Warehouses.Add(new SelectableWarehouse
+            var parameters = new Core.Models.QueryParameters { PageSize = 1000 };
+            var response = await _warehouseService.GetWarehousesAsync(parameters, ct);
+
+            Warehouses.Clear();
+            foreach (var warehouse in response.Data)
             {
-                Id = warehouse.Id,
-                Name = warehouse.Name,
-                IsSelected = false
-            });
+                Warehouses.Add(new SelectableWarehouse
+                {
+                    Id = warehouse.Id,
+                    Name = warehouse.Name,
+                    // Reflect the channel's stored selection (edit mode); no-op for new channels.
+                    IsSelected = _selectedWarehouseIds.Contains(warehouse.Id)
+                });
+            }
+
+            OnPropertyChanged(nameof(HasWarehouses));
+            OnPropertyChanged(nameof(ShowNoWarehouses));
+        }
+        catch (OperationCanceledException)
+        {
+            // Page navigated away while loading — nothing to do.
+        }
+        catch (Exception ex)
+        {
+            // Warehouses are optional; a failure must not break the form. Surface the empty state.
+            _logger.LogError(ex, "Failed to load warehouses for the sales channel edit page");
+        }
+        finally
+        {
+            IsWarehousesLoading = false;
         }
     }
 
@@ -534,6 +565,22 @@ public class SalesChannelEditModel : AsyncInitializableModel
 
     public bool HasWarehouses => Warehouses.Count > 0;
 
+    /// <summary>True while the warehouse list is being fetched in the background.</summary>
+    public bool IsWarehousesLoading
+    {
+        get => _isWarehousesLoading;
+        private set
+        {
+            if (SetProperty(ref _isWarehousesLoading, value))
+            {
+                OnPropertyChanged(nameof(ShowNoWarehouses));
+            }
+        }
+    }
+
+    /// <summary>Show the "no warehouses" placeholder only once loading finished and none exist.</summary>
+    public bool ShowNoWarehouses => !IsWarehousesLoading && !HasWarehouses;
+
     #endregion
 
     #region UI State
@@ -658,11 +705,12 @@ public class SalesChannelEditModel : AsyncInitializableModel
             OnPropertyChanged(nameof(IsConnected));
             OnPropertyChanged(nameof(ConnectionStatusLabel));
 
-            // Mark associated warehouses as selected
-            var warehouseIds = salesChannel.Warehouses?.Select(w => w.Id).ToHashSet() ?? new HashSet<Guid>();
+            // Capture associated warehouse ids; the (background) warehouse loader applies the
+            // selection once the list arrives. Also mark any warehouses already present.
+            _selectedWarehouseIds = salesChannel.Warehouses?.Select(w => w.Id).ToHashSet() ?? new HashSet<Guid>();
             foreach (var warehouse in Warehouses)
             {
-                warehouse.IsSelected = warehouseIds.Contains(warehouse.Id);
+                warehouse.IsSelected = _selectedWarehouseIds.Contains(warehouse.Id);
             }
         }
     }

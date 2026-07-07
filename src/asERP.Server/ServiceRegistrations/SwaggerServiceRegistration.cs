@@ -19,7 +19,7 @@ public static class SwaggerRegistrationService
                 Contact = new OpenApiContact
                 {
                     Name = "asERP",
-                    Email = "support@aserp.de",
+                    Email = "support@as-erp.de",
                     Url = new Uri("https://github.com/asERP")
                 },
                 License = new OpenApiLicense

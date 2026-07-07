@@ -39,7 +39,7 @@ AppId={{7E1B7A46-3A34-4C0D-9C1E-52B7D9E9A11F}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=andrich software
-AppPublisherURL=https://www.aserp.de/
+AppPublisherURL=https://www.as-erp.de/
 ; Own folder, deliberately separate from the desktop installer ({autopf}\asERP Desktop) —
 ; sharing {autopf}\asERP caused conflicts when both products were installed on one machine.
 ; Existing installs keep their previous folder (Inno's UsePreviousAppDir default).
@@ -114,7 +114,7 @@ Filename: "{sys}\sc.exe"; \
 Filename: "{sys}\sc.exe"; \
   Parameters: "config {#ServiceName} binPath= ""\""{app}\Server\asERP.Server.exe\"""" start= delayed-auto"; \
   Flags: runhidden; Check: ServiceExists
-Filename: "{sys}\sc.exe"; Parameters: "description {#ServiceName} ""asERP application server (https://www.aserp.de/)"""; Flags: runhidden
+Filename: "{sys}\sc.exe"; Parameters: "description {#ServiceName} ""asERP application server (https://www.as-erp.de/)"""; Flags: runhidden
 ; Recovery: restart after 5s/10s/30s, reset the failure counter daily.
 Filename: "{sys}\sc.exe"; Parameters: "failure {#ServiceName} reset= 86400 actions= restart/5000/restart/10000/restart/30000"; Flags: runhidden
 ; Stock service DACL plus RP (start), WP (stop), DT (pause) for Authenticated Users (AU):

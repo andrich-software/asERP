@@ -30,7 +30,7 @@ AppId={{A9E4F2C1-6B3D-4E8A-9F27-1C5D8B0A4E63}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=andrich software
-AppPublisherURL=https://www.aserp.de/
+AppPublisherURL=https://www.as-erp.de/
 ; Own folder, deliberately separate from the server installer ({autopf}\asERP Server) —
 ; sharing {autopf}\asERP caused conflicts when both products were installed on one machine.
 ; Existing installs keep their previous folder (Inno's UsePreviousAppDir default).

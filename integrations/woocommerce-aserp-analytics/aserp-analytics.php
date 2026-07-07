@@ -1,7 +1,7 @@
 ﻿<?php
 /**
  * Plugin Name:       asERP Web Analytics
- * Plugin URI:        https://www.aserp.de/
+ * Plugin URI:        https://www.as-erp.de/
  * Description:        First-party, privacy-friendly web analytics for your WooCommerce store, reporting
  *                     into your asERP server. The tracking token never reaches the browser — beacons are
  *                     proxied server-side. No cookies, IPs are masked server-side.

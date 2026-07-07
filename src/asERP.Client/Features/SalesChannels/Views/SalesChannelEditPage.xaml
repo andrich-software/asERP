@@ -830,11 +830,29 @@
               </Grid>
             </Border>
 
+            <!-- Warehouses loading spinner (loaded in the background, independently of the form) -->
+            <Border Background="{ThemeResource SurfaceVariantBrush}"
+                    CornerRadius="8"
+                    Padding="24"
+                    Visibility="{Binding IsWarehousesLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+              <StackPanel HorizontalAlignment="Center"
+                          Orientation="Horizontal"
+                          Spacing="12">
+                <ProgressRing IsActive="True"
+                              Width="20"
+                              Height="20" />
+                <TextBlock x:Uid="Common.Loading"
+                           Style="{StaticResource BodyMedium}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Border>
+
             <!-- No Warehouses Placeholder -->
             <Border Background="{ThemeResource SurfaceVariantBrush}"
                     CornerRadius="8"
                     Padding="24"
-                    Visibility="{Binding HasWarehouses, Converter={StaticResource BoolToInverseVisibilityConverter}}">
+                    Visibility="{Binding ShowNoWarehouses, Converter={StaticResource BoolToVisibilityConverter}}">
               <StackPanel HorizontalAlignment="Center"
                           Spacing="8">
                 <FontIcon Glyph="&#xE80F;"

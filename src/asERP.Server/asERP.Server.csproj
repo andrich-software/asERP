@@ -66,7 +66,6 @@
 	</ItemGroup>
 	<ItemGroup>
 		<None Include="README.md" Pack="true" PackagePath="\" />
-		<None Remove="Properties\PublishProfiles\tipover.aserp.de.pubxml" />
 	</ItemGroup>
     <ItemGroup>
         <ProjectReference Include="../asERP.Analytics/asERP.Analytics.csproj" />
