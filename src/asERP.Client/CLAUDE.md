@@ -159,6 +159,7 @@ Custom controls live in `Controls/` (namespace `asERP.Client.Controls`, xmlns `c
 | `StatusBadge` | Pill badge for any status enum or bool sync flag: `Status="{Binding ...}"` — text + colors resolved centrally in `Core/Status/StatusVisuals.cs` | automatic (`{EnumType}.{Value}` resw keys) |
 | `LabeledField` | Icon + label + value with built-in "N/A" fallback; `LabeledFieldKeyValueStyle` for label-left/value-right rows | x:Uid with `.Text` suffix key |
 | `EmptyState` | Centered icon/title/message placeholder, optional `ActionContent` | x:Uid with `.Title`/`.Message` suffix keys |
+| `SortHeaderButton` | Sortable table-column header bound to `ActiveSortField`/`SortAscending` model states (see "List pages") | x:Uid |
 
 x:Uid on custom control properties is resolved **at compile time** by the Uno XAML generator — a typo'd resw key silently produces an empty string, so verify new keys exist in **both** `de` and `en` resw.
 
@@ -220,3 +221,7 @@ When adding UI, think about all four runtimes (Desktop / WASM / Android / iOS):
 | Page-level error display | Catch `ApiException` in the model, bind `ErrorMessage` to a `TextBlock` |
 | Change a color/design token | Material palette → `Styles/ColorPaletteOverride.json` (both schemes; XAML is generated); app tokens → `Styles/AppTheme.xaml` (Light + Default); status colors → `Styles/StatusColors.xaml` |
 | Add a new page header | List page → `controls:PageHeader`; detail/edit page → `DetailPageHeader` (see "Design rules") |
+
+## Tests
+
+Pure client logic (static helpers, `x:Bind` visual functions, model logic) is tested in `tests/asERP.Client.Tests` (NUnit) — extract logic into static helpers to make it testable there; see its `CLAUDE.md`. `tests/asERP.Client.UITests` is placeholder template scaffolding and provides no real coverage.

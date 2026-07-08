@@ -38,11 +38,16 @@ Provided by the base class:
 - `DbContext` — direct EF Core access for arrangement/assertion
 - `TenantContext` — in-memory `ITenantContext`
 
+**The global tenant query filter is always active in tests** (since `SetTenantHeader` also syncs the `TenantContext`). Consequences:
+- Cross-tenant `DbContext` assertions must use `IgnoreQueryFilters()` (or reset the tenant context) — otherwise the other tenant's rows are invisible and the assert passes/fails for the wrong reason.
+- EF InMemory logs a transaction warning — ignore it, it's expected.
+- Uniqueness checks (`IsUniqueAsync`) can only be exercised via the repository, not raw context queries.
+
 ### Helper methods
 
 | Helper | Purpose |
 |---|---|
-| `SetTenantHeader(Guid)` | Set valid `X-Tenant-Id` header |
+| `SetTenantHeader(Guid)` | Set valid `X-Tenant-Id` header **and** sync `TenantContext.SetCurrentTenantId` |
 | `SetInvalidTenantHeader()` | Set a syntactically valid GUID that doesn't exist |
 | `SetInvalidTenantHeaderValue(string)` | Set a malformed (non-GUID) header value |
 | `RemoveTenantHeader()` | Drop the header entirely |
@@ -54,7 +59,7 @@ Provided by the base class:
 
 Location: `tests/asERP.Server.Tests/Infrastructure/TestDataSeeder.cs`. Idempotent. Seeds:
 - 3 Tenants (`TestTenant1Id`, `TestTenant2Id`, `TestTenant3Id` from `TenantConstants`)
-- 4 TaxClasses, 4 Warehouses, 4 SalesChannels, 3 AiModels, 3 AiPrompts
+- 4 TaxClasses, 4 Warehouses, 4 SalesChannels (WooCommerce, Shopware6, eBay, PointOfSale — each with its `SalesChannelSyncState`), 3 AiModels, 3 AiPrompts
 - SalesChannel↔Warehouse mappings
 
 Call once per test:

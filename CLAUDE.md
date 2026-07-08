@@ -16,13 +16,16 @@ asERP is an open-source, multi-tenant ERP system. C#, .NET 10, Clean Architectur
 | `src/asERP.Persistence` | EF Core DbContext, repositories, configurations, seeders |
 | `src/asERP.Persistence.{MSSQL,PostgreSQL,SQLite}` | Provider-specific migration assemblies |
 | `src/asERP.Identity` | ASP.NET Identity, JWT auth, token services |
-| `src/asERP.SalesChannels` | Integrations: PointOfSale, Shopware 5/6, WooCommerce, eBay |
-| `src/asERP.Analytics` | Analytics scaffolding |
+| `src/asERP.SalesChannels` | Channel integrations: PointOfSale, Shopware 6, WooCommerce (REST + direct DB), eBay, Amazon; sync orchestrator + export outbox |
+| `src/asERP.Shipping` | Carrier integrations (DHL, DPD, GLS, UPS): labels, returns, tracking polls, outbox-backed retries |
+| `src/asERP.Analytics` | ClickHouse-backed cookieless web analytics (ingest pipeline + dashboard queries) |
 | `src/asERP.Server` | ASP.NET Core Web API (no frontend) |
+| `src/asERP.Server.Tray` | Windows tray app (WinForms) managing the installed Server service: start/stop, health, backup, updates |
 | `src/asERP.Client` | Uno Platform app (Desktop, WASM, Android, iOS) |
 | `tests/asERP.Server.Tests` | xUnit, multi-tenant integration tests |
 | `tests/asERP.Persistence.Tests` | xUnit, persistence layer |
-| `tests/asERP.Client.Tests`, `tests/asERP.Client.UITests` | NUnit |
+| `tests/asERP.Client.Tests` | NUnit, pure client logic |
+| `tests/asERP.Client.UITests` | NUnit + Uno.UITest — placeholder scaffolding only |
 
 ### Architecture in one screen
 
@@ -31,7 +34,7 @@ asERP is an open-source, multi-tenant ERP system. C#, .NET 10, Clean Architectur
 - **Manual mapping** — no AutoMapper; mapping done explicitly in handlers/extensions.
 - **Repositories** for data access; entities inherit `BaseEntity` (with `Guid? TenantId`) or `BaseEntityWithoutTenant`. All Ids are `System.Guid` (`BaseEntity.cs`).
 - **Tenancy** — global EF Core query filters enforce tenant isolation; `ITenantContext` is the runtime source of truth.
-- **REST + JWT** — versioned routes (`/api/v{version:apiVersion}/...`), Bearer auth, RFC 7807 problem details, `GlobalExceptionFilters`.
+- **REST + JWT** — versioned routes (`/api/v{version:apiVersion}/...`), Bearer auth, RFC 7807 problem details via `GlobalExceptionHandler` (an `IExceptionHandler`, not a filter).
 - **Client** is API-only — no DB access, talks to Server via HTTP (Kiota + named `HttpClient`).
 
 ## Common Commands
@@ -56,9 +59,10 @@ dotnet test tests/asERP.Server.Tests/asERP.Server.Tests.csproj --filter "FullyQu
 dotnet format
 dotnet format --verify-no-changes
 
-# Migrations — see src/asERP.Persistence/CLAUDE.md
-./create-migrations.sh "MigrationName"               # all providers
-./create-migrations.sh "MigrationName" postgresql    # one provider
+# Migrations — see src/asERP.Persistence/CLAUDE.md (named flags, not positional args)
+./create-migrations.sh -n "MigrationName"                  # all providers
+./create-migrations.sh -n "MigrationName" -d postgresql    # one provider
+# Windows equivalent: ./create-migrations.ps1 -name "MigrationName" [-database postgresql]
 ```
 
 ## Project-wide Rules
@@ -84,11 +88,12 @@ When adding a feature or layout, **find a similar one and mirror it**. Naming, f
 - **RoleManageTenant** — may edit/delete their own tenants via `TenantsController`.
 - Login is allowed without a tenant. Every user can create tenants and only sees their own.
 - All users may view their own profile even without a `UserTenant`.
-- `EnsureSuperadminAccessAsync()` is **test-only**.
+- `Superadmin`/`User` are the only ASP.NET Identity roles; `RoleManageUser`/`RoleManageTenant` are boolean flags on `UserTenant`, checked in handlers (not in JWT claims).
+- `EnsureSuperadminAccessAsync()` (Server) only matters under the test harness — the real guard is `[Authorize(Roles = "Superadmin")]`.
 
 ### Validation & errors
 - **FluentValidation** for request validation.
-- Use **RFC 7807** problem details for error responses; rely on `GlobalExceptionFilters`.
+- Use **RFC 7807** problem details for error responses; rely on `GlobalExceptionHandler` (Server).
 - Pagination is **zero-based** — see `QueryableExtensions.cs`.
 - Enum serialization goes through `StrictEnumConverter` to fail fast on unknown values.
 
@@ -113,8 +118,8 @@ When adding a feature or layout, **find a similar one and mirror it**. Naming, f
 - **EF Core**: 10.0.x (relational + InMemory for tests)
 - **FluentValidation**: 12.x
 - **Serilog**: 10.x
-- **Swashbuckle**: 10.x, **Asp.Versioning**: 8.x
-- **Test runners**: xUnit 2.9 (Server, Persistence), NUnit 4.5 (Client)
+- **Swashbuckle**: 10.x, **Asp.Versioning**: 10.x
+- **Test runners**: xUnit 2.9 (Server, Persistence), NUnit 4.6 (Client)
 - Central package management is on (`Directory.Packages.props`) — bump versions there, not in individual `.csproj` files.
 
 ## MCP Servers Available

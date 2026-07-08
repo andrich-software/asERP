@@ -8,12 +8,16 @@ Refer to the root `/CLAUDE.md` for cross-cutting rules. This file covers Server-
 
 ```
 Controllers/Api/V1/        REST endpoints (versioned)
-Filters/                   Authorization & action filters, GlobalExceptionFilter
-Middleware/                Request pipeline (tenant resolution, etc.)
+Filters/                   Swagger operation/schema filters only (ProblemDetails*, TenantHeaderOperationFilter)
+Middleware/                TenantMiddleware (tenant resolution), ResponseCachePolicy
 ServiceRegistrations/      DI wiring per concern
 Infrastructure/JsonConverters/   StrictEnumConverter, etc.
-Extensions/                ToActionResult() and similar helpers
-Views/                     Razor views for tracking/web pages
+Extensions/                ToActionResult(), SuperadminAccessExtensions and similar helpers
+Services/                  Server-hosted services
+Cli/                       Out-of-band CLI commands (backup/restore/superadmin — invoked by Server.Tray)
+Models/                    Server-local models
+Views/, Pages/             Razor views/pages for tracking/web pages
+GlobalExceptionHandler.cs  IExceptionHandler → RFC 7807 (project root)
 ```
 
 ## Controller Pattern
@@ -70,8 +74,8 @@ See root `CLAUDE.md` for the role matrix. In Server code:
 ## Validation & Error Handling
 
 - **FluentValidation** registered via `FluentValidation.DependencyInjectionExtensions`.
-- A global exception filter converts unhandled exceptions to RFC 7807 `ProblemDetails`.
-- Don't catch and swallow — let the global filter handle it unless you have a specific recovery path.
+- `GlobalExceptionHandler` (an `IExceptionHandler`, not a filter) converts unhandled exceptions to RFC 7807 `ProblemDetails`. It masks 5xx messages and only echoes 4xx messages to clients — never leak internals in exception text.
+- Don't catch and swallow — let the global handler handle it unless you have a specific recovery path.
 
 ## Versioning & Swagger
 
