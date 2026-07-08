@@ -404,7 +404,7 @@ public class SalesImportRepository : ISalesImportRepository
     /// </summary>
     private async Task BookSaleMovementsAsync(SalesChannel salesChannel, Sales newSales)
     {
-        if (salesChannel.ImportStock || !salesChannel.InitialSalesImportCompleted || IsCancelledStatus(newSales.Status))
+        if (salesChannel.ImportStock || !salesChannel.SyncState.InitialSalesImportCompleted || IsCancelledStatus(newSales.Status))
         {
             return;
         }

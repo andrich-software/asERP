@@ -1,3 +1,5 @@
+using asERP.Domain.Dtos.Company;
+
 namespace asERP.Domain.Dtos.Shipping;
 
 /// <summary>
@@ -7,6 +9,9 @@ namespace asERP.Domain.Dtos.Shipping;
 public class PickListData
 {
     public Guid? TenantId { get; set; }
+
+    /// <summary>Sender/company block, resolved from the tenant.</summary>
+    public CompanySenderInfo Company { get; set; } = new();
     public List<int> SalesNumbers { get; set; } = new();
 
     /// <summary>Already sorted by storage location ascending; items without a location last.</summary>

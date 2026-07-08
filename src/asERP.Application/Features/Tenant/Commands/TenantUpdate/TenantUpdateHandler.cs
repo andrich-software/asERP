@@ -74,6 +74,11 @@ public class TenantUpdateHandler : IRequestHandler<TenantUpdateCommand, Result<G
             tenantToUpdate.State = request.State;
             tenantToUpdate.Country = request.Country;
             tenantToUpdate.Iban = request.Iban;
+            tenantToUpdate.BankName = request.BankName;
+            tenantToUpdate.Bic = request.Bic;
+            tenantToUpdate.TaxId = request.TaxId;
+            tenantToUpdate.VatId = request.VatId;
+            tenantToUpdate.LogoPath = request.LogoPath;
             tenantToUpdate.PackingSlipShowPrices = request.PackingSlipShowPrices;
             tenantToUpdate.PackingSlipPrintByDefault = request.PackingSlipPrintByDefault;
             tenantToUpdate.SendShippingNotificationEmails = request.SendShippingNotificationEmails;

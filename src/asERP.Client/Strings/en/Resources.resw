@@ -2146,7 +2146,6 @@
   <data name="GlobalSettingsPage.Field.PublicBaseUrl.Hint.Text" xml:space="preserve"><value>Example: https://erp.yourdomain.com — used by the OAuth callback endpoint.</value></data>
   <data name="GlobalSettings.ClientSecretSetHint" xml:space="preserve"><value>A secret is stored. Leave empty to keep it unchanged.</value></data>
   <data name="GlobalSettings.SaveSucceeded" xml:space="preserve"><value>Settings saved.</value></data>
-  <data name="GlobalSettings.GroupCompany" xml:space="preserve"><value>Company details</value></data>
   <data name="GlobalSettings.GroupSystem" xml:space="preserve"><value>System defaults</value></data>
   <data name="GlobalSettings.GroupInvoice" xml:space="preserve"><value>Invoices</value></data>
   <data name="GlobalSettings.GroupSales" xml:space="preserve"><value>Sales</value></data>
@@ -3588,6 +3587,18 @@
   <data name="TenantDetailPage.Field.Iban.Text" xml:space="preserve">
     <value>IBAN</value>
   </data>
+  <data name="TenantDetailPage.Field.BankName.Text" xml:space="preserve">
+    <value>Bank Name</value>
+  </data>
+  <data name="TenantDetailPage.Field.Bic.Text" xml:space="preserve">
+    <value>BIC</value>
+  </data>
+  <data name="TenantDetailPage.Field.TaxId.Text" xml:space="preserve">
+    <value>Tax Number</value>
+  </data>
+  <data name="TenantDetailPage.Field.VatId.Text" xml:space="preserve">
+    <value>VAT ID</value>
+  </data>
   <data name="TenantDetailPage.Field.DateCreated.Text" xml:space="preserve">
     <value>Created</value>
   </data>
@@ -3781,6 +3792,38 @@
   <data name="TenantEditPage.Field.Iban.Hint.Text" xml:space="preserve">
     <value>Format: DE89 3704 0044 0532 0130 00</value>
   </data>
+  <data name="TenantEditPage.Field.BankName.Header" xml:space="preserve">
+    <value>Bank Name</value>
+  </data>
+  <data name="TenantEditPage.Field.BankName.PlaceholderText" xml:space="preserve">
+    <value>Enter bank name</value>
+  </data>
+  <data name="TenantEditPage.Field.Bic.Header" xml:space="preserve">
+    <value>BIC</value>
+  </data>
+  <data name="TenantEditPage.Field.Bic.PlaceholderText" xml:space="preserve">
+    <value>Enter BIC</value>
+  </data>
+
+  <!-- TenantEditPage - Tax Fields -->
+  <data name="TenantEditPage.Field.TaxId.Header" xml:space="preserve">
+    <value>Tax Number</value>
+  </data>
+  <data name="TenantEditPage.Field.TaxId.PlaceholderText" xml:space="preserve">
+    <value>Enter tax number</value>
+  </data>
+  <data name="TenantEditPage.Field.VatId.Header" xml:space="preserve">
+    <value>VAT ID</value>
+  </data>
+  <data name="TenantEditPage.Field.VatId.PlaceholderText" xml:space="preserve">
+    <value>Enter VAT ID</value>
+  </data>
+  <data name="TenantEditPage.Field.LogoPath.Header" xml:space="preserve">
+    <value>Logo Path</value>
+  </data>
+  <data name="TenantEditPage.Field.LogoPath.PlaceholderText" xml:space="preserve">
+    <value>Path to the company logo</value>
+  </data>
 
   <!-- TenantEditPage - Errors -->
   <data name="TenantEditPage.Error.SaveFailed" xml:space="preserve">
@@ -3876,6 +3919,122 @@
   </data>
   <data name="SuperadminTenantListPage.ItemsPerPage.Text" xml:space="preserve">
     <value>Items per page:</value>
+  </data>
+
+  <!-- Superadmin Country List Page -->
+  <data name="SuperadminCountryListPage.PageHeader.Title" xml:space="preserve">
+    <value>Countries</value>
+  </data>
+  <data name="SuperadminCountryListPage.PageHeader.Description" xml:space="preserve">
+    <value>Manage the global country reference data used across all tenants for addresses and imports.</value>
+  </data>
+  <data name="SuperadminCountryListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Create country</value>
+  </data>
+  <data name="SuperadminCountryListPage.SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search countries...</value>
+  </data>
+  <data name="SuperadminCountryListPage.Header.Name.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="SuperadminCountryListPage.Header.CountryCode.Text" xml:space="preserve">
+    <value>ISO code</value>
+  </data>
+  <data name="SuperadminCountryListPage.NoCountries.Title" xml:space="preserve">
+    <value>No countries found</value>
+  </data>
+  <data name="SuperadminCountryListPage.NoCountries.Message" xml:space="preserve">
+    <value>Create a country to make it available for addresses and imports.</value>
+  </data>
+  <data name="SuperadminCountryListPage.LoadError.Title" xml:space="preserve">
+    <value>Could not load countries</value>
+  </data>
+  <data name="SuperadminCountryListPage.LoadError.Message" xml:space="preserve">
+    <value>Failed to load countries</value>
+  </data>
+  <data name="SuperadminCountryListPage.PreviousPage.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Previous page</value>
+  </data>
+  <data name="SuperadminCountryListPage.NextPage.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Next page</value>
+  </data>
+  <data name="SuperadminCountryListPage.ItemsPerPage.Text" xml:space="preserve">
+    <value>Items per page:</value>
+  </data>
+
+  <!-- Superadmin Country Edit Page -->
+  <data name="SuperadminCountryEditPage.TitleNew" xml:space="preserve">
+    <value>New Country</value>
+  </data>
+  <data name="SuperadminCountryEditPage.TitleEdit" xml:space="preserve">
+    <value>Edit Country</value>
+  </data>
+  <data name="SuperadminCountryEditPage.AppBarButton.Cancel.Label" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SuperadminCountryEditPage.AppBarButton.Save.Label" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="SuperadminCountryEditPage.Section.CountryDetails.Text" xml:space="preserve">
+    <value>Country Details</value>
+  </data>
+  <data name="SuperadminCountryEditPage.Section.CountryDetails.Subtitle.Text" xml:space="preserve">
+    <value>Name and ISO country code for this country</value>
+  </data>
+  <data name="SuperadminCountryEditPage.Field.Name.Label.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="SuperadminCountryEditPage.Field.Name.PlaceholderText" xml:space="preserve">
+    <value>e.g. Israel</value>
+  </data>
+  <data name="SuperadminCountryEditPage.Field.CountryCode.Label.Text" xml:space="preserve">
+    <value>ISO code</value>
+  </data>
+  <data name="SuperadminCountryEditPage.Field.CountryCode.PlaceholderText" xml:space="preserve">
+    <value>e.g. IL</value>
+  </data>
+  <data name="SuperadminCountryEditPage.Field.CountryCode.HelperText.Text" xml:space="preserve">
+    <value>ISO 3166 country code (2 letters, e.g. IL, LI, DE). Used to match countries during imports.</value>
+  </data>
+  <data name="SuperadminCountryEditPage.Button.Delete.Content" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="SuperadminCountryEditPage.Button.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SuperadminCountryEditPage.Button.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="SuperadminCountryEditPage.DeleteTitle" xml:space="preserve">
+    <value>Delete country?</value>
+  </data>
+  <data name="SuperadminCountryEditPage.DeleteMessage" xml:space="preserve">
+    <value>This country will be removed. Addresses that reference it may be affected. This action cannot be undone.</value>
+  </data>
+  <data name="SuperadminCountryEditPage.DeleteAccept" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="SuperadminCountryEditPage.DeleteCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SuperadminCountryEditPage.SaveFailed" xml:space="preserve">
+    <value>Failed to save the country: {0}</value>
+  </data>
+  <data name="SuperadminCountryEditPage.DeleteFailed" xml:space="preserve">
+    <value>Failed to delete the country: {0}</value>
+  </data>
+
+  <!-- Pagination - Countries -->
+  <data name="Pagination.CountriesSingular" xml:space="preserve">
+    <value>1 country</value>
+  </data>
+  <data name="Pagination.CountriesPlural" xml:space="preserve">
+    <value>{0} countries</value>
+  </data>
+
+  <!-- Shell nav item - Countries (Superadmin) -->
+  <data name="Shell.NavItem.Countries.Text" xml:space="preserve">
+    <value>Countries</value>
   </data>
 
   <!-- SuperadminTenantEditPage -->
@@ -3993,6 +4152,36 @@
   </data>
   <data name="SuperadminTenantEditPage.Field.Iban.Hint.Text" xml:space="preserve">
     <value>International Bank Account Number (e.g., DE89370400440532013000)</value>
+  </data>
+  <data name="SuperadminTenantEditPage.Field.BankName.Header" xml:space="preserve">
+    <value>Bank Name</value>
+  </data>
+  <data name="SuperadminTenantEditPage.Field.BankName.PlaceholderText" xml:space="preserve">
+    <value>Enter bank name</value>
+  </data>
+  <data name="SuperadminTenantEditPage.Field.Bic.Header" xml:space="preserve">
+    <value>BIC</value>
+  </data>
+  <data name="SuperadminTenantEditPage.Field.Bic.PlaceholderText" xml:space="preserve">
+    <value>Enter BIC</value>
+  </data>
+  <data name="SuperadminTenantEditPage.Field.TaxId.Header" xml:space="preserve">
+    <value>Tax Number</value>
+  </data>
+  <data name="SuperadminTenantEditPage.Field.TaxId.PlaceholderText" xml:space="preserve">
+    <value>Enter tax number</value>
+  </data>
+  <data name="SuperadminTenantEditPage.Field.VatId.Header" xml:space="preserve">
+    <value>VAT ID</value>
+  </data>
+  <data name="SuperadminTenantEditPage.Field.VatId.PlaceholderText" xml:space="preserve">
+    <value>Enter VAT ID</value>
+  </data>
+  <data name="SuperadminTenantEditPage.Field.LogoPath.Header" xml:space="preserve">
+    <value>Logo Path</value>
+  </data>
+  <data name="SuperadminTenantEditPage.Field.LogoPath.PlaceholderText" xml:space="preserve">
+    <value>Path to the company logo</value>
   </data>
 
   <!-- SuperadminTenantEditPage - Error Messages -->

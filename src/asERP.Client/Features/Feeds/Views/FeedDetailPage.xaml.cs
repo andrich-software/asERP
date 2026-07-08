@@ -141,13 +141,7 @@ public sealed partial class FeedDetailPage : Page
 
     private void ApplySelectedTab(TabBar tabBar)
     {
-        for (var i = 0; i < TabPanelNames.Length; i++)
-        {
-            if (tabBar.FindName(TabPanelNames[i]) is UIElement panel)
-            {
-                panel.Visibility = i == _selectedTabIndex ? Visibility.Visible : Visibility.Collapsed;
-            }
-        }
+        TabPanelSwitcher.Apply(tabBar, TabPanelNames, _selectedTabIndex);
 
         // Gate the expensive per-tab feeds so they only query once the user opens the tab.
         if (DataContext is FeedDetailModel model)

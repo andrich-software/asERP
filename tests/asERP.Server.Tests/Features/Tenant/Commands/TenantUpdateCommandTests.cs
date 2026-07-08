@@ -86,6 +86,11 @@ public class TenantUpdateCommandTests : TenantIsolatedTestBase
             State = "Updated State",
             Country = "Updated Country",
             Iban = "DE89370400440532013000",
+            BankName = "Updated Bank",
+            Bic = "UPDTDEFF",
+            TaxId = "123/456/7890",
+            VatId = "DE987654321",
+            LogoPath = "/logos/updated.png",
             PackingSlipShowPrices = true,
             PackingSlipPrintByDefault = true,
             SendShippingNotificationEmails = true,
@@ -312,6 +317,11 @@ public class TenantUpdateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertEqual(updateInput.State, updatedTenant.State);
         TestAssertions.AssertEqual(updateInput.Country, updatedTenant.Country);
         TestAssertions.AssertEqual(updateInput.Iban, updatedTenant.Iban);
+        TestAssertions.AssertEqual(updateInput.BankName, updatedTenant.BankName);
+        TestAssertions.AssertEqual(updateInput.Bic, updatedTenant.Bic);
+        TestAssertions.AssertEqual(updateInput.TaxId, updatedTenant.TaxId);
+        TestAssertions.AssertEqual(updateInput.VatId, updatedTenant.VatId);
+        TestAssertions.AssertEqual(updateInput.LogoPath, updatedTenant.LogoPath);
         TestAssertions.AssertTrue(updatedTenant.PackingSlipShowPrices);
         TestAssertions.AssertTrue(updatedTenant.PackingSlipPrintByDefault);
         TestAssertions.AssertTrue(updatedTenant.SendShippingNotificationEmails);
@@ -338,6 +348,29 @@ public class TenantUpdateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertTrue(result.Data.PackingSlipPrintByDefault);
         TestAssertions.AssertTrue(result.Data.SendShippingNotificationEmails);
         TestAssertions.AssertTrue(result.Data.SendDeliveryNotificationEmails);
+    }
+
+    [Fact]
+    public async Task UpdateTenant_CompanyFields_ShouldBeReturnedByDetailQuery()
+    {
+        await SeedUserTenantsAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        SimulateAuthenticatedRequest(AdminUserId);
+
+        var updateInput = CreateUpdateTenantInput();
+        var updateResponse = await PutAsJsonAsync($"/api/v1/tenants/{TenantConstants.TestTenant1Id}", updateInput);
+        TestAssertions.AssertEqual(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        var detailResponse = await Client.GetAsync($"/api/v1/tenants/{TenantConstants.TestTenant1Id}");
+
+        TestAssertions.AssertHttpSuccess(detailResponse);
+        var result = await ReadResponseAsync<Result<TenantDetailDto>>(detailResponse);
+        TestAssertions.AssertNotNull(result.Data);
+        TestAssertions.AssertEqual(updateInput.BankName, result.Data!.BankName);
+        TestAssertions.AssertEqual(updateInput.Bic, result.Data.Bic);
+        TestAssertions.AssertEqual(updateInput.TaxId, result.Data.TaxId);
+        TestAssertions.AssertEqual(updateInput.VatId, result.Data.VatId);
+        TestAssertions.AssertEqual(updateInput.LogoPath, result.Data.LogoPath);
     }
 
     [Fact]

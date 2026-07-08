@@ -805,7 +805,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
             var progress = new ProgressThrottle(context);
 
             // Caught up: pull only orders changed since the last successful run.
-            if (context.SalesChannel.InitialSalesImportCompleted)
+            if (context.SalesChannel.SyncState.InitialSalesImportCompleted)
             {
                 return await ImportSalesByModifiedAsync(connection, db, hpos, context, context.IncrementalSince, progress);
             }
@@ -908,9 +908,9 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         var failed = 0;
 
         // Resume one second before the persisted cursor — cheap overlap, and upserts are idempotent.
-        var cursorDate = context.SalesChannel.SalesImportBackfillCursor?.AddSeconds(-1) ?? DateTime.MinValue;
+        var cursorDate = context.SalesChannel.SyncState.SalesImportBackfillCursor?.AddSeconds(-1) ?? DateTime.MinValue;
         ulong cursorId = 0;
-        var cursorAdvance = context.SalesChannel.SalesImportBackfillCursor;
+        var cursorAdvance = context.SalesChannel.SyncState.SalesImportBackfillCursor;
         var frozen = false;
         var reachedEnd = false;
         var runStart = DateTime.UtcNow;
@@ -950,9 +950,9 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
                 }
             }
 
-            if (cursorAdvance is { } advance && advance != context.SalesChannel.SalesImportBackfillCursor)
+            if (cursorAdvance is { } advance && advance != context.SalesChannel.SyncState.SalesImportBackfillCursor)
             {
-                context.SalesChannel.SalesImportBackfillCursor = advance;
+                context.SalesChannel.SyncState.SalesImportBackfillCursor = advance;
             }
 
             await progress.MaybeReportAsync(processed, failed);
@@ -971,7 +971,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
 
         if (reachedEnd && !frozen)
         {
-            context.SalesChannel.InitialSalesImportCompleted = true;
+            context.SalesChannel.SyncState.InitialSalesImportCompleted = true;
         }
 
         return new SyncResult(processed, failed);
@@ -1476,7 +1476,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
             // Same page-cursor resume semantics as the REST connector (offset paging over the
             // immutable user id order): a time-boxed run continues where the last one stopped, a
             // failed customer freezes the cursor so it is retried.
-            var startPage = context.SalesChannel.CustomerImportPageCursor + 1;
+            var startPage = context.SalesChannel.SyncState.CustomerImportPageCursor + 1;
             var reachedEnd = false;
             var frozen = false;
 
@@ -1511,7 +1511,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
 
                 if (!frozen)
                 {
-                    context.SalesChannel.CustomerImportPageCursor = page;
+                    context.SalesChannel.SyncState.CustomerImportPageCursor = page;
                 }
 
                 if (batch.Count < PageSize)
@@ -1527,8 +1527,8 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
 
             if (reachedEnd && !frozen)
             {
-                context.SalesChannel.InitialCustomerImportCompleted = true;
-                context.SalesChannel.CustomerImportPageCursor = 0;
+                context.SalesChannel.SyncState.InitialCustomerImportCompleted = true;
+                context.SalesChannel.SyncState.CustomerImportPageCursor = 0;
             }
         }
         catch (OperationCanceledException)

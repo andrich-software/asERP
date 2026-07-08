@@ -118,6 +118,8 @@ public static class Routes
     // Superadmin
     public const string SuperadminTenantList = "SuperadminTenants";
     public const string SuperadminTenantEdit = "SuperadminTenantEdit";
+    public const string SuperadminCountryList = "SuperadminCountries";
+    public const string SuperadminCountryEdit = "SuperadminCountryEdit";
 
     // Legacy (for migration - remove after complete)
     public const string Main = "Main";

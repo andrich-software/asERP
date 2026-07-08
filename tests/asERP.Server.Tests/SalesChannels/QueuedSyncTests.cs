@@ -268,8 +268,8 @@ public class QueuedSyncTests
             ImportProducts = false,
             ImportCustomers = importCustomers,
             ImportSaless = importSaless,
-            InitialSalesImportCompleted = initialSalesDone,
             SyncIntervalSeconds = 0,
+            SyncState = new SalesChannelSyncState { InitialSalesImportCompleted = initialSalesDone },
         };
 
     private static ServiceProvider BuildProvider(string dbName, ISalesChannelConnector connector)

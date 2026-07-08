@@ -311,6 +311,60 @@
                                        Visibility="{Binding Data.Website, Converter={StaticResource StringToInverseVisibilityConverter}}" />
                           </StackPanel>
                         </Grid>
+
+                        <!-- Tax Number -->
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                          </Grid.ColumnDefinitions>
+                          <FontIcon Grid.Column="0"
+                                    Glyph="&#xE8A1;"
+                                    FontSize="16"
+                                    Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center" />
+                          <StackPanel Grid.Column="1">
+                            <TextBlock x:Uid="TenantDetailPage.Field.TaxId"
+                                       Style="{StaticResource LabelSmall}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                            <TextBlock Text="{Binding Data.TaxId}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}"
+                                       Visibility="{Binding Data.TaxId, Converter={StaticResource StringToVisibilityConverter}}" />
+                            <TextBlock x:Uid="TenantDetailPage.NotAvailable"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                       Visibility="{Binding Data.TaxId, Converter={StaticResource StringToInverseVisibilityConverter}}" />
+                          </StackPanel>
+                        </Grid>
+
+                        <!-- VAT ID -->
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                          </Grid.ColumnDefinitions>
+                          <FontIcon Grid.Column="0"
+                                    Glyph="&#xE8A1;"
+                                    FontSize="16"
+                                    Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center" />
+                          <StackPanel Grid.Column="1">
+                            <TextBlock x:Uid="TenantDetailPage.Field.VatId"
+                                       Style="{StaticResource LabelSmall}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                            <TextBlock Text="{Binding Data.VatId}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}"
+                                       Visibility="{Binding Data.VatId, Converter={StaticResource StringToVisibilityConverter}}" />
+                            <TextBlock x:Uid="TenantDetailPage.NotAvailable"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                       Visibility="{Binding Data.VatId, Converter={StaticResource StringToInverseVisibilityConverter}}" />
+                          </StackPanel>
+                        </Grid>
                       </StackPanel>
                     </StackPanel>
                   </Border>
@@ -483,6 +537,60 @@
                                        Style="{StaticResource BodyMedium}"
                                        Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                        Visibility="{Binding Data.Iban, Converter={StaticResource StringToInverseVisibilityConverter}}" />
+                          </StackPanel>
+                        </Grid>
+
+                        <!-- Bank Name -->
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                          </Grid.ColumnDefinitions>
+                          <FontIcon Grid.Column="0"
+                                    Glyph="&#xE825;"
+                                    FontSize="16"
+                                    Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center" />
+                          <StackPanel Grid.Column="1">
+                            <TextBlock x:Uid="TenantDetailPage.Field.BankName"
+                                       Style="{StaticResource LabelSmall}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                            <TextBlock Text="{Binding Data.BankName}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}"
+                                       Visibility="{Binding Data.BankName, Converter={StaticResource StringToVisibilityConverter}}" />
+                            <TextBlock x:Uid="TenantDetailPage.NotAvailable"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                       Visibility="{Binding Data.BankName, Converter={StaticResource StringToInverseVisibilityConverter}}" />
+                          </StackPanel>
+                        </Grid>
+
+                        <!-- BIC -->
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                          </Grid.ColumnDefinitions>
+                          <FontIcon Grid.Column="0"
+                                    Glyph="&#xE8A1;"
+                                    FontSize="16"
+                                    Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center" />
+                          <StackPanel Grid.Column="1">
+                            <TextBlock x:Uid="TenantDetailPage.Field.Bic"
+                                       Style="{StaticResource LabelSmall}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                            <TextBlock Text="{Binding Data.Bic}"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}"
+                                       Visibility="{Binding Data.Bic, Converter={StaticResource StringToVisibilityConverter}}" />
+                            <TextBlock x:Uid="TenantDetailPage.NotAvailable"
+                                       Style="{StaticResource BodyMedium}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                       Visibility="{Binding Data.Bic, Converter={StaticResource StringToInverseVisibilityConverter}}" />
                           </StackPanel>
                         </Grid>
                       </StackPanel>

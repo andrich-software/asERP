@@ -4,7 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using asERP.Application.Contracts.Infrastructure;
-using asERP.Application.Contracts.Persistence;
+using asERP.Domain.Dtos.Company;
 using asERP.Domain.Entities;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
@@ -17,28 +17,8 @@ namespace asERP.Infrastructure.PDF;
 
 public partial class PdfService : IPdfService
 {
-    private readonly ISettingRepository _settingRepository;
-    private readonly SemaphoreSlim _settingsGate = new(1, 1);
-    private bool _companySettingsLoaded;
-    private Guid? _settingsLoadedForTenantId;
-    private string _companyName = string.Empty;
-    private string _companyAddress = string.Empty;
-    private string _companyZipCity = string.Empty;
-    private string _companyCountry = string.Empty;
-    private string _companyPhone = string.Empty;
-    private string _companyEmail = string.Empty;
-    private string _companyWebsite = string.Empty;
-    private string _companyTaxId = string.Empty;
-    private string _companyVatId = string.Empty;
-    private string _companyBankName = string.Empty;
-    private string _companyIban = string.Empty;
-    private string _companyBic = string.Empty;
-    private string _logoPath = string.Empty;
-
-    public PdfService(ISettingRepository settingRepository)
+    public PdfService()
     {
-        _settingRepository = settingRepository ?? throw new ArgumentNullException(nameof(settingRepository));
-
         // Ensure a font resolver is registered so MigraDoc can render text with embedded fonts.
         try
         {
@@ -51,56 +31,6 @@ public partial class PdfService : IPdfService
         {
             // Ignore font resolver issues; handled later when rendering if necessary.
         }
-    }
-
-    // Note: settings are stored as global (non-tenant) entities and ISettingRepository.GetAllAsync()
-    // exposes no per-tenant overload, so the load cannot be scoped to a specific tenantId here — the
-    // parameter only keys the in-memory cache. DB failures now propagate (no silent empty fallback), so a
-    // failed load surfaces via the RFC 7807 filter instead of rendering an invoice with empty company data.
-    private async Task EnsureCompanySettingsLoadedAsync(Guid? tenantId)
-    {
-        if (_companySettingsLoaded && Nullable.Equals(_settingsLoadedForTenantId, tenantId))
-        {
-            return;
-        }
-
-        await _settingsGate.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            if (_companySettingsLoaded && Nullable.Equals(_settingsLoadedForTenantId, tenantId))
-            {
-                return;
-            }
-
-            var settings = await _settingRepository.GetAllAsync().ConfigureAwait(false)
-                ?? Array.Empty<Setting>();
-
-            _companyName = GetSettingValue(settings, "Company.Name");
-            _companyAddress = GetSettingValue(settings, "Company.Address");
-            _companyZipCity = GetSettingValue(settings, "Company.ZipCity");
-            _companyCountry = GetSettingValue(settings, "Company.Country");
-            _companyPhone = GetSettingValue(settings, "Company.Phone");
-            _companyEmail = GetSettingValue(settings, "Company.Email");
-            _companyWebsite = GetSettingValue(settings, "Company.Website");
-            _companyTaxId = GetSettingValue(settings, "Company.TaxId");
-            _companyVatId = GetSettingValue(settings, "Company.VatId");
-            _companyBankName = GetSettingValue(settings, "Company.BankName");
-            _companyIban = GetSettingValue(settings, "Company.Iban");
-            _companyBic = GetSettingValue(settings, "Company.Bic");
-            _logoPath = GetSettingValue(settings, "Company.LogoPath");
-
-            _companySettingsLoaded = true;
-            _settingsLoadedForTenantId = tenantId;
-        }
-        finally
-        {
-            _settingsGate.Release();
-        }
-    }
-
-    private string GetSettingValue(IEnumerable<Setting> settings, string key)
-    {
-        return settings.FirstOrDefault(s => s.Key == key)?.Value ?? string.Empty;
     }
 
     /// <summary>
@@ -136,25 +66,22 @@ public partial class PdfService : IPdfService
     /// Generates a PDF invoice from the given Invoice entity
     /// </summary>
     /// <param name="invoice">The invoice entity to generate PDF for</param>
+    /// <param name="company">The tenant's company/sender block printed on the invoice</param>
     /// <param name="outputPath">Optional path to save the PDF file. If null, returns the PDF as a byte array</param>
     /// <returns>Byte array containing the PDF if outputPath is null, otherwise returns null after saving to file</returns>
-    public byte[]? GenerateInvoice(Invoice invoice, string? outputPath = null)
+    public byte[]? GenerateInvoice(Invoice invoice, CompanySenderInfo company, string? outputPath = null)
     {
         ArgumentNullException.ThrowIfNull(invoice);
+        ArgumentNullException.ThrowIfNull(company);
 
         try
         {
-            // IPdfService.GenerateInvoice is a synchronous contract we do not own; bridge to the async
-            // loader at this single boundary. There is no synchronization context in ASP.NET Core, so this
-            // does not deadlock, and it removes the previous sync-over-async call made while holding a lock.
-            EnsureCompanySettingsLoadedAsync(invoice.TenantId).GetAwaiter().GetResult();
-
             if (GlobalFontSettings.FontResolver == null)
             {
                 GlobalFontSettings.FontResolver = new StandardFontResolver();
             }
 
-            var document = CreateInvoiceDocument(invoice);
+            var document = CreateInvoiceDocument(invoice, company);
 
             var pdfRenderer = new PdfDocumentRenderer
             {
@@ -190,7 +117,7 @@ public partial class PdfService : IPdfService
         }
     }
 
-    private Document CreateInvoiceDocument(Invoice invoice)
+    private Document CreateInvoiceDocument(Invoice invoice, CompanySenderInfo company)
     {
         // Sicherstellen, dass die richtige Kodierung für deutsche Zeichen verwendet wird
         Document document = new Document();
@@ -230,7 +157,7 @@ public partial class PdfService : IPdfService
         section.PageSetup.BottomMargin = Unit.FromCentimeter(2);
 
         // Header mit Logo und Firmeninfos
-        CreateHeader(section, invoice);
+        CreateHeader(section, invoice, company);
 
         // Rechnungsadresse und ggf. Lieferadresse
         CreateAddresses(section, invoice);
@@ -242,7 +169,7 @@ public partial class PdfService : IPdfService
         CreateSummary(section, invoice);
 
         // Zahlungsinfos
-        CreatePaymentInfo(section, invoice);
+        CreatePaymentInfo(section, invoice, company);
 
         // Anmerkungen
         if (!string.IsNullOrEmpty(invoice.Notes))
@@ -251,12 +178,12 @@ public partial class PdfService : IPdfService
         }
 
         // Footer
-        CreateFooter(section);
+        CreateFooter(section, company);
 
         return document;
     }
 
-    private void CreateHeader(Section section, Invoice invoice)
+    private void CreateHeader(Section section, Invoice invoice, CompanySenderInfo company)
     {
         // Sicherstellen, dass section nicht null ist
         if (section == null)
@@ -283,22 +210,26 @@ public partial class PdfService : IPdfService
         var cell = row.Cells[0];
         var paragraph = cell.AddParagraph();
 
-        if (!string.IsNullOrEmpty(_logoPath) && File.Exists(_logoPath))
+        if (!string.IsNullOrEmpty(company.LogoPath) && File.Exists(company.LogoPath))
         {
-            var logo = paragraph.AddImage(_logoPath);
+            var logo = paragraph.AddImage(company.LogoPath);
             logo.Height = Unit.FromCentimeter(2);
         }
         else
         {
-            paragraph.AddFormattedText(_companyName, TextFormat.Bold);
+            paragraph.AddFormattedText(company.Name, TextFormat.Bold);
         }
 
-        paragraph = cell.AddParagraph(_companyAddress);
-        paragraph = cell.AddParagraph(_companyZipCity);
-        paragraph = cell.AddParagraph(_companyCountry);
-        paragraph = cell.AddParagraph($"Tel: {_companyPhone}");
-        paragraph = cell.AddParagraph($"E-Mail: {_companyEmail}");
-        paragraph = cell.AddParagraph($"Web: {_companyWebsite}");
+        cell.AddParagraph(company.Street);
+        if (!string.IsNullOrWhiteSpace(company.Street2))
+        {
+            cell.AddParagraph(company.Street2);
+        }
+        cell.AddParagraph(company.ZipCity);
+        cell.AddParagraph(company.Country);
+        cell.AddParagraph($"Tel: {company.Phone}");
+        cell.AddParagraph($"E-Mail: {company.Email}");
+        cell.AddParagraph($"Web: {company.Website}");
 
         // Rechte Spalte: Rechnungsinformationen
         cell = row.Cells[1];
@@ -526,7 +457,7 @@ public partial class PdfService : IPdfService
         section.AddParagraph().Format.SpaceAfter = Unit.FromCentimeter(0.5);
     }
 
-    private void CreatePaymentInfo(Section section, Invoice invoice)
+    private void CreatePaymentInfo(Section section, Invoice invoice, CompanySenderInfo company)
     {
         var paragraph = section.AddParagraph("Zahlungsinformationen:");
         paragraph.Format.Font.Bold = true;
@@ -546,9 +477,9 @@ public partial class PdfService : IPdfService
         paragraph.Format.Font.Bold = true;
         paragraph.Format.SpaceBefore = Unit.FromCentimeter(0.3);
 
-        section.AddParagraph($"Bank: {_companyBankName}");
-        section.AddParagraph($"IBAN: {_companyIban}");
-        section.AddParagraph($"BIC: {_companyBic}");
+        section.AddParagraph($"Bank: {company.BankName}");
+        section.AddParagraph($"IBAN: {company.Iban}");
+        section.AddParagraph($"BIC: {company.Bic}");
     }
 
     private void CreateNotes(Section section, Invoice invoice)
@@ -560,7 +491,7 @@ public partial class PdfService : IPdfService
         section.AddParagraph(invoice.Notes);
     }
 
-    private void CreateFooter(Section section)
+    private void CreateFooter(Section section, CompanySenderInfo company)
     {
         if (section == null)
             throw new ArgumentNullException(nameof(section));
@@ -589,21 +520,21 @@ public partial class PdfService : IPdfService
 
         // Firmendaten
         var cell = row.Cells[0];
-        cell.AddParagraph(_companyName);
-        cell.AddParagraph($"USt-IdNr.: {_companyVatId}");
-        cell.AddParagraph($"Steuernummer: {_companyTaxId}");
+        cell.AddParagraph(company.Name);
+        cell.AddParagraph($"USt-IdNr.: {company.VatId}");
+        cell.AddParagraph($"Steuernummer: {company.TaxId}");
 
         // Bankdaten
         cell = row.Cells[1];
-        cell.AddParagraph(_companyBankName);
-        cell.AddParagraph($"IBAN: {_companyIban}");
-        cell.AddParagraph($"BIC: {_companyBic}");
+        cell.AddParagraph(company.BankName);
+        cell.AddParagraph($"IBAN: {company.Iban}");
+        cell.AddParagraph($"BIC: {company.Bic}");
 
         // Kontaktdaten
         cell = row.Cells[2];
-        cell.AddParagraph(_companyPhone);
-        cell.AddParagraph(_companyEmail);
-        cell.AddParagraph(_companyWebsite);
+        cell.AddParagraph(company.Phone);
+        cell.AddParagraph(company.Email);
+        cell.AddParagraph(company.Website);
 
         // Seitenzahl
         paragraph = section.AddParagraph("Seite ");

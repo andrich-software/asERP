@@ -1,6 +1,8 @@
 using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
+using asERP.Application.Extensions;
+using asERP.Domain.Dtos.Company;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.Persistence.DatabaseContext;
@@ -146,9 +148,22 @@ public class InvoiceRepository : GenericRepository<Invoice>, IInvoiceRepository
             // Persist the invoice
             var createdInvoice = await this.CreateAsync(invoice);
 
-            // Generate the PDF invoice
+            // Generate the PDF invoice. The company/sender block comes from the tenant that owns
+            // the invoice (no installation-wide company default exists anymore).
             string outputPath = $"Invoices/INV-{DateTime.UtcNow:yyyyMMdd}-{sales.Id}.pdf";
-            _pdfService.GenerateInvoice(invoice, outputPath);
+            var company = new CompanySenderInfo();
+            var tenantId = invoice.TenantId ?? sales.TenantId;
+            if (tenantId.HasValue)
+            {
+                var tenant = await Context.Set<Tenant>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.Id == tenantId.Value);
+                if (tenant != null)
+                {
+                    company = tenant.ToCompanySenderInfo();
+                }
+            }
+            _pdfService.GenerateInvoice(invoice, company, outputPath);
 
             _logger.LogInformation("Successfully created invoice for sales ID: {Id}", sales.Id);
             return invoice;

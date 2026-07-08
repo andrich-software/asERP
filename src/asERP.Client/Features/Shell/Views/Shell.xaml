@@ -596,6 +596,17 @@
                              VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
+              <Button x:Name="NavItemSuperadminCountries"
+                      Style="{StaticResource SidebarNavItemStyle}"
+                      Tag="SuperadminCountries"
+                      Click="OnNavItemClick">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <FontIcon Glyph="&#xE909;" FontSize="16" />
+                  <TextBlock x:Uid="Shell.NavItem.Countries"
+                             Style="{StaticResource BodyMedium}"
+                             VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
               <Button x:Name="NavItemGlobalSettings"
                       Style="{StaticResource SidebarNavItemStyle}"
                       Tag="GlobalSettings"

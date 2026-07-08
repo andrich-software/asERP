@@ -124,6 +124,9 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
             ExportStock = command.ExportStock,
             PushSalesCancellations = command.PushSalesCancellations,
             ImportStock = command.ImportStock,
+            // Every channel owns a 1:1 sync-state row (import cursors, completion flags). Created here so it
+            // is inserted with the channel; the sync machinery mutates it thereafter (never the channel row).
+            SyncState = new Domain.Entities.SalesChannelSyncState(),
         };
     }
 }

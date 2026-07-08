@@ -1,5 +1,7 @@
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
+using asERP.Application.Extensions;
+using asERP.Domain.Dtos.Company;
 using asERP.Domain.Dtos.Shipping;
 using asERP.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -42,10 +44,15 @@ public class ShippingDocumentDataService : IShippingDocumentDataService
         var packageIndex = ordered.FindIndex(s => s.Id == shippingId) + 1;
 
         var showPrices = false;
+        var company = new CompanySenderInfo();
         if (shipping.TenantId.HasValue)
         {
             var tenant = await _tenantRepository.GetByIdAsync(shipping.TenantId.Value, asNoTracking: true);
-            showPrices = tenant?.PackingSlipShowPrices ?? false;
+            if (tenant != null)
+            {
+                showPrices = tenant.PackingSlipShowPrices;
+                company = tenant.ToCompanySenderInfo();
+            }
         }
 
         var sales = shipping.Sales;
@@ -53,6 +60,7 @@ public class ShippingDocumentDataService : IShippingDocumentDataService
         return new PackingSlipData
         {
             TenantId = shipping.TenantId,
+            Company = company,
             SalesNumber = sales.SalesId,
             SalesDate = sales.DateSalesed,
             TrackingNumber = shipping.TrackingNumber,
@@ -127,6 +135,16 @@ public class ShippingDocumentDataService : IShippingDocumentDataService
             .GroupBy(s => s.ProductId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
+        var company = new CompanySenderInfo();
+        if (tenantId.HasValue)
+        {
+            var tenant = await _tenantRepository.GetByIdAsync(tenantId.Value, asNoTracking: true);
+            if (tenant != null)
+            {
+                company = tenant.ToCompanySenderInfo();
+            }
+        }
+
         var rows = new List<PickListItem>();
         foreach (var (item, salesNumber) in itemsWithSales)
         {
@@ -166,6 +184,7 @@ public class ShippingDocumentDataService : IShippingDocumentDataService
         return new PickListData
         {
             TenantId = tenantId,
+            Company = company,
             SalesNumbers = salesNumbers,
             Items = rows
                 .OrderBy(r => r.StorageLocation == null)

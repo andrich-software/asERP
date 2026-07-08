@@ -229,12 +229,6 @@ public sealed partial class SalesDetailPage : Page
 
     private void ApplySelectedTab(TabBar tabBar)
     {
-        for (var i = 0; i < TabPanelNames.Length; i++)
-        {
-            if (tabBar.FindName(TabPanelNames[i]) is UIElement panel)
-            {
-                panel.Visibility = i == _selectedTabIndex ? Visibility.Visible : Visibility.Collapsed;
-            }
-        }
+        TabPanelSwitcher.Apply(tabBar, TabPanelNames, _selectedTabIndex);
     }
 }

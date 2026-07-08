@@ -42,6 +42,15 @@ public class SuperadminTenantEditModel : AsyncInitializableModel
 
     // Payment Information
     private string _iban = string.Empty;
+    private string _bankName = string.Empty;
+    private string _bic = string.Empty;
+
+    // Tax Information
+    private string _taxId = string.Empty;
+    private string _vatId = string.Empty;
+
+    // Branding
+    private string _logoPath = string.Empty;
 
     // Users
     private ObservableCollection<SuperadminTenantUserDto> _users = new();
@@ -169,6 +178,44 @@ public class SuperadminTenantEditModel : AsyncInitializableModel
     {
         get => _iban;
         set => SetProperty(ref _iban, value);
+    }
+
+    public string BankName
+    {
+        get => _bankName;
+        set => SetProperty(ref _bankName, value);
+    }
+
+    public string Bic
+    {
+        get => _bic;
+        set => SetProperty(ref _bic, value);
+    }
+
+    #endregion
+
+    #region Tax Information
+
+    public string TaxId
+    {
+        get => _taxId;
+        set => SetProperty(ref _taxId, value);
+    }
+
+    public string VatId
+    {
+        get => _vatId;
+        set => SetProperty(ref _vatId, value);
+    }
+
+    #endregion
+
+    #region Branding
+
+    public string LogoPath
+    {
+        get => _logoPath;
+        set => SetProperty(ref _logoPath, value);
     }
 
     #endregion
@@ -321,6 +368,15 @@ public class SuperadminTenantEditModel : AsyncInitializableModel
 
             // Payment Information
             Iban = tenant.Iban ?? string.Empty;
+            BankName = tenant.BankName ?? string.Empty;
+            Bic = tenant.Bic ?? string.Empty;
+
+            // Tax Information
+            TaxId = tenant.TaxId ?? string.Empty;
+            VatId = tenant.VatId ?? string.Empty;
+
+            // Branding
+            LogoPath = tenant.LogoPath ?? string.Empty;
 
             // Users
             Users = new ObservableCollection<SuperadminTenantUserDto>(tenant.Users);
@@ -353,7 +409,12 @@ public class SuperadminTenantEditModel : AsyncInitializableModel
                 City = string.IsNullOrWhiteSpace(City) ? null : City,
                 State = string.IsNullOrWhiteSpace(State) ? null : State,
                 Country = string.IsNullOrWhiteSpace(Country) ? null : Country,
-                Iban = string.IsNullOrWhiteSpace(Iban) ? null : Iban
+                Iban = string.IsNullOrWhiteSpace(Iban) ? null : Iban,
+                BankName = string.IsNullOrWhiteSpace(BankName) ? null : BankName,
+                Bic = string.IsNullOrWhiteSpace(Bic) ? null : Bic,
+                TaxId = string.IsNullOrWhiteSpace(TaxId) ? null : TaxId,
+                VatId = string.IsNullOrWhiteSpace(VatId) ? null : VatId,
+                LogoPath = string.IsNullOrWhiteSpace(LogoPath) ? null : LogoPath
             };
 
             await _tenantService.UpdateTenantAsync(_tenantId, input, ct);

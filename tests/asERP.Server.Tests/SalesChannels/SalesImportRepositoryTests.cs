@@ -300,6 +300,7 @@ public class SalesImportRepositoryTests
         Url = "https://shop.example/wp-json/wc/v3",
         Username = "key",
         Password = "secret",
+        SyncState = new SalesChannelSyncState(),
     };
 
     private sealed class TestTenantContext : ITenantContext

@@ -49,6 +49,23 @@ public class Tenant : BaseEntityWithoutTenant, IBaseEntityWithoutTenant
     [MaxLength(34)]
     public string? Iban { get; set; }
 
+    [MaxLength(100)]
+    public string? BankName { get; set; }
+
+    [MaxLength(11)]
+    public string? Bic { get; set; }
+
+    // Tax Information
+    [MaxLength(50)]
+    public string? TaxId { get; set; }
+
+    [MaxLength(50)]
+    public string? VatId { get; set; }
+
+    // Branding — filesystem path to the company logo used on generated documents
+    [MaxLength(500)]
+    public string? LogoPath { get; set; }
+
     // Shipping documents
     public bool PackingSlipShowPrices { get; set; }
 

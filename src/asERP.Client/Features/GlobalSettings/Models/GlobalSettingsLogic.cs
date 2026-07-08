@@ -21,7 +21,7 @@ public static class GlobalSettingsLogic
     };
 
     /// <summary>Fixed group order on the "General" tab; unknown prefixes follow alphabetically.</summary>
-    private static readonly string[] GeneralGroupOrder = ["Company", "System", "Invoice", "Sales", "Notification"];
+    private static readonly string[] GeneralGroupOrder = ["System", "Invoice", "Sales", "Notification"];
 
     public static string GroupPrefix(string key)
     {

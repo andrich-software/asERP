@@ -18,10 +18,15 @@ public static class GlobalSettingsRules
     };
 
     /// <summary>
-    /// Prefixes managed by their own dedicated bundle endpoints (system OAuth apps) — hidden
-    /// here so the same value is not editable through two doors.
+    /// Prefixes never exposed or editable through the generic endpoint:
+    /// <list type="bullet">
+    /// <item><c>OAuth.</c> — managed by their own dedicated bundle endpoints (system OAuth apps),
+    /// hidden here so the same value is not editable through two doors.</item>
+    /// <item><c>Company.</c> — company/sender data moved to the tenant level; legacy rows in older
+    /// databases are hidden here so they never reappear in the Superadmin UI.</item>
+    /// </list>
     /// </summary>
-    private static readonly string[] HiddenPrefixes = ["OAuth."];
+    private static readonly string[] HiddenPrefixes = ["OAuth.", "Company."];
 
     /// <summary>
     /// Plaintext-credential keys that predate the per-row <c>IsEncrypted</c> flag. They are

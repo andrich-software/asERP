@@ -296,7 +296,7 @@ public sealed class Shopware6Connector : ConnectorBase
             return SyncResult.Failed(ex.Message);
         }
 
-        if (salesChannel.InitialSalesImportCompleted)
+        if (salesChannel.SyncState.InitialSalesImportCompleted)
         {
             return await ImportSalesByUpdatedAsync(context, baseUrl, context.IncrementalSince);
         }
@@ -322,7 +322,7 @@ public sealed class Shopware6Connector : ConnectorBase
         var salesChannel = context.SalesChannel;
         var processed = 0;
         var failed = 0;
-        var cursorAdvance = salesChannel.SalesImportBackfillCursor;
+        var cursorAdvance = salesChannel.SyncState.SalesImportBackfillCursor;
         var frozen = false;
         var reachedEnd = false;
         var fetchFailed = false;
@@ -393,9 +393,9 @@ public sealed class Shopware6Connector : ConnectorBase
             }
 
             // Persist progress on the tracked channel entity (the orchestrator saves it after the run).
-            if (cursorAdvance is { } adv && adv != salesChannel.SalesImportBackfillCursor)
+            if (cursorAdvance is { } adv && adv != salesChannel.SyncState.SalesImportBackfillCursor)
             {
-                salesChannel.SalesImportBackfillCursor = adv;
+                salesChannel.SyncState.SalesImportBackfillCursor = adv;
             }
 
             if (context.ReportProgressAsync is not null)
@@ -424,7 +424,7 @@ public sealed class Shopware6Connector : ConnectorBase
 
         if (reachedEnd && !fetchFailed && !frozen)
         {
-            salesChannel.InitialSalesImportCompleted = true;
+            salesChannel.SyncState.InitialSalesImportCompleted = true;
         }
 
         if (fetchFailed && failed == 0)

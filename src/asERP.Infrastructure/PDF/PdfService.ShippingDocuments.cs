@@ -21,15 +21,13 @@ public partial class PdfService
     {
         ArgumentNullException.ThrowIfNull(data);
 
-        EnsureCompanySettingsLoadedAsync(data.TenantId).GetAwaiter().GetResult();
-
         var document = CreateShippingDocumentShell();
         var section = document.LastSection;
 
         CreatePackingSlipHeader(section, data);
         CreateDeliveryAddress(section, data);
         CreatePackingSlipItemsTable(section, data);
-        CreateFooter(section);
+        CreateFooter(section, data.Company);
 
         return RenderDocument(document);
     }
@@ -38,14 +36,12 @@ public partial class PdfService
     {
         ArgumentNullException.ThrowIfNull(data);
 
-        EnsureCompanySettingsLoadedAsync(data.TenantId).GetAwaiter().GetResult();
-
         var document = CreateShippingDocumentShell();
         var section = document.LastSection;
 
         CreatePickListHeader(section, data);
         CreatePickListItemsTable(section, data);
-        CreateFooter(section);
+        CreateFooter(section, data.Company);
 
         return RenderDocument(document);
     }
@@ -100,25 +96,30 @@ public partial class PdfService
         var row = table.AddRow();
 
         // Left column: logo and company info (same as invoice)
+        var company = data.Company;
         var cell = row.Cells[0];
         var paragraph = cell.AddParagraph();
 
-        if (!string.IsNullOrEmpty(_logoPath) && File.Exists(_logoPath))
+        if (!string.IsNullOrEmpty(company.LogoPath) && File.Exists(company.LogoPath))
         {
-            var logo = paragraph.AddImage(_logoPath);
+            var logo = paragraph.AddImage(company.LogoPath);
             logo.Height = Unit.FromCentimeter(2);
         }
         else
         {
-            paragraph.AddFormattedText(_companyName, TextFormat.Bold);
+            paragraph.AddFormattedText(company.Name, TextFormat.Bold);
         }
 
-        cell.AddParagraph(_companyAddress);
-        cell.AddParagraph(_companyZipCity);
-        cell.AddParagraph(_companyCountry);
-        cell.AddParagraph($"Tel: {_companyPhone}");
-        cell.AddParagraph($"E-Mail: {_companyEmail}");
-        cell.AddParagraph($"Web: {_companyWebsite}");
+        cell.AddParagraph(company.Street);
+        if (!string.IsNullOrWhiteSpace(company.Street2))
+        {
+            cell.AddParagraph(company.Street2);
+        }
+        cell.AddParagraph(company.ZipCity);
+        cell.AddParagraph(company.Country);
+        cell.AddParagraph($"Tel: {company.Phone}");
+        cell.AddParagraph($"E-Mail: {company.Email}");
+        cell.AddParagraph($"Web: {company.Website}");
 
         // Right column: shipment info
         cell = row.Cells[1];
@@ -243,17 +244,18 @@ public partial class PdfService
 
         var row = table.AddRow();
 
+        var company = data.Company;
         var cell = row.Cells[0];
         var paragraph = cell.AddParagraph();
 
-        if (!string.IsNullOrEmpty(_logoPath) && File.Exists(_logoPath))
+        if (!string.IsNullOrEmpty(company.LogoPath) && File.Exists(company.LogoPath))
         {
-            var logo = paragraph.AddImage(_logoPath);
+            var logo = paragraph.AddImage(company.LogoPath);
             logo.Height = Unit.FromCentimeter(2);
         }
         else
         {
-            paragraph.AddFormattedText(_companyName, TextFormat.Bold);
+            paragraph.AddFormattedText(company.Name, TextFormat.Bold);
         }
 
         cell = row.Cells[1];
