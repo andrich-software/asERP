@@ -49,4 +49,19 @@ public class SuperadminTenantInputDto : ITenantInputModel
     [MaxLength(34)]
     [RegularExpression(@"^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$", ErrorMessage = "Invalid IBAN format")]
     public string? Iban { get; set; }
+
+    [MaxLength(100)]
+    public string? BankName { get; set; }
+
+    [MaxLength(11)]
+    public string? Bic { get; set; }
+
+    [MaxLength(50)]
+    public string? TaxId { get; set; }
+
+    [MaxLength(50)]
+    public string? VatId { get; set; }
+
+    [MaxLength(500)]
+    public string? LogoPath { get; set; }
 }

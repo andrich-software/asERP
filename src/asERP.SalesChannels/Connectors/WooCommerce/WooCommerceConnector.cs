@@ -282,7 +282,7 @@ public sealed class WooCommerceConnector : ConnectorBase
 
         // Caught up: pull only orders changed since the last successful run (modified_after), which also
         // catches edits/refunds to existing orders.
-        if (context.SalesChannel.InitialSalesImportCompleted)
+        if (context.SalesChannel.SyncState.InitialSalesImportCompleted)
         {
             return await ImportSalesByModifiedAsync(context, rest, context.IncrementalSince, progress);
         }
@@ -315,7 +315,7 @@ public sealed class WooCommerceConnector : ConnectorBase
     /// starting over. The boundary second is re-fetched (<c>after</c> is exclusive, we step back 1s) but upserts
     /// are idempotent. The cursor never advances past an order that failed to import, so failures are retried
     /// rather than skipped. When a short page proves we walked off the end with no error, we flip
-    /// <see cref="SalesChannel.InitialSalesImportCompleted"/> and the channel switches to incremental mode.
+    /// <see cref="SalesChannelSyncState.InitialSalesImportCompleted"/> and the channel switches to incremental mode.
     /// </summary>
     private async Task<SyncResult> ImportSalesBackfillAsync(SalesChannelContext context, RestAPI rest, ProgressThrottle progress)
     {
@@ -330,7 +330,7 @@ public sealed class WooCommerceConnector : ConnectorBase
             ["dates_are_gmt"] = "true",
         };
 
-        var startCursor = context.SalesChannel.SalesImportBackfillCursor;
+        var startCursor = context.SalesChannel.SyncState.SalesImportBackfillCursor;
         if (startCursor is { } c)
         {
             // 'after' is exclusive; step back a second so orders sharing the cursor's timestamp are not skipped.
@@ -419,9 +419,9 @@ public sealed class WooCommerceConnector : ConnectorBase
 
                 // Persist progress after every page (in-memory on the tracked entity; the orchestrator/CloseRun
                 // saves it) so a shutdown-canceled or failed run still resumes from here.
-                if (cursorAdvance is { } adv && adv != context.SalesChannel.SalesImportBackfillCursor)
+                if (cursorAdvance is { } adv && adv != context.SalesChannel.SyncState.SalesImportBackfillCursor)
                 {
-                    context.SalesChannel.SalesImportBackfillCursor = adv;
+                    context.SalesChannel.SyncState.SalesImportBackfillCursor = adv;
                 }
 
                 // Flush running counts + the advanced cursor to the DB mid-walk (throttled) so the dashboard
@@ -458,7 +458,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         // order left behind. Otherwise stay in backfill mode so the next run keeps filling from the cursor.
         if (reachedEnd && !fetchFailed && !frozen)
         {
-            context.SalesChannel.InitialSalesImportCompleted = true;
+            context.SalesChannel.SyncState.InitialSalesImportCompleted = true;
         }
 
         if (fetchFailed && failed == 0)
@@ -809,7 +809,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         // Resume from the page after the last one fully imported (id-ordered for stable pagination across
         // resumes, mirroring the order backfill). 0 → start at page 1. This keeps a time-boxed run from
         // re-walking everything from the top on every tick.
-        var startPage = context.SalesChannel.CustomerImportPageCursor + 1;
+        var startPage = context.SalesChannel.SyncState.CustomerImportPageCursor + 1;
         var reachedEnd = false;
         var frozen = false;
 
@@ -908,7 +908,7 @@ public sealed class WooCommerceConnector : ConnectorBase
                 // orchestrator saves it), so a failed customer is retried next run rather than skipped.
                 if (!frozen)
                 {
-                    context.SalesChannel.CustomerImportPageCursor = page;
+                    context.SalesChannel.SyncState.CustomerImportPageCursor = page;
                 }
 
                 // No new rows (endpoint repeated a page) or a short page → we have reached the end.
@@ -935,8 +935,8 @@ public sealed class WooCommerceConnector : ConnectorBase
         // Reset the cursor so clearing the flag later forces a clean re-import from page 1.
         if (reachedEnd && !frozen)
         {
-            context.SalesChannel.InitialCustomerImportCompleted = true;
-            context.SalesChannel.CustomerImportPageCursor = 0;
+            context.SalesChannel.SyncState.InitialCustomerImportCompleted = true;
+            context.SalesChannel.SyncState.CustomerImportPageCursor = 0;
         }
 
         return new SyncResult(processed, failed);

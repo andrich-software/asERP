@@ -36,6 +36,7 @@ public static class ApiEndpoints
     public static class Countries
     {
         public const string Base = $"{ApiBase}/countries";
+        public static string ById(Guid id) => $"{Base}/{id}";
     }
 
     // Global search

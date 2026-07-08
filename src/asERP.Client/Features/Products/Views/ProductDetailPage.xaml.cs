@@ -1,3 +1,4 @@
+using asERP.Client.Core.Helpers;
 using asERP.Client.Features.Products.Models;
 using asERP.Domain.Dtos.Product;
 using Microsoft.UI.Xaml.Controls;
@@ -64,13 +65,7 @@ public sealed partial class ProductDetailPage : Page
 
     private void ApplySelectedTab(TabBar tabBar)
     {
-        for (var i = 0; i < TabPanelNames.Length; i++)
-        {
-            if (tabBar.FindName(TabPanelNames[i]) is UIElement panel)
-            {
-                panel.Visibility = i == _selectedTabIndex ? Visibility.Visible : Visibility.Collapsed;
-            }
-        }
+        TabPanelSwitcher.Apply(tabBar, TabPanelNames, _selectedTabIndex);
 
         if (_selectedTabIndex == ImagesTabIndex)
         {

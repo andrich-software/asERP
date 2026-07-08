@@ -81,6 +81,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<ProductSalesChannel>().ToTable("product_saleschannel");
         modelBuilder.Entity<ProductStock>().ToTable("product_stock");
         modelBuilder.Entity<SalesChannel>().ToTable("saleschannel");
+        modelBuilder.Entity<SalesChannelSyncState>().ToTable("saleschannel_sync_state");
         modelBuilder.Entity<ReturnShipment>().ToTable("return_shipment");
         modelBuilder.Entity<ReturnShipmentItem>().ToTable("return_shipment_item");
         modelBuilder.Entity<ReturnShipmentItemSerialNumber>().ToTable("return_shipment_item_serialnumber");
@@ -114,6 +115,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new WarehouseConfiguration());
         modelBuilder.ApplyConfiguration(new ManufacturerConfiguration());
         modelBuilder.ApplyConfiguration(new SalesChannelConfiguration());
+        modelBuilder.ApplyConfiguration(new SalesChannelSyncStateConfiguration());
 
         // Wire up at-rest encryption for SalesChannel credentials. Converter goes through
         // the injected ICredentialEncryptor (NoOp at design-time / in tests, DataProtection
@@ -234,6 +236,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ProductSalesChannel> ProductSalesChannel { get; set; } = null!;
     public DbSet<ProductStock> ProductStock { get; set; } = null!;
     public DbSet<SalesChannel> SalesChannel { get; set; } = null!;
+    public DbSet<SalesChannelSyncState> SalesChannelSyncState { get; set; } = null!;
     public DbSet<Setting> Setting { get; set; } = null!;
     public DbSet<Shipping> Shipping { get; set; } = null!;
     public DbSet<ShippingProvider> ShippingProvider { get; set; } = null!;

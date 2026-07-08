@@ -61,37 +61,9 @@ public class SalesChannel : BaseEntity, IBaseEntity, IConcurrencyStamped
     /// POS) book movements against the mirror and are forwarded to the master as stock updates.
     /// </summary>
     public bool ImportStock { get; set; }
-    public bool InitialProductImportCompleted { get; set; }
-    public bool InitialProductExportCompleted { get; set; }
-    public bool InitialCustomerImportCompleted { get; set; }
-
-    /// <summary>
-    /// True once the resumable, oldest-first order backfill has walked the whole remote history. Until then,
-    /// scheduled sales imports run in backfill mode; afterwards they switch to the lighter incremental
-    /// (modified_after) mode. Clear this to force a fresh full backfill.
-    /// </summary>
-    public bool InitialSalesImportCompleted { get; set; }
-
-    /// <summary>
-    /// Resume point for the order backfill: the UTC <c>date_created</c> of the furthest order imported so far.
-    /// The next backfill run continues from here (WooCommerce <c>after=</c>) instead of restarting, so an
-    /// interrupted sweep never loses ground. Null means "start from the beginning of history".
-    /// </summary>
-    public DateTime? SalesImportBackfillCursor { get; set; }
-
-    /// <summary>
-    /// Resume point for the customer import: the last fully imported page (1-based, id-ordered). A time-boxed
-    /// run persists its progress here so the next run continues from the following page instead of re-walking
-    /// from the start. Reset to 0 once the whole customer base is in (and <see cref="InitialCustomerImportCompleted"/>
-    /// flips). 0 means "start from the first page".
-    /// </summary>
-    public int CustomerImportPageCursor { get; set; }
 
     /// <summary>Polling interval used by the orchestrator. Defaults to 60s.</summary>
     public int SyncIntervalSeconds { get; set; } = 60;
-
-    /// <summary>UTC time of the last sync attempt — orchestrator schedules the next dispatch from this.</summary>
-    public DateTime? LastSyncStartedAt { get; set; }
 
     /// <summary>Kill-switch independent of the per-direction Import/Export flags.</summary>
     public bool IsEnabled { get; set; } = true;
@@ -125,4 +97,13 @@ public class SalesChannel : BaseEntity, IBaseEntity, IConcurrencyStamped
     public string? WebhookSecret { get; set; }
 
     public ICollection<Warehouse> Warehouses { get; set; } = null!;
+
+    /// <summary>
+    /// 1:1 synchronization bookkeeping (import cursors, initial-import flags, last poll time). Held on a
+    /// SEPARATE, non-concurrency-stamped entity so the sync machinery's concurrent per-operation updates
+    /// (order backfill cursor vs. customer import cursor, etc.) don't collide on this channel's optimistic-
+    /// concurrency token. The sync paths always load it via <c>Include(s =&gt; s.SyncState)</c>; new channels
+    /// must initialize it (a fresh <see cref="SalesChannelSyncState"/>).
+    /// </summary>
+    public SalesChannelSyncState SyncState { get; set; } = null!;
 }

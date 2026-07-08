@@ -68,6 +68,11 @@ public class SuperadminUpdateHandler : IRequestHandler<SuperadminUpdateCommand, 
             tenantToUpdate.State = request.State;
             tenantToUpdate.Country = request.Country;
             tenantToUpdate.Iban = request.Iban;
+            tenantToUpdate.BankName = request.BankName;
+            tenantToUpdate.Bic = request.Bic;
+            tenantToUpdate.TaxId = request.TaxId;
+            tenantToUpdate.VatId = request.VatId;
+            tenantToUpdate.LogoPath = request.LogoPath;
 
             await _tenantRepository.UpdateAsync(tenantToUpdate);
 

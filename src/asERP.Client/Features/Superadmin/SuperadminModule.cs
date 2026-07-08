@@ -19,10 +19,13 @@ public static class SuperadminModule
         // Feature-specific services
         // SuperadminTenantService: Transient - stateless, creates new instance per request
         services.AddTransient<ISuperadminTenantService, SuperadminTenantService>();
+        services.AddTransient<ISuperadminCountryService, SuperadminCountryService>();
 
         // Page models
         services.AddTransient<SuperadminTenantListModel>();
         services.AddTransient<SuperadminTenantEditModel>();
+        services.AddTransient<SuperadminCountryListModel>();
+        services.AddTransient<SuperadminCountryEditModel>();
 
         return services;
     }
@@ -34,7 +37,9 @@ public static class SuperadminModule
     {
         views.Register(
             new ViewMap<SuperadminTenantListPage, SuperadminTenantListModel>(),
-            new ViewMap<SuperadminTenantEditPage, SuperadminTenantEditModel>(Data: new DataMap<SuperadminTenantEditData>())
+            new ViewMap<SuperadminTenantEditPage, SuperadminTenantEditModel>(Data: new DataMap<SuperadminTenantEditData>()),
+            new ViewMap<SuperadminCountryListPage, SuperadminCountryListModel>(),
+            new ViewMap<SuperadminCountryEditPage, SuperadminCountryEditModel>(Data: new DataMap<SuperadminCountryEditData>())
         );
     }
 
@@ -45,5 +50,7 @@ public static class SuperadminModule
     {
         yield return new RouteMap(Routes.SuperadminTenantList, View: views.FindByViewModel<SuperadminTenantListModel>());
         yield return new RouteMap(Routes.SuperadminTenantEdit, View: views.FindByViewModel<SuperadminTenantEditModel>());
+        yield return new RouteMap(Routes.SuperadminCountryList, View: views.FindByViewModel<SuperadminCountryListModel>());
+        yield return new RouteMap(Routes.SuperadminCountryEdit, View: views.FindByViewModel<SuperadminCountryEditModel>());
     }
 }

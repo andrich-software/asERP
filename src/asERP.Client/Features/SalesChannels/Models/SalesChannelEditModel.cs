@@ -127,26 +127,34 @@ public class SalesChannelEditModel : AsyncInitializableModel
 
     private async Task LoadWarehousesAsync(CancellationToken ct)
     {
-        IsWarehousesLoading = true;
+        RunOnUi(() => IsWarehousesLoading = true);
         try
         {
             var parameters = new Core.Models.QueryParameters { PageSize = 1000 };
             var response = await _warehouseService.GetWarehousesAsync(parameters, ct);
 
-            Warehouses.Clear();
-            foreach (var warehouse in response.Data)
+            // This model's async continuations run off the UI thread (the navigation pipeline
+            // resolves it on a background thread). The ObservableCollection mutation and the
+            // change notifications below drive classic {Binding} targets (the warehouse table,
+            // spinner and empty-state visibility) — those only refresh from UI-thread
+            // notifications, so marshal them explicitly or they are silently dropped.
+            RunOnUi(() =>
             {
-                Warehouses.Add(new SelectableWarehouse
+                Warehouses.Clear();
+                foreach (var warehouse in response.Data)
                 {
-                    Id = warehouse.Id,
-                    Name = warehouse.Name,
-                    // Reflect the channel's stored selection (edit mode); no-op for new channels.
-                    IsSelected = _selectedWarehouseIds.Contains(warehouse.Id)
-                });
-            }
+                    Warehouses.Add(new SelectableWarehouse
+                    {
+                        Id = warehouse.Id,
+                        Name = warehouse.Name,
+                        // Reflect the channel's stored selection (edit mode); no-op for new channels.
+                        IsSelected = _selectedWarehouseIds.Contains(warehouse.Id)
+                    });
+                }
 
-            OnPropertyChanged(nameof(HasWarehouses));
-            OnPropertyChanged(nameof(ShowNoWarehouses));
+                OnPropertyChanged(nameof(HasWarehouses));
+                OnPropertyChanged(nameof(ShowNoWarehouses));
+            });
         }
         catch (OperationCanceledException)
         {
@@ -159,7 +167,26 @@ public class SalesChannelEditModel : AsyncInitializableModel
         }
         finally
         {
-            IsWarehousesLoading = false;
+            RunOnUi(() => IsWarehousesLoading = false);
+        }
+    }
+
+    /// <summary>
+    /// Runs a UI-affecting action on the UI thread. This model's async continuations can run on a
+    /// background thread, so classic {Binding} updates (and ObservableCollection mutations bound to
+    /// the UI) must be marshalled onto the UI dispatcher; otherwise they are dropped on Desktop/Skia.
+    /// Falls back to inline execution when already on the UI thread or when no dispatcher is available.
+    /// </summary>
+    private static void RunOnUi(Action action)
+    {
+        var dispatcher = App.UiDispatcher;
+        if (dispatcher is null || dispatcher.HasThreadAccess)
+        {
+            action();
+        }
+        else
+        {
+            dispatcher.TryEnqueue(() => action());
         }
     }
 

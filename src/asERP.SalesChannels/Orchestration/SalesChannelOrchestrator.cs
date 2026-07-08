@@ -314,12 +314,13 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         // (now - LastSyncStartedAt).TotalSeconds across providers).
         var enabledChannels = await context.SalesChannel
             .IgnoreQueryFilters()
+            .Include(s => s.SyncState)
             .Where(s => s.IsEnabled)
             .ToListAsync(cancellationToken);
 
         var dueChannels = enabledChannels
-            .Where(s => s.LastSyncStartedAt is null
-                        || (now - s.LastSyncStartedAt.Value).TotalSeconds >= s.SyncIntervalSeconds)
+            .Where(s => s.SyncState.LastSyncStartedAt is null
+                        || (now - s.SyncState.LastSyncStartedAt.Value).TotalSeconds >= s.SyncIntervalSeconds)
             .ToList();
 
         if (dueChannels.Count == 0)
@@ -335,7 +336,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             // run until their initial import completes once (the connectors flip the flags; clearing a
             // flag re-enables the scheduled run). Sales runs every interval (incremental or backfill chunk).
             var dueOperations = new List<ChannelSyncOperation>();
-            if (channel.ImportProducts && !channel.InitialProductImportCompleted)
+            if (channel.ImportProducts && !channel.SyncState.InitialProductImportCompleted)
             {
                 dueOperations.Add(ChannelSyncOperation.ImportProducts);
             }
@@ -343,7 +344,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             {
                 dueOperations.Add(ChannelSyncOperation.ImportSaless);
             }
-            if (channel.ImportCustomers && !channel.InitialCustomerImportCompleted)
+            if (channel.ImportCustomers && !channel.SyncState.InitialCustomerImportCompleted)
             {
                 dueOperations.Add(ChannelSyncOperation.ImportCustomers);
             }
@@ -365,7 +366,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
 
             // Stamp the real start time now (this also gates re-triggering before the interval elapses) and
             // persist it before detaching the work.
-            channel.LastSyncStartedAt = now;
+            channel.SyncState.LastSyncStartedAt = now;
             await context.SaveChangesAsync(cancellationToken);
 
             // Launch each due operation on its own DI scope and do NOT await — the tick loop has to stay
@@ -439,6 +440,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
 
             var channel = await context.SalesChannel
                 .IgnoreQueryFilters()
+                .Include(s => s.SyncState)
                 .FirstOrDefaultAsync(s => s.Id == run.SalesChannelId, cancellationToken);
 
             if (channel is null || !channel.IsEnabled)
@@ -487,6 +489,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
 
             var channel = await context.SalesChannel
                 .IgnoreQueryFilters()
+                .Include(s => s.SyncState)
                 .FirstOrDefaultAsync(s => s.Id == channelId, cancellationToken);
 
             if (channel is null)
@@ -502,7 +505,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             if (operation == ChannelSyncOperation.ImportProducts
                 && run.Status is ChannelSyncRunStatus.Success or ChannelSyncRunStatus.PartialFailure)
             {
-                channel.InitialProductImportCompleted = true;
+                channel.SyncState.InitialProductImportCompleted = true;
             }
 
             // Persist cursor/flag progress — even after a partial or shutdown-canceled run — so the next

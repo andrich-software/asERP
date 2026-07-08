@@ -1,78 +1,33 @@
-﻿using asERP.Application.Contracts.Persistence;
+using asERP.Domain.Dtos.Company;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.Infrastructure.PDF;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace asERP.Persistence.Tests;
 
 public class PdfServiceTests
 {
-    private sealed class FakeSettingRepository : ISettingRepository
+    private static CompanySenderInfo SampleCompany() => new()
     {
-        private readonly List<Setting> _settings;
-
-        public FakeSettingRepository(IEnumerable<Setting> settings)
-        {
-            _settings = settings.ToList();
-        }
-
-        public IQueryable<Setting> Entities => _settings.AsQueryable();
-
-        public IQueryable<TCt> GetContext<TCt>() where TCt : class => throw new NotSupportedException();
-
-        public void Attach(Setting entity) => throw new NotSupportedException();
-
-        public void AttachRange(IEnumerable<Setting> entities) => throw new NotSupportedException();
-
-        public Task<Guid> CreateAsync(Setting entity) => throw new NotSupportedException();
-
-        public Task<ICollection<Setting>> GetAllAsync() => Task.FromResult<ICollection<Setting>>(_settings);
-
-        public Task<Setting?> GetByIdAsync(Guid id, bool asNoTracking = false) =>
-            Task.FromResult(_settings.FirstOrDefault(s => s.Id == id));
-
-        public Task UpdateAsync(Setting entity) => throw new NotSupportedException();
-
-        public Task DeleteAsync(Setting entity) => throw new NotSupportedException();
-
-        public Task<bool> ExistsAsync(Guid id) => Task.FromResult(_settings.Any(s => s.Id == id));
-
-        public Task<bool> ExistsGloballyAsync(Guid id) => Task.FromResult(_settings.Any(s => s.Id == id));
-
-        public Task<bool> IsUniqueAsync(Setting entity, Guid? id = null) =>
-            Task.FromResult(!_settings.Any(s => s.Key == entity.Key && (!id.HasValue || s.Id != id.Value)));
-
-        public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
-
-        public void Add(Setting entity) => throw new NotSupportedException();
-    }
+        Name = "Test Company",
+        Street = "Test Street 1",
+        ZipCity = "12345 Test City",
+        Country = "Test Country",
+        Phone = "+49 123 456",
+        Email = "info@test.com",
+        Website = "https://test.com",
+        TaxId = "TAX-123",
+        VatId = "VAT-456",
+        BankName = "Test Bank",
+        Iban = "DE00 0000 0000 0000",
+        Bic = "TESTDEFF"
+    };
 
     [Fact]
     public void GenerateInvoice_WithOutputPath_ShouldReturnBytesAndPersistFile()
     {
         // Arrange
-        var repository = new FakeSettingRepository(new[]
-        {
-            new Setting { Key = "Company.Name", Value = "Test Company" },
-            new Setting { Key = "Company.Address", Value = "Test Street 1" },
-            new Setting { Key = "Company.ZipCity", Value = "12345 Test City" },
-            new Setting { Key = "Company.Country", Value = "Test Country" },
-            new Setting { Key = "Company.Phone", Value = "+49 123 456" },
-            new Setting { Key = "Company.Email", Value = "info@test.com" },
-            new Setting { Key = "Company.Website", Value = "https://test.com" },
-            new Setting { Key = "Company.TaxId", Value = "TAX-123" },
-            new Setting { Key = "Company.VatId", Value = "VAT-456" },
-            new Setting { Key = "Company.BankName", Value = "Test Bank" },
-            new Setting { Key = "Company.Iban", Value = "DE00 0000 0000 0000" },
-            new Setting { Key = "Company.Bic", Value = "TESTDEFF" }
-        });
-
-        var pdfService = new PdfService(repository);
+        var pdfService = new PdfService();
 
         var invoice = new Invoice
         {
@@ -122,7 +77,7 @@ public class PdfServiceTests
         try
         {
             // Act
-            var pdfBytes = pdfService.GenerateInvoice(invoice, outputPath);
+            var pdfBytes = pdfService.GenerateInvoice(invoice, SampleCompany(), outputPath);
 
             // Assert
             Assert.NotNull(pdfBytes);

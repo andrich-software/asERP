@@ -102,6 +102,11 @@ public class TenantDetailHandler : IRequestHandler<TenantDetailQuery, Result<Ten
                 State = tenant.State,
                 Country = tenant.Country,
                 Iban = tenant.Iban,
+                BankName = tenant.BankName,
+                Bic = tenant.Bic,
+                TaxId = tenant.TaxId,
+                VatId = tenant.VatId,
+                LogoPath = tenant.LogoPath,
                 DateCreated = tenant.DateCreated,
                 DateModified = tenant.DateModified,
                 // Note: Domain, ConnectionString, AdminEmail, and ValidUntil are not part of the Tenant entity

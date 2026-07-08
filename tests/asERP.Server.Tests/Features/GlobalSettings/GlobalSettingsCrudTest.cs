@@ -95,6 +95,35 @@ public class GlobalSettingsCrudTest : TenantIsolatedTestBase
     }
 
     [Fact]
+    public async Task GetAll_ExcludesLegacyCompanyRows()
+    {
+        // Company/sender data moved to the tenant level; any legacy Company.* row must not be
+        // exposed through the Superadmin settings endpoint anymore.
+        await EnsureSettingAsync("Company.Name", "Musterfirma GmbH");
+        SetSuperadminAuthentication();
+
+        var response = await Client.GetAsync(Url);
+
+        TestAssertions.AssertHttpStatusCode(response, HttpStatusCode.OK);
+        var result = await ReadResponseAsync<Result<List<GlobalSettingDto>>>(response);
+        Assert.DoesNotContain(result.Data!, s => s.Key.StartsWith("Company."));
+    }
+
+    [Fact]
+    public async Task Update_CompanyKey_ReturnsBadRequest()
+    {
+        // Even if a legacy row still exists, it must be read-only through this endpoint.
+        await EnsureSettingAsync("Company.Name", "Musterfirma GmbH");
+        SetSuperadminAuthentication();
+
+        var response = await PutAsJsonAsync(Url, Input(("Company.Name", "Hacked GmbH")));
+
+        TestAssertions.AssertHttpStatusCode(response, HttpStatusCode.BadRequest);
+        var stored = await GetStoredAsync("Company.Name");
+        Assert.Equal("Musterfirma GmbH", stored!.Value);
+    }
+
+    [Fact]
     public async Task Update_ChangesValue()
     {
         await EnsureSettingAsync("Email.SmtpHost", "old.example.com");

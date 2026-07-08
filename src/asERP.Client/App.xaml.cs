@@ -51,6 +51,15 @@ public partial class App : Application
     public new static App Current => (App)Application.Current;
     public IServiceProvider Services => Host!.Services;
 
+    /// <summary>
+    /// The UI-thread dispatcher of the app, captured in <see cref="OnLaunched"/>.
+    /// View models are resolved off the UI thread by the navigation pipeline, so their async
+    /// continuations run on background threads. Models that drive classic {Binding} targets use
+    /// this to marshal late property-change notifications back onto the UI thread — without it,
+    /// those updates are silently dropped on the Desktop/Skia head.
+    /// </summary>
+    public static Microsoft.UI.Dispatching.DispatcherQueue? UiDispatcher { get; private set; }
+
     [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Uno Platform framework APIs are not trim-compatible by design")]
     [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Interoperability", "CA1416", Justification = "Browser-specific calls are guarded by #if __WASM__")]
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
@@ -216,6 +225,10 @@ public partial class App : Application
             );
         MainWindow = builder.Window;
         MainWindow.Title = "asERP - Enterprise Resource Planning";
+
+        // Captured here because OnLaunched runs on the UI thread; models resolved later off the
+        // UI thread use App.UiDispatcher to marshal property-change notifications back onto it.
+        UiDispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
 
 #if DEBUG
         // MainWindow.UseStudio();

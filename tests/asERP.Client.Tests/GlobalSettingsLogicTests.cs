@@ -36,12 +36,12 @@ public class GlobalSettingsLogicTests
     [Test]
     public void GeneralOrderIndex_UnknownPrefixes_SortAfterKnownOnes()
     {
-        Assert.That(GlobalSettingsLogic.GeneralOrderIndex("Company"),
-            Is.LessThan(GlobalSettingsLogic.GeneralOrderIndex("System")));
+        Assert.That(GlobalSettingsLogic.GeneralOrderIndex("System"),
+            Is.LessThan(GlobalSettingsLogic.GeneralOrderIndex("Invoice")));
         Assert.That(GlobalSettingsLogic.GeneralOrderIndex("Notification"),
             Is.LessThan(GlobalSettingsLogic.GeneralOrderIndex("Zebra")));
-        Assert.That(GlobalSettingsLogic.GeneralOrderIndex("company"),
-            Is.EqualTo(GlobalSettingsLogic.GeneralOrderIndex("Company")));
+        Assert.That(GlobalSettingsLogic.GeneralOrderIndex("system"),
+            Is.EqualTo(GlobalSettingsLogic.GeneralOrderIndex("System")));
     }
 
     [Test]
@@ -69,11 +69,11 @@ public class GlobalSettingsLogicTests
             Setting("Zebra.Key", "z"),
             Setting("Invoice.Prefix", "INV"),
             Setting("Aardvark.Key", "a"),
-            Setting("Company.Name", "ACME"),
+            Setting("System.Theme", "Light"),
         ], prefix => prefix);
 
         Assert.That(tabs[Tab.General].Select(g => g.Title),
-            Is.EqualTo(new[] { "Company", "Invoice", "Aardvark", "Zebra" }));
+            Is.EqualTo(new[] { "System", "Invoice", "Aardvark", "Zebra" }));
     }
 
     [Test]

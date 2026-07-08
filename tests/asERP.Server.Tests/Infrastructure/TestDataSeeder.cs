@@ -198,7 +198,8 @@ public static class TestDataSeeder
             ExportSaless = false,
             TenantId = TenantConstants.TestTenant1Id,
             DateCreated = DateTime.UtcNow,
-            DateModified = DateTime.UtcNow
+            DateModified = DateTime.UtcNow,
+            SyncState = new asERP.Domain.Entities.SalesChannelSyncState { TenantId = TenantConstants.TestTenant1Id },
         };
 
         var salesChannel2Tenant1 = new asERP.Domain.Entities.SalesChannel
@@ -217,7 +218,8 @@ public static class TestDataSeeder
             ExportSaless = true,
             TenantId = TenantConstants.TestTenant1Id,
             DateCreated = DateTime.UtcNow,
-            DateModified = DateTime.UtcNow
+            DateModified = DateTime.UtcNow,
+            SyncState = new asERP.Domain.Entities.SalesChannelSyncState { TenantId = TenantConstants.TestTenant1Id },
         };
 
         var salesChannel3Tenant2 = new asERP.Domain.Entities.SalesChannel
@@ -236,7 +238,8 @@ public static class TestDataSeeder
             ExportSaless = true,
             TenantId = TenantConstants.TestTenant2Id,
             DateCreated = DateTime.UtcNow,
-            DateModified = DateTime.UtcNow
+            DateModified = DateTime.UtcNow,
+            SyncState = new asERP.Domain.Entities.SalesChannelSyncState { TenantId = TenantConstants.TestTenant2Id },
         };
 
         var salesChannel4Tenant2 = new asERP.Domain.Entities.SalesChannel
@@ -255,7 +258,8 @@ public static class TestDataSeeder
             ExportSaless = false,
             TenantId = TenantConstants.TestTenant2Id,
             DateCreated = DateTime.UtcNow,
-            DateModified = DateTime.UtcNow
+            DateModified = DateTime.UtcNow,
+            SyncState = new asERP.Domain.Entities.SalesChannelSyncState { TenantId = TenantConstants.TestTenant2Id },
         };
 
         context.SalesChannel.AddRange(salesChannel1Tenant1, salesChannel2Tenant1, salesChannel3Tenant2, salesChannel4Tenant2);

@@ -252,6 +252,21 @@
                            Text="{Binding Website, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            InputScope="Url"
                            IsEnabled="{Binding IsNotLoading}" />
+
+                  <!-- Tax Number (Steuernummer) -->
+                  <TextBox x:Uid="TenantEditPage.Field.TaxId"
+                           Text="{Binding TaxId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           IsEnabled="{Binding IsNotLoading}" />
+
+                  <!-- VAT ID (USt-IdNr.) -->
+                  <TextBox x:Uid="TenantEditPage.Field.VatId"
+                           Text="{Binding VatId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           IsEnabled="{Binding IsNotLoading}" />
+
+                  <!-- Logo Path -->
+                  <TextBox x:Uid="TenantEditPage.Field.LogoPath"
+                           Text="{Binding LogoPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           IsEnabled="{Binding IsNotLoading}" />
                 </StackPanel>
               </StackPanel>
             </Border>
@@ -362,6 +377,16 @@
                   <TextBlock x:Uid="TenantEditPage.Field.Iban.Hint"
                              Style="{StaticResource LabelSmall}"
                              Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+
+                  <!-- Bank Name -->
+                  <TextBox x:Uid="TenantEditPage.Field.BankName"
+                           Text="{Binding BankName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           IsEnabled="{Binding IsNotLoading}" />
+
+                  <!-- BIC -->
+                  <TextBox x:Uid="TenantEditPage.Field.Bic"
+                           Text="{Binding Bic, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           IsEnabled="{Binding IsNotLoading}" />
                 </StackPanel>
               </StackPanel>
             </Border>

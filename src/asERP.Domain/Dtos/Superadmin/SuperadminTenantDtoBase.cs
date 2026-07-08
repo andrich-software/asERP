@@ -46,6 +46,21 @@ public abstract class SuperadminTenantDtoBase
     [JsonPropertyName("iban")]
     public string? Iban { get; set; }
 
+    [JsonPropertyName("bankName")]
+    public string? BankName { get; set; }
+
+    [JsonPropertyName("bic")]
+    public string? Bic { get; set; }
+
+    [JsonPropertyName("taxId")]
+    public string? TaxId { get; set; }
+
+    [JsonPropertyName("vatId")]
+    public string? VatId { get; set; }
+
+    [JsonPropertyName("logoPath")]
+    public string? LogoPath { get; set; }
+
     [JsonPropertyName("dateCreated")]
     public DateTime DateCreated { get; set; }
 

@@ -114,6 +114,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             { "AiPrompts", NavItemAiPrompts },
             { "TenantOAuthSettings", NavItemTenantOAuthSettings },
             { "SuperadminTenants", NavItemSuperadminTenants },
+            { "SuperadminCountries", NavItemSuperadminCountries },
             { "GlobalSettings", NavItemGlobalSettings }
         };
     }
@@ -582,6 +583,9 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                 case "Saless":
                     await navigator.NavigateViewModelAsync<SalesListModel>(this);
                     break;
+                case "Shippings":
+                    await navigator.NavigateViewModelAsync<asERP.Client.Features.Shippings.Models.ShippingListModel>(this);
+                    break;
                 case "Products":
                     await navigator.NavigateViewModelAsync<ProductListModel>(this);
                     break;
@@ -623,6 +627,9 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                     break;
                 case "SuperadminTenants":
                     await navigator.NavigateViewModelAsync<SuperadminTenantListModel>(this);
+                    break;
+                case "SuperadminCountries":
+                    await navigator.NavigateViewModelAsync<SuperadminCountryListModel>(this);
                     break;
                 case "GlobalSettings":
                     await navigator.NavigateViewModelAsync<asERP.Client.Features.GlobalSettings.Models.GlobalSettingsModel>(this);

@@ -44,6 +44,7 @@ public class SalesChannelsController(
     {
         var currentTenantId = tenantContext.GetCurrentTenantId();
         return dbContext.SalesChannel
+            .Include(s => s.SyncState)
             .FirstOrDefaultAsync(s => s.Id == id && (s.TenantId == null || s.TenantId == currentTenantId), cancellationToken);
     }
 
@@ -293,7 +294,7 @@ public class SalesChannelsController(
 
         var now = DateTime.UtcNow;
         var interval = TimeSpan.FromSeconds(Math.Max(1, channel.SyncIntervalSeconds));
-        DateTime? nextPoll = channel.IsEnabled ? (channel.LastSyncStartedAt ?? now) + interval : null;
+        DateTime? nextPoll = channel.IsEnabled ? (channel.SyncState.LastSyncStartedAt ?? now) + interval : null;
 
         var deadLetterCount = await dbContext.ChannelExportOutbox
             .CountAsync(o => o.SalesChannelId == id && o.Status == ChannelOutboxStatus.DeadLetter, cancellationToken);
@@ -316,12 +317,12 @@ public class SalesChannelsController(
 
         var products = await BuildOperationStatusAsync(
             id, ChannelSyncOperation.ImportProducts, channel.ImportProducts,
-            channel.InitialProductImportCompleted, willRunOnSchedule: channel.ImportProducts && !channel.InitialProductImportCompleted,
+            channel.SyncState.InitialProductImportCompleted, willRunOnSchedule: channel.ImportProducts && !channel.SyncState.InitialProductImportCompleted,
             nextPoll, cancellationToken);
 
         var customers = await BuildOperationStatusAsync(
             id, ChannelSyncOperation.ImportCustomers, channel.ImportCustomers,
-            channel.InitialCustomerImportCompleted, willRunOnSchedule: channel.ImportCustomers && !channel.InitialCustomerImportCompleted,
+            channel.SyncState.InitialCustomerImportCompleted, willRunOnSchedule: channel.ImportCustomers && !channel.SyncState.InitialCustomerImportCompleted,
             nextPoll, cancellationToken);
 
         var saless = await BuildOperationStatusAsync(
@@ -344,8 +345,8 @@ public class SalesChannelsController(
             OutboxPendingCount = outboxPending,
             OutboxInFlightCount = outboxInFlight,
             OldestPendingOutboxAgeSeconds = oldestPending is { } oldest ? (now - oldest).TotalSeconds : null,
-            InitialSalesImportCompleted = channel.InitialSalesImportCompleted,
-            SalesImportBackfillCursor = channel.SalesImportBackfillCursor,
+            InitialSalesImportCompleted = channel.SyncState.InitialSalesImportCompleted,
+            SalesImportBackfillCursor = channel.SyncState.SalesImportBackfillCursor,
             StockMovementsLast24h = stockMovementsLast24h,
             NegativeStockCount = negativeStockCount,
             Products = products,

@@ -187,8 +187,8 @@ public class SyncOrchestrationTests
         ImportProducts = false,
         ImportCustomers = false,
         ImportSaless = importSaless,
-        InitialSalesImportCompleted = initialSalesDone,
         SyncIntervalSeconds = syncIntervalSeconds,
+        SyncState = new SalesChannelSyncState { InitialSalesImportCompleted = initialSalesDone },
     };
 
     private static SyncDispatcher NewDispatcher(ApplicationDbContext context, ISalesChannelConnector connector)

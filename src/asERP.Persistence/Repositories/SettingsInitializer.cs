@@ -71,6 +71,30 @@ public class SettingsInitializer
 
         await ReplaceLegacyJwtKeyPlaceholderAsync(existingSettings);
         await ReplaceLegacyLokiEndpointDefaultAsync(existingSettings);
+        await RemoveLegacyCompanySettingsAsync(existingSettings);
+    }
+
+    /// <summary>
+    /// Removes installation-wide <c>Company.*</c> rows seeded by older releases. Company/sender
+    /// data now lives on the <c>Tenant</c> entity, so these rows are obsolete — deleting them keeps
+    /// them out of the Superadmin settings UI and the generic settings listing for good.
+    /// </summary>
+    private async Task RemoveLegacyCompanySettingsAsync(List<Setting> existingSettings)
+    {
+        var legacyCompanySettings = existingSettings
+            .Where(s => s.Key.StartsWith("Company.", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (legacyCompanySettings.Count == 0)
+        {
+            return;
+        }
+
+        _context.Setting.RemoveRange(legacyCompanySettings);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Removed {Count} legacy Company.* settings; company data is now per-tenant",
+            legacyCompanySettings.Count);
     }
 
     /// <summary>
@@ -119,21 +143,11 @@ public class SettingsInitializer
         // This reuses settings from SettingsSeeder and adds any additional required settings
         return new List<Setting>
         {
-            // Company Information
-            new Setting { Key = "Company.Name", Value = "Musterfirma GmbH" },
-            new Setting { Key = "Company.Address", Value = "Musterstraße 123" },
-            new Setting { Key = "Company.ZipCity", Value = "12345 Musterstadt" },
-            new Setting { Key = "Company.Country", Value = "Deutschland" },
-            new Setting { Key = "Company.Phone", Value = "+49 123 456789" },
-            new Setting { Key = "Company.Email", Value = "info@musterfirma.de" },
-            new Setting { Key = "Company.Website", Value = "www.musterfirma.de" },
-            new Setting { Key = "Company.TaxId", Value = "123/456/7890" },
-            new Setting { Key = "Company.VatId", Value = "DE123456789" },
-            new Setting { Key = "Company.BankName", Value = "Musterbank" },
-            new Setting { Key = "Company.Iban", Value = "DE89 3704 0044 0532 0130 00" },
-            new Setting { Key = "Company.Bic", Value = "MUSTDEXXX" },
-            new Setting { Key = "Company.LogoPath", Value = "" },
-            
+            // Company/sender data is no longer an installation-wide setting — it lives on the
+            // Tenant entity (see Tenant.CompanyName/Street/.../BankName/Bic/TaxId/VatId/LogoPath)
+            // so each tenant prints its own address on invoices and shipping documents. Legacy
+            // Company.* rows in older databases are removed by RemoveLegacyCompanySettingsAsync.
+
             // System Settings
             new Setting { Key = "System.Theme", Value = "Light" },
             new Setting { Key = "System.DefaultLanguage", Value = "de-DE" },

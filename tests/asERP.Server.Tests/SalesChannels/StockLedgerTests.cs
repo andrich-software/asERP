@@ -170,7 +170,7 @@ public class StockLedgerTests
         await repo.ImportOrUpdateFromSalesChannel(channel, NewImport("O-1", quantity: 2));
 
         // Later (still or again) cancelled — the compensation must be skipped.
-        channel.InitialSalesImportCompleted = true;
+        channel.SyncState.InitialSalesImportCompleted = true;
         await repo.ImportOrUpdateFromSalesChannel(channel, NewImport("O-1", quantity: 2, status: SalesStatus.Cancelled));
 
         Assert.Equal(0, await ctx.StockMovement.IgnoreQueryFilters().CountAsync());
@@ -240,8 +240,8 @@ public class StockLedgerTests
             IsEnabled = true,
             ImportSaless = true,
             ImportStock = importStock,
-            InitialSalesImportCompleted = initialSalesDone,
             Warehouses = new List<Warehouse> { warehouse },
+            SyncState = new SalesChannelSyncState { InitialSalesImportCompleted = initialSalesDone },
         };
 
         var product = new Product { Id = Guid.NewGuid(), Sku = "SKU-1", Name = "Test Product" };
