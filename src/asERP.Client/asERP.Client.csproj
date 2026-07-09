@@ -106,5 +106,9 @@
 
     <PackageReference Include="SkiaSharp.Skottie" />
     <PackageReference Include="SkiaSharp.Views.Uno.WinUI" />
+
+    <!-- The Uno.Sdk only auto-embeds WasmScripts\AppManifest.js (see Uno.SingleProject.Wasm.targets);
+         additional bootstrapper-loaded scripts must be embedded explicitly. -->
+    <EmbeddedResource Include="Platforms\WebAssembly\WasmScripts\LabelInterop.js" />
   </ItemGroup>
 </Project>
