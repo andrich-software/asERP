@@ -1,6 +1,7 @@
-﻿using asERP.Application.Mediator;
+using asERP.Application.Mediator;
 using asERP.Application.Notifications;
 using asERP.Domain.Entities;
+using asERP.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -14,7 +15,12 @@ namespace asERP.Persistence.Interceptors;
 /// every Add/Update/Delete on Product, ProductSalesChannel, ProductStock, Sales and Customer
 /// regardless of whether the caller went through a CQRS command-handler or wrote to the DbContext
 /// directly. Notifications are published after SaveChanges succeeds, so a failed save never
-/// produces phantom outbox rows.
+/// produces phantom outbox rows. SavedChangesAsync runs inside the SaveChanges call stack but
+/// after EF has released its concurrency guard and committed the implicit transaction — handlers
+/// may therefore query and re-save on the same scoped DbContext (pinned by the interceptor
+/// pipeline tests in asERP.Server.Tests). Writes that bypass the change tracker
+/// (ExecuteUpdate/ExecuteDelete) and synchronous SaveChanges are invisible to this interceptor;
+/// those paths must publish explicitly (see StockLedgerService).
 ///
 /// This is the safety-net half of the export pipeline; CQRS handlers are still free to publish
 /// richer notifications themselves (e.g. <c>SalesChangeKind.StatusChanged</c>), and the outbox
@@ -139,7 +145,7 @@ public sealed class ChannelExportNotificationInterceptor : SaveChangesIntercepto
 
                 case Sales sales:
                     notifications.Add(new SalesChangedNotification(
-                        sales.Id, sales.TenantId, MapSalesKind(entry.State)));
+                        sales.Id, sales.TenantId, MapSalesKind(entry, sales)));
                     break;
 
                 case Customer customer:
@@ -185,12 +191,30 @@ public sealed class ChannelExportNotificationInterceptor : SaveChangesIntercepto
         _ => ProductChangeKind.Updated,
     };
 
-    private static SalesChangeKind MapSalesKind(EntityState state) => state switch
+    /// <summary>
+    /// Orders are never hard-deleted in the normal flow — a cancel or refund arrives here as a
+    /// plain status update. Derive the kind from the status transition, otherwise handlers that
+    /// act only on <see cref="SalesChangeKind.Cancelled"/>/<see cref="SalesChangeKind.Refunded"/>
+    /// (e.g. POS stock compensation) never fire via the safety net.
+    /// </summary>
+    private static SalesChangeKind MapSalesKind(EntityEntry entry, Sales sales)
     {
-        EntityState.Added => SalesChangeKind.Created,
-        EntityState.Deleted => SalesChangeKind.Cancelled,
-        _ => SalesChangeKind.StatusChanged,
-    };
+        switch (entry.State)
+        {
+            case EntityState.Added:
+                return SalesChangeKind.Created;
+            case EntityState.Deleted:
+                return SalesChangeKind.Cancelled;
+        }
+
+        var oldStatus = entry.OriginalValues.GetValue<SalesStatus>(nameof(Sales.Status));
+        return sales.Status switch
+        {
+            SalesStatus.Cancelled when oldStatus != SalesStatus.Cancelled => SalesChangeKind.Cancelled,
+            SalesStatus.Refunded when oldStatus != SalesStatus.Refunded => SalesChangeKind.Refunded,
+            _ => SalesChangeKind.StatusChanged,
+        };
+    }
 
     private static CustomerChangeKind MapCustomerKind(EntityState state) => state switch
     {
