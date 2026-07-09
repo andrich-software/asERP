@@ -107,8 +107,10 @@
     <PackageReference Include="SkiaSharp.Skottie" />
     <PackageReference Include="SkiaSharp.Views.Uno.WinUI" />
 
-    <!-- The Uno.Sdk only auto-embeds WasmCSS/Fonts.css; additional bootstrapper
-         CSS (animated splash) must be added explicitly. -->
+    <!-- The Uno.Sdk only auto-embeds WasmCSS/Fonts.css and WasmScripts/AppManifest.js
+         (see Uno.SingleProject.Wasm.targets); additional bootstrapper-loaded CSS and
+         scripts must be embedded explicitly. -->
     <EmbeddedResource Include="Platforms\WebAssembly\WasmCSS\Splash.css" />
+    <EmbeddedResource Include="Platforms\WebAssembly\WasmScripts\LabelInterop.js" />
   </ItemGroup>
 </Project>
