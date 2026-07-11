@@ -34,8 +34,8 @@ public class ProductImagesController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Uploads an image for a product. The file is re-encoded to PNG and appended to the end
-    /// of the order. Accepts JPG/JPEG, PNG, WebP, GIF and BMP.
+    /// Uploads an image for a product. The file is re-encoded to the configured storage format
+    /// (WebP by default) and appended to the end of the order. Accepts JPG/JPEG, PNG, WebP, GIF and BMP.
     /// </summary>
     /// <response code="201">Image uploaded successfully</response>
     /// <response code="400">Invalid or unsupported file</response>
@@ -53,7 +53,7 @@ public class ProductImagesController(IMediator mediator) : ControllerBase
     /// <summary>
     /// Streams an image's binary content. Pass <c>thumbnail=true</c> for the thumbnail.
     /// </summary>
-    /// <response code="200">Returns the image bytes (image/png)</response>
+    /// <response code="200">Returns the image bytes (content type reflects the stored format)</response>
     /// <response code="404">Image not found</response>
     [HttpGet("{imageId:guid}/content")]
     [ProducesResponseType(StatusCodes.Status200OK)]

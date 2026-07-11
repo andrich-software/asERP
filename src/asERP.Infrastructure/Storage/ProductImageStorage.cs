@@ -7,8 +7,10 @@ namespace asERP.Infrastructure.Storage;
 
 /// <summary>
 /// Filesystem implementation of <see cref="IProductImageStorage"/>. Stores originals and
-/// thumbnails as PNG, sharded by the first two hex characters of a freshly minted GUID:
-/// <c>{root}/products/{ab}/{guid}.png</c> and <c>{root}/products/{ab}/{guid}_thumb.png</c>.
+/// thumbnails in the configured <see cref="FileStorageOptions.StoredImageFormat"/> (WebP by
+/// default — far smaller than the former PNG default for photographic images), sharded by the
+/// first two hex characters of a freshly minted GUID:
+/// <c>{root}/products/{ab}/{guid}.{ext}</c> and <c>{root}/products/{ab}/{guid}_thumb.{ext}</c>.
 /// </summary>
 public class ProductImageStorage : IProductImageStorage
 {
@@ -19,11 +21,26 @@ public class ProductImageStorage : IProductImageStorage
     private const long MaxImageSizeBytes = 20L * 1024 * 1024;
 
     private readonly FileStorageOptions _options;
+    private readonly SKEncodedImageFormat _format;
+    private readonly string _extension;
+    private readonly int _quality;
 
     public ProductImageStorage(IOptions<FileStorageOptions> options)
     {
         _options = options.Value;
+        (_format, _extension) = ResolveFormat(_options.StoredImageFormat);
+        // PNG is lossless (quality is ignored by the encoder); clamp lossy quality into 1..100.
+        _quality = Math.Clamp(_options.ImageQuality, 1, 100);
     }
+
+    /// <summary>Maps the configured format name to the SkiaSharp encoder + file extension. Unknown values fall back to WebP.</summary>
+    private static (SKEncodedImageFormat Format, string Extension) ResolveFormat(string? name) =>
+        (name?.Trim().ToLowerInvariant()) switch
+        {
+            "png" => (SKEncodedImageFormat.Png, "png"),
+            "jpg" or "jpeg" => (SKEncodedImageFormat.Jpeg, "jpg"),
+            _ => (SKEncodedImageFormat.Webp, "webp"),
+        };
 
     private string RootPath => Path.IsPathRooted(_options.RootPath)
         ? _options.RootPath
@@ -35,8 +52,8 @@ public class ProductImageStorage : IProductImageStorage
         var name = id.ToString("N");
         var shard = name[..2];
 
-        var fileName = $"{name}.png";
-        var thumbName = $"{name}_thumb.png";
+        var fileName = $"{name}.{_extension}";
+        var thumbName = $"{name}_thumb.{_extension}";
         var relativePath = $"{ProductsFolder}/{shard}/{fileName}";
         var thumbnailPath = $"{ProductsFolder}/{shard}/{thumbName}";
 
@@ -57,12 +74,12 @@ public class ProductImageStorage : IProductImageStorage
         var width = image.Width;
         var height = image.Height;
 
-        // Original: re-encode whatever was uploaded to PNG.
-        await WritePngAsync(image, originalFullPath, cancellationToken);
+        // Original: re-encode whatever was uploaded to the configured format.
+        await WriteEncodedAsync(image, originalFullPath, cancellationToken);
 
-        // Thumbnail: fit within a square box without upscaling, then PNG.
+        // Thumbnail: fit within a square box without upscaling, then encode.
         using var thumbnail = CreateThumbnail(image, _options.ThumbnailSize);
-        await WritePngAsync(thumbnail, thumbnailFullPath, cancellationToken);
+        await WriteEncodedAsync(thumbnail, thumbnailFullPath, cancellationToken);
 
         var fileSize = new FileInfo(originalFullPath).Length;
 
@@ -89,13 +106,48 @@ public class ProductImageStorage : IProductImageStorage
             ?? throw new InvalidOperationException("Failed to generate the image thumbnail.");
     }
 
-    private static async Task WritePngAsync(SKBitmap bitmap, string path, CancellationToken cancellationToken)
+    private async Task WriteEncodedAsync(SKBitmap bitmap, string path, CancellationToken cancellationToken)
     {
         using var image = SKImage.FromBitmap(bitmap);
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        // Quality is honoured by the lossy encoders (WebP/JPEG) and ignored by PNG.
+        using var data = image.Encode(_format, _quality)
+            ?? throw new InvalidOperationException($"Failed to encode the image as {_format}.");
 
         await using var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
         await data.AsStream().CopyToAsync(fileStream, cancellationToken);
+    }
+
+    public async Task<ReencodedFile?> ReencodeAsync(string relativePath, CancellationToken cancellationToken = default)
+    {
+        var fullPath = ResolveFullPath(relativePath);
+        if (!File.Exists(fullPath))
+        {
+            return null;
+        }
+
+        // Already in the target format → nothing to migrate.
+        if (string.Equals(Path.GetExtension(fullPath).TrimStart('.'), _extension, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        using var bitmap = SKBitmap.Decode(fullPath);
+        if (bitmap is null)
+        {
+            // Corrupt/undecodable file — leave it untouched rather than destroy it.
+            return null;
+        }
+
+        var newRelativePath = Path.ChangeExtension(relativePath, _extension)!.Replace('\\', '/');
+        var newFullPath = ResolveFullPath(newRelativePath);
+
+        // Write the new file but deliberately leave the original in place. The caller deletes the
+        // old file only after it has persisted the new path — so a crash mid-migration never leaves
+        // a DB row pointing at a deleted file (at worst an orphaned new file, cleaned up separately).
+        await WriteEncodedAsync(bitmap, newFullPath, cancellationToken);
+
+        var size = new FileInfo(newFullPath).Length;
+        return new ReencodedFile(newRelativePath, Path.GetFileName(newRelativePath), size, bitmap.Width, bitmap.Height);
     }
 
     public Task<Stream?> OpenReadAsync(string relativePath, CancellationToken cancellationToken = default)

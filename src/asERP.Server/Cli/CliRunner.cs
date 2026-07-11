@@ -1,6 +1,9 @@
+using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Services;
+using asERP.Application.Models.Storage;
 using asERP.Domain.Entities;
 using asERP.Identity.Services;
+using asERP.Infrastructure.Storage;
 using asERP.Persistence.Configurations.Options;
 using asERP.Persistence.DatabaseContext;
 using asERP.Persistence.Services.Backup;
@@ -55,6 +58,7 @@ internal static class CliRunner
             "backup" => await HandleBackupAsync(host, args[1..]),
             "restore" => await HandleRestoreAsync(host, args[1..]),
             "test-connection" => await HandleTestConnectionAsync(args[1..]),
+            "reencode-images" => await HandleReencodeImagesAsync(host, args[1..]),
             _ => Fail($"unknown cli command '{args[0]}'")
         };
     }
@@ -90,6 +94,10 @@ internal static class CliRunner
 
         services.Configure<BackupOptions>(configuration.GetSection(BackupOptions.Section));
         services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
+
+        // Product-image storage, so the reencode-images maintenance command can rewrite files.
+        services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.Section));
+        services.AddScoped<IProductImageStorage, ProductImageStorage>();
 
         services.AddDataProtection().SetApplicationName("asERP");
 
@@ -247,6 +255,138 @@ internal static class CliRunner
 
         Console.WriteLine("Connection successful.");
         return 0;
+    }
+
+    // Re-encodes every stored product image into the configured FileStorage format (e.g. PNG → WebP)
+    // and updates the DB rows to match. Host-level maintenance: runs across all tenants. Idempotent —
+    // images already in the target format are skipped, so it is safe to re-run and to resume after an abort.
+    private static async Task<int> HandleReencodeImagesAsync(IHost host, string[] args)
+    {
+        var dryRun = args.Contains("--dry-run");
+        var batchSize = 200;
+        for (var i = 0; i < args.Length - 1; i++)
+        {
+            if (args[i] == "--batch" && int.TryParse(args[i + 1], out var parsed) && parsed > 0)
+            {
+                batchSize = parsed;
+            }
+        }
+
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var storage = scope.ServiceProvider.GetRequiredService<IProductImageStorage>();
+
+        // Bypass the tenant query filter — this is cross-tenant host maintenance (the CLI has no tenant).
+        var baseQuery = db.Set<ProductImage>().IgnoreQueryFilters();
+
+        var ids = await baseQuery.OrderBy(image => image.Id).Select(image => image.Id).ToListAsync();
+        Console.WriteLine($"{ids.Count} product image row(s) found.");
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        if (dryRun)
+        {
+            var recordedBytes = await baseQuery.SumAsync(image => image.FileSizeBytes);
+            Console.WriteLine(
+                $"[dry-run] would re-encode up to {ids.Count} images ({FormatBytes(recordedBytes)} of originals recorded in the DB). " +
+                "Already-converted images are skipped at run time. No files changed.");
+            return 0;
+        }
+
+        long beforeBytes = 0, afterBytes = 0;
+        int migrated = 0, skipped = 0, failed = 0, processed = 0;
+
+        for (var offset = 0; offset < ids.Count; offset += batchSize)
+        {
+            var chunk = ids.Skip(offset).Take(batchSize).ToList();
+            var images = await baseQuery.Where(image => chunk.Contains(image.Id)).ToListAsync();
+
+            // Old files to remove *after* the batch is persisted (crash-safe ordering).
+            var oldFiles = new List<(string Original, string Thumbnail)>();
+
+            foreach (var image in images)
+            {
+                processed++;
+                try
+                {
+                    var originalSizeBefore = image.FileSizeBytes;
+                    var oldOriginal = image.RelativePath;
+                    var oldThumbnail = image.ThumbnailPath;
+
+                    var reencodedOriginal = await storage.ReencodeAsync(image.RelativePath);
+                    var reencodedThumbnail = await storage.ReencodeAsync(image.ThumbnailPath);
+
+                    if (reencodedOriginal is null && reencodedThumbnail is null)
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    if (reencodedOriginal is not null)
+                    {
+                        beforeBytes += originalSizeBefore;
+                        afterBytes += reencodedOriginal.FileSizeBytes;
+                        image.RelativePath = reencodedOriginal.RelativePath;
+                        image.FileName = reencodedOriginal.FileName;
+                        image.FileSizeBytes = reencodedOriginal.FileSizeBytes;
+                        image.Width = reencodedOriginal.Width;
+                        image.Height = reencodedOriginal.Height;
+                    }
+
+                    if (reencodedThumbnail is not null)
+                    {
+                        image.ThumbnailPath = reencodedThumbnail.RelativePath;
+                    }
+
+                    oldFiles.Add((
+                        reencodedOriginal is not null ? oldOriginal : string.Empty,
+                        reencodedThumbnail is not null ? oldThumbnail : string.Empty));
+                    migrated++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    Console.Error.WriteLine($"warning: failed to re-encode image {image.Id}: {ex.Message}");
+                }
+            }
+
+            await db.SaveChangesAsync();
+
+            // New paths are persisted — now it is safe to delete the superseded originals.
+            foreach (var (original, thumbnail) in oldFiles)
+            {
+                await storage.DeleteAsync(
+                    string.IsNullOrEmpty(original) ? thumbnail : original,
+                    string.IsNullOrEmpty(original) ? null : thumbnail);
+            }
+
+            Console.WriteLine($"  processed {processed}/{ids.Count} (migrated {migrated}, skipped {skipped}, failed {failed})");
+        }
+
+        Console.WriteLine($"Done. Migrated {migrated}, skipped {skipped}, failed {failed}.");
+        if (beforeBytes > 0)
+        {
+            var percent = 100 - (afterBytes * 100.0 / beforeBytes);
+            Console.WriteLine($"Originals: {FormatBytes(beforeBytes)} → {FormatBytes(afterBytes)} ({percent:F1}% smaller).");
+        }
+
+        return failed > 0 ? 1 : 0;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = bytes;
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:F1} {units[unit]}";
     }
 
     private static async Task TestConnectionAsync(System.Data.Common.DbConnection connection)
@@ -486,5 +626,9 @@ internal static class CliRunner
         Console.Error.WriteLine("                              stop the server/service before restoring");
         Console.Error.WriteLine("  test-connection --provider <Sqlite|PostgreSQL|MSSQL> --connection-string <cs>");
         Console.Error.WriteLine("                              validate database settings without persisting them");
+        Console.Error.WriteLine("  reencode-images [--dry-run] [--batch <n>]");
+        Console.Error.WriteLine("                              re-encode stored product images into the configured");
+        Console.Error.WriteLine("                              FileStorage format (e.g. PNG → WebP) and update the DB;");
+        Console.Error.WriteLine("                              idempotent and resumable (default batch 200)");
     }
 }

@@ -8,8 +8,6 @@ namespace asERP.Application.Features.ProductImage.Queries.ProductImageContent;
 
 public class ProductImageContentHandler : IRequestHandler<ProductImageContentQuery, Result<ProductImageFile>>
 {
-    private const string PngContentType = "image/png";
-
     private readonly IAppLogger<ProductImageContentHandler> _logger;
     private readonly IProductImageRepository _productImageRepository;
     private readonly IProductImageStorage _productImageStorage;
@@ -41,6 +39,22 @@ public class ProductImageContentHandler : IRequestHandler<ProductImageContentQue
             return Result<ProductImageFile>.Fail(ResultStatusCode.NotFound, "Image file not found");
         }
 
-        return Result<ProductImageFile>.Success(new ProductImageFile(stream, PngContentType, image.FileName));
+        return Result<ProductImageFile>.Success(
+            new ProductImageFile(stream, ContentTypeFor(image.FileName), image.FileName));
     }
+
+    /// <summary>
+    /// Derives the response content type from the stored file's extension, so images written in
+    /// any historical format (legacy PNG, current WebP, …) are served with the correct MIME type.
+    /// </summary>
+    private static string ContentTypeFor(string fileName) =>
+        Path.GetExtension(fileName).ToLowerInvariant() switch
+        {
+            ".webp" => "image/webp",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            _ => "application/octet-stream",
+        };
 }
