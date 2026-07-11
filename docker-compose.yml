@@ -11,6 +11,16 @@ name: aserp
 #   DB_MODE=postgres  → activates only 'server', external postgres from .env.
 #   DB_MODE=mssql     → activates only 'server', external SQL Server.
 
+# Cap Docker's json-file container logs so stdout/stderr can't fill the host disk.
+# The default json-file driver grows unbounded — that is what filled /var/lib/docker
+# on the prod host. 10 MB × 5 files = 50 MB max per container; older lines roll off.
+# Wired into every long-running service below via `logging: *default-logging`.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   server:
     profiles: ["server"]
@@ -42,6 +52,11 @@ services:
       # be lost on every rebuild/redeploy. Point it at /app/data so they survive.
       - FileStorage__RootPath=/app/data/files
       - Logging__LogLevel__Default=Warning
+      # The server logs through Serilog, which reads Serilog:MinimumLevel — NOT
+      # Logging:LogLevel. Without this the Logging__LogLevel__Default above never
+      # reaches Serilog and the server keeps writing Information-level logs (incl.
+      # per-request logging) to stdout. This is the setting that actually caps it.
+      - Serilog__MinimumLevel__Default=Warning
       # Web-analytics ClickHouse — reachable only inside the 'backend' network. These seed the
       # server's ClickHouse.* settings on first run; afterwards they are editable in Settings
       # (e.g. to point at an external ClickHouse).
@@ -72,6 +87,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    logging: *default-logging
 
   postgres:
     profiles: ["postgres-internal"]
@@ -94,6 +110,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U aserp -d aserp"]
       timeout: 20s
@@ -129,6 +146,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       # Use 127.0.0.1, not localhost: localhost resolves to ::1 (IPv6) in the
       # container while ClickHouse only listens on IPv4 (0.0.0.0) — so a
@@ -156,6 +174,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    logging: *default-logging
 
 volumes:
   aserp-data:

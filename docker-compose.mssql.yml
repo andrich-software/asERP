@@ -7,6 +7,14 @@ name: aserp-mssql
 # This file is self-contained (no .env auto-loading via cli.sh). ASERP_SERVER_PORT
 # and ASERP_RESTRICT_SERVER_URL are read from the shell environment if set.
 
+# Cap Docker's json-file container logs so stdout/stderr can't fill the host disk
+# (the default driver grows unbounded). 10 MB × 5 files = 50 MB max per container.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   server:
     image: ${DOCKER_REGISTRY-}andrichsoftware/aserp-server:latest
@@ -19,6 +27,9 @@ services:
       - DatabaseConfig__Provider=MSSQL
       - DatabaseConfig__ConnectionString=Server=mssql;Database=aserp_01;User Id=aserp;Password=aserp123!;TrustServerCertificate=True;
       - Logging__LogLevel__Default=Warning
+      # Serilog reads Serilog:MinimumLevel, not Logging:LogLevel — this is the
+      # setting that actually caps the server's stdout log volume.
+      - Serilog__MinimumLevel__Default=Warning
     ports:
       - "${ASERP_SERVER_PORT:-8443}:8443"
     depends_on:
@@ -27,6 +38,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    logging: *default-logging
 
   mssql:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -41,6 +53,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P SqlServer123! -Q 'SELECT 1' || exit 1"]
       timeout: 20s
@@ -61,6 +74,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    logging: *default-logging
 
 volumes:
   aserp-mssql-data:
