@@ -3,22 +3,22 @@
 namespace asERP.Domain.Entities;
 
 /// <summary>
-/// An image attached to a product. Files live on the filesystem (filename = GUID, always
-/// stored as PNG); only metadata is persisted here. The image with the lowest
-/// <see cref="SortOrder"/> is the product's primary image.
+/// An image attached to a product. Files live on the filesystem (filename = GUID, stored in the
+/// configured FileStorage format — WebP by default, historically PNG); only metadata is persisted
+/// here. The image with the lowest <see cref="SortOrder"/> is the product's primary image.
 /// </summary>
 public class ProductImage : BaseEntity, IBaseEntity
 {
     public Guid ProductId { get; set; }
     public Product? Product { get; set; }
 
-    /// <summary>On-disk original file name, "{guid}.png".</summary>
+    /// <summary>On-disk original file name, "{guid}.{ext}".</summary>
     public string FileName { get; set; } = string.Empty;
 
-    /// <summary>Path of the original, relative to the storage root: "products/ab/{guid}.png".</summary>
+    /// <summary>Path of the original, relative to the storage root: "products/ab/{guid}.{ext}".</summary>
     public string RelativePath { get; set; } = string.Empty;
 
-    /// <summary>Path of the thumbnail, relative to the storage root: "products/ab/{guid}_thumb.png".</summary>
+    /// <summary>Path of the thumbnail, relative to the storage root: "products/ab/{guid}_thumb.{ext}".</summary>
     public string ThumbnailPath { get; set; } = string.Empty;
 
     /// <summary>Original file name as uploaded, kept for download/alt fallback.</summary>

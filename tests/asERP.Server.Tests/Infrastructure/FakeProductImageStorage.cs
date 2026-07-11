@@ -33,6 +33,9 @@ public class FakeProductImageStorage : IProductImageStorage
     public Task<Stream?> OpenReadAsync(string relativePath, CancellationToken cancellationToken = default)
         => Task.FromResult<Stream?>(_files.TryGetValue(relativePath, out var bytes) ? new MemoryStream(bytes) : null);
 
+    public Task<ReencodedFile?> ReencodeAsync(string relativePath, CancellationToken cancellationToken = default)
+        => Task.FromResult<ReencodedFile?>(null); // no real encoding in tests
+
     public Task DeleteAsync(string relativePath, string? thumbnailPath, CancellationToken cancellationToken = default)
     {
         _files.TryRemove(relativePath, out _);

@@ -23,6 +23,10 @@
 #   ./cli.sh db     shell [args...]  Open an interactive psql session against the
 #                                    database (postgres only). Extra args are passed
 #                                    to psql, e.g. db shell -c "SELECT now();"
+#   ./cli.sh images reencode [--dry-run] [--batch N]
+#                                    Re-encode all stored product images into the configured
+#                                    FileStorage format (e.g. PNG -> WebP) and update the DB.
+#                                    Idempotent & resumable; --dry-run only reports.
 #   ./cli.sh superadmin create       Interactively create a Superadmin user
 #   ./cli.sh superadmin update <email>
 #                                    Interactively update a Superadmin user
@@ -58,7 +62,7 @@ fi
 COMPOSE=("${COMPOSE_BIN[@]}")
 
 usage() {
-    sed -n '3,35p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '3,39p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # Print an error message followed by the full usage block, then exit 1.
@@ -521,6 +525,7 @@ main() {
         stop)         cmd_stop         "$@" ;;
         logs)         cmd_logs         "$@" ;;
         db)           cmd_db           "$@" ;;
+        images)       cmd_images       "$@" ;;
         superadmin)   cmd_superadmin   "$@" ;;
         *)
             die_usage "unknown command '$command' (expected: deploy|build-deploy|start|stop|logs|db|superadmin)."
@@ -574,6 +579,26 @@ require_server_running() {
         echo "error: server container is not running. Start it with: ./cli.sh start server" >&2
         exit 1
     fi
+}
+
+cmd_images() {
+    local sub="${1:-}"
+    case "$sub" in
+        reencode)
+            shift
+            require_server_running
+            # Runs inside the server container so it uses the same DB + FileStorage config
+            # (incl. the /app/data volume) the server itself is configured with.
+            "${COMPOSE[@]}" --profile server exec -T \
+                server dotnet asERP.Server.dll cli reencode-images "$@"
+            ;;
+        "")
+            die_usage "'images' requires a subcommand (reencode)."
+            ;;
+        *)
+            die_usage "unknown images subcommand '$sub' (expected: reencode)."
+            ;;
+    esac
 }
 
 cmd_superadmin() {

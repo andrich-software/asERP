@@ -18,8 +18,22 @@ public class FileStorageOptions
     public int ThumbnailSize { get; set; } = 300;
 
     /// <summary>
-    /// Accepted upload content types. Everything is re-encoded to PNG on save, so this
-    /// list only gates what callers may upload, not what is stored.
+    /// On-disk format for stored originals and thumbnails: <c>webp</c> (default), <c>jpeg</c> or
+    /// <c>png</c>. WebP/JPEG are lossy and dramatically smaller than PNG for photographic product
+    /// images (the previous PNG-@-quality-100 default produced multi-MB files); PNG stays lossless.
+    /// Existing files keep whatever format they were written with — this only affects new saves.
+    /// </summary>
+    public string StoredImageFormat { get; set; } = "webp";
+
+    /// <summary>
+    /// Encoder quality (1–100) for the lossy formats (<c>webp</c>/<c>jpeg</c>); ignored for
+    /// <c>png</c>. 80 is a good size/quality trade-off for e-commerce product photos.
+    /// </summary>
+    public int ImageQuality { get; set; } = 80;
+
+    /// <summary>
+    /// Accepted upload content types. Uploads are re-encoded to <see cref="StoredImageFormat"/> on
+    /// save, so this list only gates what callers may upload, not what is stored.
     /// </summary>
     public string[] AllowedContentTypes { get; set; } =
         ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp"];
