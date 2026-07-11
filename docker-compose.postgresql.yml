@@ -8,6 +8,14 @@ name: aserp-postgresql
 # Bring up with:  docker compose -f docker-compose.postgresql.yml up -d
 # Add WASM:       docker compose -f docker-compose.postgresql.yml --profile wasm up -d
 
+# Cap Docker's json-file container logs so stdout/stderr can't fill the host disk
+# (the default driver grows unbounded). 10 MB × 5 files = 50 MB max per container.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   server:
     image: ${DOCKER_REGISTRY-}andrichsoftware/aserp-server:latest
@@ -20,6 +28,9 @@ services:
       - DatabaseConfig__Provider=PostgreSQL
       - DatabaseConfig__ConnectionString=Host=postgresql;Port=5432;Database=aserp_01;Username=aserp;Password=aserp;
       - Logging__LogLevel__Default=Warning
+      # Serilog reads Serilog:MinimumLevel, not Logging:LogLevel — this is the
+      # setting that actually caps the server's stdout log volume.
+      - Serilog__MinimumLevel__Default=Warning
     ports:
       - "${ASERP_SERVER_PORT:-8443}:8443"
     depends_on:
@@ -28,6 +39,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    logging: *default-logging
 
   postgresql:
     image: postgres:16-alpine
@@ -42,6 +54,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U aserp -d aserp_01"]
       timeout: 20s
@@ -62,6 +75,7 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    logging: *default-logging
 
 volumes:
   aserp-postgresql-data:
