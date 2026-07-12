@@ -70,6 +70,39 @@
             </Grid>
           </Border>
 
+          <!-- Update-Required Banner: the selected server demands a newer client -->
+          <Border x:Name="UpdateRequiredBanner"
+                  Background="{ThemeResource StatusWarningBackgroundBrush}"
+                  CornerRadius="8"
+                  Padding="14,12"
+                  Visibility="Collapsed">
+            <StackPanel Spacing="10">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <FontIcon Grid.Column="0"
+                          Glyph="&#xE777;"
+                          FontSize="18"
+                          Foreground="{ThemeResource StatusWarningForegroundBrush}"
+                          Margin="0,0,12,0"
+                          VerticalAlignment="Center" />
+                <TextBlock x:Name="UpdateRequiredText"
+                           Grid.Column="1"
+                           Style="{StaticResource BodySmall}"
+                           Foreground="{ThemeResource StatusWarningForegroundBrush}"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center" />
+              </Grid>
+              <Button x:Name="UpdateRequiredButton"
+                      Style="{StaticResource FilledButtonStyle}"
+                      HorizontalAlignment="Stretch"
+                      Height="40"
+                      Click="UpdateRequired_Click" />
+            </StackPanel>
+          </Border>
+
           <!-- Login Form Card -->
           <Border Background="{ThemeResource SurfaceBrush}"
                   CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">

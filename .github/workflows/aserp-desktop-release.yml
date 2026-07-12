@@ -46,6 +46,7 @@ jobs:
         dotnet publish src/asERP.Client/asERP.Client.csproj `
           --configuration Release `
           --framework net10.0-desktop `
+          -p:Version=${{ needs.version.outputs.version }} `
           --output ./publish/windows
 
     - name: Rename executable
@@ -90,6 +91,7 @@ jobs:
         dotnet publish src/asERP.Client/asERP.Client.csproj \
           --configuration Release \
           --framework net10.0-desktop \
+          -p:Version=${{ needs.version.outputs.version }} \
           --output ./publish/linux
 
     - name: Rename executable
@@ -134,6 +136,7 @@ jobs:
         dotnet publish src/asERP.Client/asERP.Client.csproj \
           --configuration Release \
           --framework net10.0-desktop \
+          -p:Version=${{ needs.version.outputs.version }} \
           --output ./publish/macos
 
     - name: Rename executable

@@ -442,6 +442,7 @@ app.UseRouting();
 
 app.UseAuthentication(); // who are you?
 
+app.UseMiddleware<asERP.Server.Middleware.ClientVersionMiddleware>(); // enforce minimum client version
 app.UseMiddleware<asERP.Server.Middleware.TenantMiddleware>(); // set tenant context
 app.UseAuthorization(); // what are you allowed to do?
 app.UseRateLimiter();

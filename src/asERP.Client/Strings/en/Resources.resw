@@ -5928,4 +5928,39 @@
   <data name="FeedEditPage.SaveFailed" xml:space="preserve">
     <value>Save failed: {0}</value>
   </data>
+
+  <!-- Desktop auto-updater (Core/Updates/ClientUpdater.cs) -->
+  <data name="AppUpdate.Title" xml:space="preserve">
+    <value>Update available</value>
+  </data>
+  <data name="AppUpdate.Message" xml:space="preserve">
+    <value>asERP Desktop {0} is available (installed: {1}). Install now? The application will close during the update and restart afterwards.</value>
+  </data>
+  <data name="AppUpdate.InstallNow" xml:space="preserve">
+    <value>Install now</value>
+  </data>
+  <data name="AppUpdate.Later" xml:space="preserve">
+    <value>Later</value>
+  </data>
+  <data name="AppUpdate.Downloading" xml:space="preserve">
+    <value>Downloading update…</value>
+  </data>
+  <data name="AppUpdate.DownloadFailed" xml:space="preserve">
+    <value>The update could not be downloaded. Please try again later.</value>
+  </data>
+  <data name="AppUpdate.InstallFailed" xml:space="preserve">
+    <value>The update installer could not be started.</value>
+  </data>
+  <data name="AppUpdate.RequiredMessage" xml:space="preserve">
+    <value>This server requires client version {0} or newer (installed: {1}).</value>
+  </data>
+  <data name="AppUpdate.UpdateNow" xml:space="preserve">
+    <value>Update now</value>
+  </data>
+  <data name="AppUpdate.OpenDownloadPage" xml:space="preserve">
+    <value>Open download page</value>
+  </data>
+  <data name="AppUpdate.NoUpdateFound" xml:space="preserve">
+    <value>No suitable update is available yet. Please try again later.</value>
+  </data>
 </root>
