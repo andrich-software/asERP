@@ -43,7 +43,9 @@ name: Release asERP Desktop Setup (Windows)
 # The 'auto_publish' input controls the final submit: leave it false (default) to
 # only push the package into the draft — you then review and click Submit in Partner
 # Center (recommended for the very first submission). Set it true for hands-off
-# publishing on later releases.
+# publishing on later releases. Push-triggered runs never auto-publish (inputs are
+# empty on push events) — they build, release on GitHub and refresh the Store draft;
+# the actual Store publish stays a manual workflow_dispatch with auto_publish=true.
 #
 # IMPORTANT prerequisites for the Store submission steps to work (they otherwise
 # fail on the 'update' step with {"errors":[{"message":"Not found"}]}):
@@ -54,6 +56,12 @@ name: Release asERP Desktop Setup (Windows)
 #     currently support free products only.
 
 on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/asERP.Client/**'
+      - 'src/asERP.Domain/**'
+      - 'installer/asERP.Client.Setup.iss'
   workflow_dispatch:
     inputs:
       auto_publish:
