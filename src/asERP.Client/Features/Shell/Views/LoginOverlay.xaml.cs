@@ -1,8 +1,13 @@
 using asERP.Client.Core.Exceptions;
+using asERP.Client.Core.Helpers;
 using asERP.Client.Features.Auth.Models;
 using asERP.Client.Features.Auth.Services;
 using asERP.Client.Features.Auth.Views;
+using asERP.Domain.Dtos.ServerInfo;
 using Microsoft.UI.Xaml.Controls;
+#if __DESKTOP__
+using asERP.Client.Core.Updates;
+#endif
 
 namespace asERP.Client.Features.Shell.Views;
 
@@ -22,6 +27,12 @@ public sealed partial class LoginOverlay : UserControl
 
     /// <summary>Raised when the user clicks the registration link.</summary>
     public event EventHandler? RegistrationRequested;
+
+    /// <summary>Portable/zip and mobile builds can't self-update — send them here instead.</summary>
+    private static readonly Uri DownloadPageUri = new("https://github.com/andrich-software/asERP/releases");
+
+    /// <summary>True while the selected server requires a newer client version — login is blocked.</summary>
+    private bool _updateRequired;
 
     public LoginOverlay()
     {
@@ -58,6 +69,8 @@ public sealed partial class LoginOverlay : UserControl
         LoginPassword.Password = string.Empty;
         LoginErrorBanner.Visibility = Visibility.Collapsed;
         LoginErrorText.Text = string.Empty;
+        _updateRequired = false;
+        UpdateRequiredBanner.Visibility = Visibility.Collapsed;
         LoginProgress.Visibility = Visibility.Collapsed;
         LoginProgress.IsActive = false;
         LoginButton.IsEnabled = true;
@@ -188,11 +201,75 @@ public sealed partial class LoginOverlay : UserControl
             LoginServerStatus.Text = info != null
                 ? string.Format(Localize("ServerDialog.StatusConnectedFormat", "asERP v{0} · verbunden"), info.Version)
                 : Localize("ServerDialog.StatusOffline", "offline");
+            ApplyServerCompatibility(info);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[LoginOverlay] RefreshServerStatusAsync error: {ex.Message}");
             LoginServerStatus.Text = Localize("ServerDialog.StatusOffline", "offline");
+        }
+    }
+
+    /// <summary>
+    /// Shows or clears the update-required banner depending on the server's minimum client
+    /// version, and blocks login while the client is too old. Unstamped builds (dev, no CI
+    /// version) are never blocked client-side.
+    /// </summary>
+    private void ApplyServerCompatibility(ServerInfoResponseDto? info)
+    {
+        var current = ClientVersionInfo.Stamped;
+        _updateRequired = current is not null
+            && Version.TryParse(info?.MinimumClientVersion, out var minimum)
+            && current < minimum;
+
+        if (_updateRequired)
+        {
+            UpdateRequiredText.Text = string.Format(
+                Localize("AppUpdate.RequiredMessage",
+                    "Dieser Server benötigt mindestens Client-Version {0} (installiert: {1})."),
+                info!.MinimumClientVersion, current);
+
+            var canSelfUpdate = false;
+#if __DESKTOP__
+            canSelfUpdate = ClientUpdater.IsInstalled;
+#endif
+            UpdateRequiredButton.Content = canSelfUpdate
+                ? Localize("AppUpdate.UpdateNow", "Jetzt aktualisieren")
+                : Localize("AppUpdate.OpenDownloadPage", "Download-Seite öffnen");
+        }
+
+        UpdateRequiredBanner.Visibility = _updateRequired ? Visibility.Visible : Visibility.Collapsed;
+        LoginButton.IsEnabled = !_updateRequired;
+    }
+
+    /// <summary>
+    /// One-click update from the login overlay. Installed desktop clients update in place
+    /// (download → silent install → automatic relaunch); everyone else gets the download page.
+    /// </summary>
+    private async void UpdateRequired_Click(object sender, RoutedEventArgs e)
+    {
+#if __DESKTOP__
+        if (ClientUpdater.IsInstalled)
+        {
+            UpdateRequiredButton.IsEnabled = false;
+            try
+            {
+                await ClientUpdater.UpdateNowAsync(this);
+            }
+            finally
+            {
+                UpdateRequiredButton.IsEnabled = true;
+            }
+            return;
+        }
+#endif
+        try
+        {
+            await Windows.System.Launcher.LaunchUriAsync(DownloadPageUri);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LoginOverlay] Could not open download page: {ex.Message}");
         }
     }
 
@@ -253,6 +330,10 @@ public sealed partial class LoginOverlay : UserControl
             RegisterLink.Visibility = info?.RegistrationEnabled == true
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+
+            // Also runs for the restricted-URL case (WASM), where the server selector —
+            // and with it RefreshServerStatusAsync — is hidden.
+            ApplyServerCompatibility(info);
         }
         catch (Exception ex)
         {
@@ -289,6 +370,13 @@ public sealed partial class LoginOverlay : UserControl
         {
             LoginErrorText.Text = "Please fill in all fields";
             LoginErrorBanner.Visibility = Visibility.Visible;
+            return;
+        }
+
+        // Belt-and-braces: the login button is disabled while an update is required, but an
+        // Enter keypress in the form still routes here.
+        if (_updateRequired)
+        {
             return;
         }
 

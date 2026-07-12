@@ -1,7 +1,12 @@
-﻿namespace asERP.Client.Features.Auth.Services;
+﻿using asERP.Client.Core.Helpers;
+using asERP.Domain.Constants;
+
+namespace asERP.Client.Features.Auth.Services;
 
 /// <summary>
 /// Handler that sets the request URI base address from stored server URL.
+/// Also stamps every API request with the client's build version (X-Client-Version)
+/// so the server can enforce its minimum client version.
 /// </summary>
 public class ServerUrlHandler : DelegatingHandler
 {
@@ -20,6 +25,14 @@ public class ServerUrlHandler : DelegatingHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
+        // Only CI-stamped builds identify themselves — dev builds send no version header
+        // and are therefore never rejected by the server's minimum-version enforcement.
+        if (ClientVersionInfo.Stamped is { } clientVersion
+            && !request.Headers.Contains(ApiHeaders.ClientVersion))
+        {
+            request.Headers.TryAddWithoutValidation(ApiHeaders.ClientVersion, clientVersion.ToString());
+        }
+
         var serverUrl = await _tokenStorage.GetServerUrlAsync();
 
         if (string.IsNullOrEmpty(serverUrl))

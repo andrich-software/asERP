@@ -203,6 +203,12 @@ See `Features/Products/Views/ProductListPage.xaml` as the reference:
 - Navigate via `_navigator.NavigateViewModelAsync<TModel>()`.
 - When adding a new XAML page, also add the matching `ViewMap<TPage, TModel>` in the module — and verify if any `DataTemplate` needs to land in `MainView.axaml`.
 
+## Auto-update (Windows Desktop only — fragile, keep couplings in sync)
+
+`Core/Updates/` (`ClientUpdater` + `ClientUpdateChecker`, both `#if __DESKTOP__`) polls GitHub Releases with tag prefix `setup-v` and asset `asERP-Desktop-Setup-*.exe`. **The repo shares releases with the server (`server-v`) and the portable zips (`v`) — never use `/releases/latest`.** The updater only activates when the app runs from the Inno-installed layout (`unins*.exe` in the parent of the exe directory); portable-zip, Store-less dev runs and non-Windows heads are untouched. On accept it downloads to `%TEMP%` and runs the installer with `/SILENT /AUTOLAUNCH=1` — the relaunch is a `[Run]` entry in `installer/asERP.Client.Setup.iss` gated on that switch (the Store's `/VERYSILENT` install must never auto-launch). Mirrors `asERP.Server.Tray/Services/UpdateChecker.cs` — keep the two in sync. Started from `Shell.OnShellLoaded`.
+
+**Minimum client version:** servers may enforce one (env var `SERVER_MINIMUM_CLIENT_VERSION`, exposed via `/api/v1/server-info`, enforced by the Server's `ClientVersionMiddleware` → 426). `Core/Helpers/ClientVersionInfo.Stamped` is the client's CI-stamped build version (null in dev builds → all gating off); `ServerUrlHandler` sends it as `X-Client-Version` on every API call. The `LoginOverlay` compares it against the server-info minimum and, when too old, blocks login and shows an update banner that triggers `ClientUpdater.UpdateNowAsync` (installed desktop) or opens the releases download page (everything else).
+
 ## Cross-Platform Considerations
 
 When adding UI, think about all four runtimes (Desktop / WASM / Android / iOS):

@@ -75,3 +75,13 @@ Root: HKLM; Subkey: "SOFTWARE\asERP\Client"; ValueType: string; ValueName: "Vers
 ; Offer to launch after an interactive install; skipped for the Store's silent run.
 Filename: "{app}\Client\{#ClientExeName}"; Description: "{cm:LaunchProgram,asERP Desktop}"; \
   Flags: nowait postinstall skipifsilent runasoriginaluser
+; Relaunch after a silent in-app update: the client's auto-updater runs this installer with
+; /SILENT /AUTOLAUNCH=1. The Store's silent install does not pass the switch, so it never
+; auto-launches there.
+Filename: "{app}\Client\{#ClientExeName}"; Flags: nowait runasoriginaluser; Check: ShouldAutoLaunch
+
+[Code]
+function ShouldAutoLaunch: Boolean;
+begin
+  Result := ExpandConstant('{param:AUTOLAUNCH|0}') = '1';
+end;

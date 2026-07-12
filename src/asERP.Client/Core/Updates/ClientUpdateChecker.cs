@@ -1,28 +1,30 @@
+#if __DESKTOP__
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace asERP.Server.Tray.Services;
+namespace asERP.Client.Core.Updates;
 
-internal sealed record ReleaseInfo(Version Version, string AssetName, string DownloadUrl);
+internal sealed record ClientReleaseInfo(Version Version, string AssetName, string DownloadUrl);
 
 /// <summary>
-/// Checks GitHub Releases for a newer server installer. Server releases use the tag
-/// prefix "server-v" — the repository shares its releases with the desktop client
-/// ("v" tags), so /releases/latest must NOT be used.
+/// Checks GitHub Releases for a newer desktop-client installer. Client installer releases use
+/// the tag prefix "setup-v" — the repository shares its releases with the server ("server-v")
+/// and the portable desktop archives ("v"), so /releases/latest must NOT be used.
+/// Mirrors src/asERP.Server.Tray/Services/UpdateChecker.cs — keep the two in sync.
 /// </summary>
-internal sealed class UpdateChecker
+internal static class ClientUpdateChecker
 {
     private const string Owner = "andrich-software";
     private const string Repository = "asERP";
-    private const string TagPrefix = "server-v";
+    private const string TagPrefix = "setup-v";
 
     private static readonly HttpClient Http = CreateClient();
 
     private static HttpClient CreateClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("asERP-Server-Tray");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("asERP-Desktop");
         return client;
     }
 
@@ -30,19 +32,22 @@ internal sealed class UpdateChecker
     {
         get
         {
-            var fileVersion = FileVersionInfo.GetVersionInfo(Application.ExecutablePath).FileVersion;
+            var processPath = Environment.ProcessPath;
+            var fileVersion = processPath is null
+                ? null
+                : FileVersionInfo.GetVersionInfo(processPath).FileVersion;
             return Version.TryParse(fileVersion, out var version) ? version : new Version(0, 0, 0, 0);
         }
     }
 
-    /// <summary>Returns the newest server release, or null when none is found / the API is unreachable.</summary>
-    public async Task<ReleaseInfo?> GetLatestAsync()
+    /// <summary>Returns the newest client installer release, or null when none is found / the API is unreachable.</summary>
+    public static async Task<ClientReleaseInfo?> GetLatestAsync()
     {
         List<GithubRelease>? releases;
         try
         {
-            // per_page=100 (API max): desktop-client releases ("v"/"setup-v" tags) share the list,
-            // so a burst of those must not push the newest server release out of the window.
+            // per_page=100 (API max): server and portable-zip releases share the list, so a burst
+            // of those must not push the newest "setup-v" release out of the window.
             releases = await Http.GetFromJsonAsync<List<GithubRelease>>(
                 $"https://api.github.com/repos/{Owner}/{Repository}/releases?per_page=100");
         }
@@ -61,21 +66,22 @@ internal sealed class UpdateChecker
             .Select(candidate =>
             {
                 var asset = candidate.Release.Assets.FirstOrDefault(a =>
-                    a.Name.StartsWith("asERP-Server-Setup-", StringComparison.OrdinalIgnoreCase)
+                    a.Name.StartsWith("asERP-Desktop-Setup-", StringComparison.OrdinalIgnoreCase)
                     && a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
                 return asset is null
                     ? null
-                    : new ReleaseInfo(candidate.Parsed!, asset.Name, asset.BrowserDownloadUrl);
+                    : new ClientReleaseInfo(candidate.Parsed!, asset.Name, asset.BrowserDownloadUrl);
             })
             .FirstOrDefault(info => info is not null);
     }
 
     /// <summary>Downloads the installer to %TEMP% and returns its path.</summary>
-    public async Task<string> DownloadAsync(ReleaseInfo release, IProgress<string>? progress)
+    public static async Task<string> DownloadAsync(ClientReleaseInfo release)
     {
         var targetPath = Path.Combine(Path.GetTempPath(), release.AssetName);
-        progress?.Report($"Downloading {release.AssetName}…");
 
+        // ResponseHeadersRead: the 30s client timeout only bounds time-to-headers,
+        // not the (potentially long) body download of the self-contained installer.
         using var response = await Http.GetAsync(release.DownloadUrl, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
@@ -90,17 +96,7 @@ internal sealed class UpdateChecker
             throw new InvalidOperationException("Downloaded installer is incomplete.");
         }
 
-        progress?.Report("Download completed.");
         return targetPath;
-    }
-
-    /// <summary>Launches the installer (silent upgrade); its admin manifest raises the UAC prompt.</summary>
-    public static void RunInstaller(string installerPath)
-    {
-        Process.Start(new ProcessStartInfo(installerPath, "/SILENT")
-        {
-            UseShellExecute = true
-        });
     }
 
     private sealed record GithubRelease(
@@ -113,3 +109,4 @@ internal sealed class UpdateChecker
         [property: JsonPropertyName("name")] string Name,
         [property: JsonPropertyName("browser_download_url")] string BrowserDownloadUrl);
 }
+#endif

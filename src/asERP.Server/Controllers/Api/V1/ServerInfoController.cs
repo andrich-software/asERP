@@ -20,6 +20,7 @@ public class ServerInfoController(IServerInfoService serverInfo) : ControllerBas
     public ActionResult<ServerInfoResponseDto> Get() => Ok(new ServerInfoResponseDto
     {
         RegistrationEnabled = serverInfo.IsRegistrationEnabled,
-        Version = serverInfo.Version
+        Version = serverInfo.Version,
+        MinimumClientVersion = serverInfo.MinimumClientVersion?.ToString()
     });
 }

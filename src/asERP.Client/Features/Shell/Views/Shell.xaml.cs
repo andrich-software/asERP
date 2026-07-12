@@ -449,6 +449,12 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                     }
 
                     InitializeDarkModeToggle();
+
+#if __DESKTOP__
+                    // Auto-updater for the installed Windows client (no-op for
+                    // portable-zip/dev runs and non-Windows platforms).
+                    asERP.Client.Core.Updates.ClientUpdater.Start(this);
+#endif
                     return;
                 }
                 else

@@ -38,6 +38,6 @@ Refer to the root `/CLAUDE.md` for cross-cutting rules. `TreatWarningsAsErrors=t
 
 ## DI (`InfrastructureServiceRegistration.cs`)
 
-Everything **Scoped** except `ServerInfoService` (**Singleton**, reads env vars once at startup — including `SERVER_REGISTRATION_ENABLED`, which gates user registration). `TenantAwareEmailService` depends on scoped repositories/`ITenantContext` — never resolve it from a singleton.
+Everything **Scoped** except `ServerInfoService` (**Singleton**, reads env vars once at startup — `SERVER_REGISTRATION_ENABLED` gates user registration, `SERVER_MINIMUM_CLIENT_VERSION` sets the minimum client version enforced by the Server's `ClientVersionMiddleware`). `TenantAwareEmailService` depends on scoped repositories/`ITenantContext` — never resolve it from a singleton.
 
 `GraphMailSender` caches `GraphServiceClient` in a static `ConcurrentDictionary` keyed by (tenant, clientId, secret) — process-global; rotated secrets create new entries, old ones linger.

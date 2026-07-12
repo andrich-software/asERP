@@ -5927,4 +5927,39 @@
   <data name="FeedEditPage.SaveFailed" xml:space="preserve">
     <value>Speichern fehlgeschlagen: {0}</value>
   </data>
+
+  <!-- Desktop auto-updater (Core/Updates/ClientUpdater.cs) -->
+  <data name="AppUpdate.Title" xml:space="preserve">
+    <value>Update verfügbar</value>
+  </data>
+  <data name="AppUpdate.Message" xml:space="preserve">
+    <value>asERP Desktop {0} ist verfügbar (installiert: {1}). Jetzt installieren? Die Anwendung wird für das Update beendet und danach neu gestartet.</value>
+  </data>
+  <data name="AppUpdate.InstallNow" xml:space="preserve">
+    <value>Jetzt installieren</value>
+  </data>
+  <data name="AppUpdate.Later" xml:space="preserve">
+    <value>Später</value>
+  </data>
+  <data name="AppUpdate.Downloading" xml:space="preserve">
+    <value>Update wird heruntergeladen…</value>
+  </data>
+  <data name="AppUpdate.DownloadFailed" xml:space="preserve">
+    <value>Das Update konnte nicht heruntergeladen werden. Bitte versuchen Sie es später erneut.</value>
+  </data>
+  <data name="AppUpdate.InstallFailed" xml:space="preserve">
+    <value>Das Update-Installationsprogramm konnte nicht gestartet werden.</value>
+  </data>
+  <data name="AppUpdate.RequiredMessage" xml:space="preserve">
+    <value>Dieser Server benötigt mindestens Client-Version {0} (installiert: {1}).</value>
+  </data>
+  <data name="AppUpdate.UpdateNow" xml:space="preserve">
+    <value>Jetzt aktualisieren</value>
+  </data>
+  <data name="AppUpdate.OpenDownloadPage" xml:space="preserve">
+    <value>Download-Seite öffnen</value>
+  </data>
+  <data name="AppUpdate.NoUpdateFound" xml:space="preserve">
+    <value>Es ist noch kein passendes Update verfügbar. Bitte versuchen Sie es später erneut.</value>
+  </data>
 </root>

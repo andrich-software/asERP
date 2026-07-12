@@ -9,7 +9,7 @@ Refer to the root `/CLAUDE.md` for cross-cutting rules. This file covers Server-
 ```
 Controllers/Api/V1/        REST endpoints (versioned)
 Filters/                   Swagger operation/schema filters only (ProblemDetails*, TenantHeaderOperationFilter)
-Middleware/                TenantMiddleware (tenant resolution), ResponseCachePolicy
+Middleware/                TenantMiddleware (tenant resolution), ClientVersionMiddleware (min client version → 426), ResponseCachePolicy
 ServiceRegistrations/      DI wiring per concern
 Infrastructure/JsonConverters/   StrictEnumConverter, etc.
 Extensions/                ToActionResult(), SuperadminAccessExtensions and similar helpers
