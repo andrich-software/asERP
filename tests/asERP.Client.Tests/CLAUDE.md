@@ -18,7 +18,10 @@ Refer to the root `/CLAUDE.md` for cross-cutting test rules.
 | Shipping feature logic | `SalesShipmentRulesTests`, `ShipmentDraftLogicTests`, `BatchShipmentLogicTests`, `LabelContentTypesTests`, `LabelPreferenceTests` |
 | `x:Bind` visual helpers | `ShippingRowVisualsTests`, `ShippingTimelineVisualsTests`, `StatusVisualsTests` (central status→kind mapping for `StatusBadge`) |
 | Superadmin GlobalSettings | `GlobalSettingEntryTests`, `GlobalSettingsLogicTests` |
-| Platform workarounds | `CurrencyFormatterTests` (WASM/ICU `¤` currency-symbol substitution), `ServerUrlUtilTests` (auth URL normalization) |
+| Sales channel edit page | `SalesChannelSaveRulesTests` (`CanSaveCore` matrix per type), `SalesChannelUrlNormalizationTests` (WooCommerce REST/base URL), `SalesChannelDatabaseConfigTests` (connector config JSON), `SelectableWarehouseTests` (Save-gating change notification) |
+| Platform workarounds | `CurrencyFormatterTests` (WASM/ICU `¤` currency-symbol substitution), `ServerUrlUtilTests` (auth URL normalization), `ClientVersionGateTests` (minimum-client-version login gate) |
+
+`internal static` helpers in the Client are reachable here via `InternalsVisibleTo("asERP.Client.Tests")` (declared in `asERP.Client.csproj`).
 
 ## Run
 
@@ -26,4 +29,4 @@ Refer to the root `/CLAUDE.md` for cross-cutting test rules.
 dotnet test tests/asERP.Client.Tests/asERP.Client.Tests.csproj
 ```
 
-UI automation lives in `tests/asERP.Client.UITests` — currently placeholder scaffolding only (see its `CLAUDE.md`).
+Browser smoke tests (Playwright against the WASM head) live in `tests/asERP.Client.UITests` (see its `CLAUDE.md`).

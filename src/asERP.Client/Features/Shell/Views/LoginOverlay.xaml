@@ -159,12 +159,19 @@
                            AutomationProperties.AutomationId="login-password"
                            KeyDown="LoginInput_KeyDown" />
 
-              <Grid Margin="0,2,0,0">
+              <StackPanel Margin="0,2,0,0"
+                          Spacing="0">
                 <CheckBox x:Name="LoginRememberMe"
                           x:Uid="Shell.Login.RememberMe"
                           IsChecked="False"
                           HorizontalAlignment="Left" />
-              </Grid>
+                <!-- Windows desktop only (DPAPI-backed); hidden elsewhere — see LoginOverlay.Reset. -->
+                <CheckBox x:Name="LoginSavePassword"
+                          x:Uid="Shell.Login.SavePassword"
+                          IsChecked="False"
+                          Visibility="Collapsed"
+                          HorizontalAlignment="Left" />
+              </StackPanel>
 
               <Button x:Name="LoginButton"
                       x:Uid="Shell.Login.LoginButton"

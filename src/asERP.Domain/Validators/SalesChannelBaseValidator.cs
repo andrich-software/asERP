@@ -23,6 +23,11 @@ public class SalesChannelBaseValidator<T> : AbstractValidator<T> where T : ISale
             .NotEmpty().WithMessage("{PropertyName} is required.")
             .MaximumLength(100).WithMessage("{PropertyName} must not exceed 100 characters.");
 
+        // Every channel must be linked to at least one warehouse — stock is always drawn from /
+        // mirrored into a concrete warehouse, so a channel without one cannot sync.
+        RuleFor(p => p.WarehouseIds)
+            .NotEmpty().WithMessage("At least one warehouse must be selected.");
+
         // URL is required only for Shopware6, WooCommerce
         RuleFor(p => p.Url)
             .NotEmpty().WithMessage("{PropertyName} is required.")

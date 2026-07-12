@@ -25,6 +25,12 @@ public sealed class SalesChannelOrchestrator : BackgroundService
     // "order imported before its product" race without any coupling between the two imports.
     private const int ReconcileEveryTicks = 180;
 
+    // Batch size per reconcile SaveChanges, and a per-pass ceiling that bounds one tick's DB work when a
+    // huge backlog (e.g. a fresh install's historical order pull) becomes linkable at once; the next pass
+    // 30 minutes later continues where this one stopped.
+    private const int ReconcileBatchSize = 500;
+    private const int ReconcileMaxBatchesPerPass = 400;
+
     // Configurable so tests can drive the loop fast; production uses the 10s default.
     private readonly TimeSpan _tickInterval;
 
@@ -244,54 +250,69 @@ public sealed class SalesChannelOrchestrator : BackgroundService
     /// Links sales items that were imported before their product existed (the importer keeps the raw SKU
     /// on <c>MissingProductSku</c>) to the now-imported product. Link only — no retroactive stock
     /// movements, since the mirrored level already reflects historical sales. Batched so a large backlog
-    /// resolves over a few passes without one long-running sweep.
+    /// resolves over a few passes without one long-running sweep. Internal for tests.
     /// </summary>
-    private async Task ReconcileMissingProductsAsync(CancellationToken cancellationToken)
+    internal async Task ReconcileMissingProductsAsync(CancellationToken cancellationToken)
     {
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-            var items = await context.SalesItem
-                .IgnoreQueryFilters()
-                .Where(i => i.ProductId == Guid.Empty && i.MissingProductSku != null && i.MissingProductSku != "")
-                .OrderBy(i => i.DateCreated)
-                .Take(500)
-                .ToListAsync(cancellationToken);
-
-            if (items.Count == 0)
+            // Only rows whose product exists NOW are selected. Rows with a SKU that was never imported
+            // (e.g. a product meanwhile deleted in the shop) are permanently unresolvable — a plain
+            // "oldest 500 missing" scan re-reads exactly those rows every pass once they accumulate at
+            // the head of the queue and never reaches the linkable rows behind them (observed in prod:
+            // 1 of the oldest 500 resolvable while 160k+ linkable rows waited).
+            var totalLinked = 0;
+            for (var batch = 0; batch < ReconcileMaxBatchesPerPass; batch++)
             {
-                return;
-            }
+                cancellationToken.ThrowIfCancellationRequested();
 
-            var skus = items.Select(i => i.MissingProductSku!).Distinct().ToList();
-            var products = await context.Product
-                .IgnoreQueryFilters()
-                .Where(p => skus.Contains(p.Sku))
-                .Select(p => new { p.Id, p.Sku, p.TenantId })
-                .ToListAsync(cancellationToken);
+                var linkable = await context.SalesItem
+                    .IgnoreQueryFilters()
+                    .Where(i => i.ProductId == Guid.Empty && i.MissingProductSku != null && i.MissingProductSku != "")
+                    .Select(i => new
+                    {
+                        Item = i,
+                        ProductId = context.Product
+                            .Where(p => p.TenantId == i.TenantId && p.Sku == i.MissingProductSku)
+                            .Select(p => (Guid?)p.Id)
+                            .FirstOrDefault()
+                    })
+                    .Where(x => x.ProductId != null)
+                    .OrderBy(x => x.Item.DateCreated)
+                    .Take(ReconcileBatchSize)
+                    .ToListAsync(cancellationToken);
 
-            var bySku = products
-                .GroupBy(p => (p.TenantId, p.Sku))
-                .ToDictionary(g => g.Key, g => g.First().Id);
-
-            var linked = 0;
-            foreach (var item in items)
-            {
-                if (bySku.TryGetValue((item.TenantId, item.MissingProductSku!), out var productId))
+                if (linkable.Count == 0)
                 {
-                    item.ProductId = productId;
-                    item.MissingProductSku = string.Empty;
-                    item.MissingProductEan = string.Empty;
-                    linked++;
+                    break;
+                }
+
+                foreach (var entry in linkable)
+                {
+                    entry.Item.ProductId = entry.ProductId!.Value;
+                    entry.Item.MissingProductSku = string.Empty;
+                    entry.Item.MissingProductEan = string.Empty;
+                }
+
+                await context.SaveChangesAsync(cancellationToken);
+                totalLinked += linkable.Count;
+
+                // Linked rows are Unchanged ballast for the next batch — drop them so DetectChanges
+                // stays cheap while a large backlog drains.
+                context.ChangeTracker.Clear();
+
+                if (linkable.Count < ReconcileBatchSize)
+                {
+                    break;
                 }
             }
 
-            if (linked > 0)
+            if (totalLinked > 0)
             {
-                await context.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Reconciled {Count} sales items to their now-imported products", linked);
+                _logger.LogInformation("Reconciled {Count} sales items to their now-imported products", totalLinked);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -332,28 +353,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Which operations are due for this channel. Products and customers are full pulls gated to
-            // run until their initial import completes once (the connectors flip the flags; clearing a
-            // flag re-enables the scheduled run). Sales runs every interval (incremental or backfill chunk).
-            var dueOperations = new List<ChannelSyncOperation>();
-            if (channel.ImportProducts && !channel.SyncState.InitialProductImportCompleted)
-            {
-                dueOperations.Add(ChannelSyncOperation.ImportProducts);
-            }
-            if (channel.ImportSaless)
-            {
-                dueOperations.Add(ChannelSyncOperation.ImportSaless);
-            }
-            if (channel.ImportCustomers && !channel.SyncState.InitialCustomerImportCompleted)
-            {
-                dueOperations.Add(ChannelSyncOperation.ImportCustomers);
-            }
-            // The stock-master channel's levels are mirrored every interval (incremental via
-            // modified_after — cheap on a steady shop; the first run is the full seed).
-            if (channel.ImportStock)
-            {
-                dueOperations.Add(ChannelSyncOperation.ImportStock);
-            }
+            var dueOperations = ComputeDueOperations(channel);
 
             // Skip operations still running in the background — a long run must not be re-launched every
             // tick. The dispatcher's per-(channel, op) lock is a second guard, but gating here also avoids
@@ -377,6 +377,47 @@ public sealed class SalesChannelOrchestrator : BackgroundService
                 LaunchDetached((channel.Id, operation), RunChannelOperationAsync(channel.Id, operation, cancellationToken));
             }
         }
+    }
+
+    /// <summary>
+    /// Which scheduled operations are due for a channel. Products and customers are full pulls gated to
+    /// run until their initial import completes once (the connectors flip the flags; clearing a flag
+    /// re-enables the scheduled run). Sales and stock match products by SKU, so on a channel that also
+    /// imports products they wait for the initial catalogue during a fresh setup: importing the order
+    /// history against a half-imported catalogue floods the DB with missing-product lines ("Unknown
+    /// Product") and silently skips stock rows — the missing-product reconciler is the safety net for
+    /// the incremental race, not a substitute for the initial product import. A channel whose initial
+    /// sales import already completed keeps importing orders (the reconciler heals the residual lines);
+    /// only the historical backfill is held back. Manual (queued) runs stay ungated as the escape hatch.
+    /// Internal for tests.
+    /// </summary>
+    internal static List<ChannelSyncOperation> ComputeDueOperations(SalesChannel channel)
+    {
+        var initialCatalogueReady = !channel.ImportProducts || channel.SyncState.InitialProductImportCompleted;
+
+        var dueOperations = new List<ChannelSyncOperation>();
+        if (channel.ImportProducts && !channel.SyncState.InitialProductImportCompleted)
+        {
+            dueOperations.Add(ChannelSyncOperation.ImportProducts);
+        }
+        if (channel.ImportSaless && (initialCatalogueReady || channel.SyncState.InitialSalesImportCompleted))
+        {
+            dueOperations.Add(ChannelSyncOperation.ImportSaless);
+        }
+        if (channel.ImportCustomers && !channel.SyncState.InitialCustomerImportCompleted)
+        {
+            dueOperations.Add(ChannelSyncOperation.ImportCustomers);
+        }
+        // The stock-master channel's levels are mirrored every interval (incremental via
+        // modified_after — cheap on a steady shop; the first run is the full seed). The seed must not
+        // run against a partial catalogue: unknown SKUs are skipped silently and the incremental pass
+        // never re-visits them, so the mirror waits for the catalogue unconditionally.
+        if (channel.ImportStock && initialCatalogueReady)
+        {
+            dueOperations.Add(ChannelSyncOperation.ImportStock);
+        }
+
+        return dueOperations;
     }
 
     /// <summary>Registers a detached import task under its in-flight key; the entry self-removes on completion.</summary>

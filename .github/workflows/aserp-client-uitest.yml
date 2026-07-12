@@ -1,0 +1,57 @@
+name: asERP.Client UI Smoke Test (WASM)
+
+# Manual-only: the WASM Release publish makes this job expensive (~10-15 min),
+# so it does not run on pushes/PRs — trigger it from the Actions tab when needed.
+on:
+  workflow_dispatch:
+
+jobs:
+  uitest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+
+      # WasmOnlyBuild trims the client's TargetFrameworks to net10.0-browserwasm (same switch
+      # as the WASM Dockerfile) so the runner doesn't install Android workloads it doesn't need.
+      - name: Restore workloads
+        run: dotnet workload restore src/asERP.Client/asERP.Client.csproj -p:WasmOnlyBuild=true
+
+      # Release on purpose: Debug bundles the Uno DevServer/Hot-Reload client, whose failing
+      # ws://.../rc connection throws an unhandled NullReferenceException that would trip the
+      # tests' page-error assertion. Release is also what users actually get (incl. trimming).
+      - name: Publish WASM head
+        run: dotnet publish src/asERP.Client/asERP.Client.csproj -f net10.0-browserwasm -c Release -p:WasmOnlyBuild=true
+
+      - name: Build UI tests
+        run: dotnet build tests/asERP.Client.UITests/asERP.Client.UITests.csproj
+
+      - name: Install Playwright Chromium
+        run: pwsh tests/asERP.Client.UITests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Serve WASM head
+        run: |
+          dotnet tool install --global dotnet-serve
+          dotnet serve --directory src/asERP.Client/bin/Release/net10.0-browserwasm/publish/wwwroot --port 5001 > dotnet-serve.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl --silent --fail http://localhost:5001 > /dev/null && break
+            sleep 1
+          done
+
+      - name: Run UI smoke tests
+        env:
+          ASERP_UITEST_TARGET_URI: http://localhost:5001
+          ASERP_UITEST_SCREENSHOT_DIR: ${{ github.workspace }}/uitest-screenshots
+        run: dotnet test tests/asERP.Client.UITests/asERP.Client.UITests.csproj --no-build --verbosity normal
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uitest-screenshots
+          path: uitest-screenshots/
+          if-no-files-found: ignore

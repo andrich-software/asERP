@@ -27,8 +27,11 @@ public class ProductsBestSellingHandler : IRequestHandler<ProductsBestSellingQue
         {
             _logger.LogInformation("Handle ProductsBestSellingQuery - fetching {Count} best-selling products", request.Count);
 
-            // Get SalesItems context
-            var salesItems = _productRepository.GetContext<SalesItem>().AsQueryable();
+            // Imported lines whose product is (still) unknown carry ProductId = Guid.Empty. Excluding
+            // them here keeps the ranking to real products — otherwise all missing-product lines
+            // aggregate into one giant fake "Unknown Product" entry that dominates the top ranks.
+            var salesItems = _productRepository.GetContext<SalesItem>()
+                .Where(oi => oi.ProductId != Guid.Empty);
 
             // Restrict to sales within the requested look-back window
             if (request.Hours.HasValue)

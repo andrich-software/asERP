@@ -70,6 +70,7 @@
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="tests/asERP.Client.Tests/asERP.Client.Tests.csproj" />
+    <Project Path="tests/asERP.Client.UITests/asERP.Client.UITests.csproj" />
     <Project Path="tests/asERP.Persistence.Tests/asERP.Persistence.Tests.csproj" />
     <Project Path="tests/asERP.Server.Tests/asERP.Server.Tests.csproj" />
   </Folder>

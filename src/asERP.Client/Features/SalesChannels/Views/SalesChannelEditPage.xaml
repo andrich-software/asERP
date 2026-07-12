@@ -635,92 +635,6 @@
             </Border>
           </Grid>
 
-          <!-- Initial Status Section (hidden for PointOfSale) -->
-          <StackPanel Spacing="12"
-                      Visibility="{Binding ShowImportExportSettings, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel Orientation="Horizontal"
-                        Spacing="12">
-              <FontIcon Glyph="&#xE73E;"
-                        FontSize="20"
-                        Foreground="{ThemeResource SecondaryBrush}" />
-              <TextBlock x:Uid="SalesChannelEditPage.Section.InitialStatus"
-                         Style="{StaticResource TitleMedium}"
-                         Foreground="{ThemeResource OnSurfaceBrush}" />
-            </StackPanel>
-
-            <Border Background="{ThemeResource SurfaceBrush}"
-                    CornerRadius="8"
-                    Padding="16" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
-              <Grid>
-                <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="*" />
-                  <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <Grid Grid.Column="0">
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                  </Grid.ColumnDefinitions>
-                  <TextBlock Grid.Column="0"
-                             x:Uid="SalesChannelEditPage.Field.InitialProductImportCompleted"
-                             Style="{StaticResource BodyMedium}"
-                             Foreground="{ThemeResource OnSurfaceBrush}"
-                             TextWrapping="Wrap"
-                             VerticalAlignment="Center"
-                             Margin="0,0,8,0" />
-                  <ToggleSwitch Grid.Column="1"
-                                IsOn="{Binding InitialProductImportCompleted, Mode=TwoWay}"
-                                IsEnabled="{Binding IsNotLoading}"
-                                MinWidth="0"
-                                OnContent=""
-                                OffContent="" />
-                </Grid>
-
-                <Grid Grid.Column="1">
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                  </Grid.ColumnDefinitions>
-                  <TextBlock Grid.Column="0"
-                             x:Uid="SalesChannelEditPage.Field.InitialProductExportCompleted"
-                             Style="{StaticResource BodyMedium}"
-                             Foreground="{ThemeResource OnSurfaceBrush}"
-                             TextWrapping="Wrap"
-                             VerticalAlignment="Center"
-                             Margin="0,0,8,0" />
-                  <ToggleSwitch Grid.Column="1"
-                                IsOn="{Binding InitialProductExportCompleted, Mode=TwoWay}"
-                                IsEnabled="{Binding IsNotLoading}"
-                                MinWidth="0"
-                                OnContent=""
-                                OffContent="" />
-                </Grid>
-
-                <Grid Grid.Column="2">
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                  </Grid.ColumnDefinitions>
-                  <TextBlock Grid.Column="0"
-                             x:Uid="SalesChannelEditPage.Field.InitialCustomerImportCompleted"
-                             Style="{StaticResource BodyMedium}"
-                             Foreground="{ThemeResource OnSurfaceBrush}"
-                             TextWrapping="Wrap"
-                             VerticalAlignment="Center"
-                             Margin="0,0,8,0" />
-                  <ToggleSwitch Grid.Column="1"
-                                IsOn="{Binding InitialCustomerImportCompleted, Mode=TwoWay}"
-                                IsEnabled="{Binding IsNotLoading}"
-                                MinWidth="0"
-                                OnContent=""
-                                OffContent="" />
-                </Grid>
-              </Grid>
-            </Border>
-          </StackPanel>
-
           <!-- Warehouses Section -->
           <StackPanel Spacing="12"
                       Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -733,6 +647,13 @@
                          Style="{StaticResource TitleMedium}"
                          Foreground="{ThemeResource OnSurfaceBrush}" />
             </StackPanel>
+
+            <!-- At least one warehouse is required to save — explains the disabled Save button. -->
+            <TextBlock x:Uid="SalesChannelEditPage.WarehouseRequiredHint"
+                       Style="{StaticResource LabelSmall}"
+                       Foreground="{ThemeResource ErrorBrush}"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding ShowWarehouseRequiredHint, Converter={StaticResource BoolToVisibilityConverter}}" />
 
             <!-- Warehouse Selection Table -->
             <Border CornerRadius="8"

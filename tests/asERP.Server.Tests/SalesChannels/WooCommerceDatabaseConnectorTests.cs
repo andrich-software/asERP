@@ -186,6 +186,7 @@ public class WooCommerceDatabaseConnectorTests
             Url = "https://shop.example.com",
             Username = "mysql",
             Password = "secret",
+            WarehouseIds = new List<Guid> { Guid.NewGuid() }, // At least one warehouse is required
         };
 
         Assert.True(validator.Validate(input).IsValid);

@@ -95,6 +95,9 @@
   <data name="Shell.Login.RememberMe.Content" xml:space="preserve">
     <value>Eingeloggt bleiben</value>
   </data>
+  <data name="Shell.Login.SavePassword.Content" xml:space="preserve">
+    <value>Passwort speichern</value>
+  </data>
   <data name="Shell.Login.LoginButton.Content" xml:space="preserve">
     <value>Anmelden</value>
   </data>
@@ -2189,9 +2192,6 @@
   <data name="SalesChannelEditPage.Section.Export.Text" xml:space="preserve">
     <value>Export</value>
   </data>
-  <data name="SalesChannelEditPage.Section.InitialStatus.Text" xml:space="preserve">
-    <value>Initialstatus</value>
-  </data>
   <data name="SalesChannelEditPage.Section.Warehouses.Text" xml:space="preserve">
     <value>Lager</value>
   </data>
@@ -2322,15 +2322,6 @@
   <data name="SalesChannelEditPage.Field.ImportStock.Text" xml:space="preserve">
     <value>Bestand aus Kanal spiegeln (Bestandsführung im Shop)</value>
   </data>
-  <data name="SalesChannelEditPage.Field.InitialProductImportCompleted.Text" xml:space="preserve">
-    <value>Initialer Produktimport abgeschlossen</value>
-  </data>
-  <data name="SalesChannelEditPage.Field.InitialProductExportCompleted.Text" xml:space="preserve">
-    <value>Initialer Produktexport abgeschlossen</value>
-  </data>
-  <data name="SalesChannelEditPage.Field.InitialCustomerImportCompleted.Text" xml:space="preserve">
-    <value>Initialer Kundenimport abgeschlossen</value>
-  </data>
   <data name="SalesChannelEditPage.RequiredFieldsNote.Text" xml:space="preserve">
     <value>* Pflichtfelder</value>
   </data>
@@ -2342,6 +2333,9 @@
   </data>
   <data name="SalesChannelEditPage.NoWarehouses.Hint.Text" xml:space="preserve">
     <value>Erstellen Sie zuerst Lager, um sie diesem Vertriebskanal zuzuweisen</value>
+  </data>
+  <data name="SalesChannelEditPage.WarehouseRequiredHint.Text" xml:space="preserve">
+    <value>Bitte wählen Sie mindestens ein Lager aus, um den Vertriebskanal speichern zu können.</value>
   </data>
   <data name="SalesChannelEditPage.Hint.Text" xml:space="preserve">
     <value>Konfigurieren Sie die Verbindungseinstellungen, um die Synchronisation mit externen Plattformen zu aktivieren. Stellen Sie sicher, dass URL und Anmeldedaten korrekt sind, bevor Sie speichern.</value>
