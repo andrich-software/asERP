@@ -26,6 +26,19 @@ public sealed partial class LoginOverlay : UserControl
     public LoginOverlay()
     {
         this.InitializeComponent();
+
+        // The horizontal wordmark has a dark-text and a white-text variant; pick the one
+        // matching the current theme (the theme is fixed while the login overlay is shown,
+        // but ActualThemeChanged keeps it correct if it ever switches underneath us).
+        this.Loaded += (_, _) => UpdateBrandLogo();
+        this.ActualThemeChanged += (_, _) => UpdateBrandLogo();
+    }
+
+    private void UpdateBrandLogo()
+    {
+        var isDark = this.ActualTheme == ElementTheme.Dark;
+        BrandLogoDark.Visibility = isDark ? Visibility.Visible : Visibility.Collapsed;
+        BrandLogoLight.Visibility = isDark ? Visibility.Collapsed : Visibility.Visible;
     }
 
     /// <summary>

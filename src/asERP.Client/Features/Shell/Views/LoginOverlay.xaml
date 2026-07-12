@@ -15,24 +15,27 @@
       <Grid Padding="24"
             MinHeight="600">
         <StackPanel Spacing="20"
-                    MaxWidth="440"
-                    HorizontalAlignment="Center"
+                    MaxWidth="680"
+                    HorizontalAlignment="Stretch"
                     VerticalAlignment="Center">
 
-          <!-- Brand + Welcome Header -->
+          <!-- Brand Logo (theme-aware; toggled in code-behind) -->
           <StackPanel Spacing="12"
                       HorizontalAlignment="Center"
                       Margin="0,0,0,4">
-            <Image Source="ms-appx:///Assets/Icons/icon.svg"
-                   Width="48"
-                   Height="48"
-                   Stretch="Uniform"
-                   HorizontalAlignment="Center" />
-            <TextBlock x:Uid="Shell.Login.Title"
-                       Style="{StaticResource HeadlineMedium}"
-                       Foreground="{ThemeResource OnBackgroundBrush}"
-                       HorizontalAlignment="Center"
-                       TextAlignment="Center" />
+            <Grid HorizontalAlignment="Center">
+              <Image x:Name="BrandLogoLight"
+                     Source="ms-appx:///Assets/Logo/logo_horizontal.png"
+                     Height="44"
+                     Stretch="Uniform"
+                     HorizontalAlignment="Center" />
+              <Image x:Name="BrandLogoDark"
+                     Source="ms-appx:///Assets/Logo/logo_horizontal_dark.png"
+                     Height="44"
+                     Stretch="Uniform"
+                     HorizontalAlignment="Center"
+                     Visibility="Collapsed" />
+            </Grid>
             <TextBlock x:Uid="Shell.Login.Subtitle"
                        Style="{StaticResource BodyMedium}"
                        Foreground="{ThemeResource OnSurfaceVariantBrush}"
