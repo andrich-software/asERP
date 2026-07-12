@@ -87,8 +87,11 @@ PG_INTERNAL_DB="aserp"
 PG_INTERNAL_USER="aserp"
 PG_INTERNAL_PASSWORD="aserp"
 
-# Client image used to run pg_dump against external DBs.
-PG_CLIENT_IMAGE="postgres:16-alpine"
+# Client image used to run pg_dump/psql against external DBs. Must be >= the server's
+# major version: pg_dump refuses to dump a newer server (e.g. a v16 client against a
+# v17 server errors with "server version mismatch"). A newer client dumps older servers
+# fine, so track the newest Postgres we target. Override with PG_CLIENT_IMAGE in .env.
+PG_CLIENT_IMAGE="${PG_CLIENT_IMAGE:-postgres:17-alpine}"
 
 # Resolved during load_env(); used everywhere downstream.
 DB_ENGINE=""             # postgres | mssql
