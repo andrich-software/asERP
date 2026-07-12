@@ -6,6 +6,7 @@ using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.Persistence.DatabaseContext;
 using asERP.Persistence.Interceptors;
+using asERP.SalesChannels.Abstractions;
 using asERP.SalesChannels.NotificationHandlers;
 using asERP.SalesChannels.Orchestration;
 using asERP.Server.Tests.Infrastructure;
@@ -45,6 +46,12 @@ public class ChannelExportNotificationInterceptorTests
         });
 
         services.AddScoped<ChannelExportOutboxEnqueuer>();
+        // SalesChangedNotificationHandler routes cancellations through the connector registry —
+        // mirror the production wiring (registry over all registered connectors; none by default).
+        // Without this the handler cannot be constructed and CustomMediator.Publish fails before
+        // ANY handler (including test recorders) runs.
+        services.AddScoped<ISalesChannelConnectorRegistry>(sp =>
+            new SalesChannelConnectorRegistry(sp.GetServices<ISalesChannelConnector>()));
         services.AddScoped<INotificationHandler<SalesChangedNotification>, SalesChangedNotificationHandler>();
         services.AddScoped<INotificationHandler<ProductChangedNotification>, ProductChangedNotificationHandler>();
         services.AddScoped<INotificationHandler<ProductSalesChannelChangedNotification>, ProductSalesChannelChangedNotificationHandler>();
@@ -104,8 +111,10 @@ public class ChannelExportNotificationInterceptorTests
         await context.SaveChangesAsync();
         await ClearOutboxAsync(context);
 
-        // The order-cancel path: no explicit publish anywhere — the interceptor alone must export.
-        sales.Status = SalesStatus.Cancelled;
+        // A plain progress update with no explicit publish anywhere — the interceptor alone must
+        // export. (A cancel is deliberately NOT exported as UpdateSales; it routes to the opt-in
+        // CancelSales operation — covered by ChannelExportInterceptorSqliteTests.)
+        sales.Status = SalesStatus.Completed;
         await context.SaveChangesAsync();
 
         var rows = await context.ChannelExportOutbox

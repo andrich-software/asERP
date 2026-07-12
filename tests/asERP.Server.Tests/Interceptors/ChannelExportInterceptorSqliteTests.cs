@@ -12,6 +12,8 @@ using asERP.Infrastructure.Logging;
 using asERP.Persistence.DatabaseContext;
 using asERP.Persistence.Interceptors;
 using asERP.Persistence.Repositories;
+using asERP.SalesChannels.Abstractions;
+using asERP.SalesChannels.Connectors.Common;
 using asERP.SalesChannels.NotificationHandlers;
 using asERP.SalesChannels.Orchestration;
 using asERP.Server.Tests.Infrastructure;
@@ -55,6 +57,10 @@ public class ChannelExportInterceptorSqliteTests : IDisposable
             options.AddInterceptors(serviceProvider.GetRequiredService<ChannelExportNotificationInterceptor>());
         });
         services.AddScoped<ChannelExportOutboxEnqueuer>();
+        // Mirror the production wiring: SalesChangedNotificationHandler resolves the connector
+        // registry for cancel routing. Tests register fake connectors where needed.
+        services.AddScoped<ISalesChannelConnectorRegistry>(sp =>
+            new SalesChannelConnectorRegistry(sp.GetServices<ISalesChannelConnector>()));
         services.AddScoped<INotificationHandler<SalesChangedNotification>, SalesChangedNotificationHandler>();
 
         configure?.Invoke(services);
@@ -62,7 +68,10 @@ public class ChannelExportInterceptorSqliteTests : IDisposable
         return services.BuildServiceProvider();
     }
 
-    private static async Task<(SalesChannel Channel, Sales Sales)> SeedCancellableSaleAsync(ApplicationDbContext context)
+    private static async Task<(SalesChannel Channel, Sales Sales)> SeedCancellableSaleAsync(
+        ApplicationDbContext context,
+        bool pushSalesCancellations = false,
+        string remoteSalesId = "")
     {
         var channel = new SalesChannel
         {
@@ -74,6 +83,7 @@ public class ChannelExportInterceptorSqliteTests : IDisposable
             Password = "secret",
             IsEnabled = true,
             ExportSaless = true,
+            PushSalesCancellations = pushSalesCancellations,
             Warehouses = new List<Warehouse>(),
             TenantId = TenantConstants.TestTenant1Id
         };
@@ -91,6 +101,7 @@ public class ChannelExportInterceptorSqliteTests : IDisposable
             SalesChannelId = channel.Id,
             CustomerId = customer.CustomerId,
             Status = SalesStatus.Processing,
+            RemoteSalesId = remoteSalesId,
             TenantId = TenantConstants.TestTenant1Id
         };
         context.SalesChannel.Add(channel);
@@ -116,7 +127,9 @@ public class ChannelExportInterceptorSqliteTests : IDisposable
 
         var (channel, sales) = await SeedCancellableSaleAsync(context);
 
-        sales.Status = SalesStatus.Cancelled;
+        // A plain progress update — cancels route to the opt-in CancelSales export instead
+        // (see the full-production-path test below).
+        sales.Status = SalesStatus.Completed;
         await context.SaveChangesAsync();
 
         var rows = await context.ChannelExportOutbox
@@ -129,7 +142,7 @@ public class ChannelExportInterceptorSqliteTests : IDisposable
     }
 
     [Fact]
-    public async Task SalesCancelCommand_FullProductionPath_EnqueuesExportAndPublishesCancelledKind()
+    public async Task SalesCancelCommand_FullProductionPath_EnqueuesCancelExportAndPublishesCancelledKind()
     {
         var recorder = new RecordingSalesHandler();
         await using var provider = BuildServiceProvider(services =>
@@ -138,6 +151,8 @@ public class ChannelExportInterceptorSqliteTests : IDisposable
             services.AddScoped<ISalesRepository, SalesRepository>();
             services.AddScoped<IShippingRepository, ShippingRepository>();
             services.AddScoped<IRequestHandler<SalesCancelCommand, Result<Guid>>, SalesCancelHandler>();
+            // The cancel routing requires a connector that declares CancelSales capability.
+            services.AddScoped<ISalesChannelConnector, CancelCapableWooConnector>();
             services.AddSingleton(recorder);
             services.AddScoped<INotificationHandler<SalesChangedNotification>>(sp =>
                 sp.GetRequiredService<RecordingSalesHandler>());
@@ -150,7 +165,8 @@ public class ChannelExportInterceptorSqliteTests : IDisposable
         tenantContext.SetCurrentTenantId(TenantConstants.TestTenant1Id);
         tenantContext.SetAssignedTenantIds(new[] { TenantConstants.TestTenant1Id });
 
-        var (channel, sales) = await SeedCancellableSaleAsync(context);
+        var (channel, sales) = await SeedCancellableSaleAsync(
+            context, pushSalesCancellations: true, remoteSalesId: "wc-4711");
         recorder.Kinds.Clear();
 
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
@@ -158,17 +174,33 @@ public class ChannelExportInterceptorSqliteTests : IDisposable
 
         TestAssertions.AssertTrue(result.Succeeded);
 
-        var rows = await context.ChannelExportOutbox
+        // A cancel must NOT surface as the generic UpdateSales export — connectors interpret that
+        // as "confirm progress" (eBay: shipment confirmation). It routes to CancelSales instead.
+        var updateRows = await context.ChannelExportOutbox
             .IgnoreQueryFilters()
             .Where(o => o.AggregateId == sales.Id && o.Operation == ChannelSyncOperation.UpdateSales)
             .ToListAsync();
+        TestAssertions.AssertEqual(0, updateRows.Count);
 
-        TestAssertions.AssertEqual(1, rows.Count);
-        TestAssertions.AssertEqual(channel.Id, rows[0].SalesChannelId);
+        // Explicit publish (SalesCancelHandler) and the interceptor's safety net both enqueue —
+        // the idempotency key coalesces them into a single CancelSales row.
+        var cancelRows = await context.ChannelExportOutbox
+            .IgnoreQueryFilters()
+            .Where(o => o.AggregateId == sales.Id && o.Operation == ChannelSyncOperation.CancelSales)
+            .ToListAsync();
+        TestAssertions.AssertEqual(1, cancelRows.Count);
+        TestAssertions.AssertEqual(channel.Id, cancelRows[0].SalesChannelId);
 
         // A cancel is a status update, not a delete — the safety net must still publish it with
         // Cancelled kind so kind-filtering handlers (e.g. POS stock compensation) react.
         TestAssertions.AssertTrue(recorder.Kinds.Contains(SalesChangeKind.Cancelled));
+    }
+
+    /// <summary>Minimal connector so the cancel routing finds CancelSales capability for WooCommerce.</summary>
+    private sealed class CancelCapableWooConnector : ConnectorBase
+    {
+        public override SalesChannelType Type => SalesChannelType.WooCommerce;
+        public override SalesChannelCapabilities Capabilities => SalesChannelCapabilities.CancelSales;
     }
 
     private sealed class RecordingSalesHandler : INotificationHandler<SalesChangedNotification>
