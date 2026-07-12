@@ -66,11 +66,6 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private bool _pushSalesCancellations;
     private bool _importStock;
 
-    // Initial Status
-    private bool _initialProductImportCompleted;
-    private bool _initialProductExportCompleted;
-    private bool _initialCustomerImportCompleted;
-
     // Warehouses
     private ObservableCollection<SelectableWarehouse> _warehouses = new();
     // Selected warehouse ids captured from the channel (edit mode) — applied once the (background-
@@ -140,20 +135,30 @@ public class SalesChannelEditModel : AsyncInitializableModel
             // notifications, so marshal them explicitly or they are silently dropped.
             RunOnUi(() =>
             {
+                foreach (var existing in Warehouses)
+                {
+                    existing.PropertyChanged -= OnWarehouseSelectionChanged;
+                }
                 Warehouses.Clear();
                 foreach (var warehouse in response.Data)
                 {
-                    Warehouses.Add(new SelectableWarehouse
+                    var selectable = new SelectableWarehouse
                     {
                         Id = warehouse.Id,
                         Name = warehouse.Name,
                         // Reflect the channel's stored selection (edit mode); no-op for new channels.
                         IsSelected = _selectedWarehouseIds.Contains(warehouse.Id)
-                    });
+                    };
+                    // Keep the Save button / required hint in sync when the user toggles a row.
+                    selectable.PropertyChanged += OnWarehouseSelectionChanged;
+                    Warehouses.Add(selectable);
                 }
 
                 OnPropertyChanged(nameof(HasWarehouses));
                 OnPropertyChanged(nameof(ShowNoWarehouses));
+                OnPropertyChanged(nameof(HasSelectedWarehouse));
+                OnPropertyChanged(nameof(ShowWarehouseRequiredHint));
+                OnPropertyChanged(nameof(CanSave));
             });
         }
         catch (OperationCanceledException)
@@ -457,44 +462,65 @@ public class SalesChannelEditModel : AsyncInitializableModel
     }
 
     /// <summary>Serializes the MySQL settings into the connector-owned config JSON.</summary>
-    private string BuildDatabaseConfigJson()
+    internal static string BuildDatabaseConfigJson(string dbHost, string dbPort, string dbName, string dbTablePrefix)
     {
         var config = new System.Text.Json.Nodes.JsonObject
         {
-            ["host"] = DbHost.Trim(),
-            ["port"] = int.TryParse(DbPort, out var port) ? port : 3306,
-            ["database"] = DbName.Trim(),
-            ["tablePrefix"] = string.IsNullOrWhiteSpace(DbTablePrefix) ? "wp_" : DbTablePrefix.Trim(),
+            ["host"] = dbHost.Trim(),
+            ["port"] = int.TryParse(dbPort, out var port) ? port : 3306,
+            ["database"] = dbName.Trim(),
+            ["tablePrefix"] = string.IsNullOrWhiteSpace(dbTablePrefix) ? "wp_" : dbTablePrefix.Trim(),
         };
         return config.ToJsonString();
     }
 
-    private void LoadDatabaseConfigFromJson(string? json)
+    /// <summary>
+    /// Parses the connector-owned config JSON back into the MySQL field values, or null when the
+    /// stored value is empty or malformed — the form then keeps its defaults and the user
+    /// re-enters the values.
+    /// </summary>
+    internal static (string Host, string Port, string Database, string TablePrefix)? TryParseDatabaseConfig(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
         {
-            return;
+            return null;
         }
 
         try
         {
             if (System.Text.Json.Nodes.JsonNode.Parse(json) is not System.Text.Json.Nodes.JsonObject config)
             {
-                return;
+                return null;
             }
-            DbHost = config["host"]?.GetValue<string>() ?? string.Empty;
-            DbPort = config["port"]?.GetValue<int>().ToString() ?? "3306";
-            DbName = config["database"]?.GetValue<string>() ?? string.Empty;
-            DbTablePrefix = config["tablePrefix"]?.GetValue<string>() ?? "wp_";
+
+            return (
+                config["host"]?.GetValue<string>() ?? string.Empty,
+                config["port"]?.GetValue<int>().ToString() ?? "3306",
+                config["database"]?.GetValue<string>() ?? string.Empty,
+                config["tablePrefix"]?.GetValue<string>() ?? "wp_");
         }
         catch (System.Text.Json.JsonException)
         {
-            // Malformed stored config — leave the defaults; the user re-enters the values.
+            return null;
         }
     }
 
-    private bool IsDbPortValid => string.IsNullOrWhiteSpace(DbPort) ||
-        (int.TryParse(DbPort, out var port) && port is > 0 and <= 65535);
+    private void LoadDatabaseConfigFromJson(string? json)
+    {
+        if (TryParseDatabaseConfig(json) is not { } config)
+        {
+            return;
+        }
+
+        DbHost = config.Host;
+        DbPort = config.Port;
+        DbName = config.Database;
+        DbTablePrefix = config.TablePrefix;
+    }
+
+    /// <summary>Empty is allowed (save falls back to 3306); otherwise it must be a valid TCP port.</summary>
+    internal static bool IsDbPortValid(string dbPort) => string.IsNullOrWhiteSpace(dbPort) ||
+        (int.TryParse(dbPort, out var port) && port is > 0 and <= 65535);
 
     #endregion
 
@@ -560,28 +586,6 @@ public class SalesChannelEditModel : AsyncInitializableModel
 
     #endregion
 
-    #region Initial Status
-
-    public bool InitialProductImportCompleted
-    {
-        get => _initialProductImportCompleted;
-        set => SetProperty(ref _initialProductImportCompleted, value);
-    }
-
-    public bool InitialProductExportCompleted
-    {
-        get => _initialProductExportCompleted;
-        set => SetProperty(ref _initialProductExportCompleted, value);
-    }
-
-    public bool InitialCustomerImportCompleted
-    {
-        get => _initialCustomerImportCompleted;
-        set => SetProperty(ref _initialCustomerImportCompleted, value);
-    }
-
-    #endregion
-
     #region Warehouses
 
     public ObservableCollection<SelectableWarehouse> Warehouses
@@ -592,6 +596,9 @@ public class SalesChannelEditModel : AsyncInitializableModel
 
     public bool HasWarehouses => Warehouses.Count > 0;
 
+    /// <summary>True once the user has selected at least one warehouse — a prerequisite for saving.</summary>
+    public bool HasSelectedWarehouse => Warehouses.Any(w => w.IsSelected);
+
     /// <summary>True while the warehouse list is being fetched in the background.</summary>
     public bool IsWarehousesLoading
     {
@@ -601,12 +608,37 @@ public class SalesChannelEditModel : AsyncInitializableModel
             if (SetProperty(ref _isWarehousesLoading, value))
             {
                 OnPropertyChanged(nameof(ShowNoWarehouses));
+                OnPropertyChanged(nameof(ShowWarehouseRequiredHint));
             }
         }
     }
 
     /// <summary>Show the "no warehouses" placeholder only once loading finished and none exist.</summary>
     public bool ShowNoWarehouses => !IsWarehousesLoading && !HasWarehouses;
+
+    /// <summary>
+    /// Show the "at least one warehouse required" hint once the list has loaded, warehouses exist,
+    /// but none is selected yet — explains why the Save button is disabled.
+    /// </summary>
+    public bool ShowWarehouseRequiredHint => !IsWarehousesLoading && HasWarehouses && !HasSelectedWarehouse;
+
+    /// <summary>
+    /// Recomputes the save-gating properties whenever a warehouse's selection toggles. The warehouse
+    /// items raise change notifications independently of this model, so we listen and re-evaluate
+    /// <see cref="CanSave"/> (the Save button's IsEnabled) and the required-selection hint.
+    /// </summary>
+    private void OnWarehouseSelectionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(SelectableWarehouse.IsSelected))
+            return;
+
+        RunOnUi(() =>
+        {
+            OnPropertyChanged(nameof(HasSelectedWarehouse));
+            OnPropertyChanged(nameof(ShowWarehouseRequiredHint));
+            OnPropertyChanged(nameof(CanSave));
+        });
+    }
 
     #endregion
 
@@ -649,42 +681,62 @@ public class SalesChannelEditModel : AsyncInitializableModel
     /// <summary>
     /// Determines if the save operation is allowed based on required fields per SalesChannelType.
     /// </summary>
-    public bool CanSave
+    public bool CanSave => !IsLoading && CanSaveCore(
+        SalesChannelType, IsEditMode, Name, Url, Username, Password,
+        DbHost, DbName, DbPort, HasSelectedWarehouse);
+
+    /// <summary>
+    /// Pure required-field validation matrix behind <see cref="CanSave"/> — one rule set per
+    /// SalesChannelType. Static so it is testable headless (tests/asERP.Client.Tests).
+    /// </summary>
+    internal static bool CanSaveCore(
+        SalesChannelType type,
+        bool isEditMode,
+        string name,
+        string url,
+        string username,
+        string password,
+        string dbHost,
+        string dbName,
+        string dbPort,
+        bool hasSelectedWarehouse)
     {
-        get
+        if (string.IsNullOrWhiteSpace(name))
+            return false;
+
+        // Every channel must have at least one warehouse assigned (stock is always drawn from /
+        // mirrored into a concrete warehouse). Enforced server-side too.
+        if (!hasSelectedWarehouse)
+            return false;
+
+        // Type-specific validation
+        return type switch
         {
-            if (IsLoading || string.IsNullOrWhiteSpace(Name))
-                return false;
+            // PointOfSale: Only Name required
+            SalesChannelType.PointOfSale => true,
 
-            // Type-specific validation
-            return SalesChannelType switch
-            {
-                // PointOfSale: Only Name required
-                SalesChannelType.PointOfSale => true,
+            // eBay / Amazon: only Name required at save time. The OAuth flow runs after save
+            // (it needs the channel id) and persists the refresh token onto the channel.
+            // Developer-App credentials live in TenantOAuthAppSettings or system Settings.
+            SalesChannelType.eBay or SalesChannelType.Amazon => true,
 
-                // eBay / Amazon: only Name required at save time. The OAuth flow runs after save
-                // (it needs the channel id) and persists the refresh token onto the channel.
-                // Developer-App credentials live in TenantOAuthAppSettings or system Settings.
-                SalesChannelType.eBay or SalesChannelType.Amazon => true,
+            // WooCommerceDatabase additionally needs the MySQL host + database name; the URL
+            // stays required because the product images are downloaded from the shop over HTTP.
+            SalesChannelType.WooCommerceDatabase =>
+                !string.IsNullOrWhiteSpace(url) &&
+                !string.IsNullOrWhiteSpace(username) &&
+                !string.IsNullOrWhiteSpace(dbHost) &&
+                !string.IsNullOrWhiteSpace(dbName) &&
+                IsDbPortValid(dbPort) &&
+                (isEditMode || !string.IsNullOrWhiteSpace(password)),
 
-                // WooCommerceDatabase additionally needs the MySQL host + database name; the URL
-                // stays required because the product images are downloaded from the shop over HTTP.
-                SalesChannelType.WooCommerceDatabase =>
-                    !string.IsNullOrWhiteSpace(Url) &&
-                    !string.IsNullOrWhiteSpace(Username) &&
-                    !string.IsNullOrWhiteSpace(DbHost) &&
-                    !string.IsNullOrWhiteSpace(DbName) &&
-                    IsDbPortValid &&
-                    (IsEditMode || !string.IsNullOrWhiteSpace(Password)),
-
-                // Shopware6, WooCommerce: Name, URL, Username required.
-                // Password is only required when creating — on edit the stored secret is kept
-                // unless the user types a new one (it is never returned to the client to prefill).
-                _ => !string.IsNullOrWhiteSpace(Url) &&
-                     !string.IsNullOrWhiteSpace(Username) &&
-                     (IsEditMode || !string.IsNullOrWhiteSpace(Password))
-            };
-        }
+            // Shopware6, WooCommerce: Name, URL, Username required.
+            // Password is only required when creating — on edit the stored secret is kept
+            // unless the user types a new one (it is never returned to the client to prefill).
+            _ => !string.IsNullOrWhiteSpace(url) &&
+                 !string.IsNullOrWhiteSpace(username) &&
+                 (isEditMode || !string.IsNullOrWhiteSpace(password))
+        };
     }
 
     #endregion
@@ -721,10 +773,6 @@ public class SalesChannelEditModel : AsyncInitializableModel
             ExportStock = salesChannel.ExportStock;
             PushSalesCancellations = salesChannel.PushSalesCancellations;
             ImportStock = salesChannel.ImportStock;
-
-            // Note: InitialProductImportCompleted and InitialProductExportCompleted
-            // are not returned by the API in DetailDto, so we keep them as default (false).
-            // They are only used for initial setup when creating/updating a sales channel.
 
             // OAuth status (only meaningful for eBay / Amazon channels).
             _hasRefreshToken = salesChannel.HasRefreshToken;
@@ -868,7 +916,9 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 Password = Password,
                 // Null keeps a channel's stored connector config untouched; only the DB variant
                 // owns its config from this form.
-                AdditionalConfigJson = IsWooCommerceDb ? BuildDatabaseConfigJson() : null,
+                AdditionalConfigJson = IsWooCommerceDb
+                    ? BuildDatabaseConfigJson(DbHost, DbPort, DbName, DbTablePrefix)
+                    : null,
                 ImportProducts = ImportProducts,
                 ImportCustomers = ImportCustomers,
                 ImportSaless = ImportSaless,
@@ -878,9 +928,6 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 ExportStock = ExportStock,
                 PushSalesCancellations = PushSalesCancellations,
                 ImportStock = ImportStock,
-                InitialProductImportCompleted = InitialProductImportCompleted,
-                InitialProductExportCompleted = InitialProductExportCompleted,
-                InitialCustomerImportCompleted = InitialCustomerImportCompleted,
                 WarehouseIds = Warehouses.Where(w => w.IsSelected).Select(w => w.Id).ToList()
             };
 

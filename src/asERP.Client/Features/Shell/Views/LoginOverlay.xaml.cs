@@ -78,22 +78,10 @@ public sealed partial class LoginOverlay : UserControl
         LoginServerStatus.Visibility = Visibility.Collapsed;
         RegisterLink.Visibility = Visibility.Collapsed;
 
-        // Dev convenience credentials (per-server last-used email overrides the email below
-        // via the selector's SelectionChanged once a server has been used).
-        try
-        {
-            var app = Application.Current as App;
-            var hostEnvironment = app?.Host?.Services?.GetService<IHostEnvironment>();
-            if (hostEnvironment?.IsDevelopment() == true)
-            {
-                LoginEmail.Text = "admin@localhost.com";
-                LoginPassword.Password = "P@ssword1";
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[LoginOverlay] Reset error: {ex.Message}");
-        }
+        // Credential prefill (saved password, dev convenience) happens per selected server in
+        // ApplyCredentialPrefill — a blanket prefill here left a stale dev password in the box
+        // when another server was selected, which then failed with "invalid credentials".
+        LoginSavePassword.IsChecked = false;
 
 #if __WASM__
         // Canvas rendering hides the login form from the browser's password manager, so ask
@@ -110,7 +98,63 @@ public sealed partial class LoginOverlay : UserControl
             return;
         }
 
+#if __DESKTOP__
+        // Opt-in password saving is only available where DPAPI protects it (Windows desktop).
+        LoginSavePassword.Visibility = SavedPasswordStore.IsSupported
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+#endif
+
         _ = InitializeServerSelectorAsync();
+    }
+
+    /// <summary>
+    /// Per-server credential prefill, applied whenever the selected server changes:
+    /// a saved password (Windows desktop, opt-in) wins; the Local-Dev profile gets the
+    /// well-known dev credentials in Development; otherwise the password box is cleared —
+    /// a password belonging to a previously selected server never matches this one, and a
+    /// filled-looking box would fake a "saved" password that fails with 401.
+    /// </summary>
+    private void ApplyCredentialPrefill(ServerProfile profile)
+    {
+#if __DESKTOP__
+        if (SavedPasswordStore.IsSupported && SavedPasswordStore.TryGet(profile.Id) is { } savedPassword)
+        {
+            LoginPassword.Password = savedPassword;
+            LoginSavePassword.IsChecked = true;
+            return;
+        }
+        LoginSavePassword.IsChecked = false;
+#endif
+
+        if (profile.Id == ServerProfile.LocalDevId && IsDevelopmentEnvironment())
+        {
+            if (string.IsNullOrWhiteSpace(LoginEmail.Text))
+            {
+                LoginEmail.Text = "admin@localhost.com";
+            }
+            LoginPassword.Password = "P@ssword1";
+            return;
+        }
+
+#if !__WASM__
+        // On WASM the browser-credential prefill is origin-scoped, not per server profile —
+        // leave it alone there. Everywhere else, drop leftovers from the previous selection.
+        LoginPassword.Password = string.Empty;
+#endif
+    }
+
+    private static bool IsDevelopmentEnvironment()
+    {
+        try
+        {
+            var app = Application.Current as App;
+            return app?.Host?.Services?.GetService<IHostEnvironment>()?.IsDevelopment() == true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
 #if __WASM__
@@ -178,6 +222,8 @@ public sealed partial class LoginOverlay : UserControl
             LoginEmail.Text = profile.LastUsedEmail;
         }
 
+        ApplyCredentialPrefill(profile);
+
         _ = RefreshServerStatusAsync(profile.Url);
         _ = RefreshRegistrationLinkAsync(profile.Url);
     }
@@ -218,9 +264,7 @@ public sealed partial class LoginOverlay : UserControl
     private void ApplyServerCompatibility(ServerInfoResponseDto? info)
     {
         var current = ClientVersionInfo.Stamped;
-        _updateRequired = current is not null
-            && Version.TryParse(info?.MinimumClientVersion, out var minimum)
-            && current < minimum;
+        _updateRequired = ClientVersionGate.IsUpdateRequired(current, info?.MinimumClientVersion);
 
         if (_updateRequired)
         {
@@ -430,6 +474,22 @@ public sealed partial class LoginOverlay : UserControl
                     {
                         await profileStore.SetLastUsedAsync(selectedProfile.Id, email);
                     }
+
+#if __DESKTOP__
+                    // Opt-in password saving: persist only after the server accepted the
+                    // credentials; unchecking removes a previously saved password.
+                    if (SavedPasswordStore.IsSupported)
+                    {
+                        if (LoginSavePassword.IsChecked == true)
+                        {
+                            SavedPasswordStore.Set(selectedProfile.Id, password);
+                        }
+                        else
+                        {
+                            SavedPasswordStore.Remove(selectedProfile.Id);
+                        }
+                    }
+#endif
                 }
 
                 if (LoginSucceeded is { } loginSucceeded)

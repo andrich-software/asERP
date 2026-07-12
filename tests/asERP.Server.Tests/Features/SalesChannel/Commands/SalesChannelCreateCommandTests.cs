@@ -380,7 +380,8 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
             Name = "Minimal Sales Channel",
             Url = "https://minimal.example.com",
             Username = "minimal",
-            Password = "password"
+            Password = "password",
+            WarehouseIds = new List<Guid> { TestWarehouse1Id } // At least one warehouse is required
         };
 
         var response = await PostAsJsonAsync("/api/v1/SalesChannels", salesChannelDto);
@@ -455,26 +456,20 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task CreateSalesChannel_WithEmptyWarehouseIds_ShouldCreateSuccessfully()
+    public async Task CreateSalesChannel_WithEmptyWarehouseIds_ShouldReturnBadRequest()
     {
         await SeedTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
         var salesChannelDto = CreateValidSalesChannelDto();
-        salesChannelDto.WarehouseIds = new List<Guid>(); // Empty list should be allowed
+        salesChannelDto.WarehouseIds = new List<Guid>(); // At least one warehouse is now required
 
         var response = await PostAsJsonAsync("/api/v1/SalesChannels", salesChannelDto);
 
-        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertTrue(result.Succeeded);
-
-        // Verify no warehouses are associated
-        var getResponse = await Client.GetAsync($"/api/v1/SalesChannels/{result.Data}");
-        TestAssertions.AssertHttpSuccess(getResponse);
-        var salesChannelDetail = await ReadResponseAsync<Result<SalesChannelDetailDto>>(getResponse);
-        TestAssertions.AssertNotNull(salesChannelDetail?.Data);
-        TestAssertions.AssertEqual(0, salesChannelDetail.Data.Warehouses.Count);
+        TestAssertions.AssertFalse(result.Succeeded);
+        TestAssertions.AssertNotEmpty(result.Messages);
     }
 
     [Fact]

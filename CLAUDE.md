@@ -25,7 +25,7 @@ asERP is an open-source, multi-tenant ERP system. C#, .NET 10, Clean Architectur
 | `tests/asERP.Server.Tests` | xUnit, multi-tenant integration tests |
 | `tests/asERP.Persistence.Tests` | xUnit, persistence layer |
 | `tests/asERP.Client.Tests` | NUnit, pure client logic |
-| `tests/asERP.Client.UITests` | NUnit + Uno.UITest — placeholder scaffolding only |
+| `tests/asERP.Client.UITests` | NUnit + Playwright — WASM boot smoke tests against the served app |
 
 ### Architecture in one screen
 

@@ -95,6 +95,9 @@
   <data name="Shell.Login.RememberMe.Content" xml:space="preserve">
     <value>Stay signed in</value>
   </data>
+  <data name="Shell.Login.SavePassword.Content" xml:space="preserve">
+    <value>Save password</value>
+  </data>
   <data name="Shell.Login.LoginButton.Content" xml:space="preserve">
     <value>Login</value>
   </data>
@@ -2189,9 +2192,6 @@
   <data name="SalesChannelEditPage.Section.Export.Text" xml:space="preserve">
     <value>Export</value>
   </data>
-  <data name="SalesChannelEditPage.Section.InitialStatus.Text" xml:space="preserve">
-    <value>Initial Status</value>
-  </data>
   <data name="SalesChannelEditPage.Section.Warehouses.Text" xml:space="preserve">
     <value>Warehouses</value>
   </data>
@@ -2322,15 +2322,6 @@
   <data name="SalesChannelEditPage.Field.ImportStock.Text" xml:space="preserve">
     <value>Mirror stock from channel (shop keeps stock)</value>
   </data>
-  <data name="SalesChannelEditPage.Field.InitialProductImportCompleted.Text" xml:space="preserve">
-    <value>Initial Product Import Completed</value>
-  </data>
-  <data name="SalesChannelEditPage.Field.InitialProductExportCompleted.Text" xml:space="preserve">
-    <value>Initial Product Export Completed</value>
-  </data>
-  <data name="SalesChannelEditPage.Field.InitialCustomerImportCompleted.Text" xml:space="preserve">
-    <value>Initial Customer Import Completed</value>
-  </data>
   <data name="SalesChannelEditPage.RequiredFieldsNote.Text" xml:space="preserve">
     <value>* Required fields</value>
   </data>
@@ -2342,6 +2333,9 @@
   </data>
   <data name="SalesChannelEditPage.NoWarehouses.Hint.Text" xml:space="preserve">
     <value>Create warehouses first to assign them to this sales channel</value>
+  </data>
+  <data name="SalesChannelEditPage.WarehouseRequiredHint.Text" xml:space="preserve">
+    <value>Please select at least one warehouse to save the sales channel.</value>
   </data>
   <data name="SalesChannelEditPage.Hint.Text" xml:space="preserve">
     <value>Configure the connection settings to enable synchronization with external platforms. Ensure the URL and credentials are correct before saving.</value>

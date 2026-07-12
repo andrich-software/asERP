@@ -230,4 +230,4 @@ When adding UI, think about all four runtimes (Desktop / WASM / Android / iOS):
 
 ## Tests
 
-Pure client logic (static helpers, `x:Bind` visual functions, model logic) is tested in `tests/asERP.Client.Tests` (NUnit) — extract logic into static helpers to make it testable there; see its `CLAUDE.md`. `tests/asERP.Client.UITests` is placeholder template scaffolding and provides no real coverage.
+Pure client logic (static helpers, `x:Bind` visual functions, model logic) is tested in `tests/asERP.Client.Tests` (NUnit) — extract logic into static helpers to make it testable there; see its `CLAUDE.md`. `tests/asERP.Client.UITests` holds Playwright-based WASM boot smoke tests (no per-control queries — Skia renders into one canvas); see its `CLAUDE.md`.

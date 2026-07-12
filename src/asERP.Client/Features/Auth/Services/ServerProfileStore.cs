@@ -122,6 +122,18 @@ public class ServerProfileStore : IServerProfileStore
 
         profiles.Remove(target);
         SaveProfiles(profiles);
+
+        // Drop a saved login password stored for this profile (written by the Windows desktop
+        // client's SavedPasswordStore — key prefix kept in sync there; no-op elsewhere).
+        try
+        {
+            ApplicationData.Current.LocalSettings.Values.Remove($"saved_password_{id}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not remove saved password for deleted server profile {Id}", id);
+        }
+
         return Task.CompletedTask;
     }
 
