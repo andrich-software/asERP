@@ -11,7 +11,7 @@ env:
 jobs:
   build-and-deploy:
     name: Build and Deploy via SFTP
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 20
 
     steps:

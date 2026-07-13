@@ -10,7 +10,7 @@ on:
 
 jobs:
   version:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
     steps:
@@ -22,7 +22,7 @@ jobs:
         echo "Generated version: $VERSION"
 
   build-windows:
-    runs-on: windows-latest
+    runs-on: [self-hosted, Linux, X64]
     needs: version
     steps:
     - name: Checkout code
@@ -41,33 +41,42 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore src/asERP.Client/asERP.Client.csproj
 
+    # Cross-compiled on the Linux runner: -r win-x64 produces the Windows apphost
+    # (asERP.Client.exe) and pulls win-x64 native assets (SkiaSharp etc.) from NuGet.
+    # --self-contained false keeps it framework-dependent (still needs .NET 10 runtime),
+    # matching the previous windows-latest build and the release notes.
     - name: Publish Windows
       run: |
-        dotnet publish src/asERP.Client/asERP.Client.csproj `
-          --configuration Release `
-          --framework net10.0-desktop `
-          -p:Version=${{ needs.version.outputs.version }} `
+        dotnet publish src/asERP.Client/asERP.Client.csproj \
+          --configuration Release \
+          --framework net10.0-desktop \
+          --runtime win-x64 \
+          --self-contained false \
+          -p:Version=${{ needs.version.outputs.version }} \
           --output ./publish/windows
 
     - name: Rename executable
       run: |
-        if (Test-Path "./publish/windows/asERP.Client.exe") {
-          Rename-Item -Path "./publish/windows/asERP.Client.exe" -NewName "asERP.Desktop.exe"
-        }
-      shell: pwsh
+        if [ -f "./publish/windows/asERP.Client.exe" ]; then
+          mv ./publish/windows/asERP.Client.exe ./publish/windows/asERP.Desktop.exe
+        fi
 
     - name: Create Windows archive
-      run: Compress-Archive -Path ./publish/windows/* -DestinationPath ./publish/asERP.Desktop-${{ needs.version.outputs.version }}-windows.zip
-      shell: pwsh
+      run: |
+        cd publish/windows
+        zip -r ../asERP.Desktop-${{ needs.version.outputs.version }}-windows.zip .
 
     - name: Upload Windows artifact
       uses: actions/upload-artifact@v4
       with:
         name: windows
         path: ./publish/asERP.Desktop-${{ needs.version.outputs.version }}-windows.zip
+        # Only a hand-off to the release job in the same run — the final asset lives
+        # in the GitHub Release, so keep the CI artifact for the minimum time.
+        retention-days: 1
 
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     needs: version
     steps:
     - name: Checkout code
@@ -110,9 +119,10 @@ jobs:
       with:
         name: linux
         path: ./publish/asERP.Desktop-${{ needs.version.outputs.version }}-linux.tar.gz
+        retention-days: 1
 
   build-macos:
-    runs-on: macos-latest
+    runs-on: [self-hosted, Linux, X64]
     needs: version
     steps:
     - name: Checkout code
@@ -131,11 +141,16 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore src/asERP.Client/asERP.Client.csproj
 
+    # Cross-compiled on the Linux runner. osx-arm64 matches what macos-latest (Apple
+    # Silicon) produced before; switch to osx-x64 if Intel Macs must be served natively.
+    # --self-contained false keeps it framework-dependent (needs the .NET 10 runtime).
     - name: Publish macOS
       run: |
         dotnet publish src/asERP.Client/asERP.Client.csproj \
           --configuration Release \
           --framework net10.0-desktop \
+          --runtime osx-arm64 \
+          --self-contained false \
           -p:Version=${{ needs.version.outputs.version }} \
           --output ./publish/macos
 
@@ -155,9 +170,10 @@ jobs:
       with:
         name: macos
         path: ./publish/asERP.Desktop-${{ needs.version.outputs.version }}-macos.tar.gz
+        retention-days: 1
 
   release:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     needs: [version, build-windows, build-linux, build-macos]
     steps:
     - name: Download all artifacts
