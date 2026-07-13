@@ -101,7 +101,7 @@
     <!-- Pinned to 3.119.2 to match the SkiaSharp version Uno 6.5.x resolves transitively.
          A higher pin (e.g. 3.119.4) mixes native asset versions and breaks WASM boot-config generation. -->
     <PackageVersion Include="SkiaSharp" Version="4.148.0" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.148.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.150.0" />
     <PackageVersion Include="SkiaSharp.Skottie" Version="3.119.2" />
     <PackageVersion Include="SkiaSharp.Views.Uno.WinUI" Version="3.119.2" />
     <PackageVersion Include="Microsoft.Graph" Version="6.2.0" />
