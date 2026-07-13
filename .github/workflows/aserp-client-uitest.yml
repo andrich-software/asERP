@@ -7,7 +7,7 @@ on:
 
 jobs:
   uitest:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -30,8 +30,14 @@ jobs:
       - name: Build UI tests
         run: dotnet build tests/asERP.Client.UITests/asERP.Client.UITests.csproj
 
+      # The runner has no PowerShell, so the generated playwright.ps1 can't be used.
+      # Microsoft.Playwright.CLI is the documented pwsh-free way to drive the browser install;
+      # run it from the test project so it picks up the matching Playwright package version.
       - name: Install Playwright Chromium
-        run: pwsh tests/asERP.Client.UITests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+        working-directory: tests/asERP.Client.UITests
+        run: |
+          dotnet tool install --global Microsoft.Playwright.CLI
+          playwright install --with-deps chromium
 
       - name: Serve WASM head
         run: |
@@ -55,3 +61,4 @@ jobs:
           name: uitest-screenshots
           path: uitest-screenshots/
           if-no-files-found: ignore
+          retention-days: 7

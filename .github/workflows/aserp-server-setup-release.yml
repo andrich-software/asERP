@@ -22,7 +22,7 @@ on:
 
 jobs:
   version:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
     steps:
@@ -87,9 +87,11 @@ jobs:
       with:
         name: installer
         path: installer/output/asERP-Server-Setup-${{ needs.version.outputs.version }}.exe
+        # Hand-off to the release job only; final installer lives in the GitHub Release.
+        retention-days: 1
 
   release:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     needs: [version, build-installer]
     permissions:
       contents: write
