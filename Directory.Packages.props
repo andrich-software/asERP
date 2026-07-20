@@ -41,7 +41,7 @@
     <PackageVersion Include="Uno.UI.Adapter.Microsoft.Extensions.Logging" Version="6.4.242" />
     <PackageVersion Include="Uno.UI.App.Mcp" Version="1.0.11" />
     <PackageVersion Include="Uno.UI.HotDesign" Version="1.17.377" />
-    <PackageVersion Include="Uno.WinUI" Version="6.5.237" />
+    <PackageVersion Include="Uno.WinUI" Version="6.6.166" />
     <PackageVersion Include="Uno.WinUI.DevServer" Version="6.4.242" />
     <PackageVersion Include="Uno.WinUI.Graphics2DSK" Version="6.4.242" />
     <PackageVersion Include="Uno.WinUI.Lottie" Version="6.4.242" />
