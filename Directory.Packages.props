@@ -65,7 +65,7 @@
     <PackageVersion Include="Xamarin.AndroidX.RecyclerView" Version="1.4.0.6" />
     <PackageVersion Include="Xamarin.Google.Android.Material" Version="1.14.0.5" />
     <!-- OpenTelemetry -->
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.16.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
     <!-- The Prometheus exporter has never shipped a stable release; the beta is the
          upstream-recommended way to expose an OTel /metrics scrape endpoint. -->
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.16.0-beta.1" />
