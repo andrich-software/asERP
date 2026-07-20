@@ -36,7 +36,7 @@
     <PackageVersion Include="Amazon.SellingPartnerAPIAA" Version="1.2.0" />
     <!-- Uno Platform -->
     <PackageVersion Include="Tmds.DBus.Protocol" Version="0.94.2" />
-    <PackageVersion Include="Uno.CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.205" />
+    <PackageVersion Include="Uno.CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.206" />
     <PackageVersion Include="Uno.Extensions.Navigation" Version="7.0.4" />
     <PackageVersion Include="Uno.UI.Adapter.Microsoft.Extensions.Logging" Version="6.4.242" />
     <PackageVersion Include="Uno.UI.App.Mcp" Version="1.0.11" />
