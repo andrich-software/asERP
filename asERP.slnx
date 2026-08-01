@@ -22,6 +22,7 @@
     <File Path=".github/workflows/codeql.yml" />
     <File Path=".github/workflows/defender-for-devops.yml" />
     <File Path=".gitignore" />
+    <File Path=".mcp.json" />
     <File Path=".vsconfig" />
     <File Path="asERP.sln.DotSettings.user" />
     <File Path="CLAUDE.md" />
