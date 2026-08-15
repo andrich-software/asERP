@@ -22,6 +22,7 @@
     </PackageReference>
     <PackageReference Include="SkiaSharp.Skottie" />
     <PackageReference Include="SkiaSharp.Views.Uno.WinUI" />
+    <PackageReference Include="System.Security.Cryptography.Xml" />
     <PackageReference Include="Uno.WinUI" />
   </ItemGroup>
 
