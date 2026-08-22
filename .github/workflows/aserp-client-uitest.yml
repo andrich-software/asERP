@@ -26,6 +26,11 @@ jobs:
       - name: Restore workloads
         run: dotnet workload restore src/asERP.Client/asERP.Client.csproj -p:WasmOnlyBuild=true
 
+      # workload restore doesn't detect the browserwasm head's wasm-tools requirement
+      # (it only surfaces at publish, when native WASM assets are linked) — install explicitly.
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
       # Release on purpose: Debug bundles the Uno DevServer/Hot-Reload client, whose failing
       # ws://.../rc connection throws an unhandled NullReferenceException that would trip the
       # tests' page-error assertion. Release is also what users actually get (incl. trimming).
