@@ -31,6 +31,11 @@ jobs:
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
 
+      # The self-hosted runner's PATH doesn't include the global dotnet tools dir,
+      # which the playwright and dotnet-serve tools below are installed into.
+      - name: Add dotnet tools to PATH
+        run: echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
       # Release on purpose: Debug bundles the Uno DevServer/Hot-Reload client, whose failing
       # ws://.../rc connection throws an unhandled NullReferenceException that would trip the
       # tests' page-error assertion. Release is also what users actually get (incl. trimming).
