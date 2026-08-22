@@ -48,11 +48,14 @@ jobs:
       # The runner has no PowerShell, so the generated playwright.ps1 can't be used.
       # Microsoft.Playwright.CLI is the documented pwsh-free way to drive the browser install;
       # run it from the test project so it picks up the matching Playwright package version.
+      # No --with-deps: it needs passwordless sudo, which the runner user doesn't have.
+      # Chromium's system libraries are installed once on the runner host instead
+      # (as root: playwright install-deps chromium).
       - name: Install Playwright Chromium
         working-directory: tests/asERP.Client.UITests
         run: |
-          dotnet tool install --global Microsoft.Playwright.CLI
-          playwright install --with-deps chromium
+          dotnet tool install --global Microsoft.Playwright.CLI || true
+          playwright install chromium
 
       - name: Serve WASM head
         run: |
