@@ -29,6 +29,11 @@ jobs:
       - name: Restore workloads
         run: dotnet workload restore src/asERP.Client/asERP.Client.csproj
 
+      # workload restore doesn't detect the browserwasm head's wasm-tools requirement
+      # (it only surfaces at publish, when native WASM assets are linked) — install explicitly.
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
       - name: Cache .NET packages
         uses: actions/cache@v4
         with:
