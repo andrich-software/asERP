@@ -14,9 +14,8 @@ on:
       - 'src/asERP.Infrastructure/**'
       - 'src/asERP.Persistence/**'
       - 'src/asERP.Persistence.MSSQL/**'
-      - 'src/asERP.Persistence.PosgreSQL/**'
+      - 'src/asERP.Persistence.PostgreSQL/**'
       - 'src/asERP.SalesChannels/**'
-      - 'src/asERP.Persistence/**'
       - 'src/asERP.Application.Persistence.IntegrationTests/**'
       - 'src/asERP.Application.UnitTests/**'
       - 'src/asERP.Server.Tests/**'
@@ -32,12 +31,17 @@ on:
       - 'src/asERP.Infrastructure/**'
       - 'src/asERP.Persistence/**'
       - 'src/asERP.SalesChannels/**'
-      - 'src/asERP.Persistence/**'
       - 'src/asERP.Persistence.MSSQL/**'
       - 'src/asERP.Persistence.PostgreSQL/**'
       - 'src/asERP.Application.Persistence.IntegrationTests/**'
       - 'src/asERP.Application.UnitTests/**'
       - 'src/asERP.Server.Tests/**'
+
+# A newer push to the same branch supersedes the running test — cancel it so it
+# stops blocking the single-slot self-hosted runner.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   # The self-hosted runner user cannot write to setup-dotnet's default

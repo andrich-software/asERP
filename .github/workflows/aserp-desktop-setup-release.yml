@@ -69,6 +69,12 @@ on:
         type: boolean
         default: false
 
+# Rapid successive pushes: each run releases under its own tag and the Store draft
+# is just re-updated by the newer run, so cancelling a superseded run is safe.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   windows-store-release:
     runs-on: windows-latest
@@ -87,8 +93,6 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4

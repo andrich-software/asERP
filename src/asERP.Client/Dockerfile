@@ -1,6 +1,9 @@
 ﻿# Uno Platform WebAssembly Dockerfile
-# Build stage with .NET 10 SDK
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# Build stage with .NET 10 SDK.
+# --platform=$BUILDPLATFORM: the WASM output is architecture-independent (static
+# files served by nginx), so in a multi-arch build the expensive publish runs
+# once natively instead of per target platform (arm64 under QEMU took ~5-10x).
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 # Install python3 required by Emscripten for WASM native compilation
 RUN apt-get update && apt-get install -y --no-install-recommends python3 && rm -rf /var/lib/apt/lists/*

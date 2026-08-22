@@ -13,12 +13,16 @@ on:
       - 'src/asERP.Infrastructure/**'
       - 'src/asERP.Persistence/**'
       - 'src/asERP.SalesChannels/**'
-      - 'src/asERP.Persistence/**'
       - 'src/asERP.Persistence.MSSQL/**'
       - 'src/asERP.Persistence.PostgreSQL/**'
       - 'src/asERP.Application.Persistence.IntegrationTests/**'
       - 'src/asERP.Application.UnitTests/**'
       - 'src/asERP.Server.Tests/**'
+
+# Rapid successive pushes: only the newest image matters — cancel superseded runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   # The self-hosted runner user cannot write to setup-dotnet's default
@@ -31,7 +35,7 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -45,6 +49,9 @@ jobs:
       - name: Test asERP.Server.Tests
         run: dotnet test tests/asERP.Server.Tests --no-build --verbosity normal
       
+      # QEMU is still needed for the arm64 runtime stage (apt-get in the final
+      # image); the .NET build itself cross-compiles natively via
+      # --platform=$BUILDPLATFORM + -a $TARGETARCH in the Dockerfile.
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -72,3 +79,7 @@ jobs:
           push: true
           labels: ${{ steps.meta.outputs.labels }}
           tags: andrichsoftware/aserp-server:latest
+          # Registry-backed layer cache: reuses the restore layer between runs
+          # as long as the project files are unchanged.
+          cache-from: type=registry,ref=andrichsoftware/aserp-server:buildcache
+          cache-to: type=registry,ref=andrichsoftware/aserp-server:buildcache,mode=max
