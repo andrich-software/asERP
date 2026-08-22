@@ -3,6 +3,7 @@ using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
 using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Application.Notifications;
 using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.SalesChannel.Commands.SalesChannelUpdate;
@@ -12,15 +13,18 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
     private readonly IAppLogger<SalesChannelUpdateHandler> _logger;
     private readonly ISalesChannelRepository _salesChannelRepository;
     private readonly IWarehouseRepository _warehouseRepository;
+    private readonly IMediator _mediator;
 
     public SalesChannelUpdateHandler(
         IAppLogger<SalesChannelUpdateHandler> logger,
         ISalesChannelRepository salesChannelRepository,
-        IWarehouseRepository warehouseRepository)
+        IWarehouseRepository warehouseRepository,
+        IMediator mediator)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _salesChannelRepository = salesChannelRepository ?? throw new ArgumentNullException(nameof(salesChannelRepository));
         _warehouseRepository = warehouseRepository ?? throw new ArgumentNullException(nameof(warehouseRepository));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
     public async Task<Result<Guid>> Handle(SalesChannelUpdateCommand request, CancellationToken cancellationToken)
@@ -61,6 +65,12 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
                 result.Messages.Add($"Sales channel with ID {request.Id} not found");
                 return result;
             }
+
+            // Snapshot the stock-relevant state before any mutation: the exported stock is the sum over
+            // the channel's linked warehouses, so a changed warehouse set (or ExportStock switching on)
+            // must trigger a stock re-push for every listed product after the update is persisted.
+            var previousWarehouseIds = existingSalesChannel.Warehouses?.Select(w => w.Id).ToHashSet() ?? new HashSet<Guid>();
+            var previousExportStock = existingSalesChannel.ExportStock;
 
             // Update properties from request
             existingSalesChannel.Type = request.SalesChannelType;
@@ -123,6 +133,16 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
 
             // Update in database
             await _salesChannelRepository.UpdateAsync(existingSalesChannel);
+
+            // A changed warehouse set (or freshly enabled ExportStock) shifts the effective stock of
+            // every listed product — kick off a stock re-push for all of them via the export outbox.
+            var newWarehouseIds = warehouses.Select(w => w.Id).ToHashSet();
+            if (request.ExportStock && (!previousExportStock || !newWarehouseIds.SetEquals(previousWarehouseIds)))
+            {
+                await _mediator.Publish(
+                    new SalesChannelStockScopeChangedNotification(existingSalesChannel.Id, existingSalesChannel.TenantId),
+                    cancellationToken);
+            }
 
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.Ok;

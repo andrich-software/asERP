@@ -39,11 +39,25 @@ public interface ISalesChannelService
     /// <summary>Test the channel's credentials/connectivity without doing any import.</summary>
     Task<SalesChannelSyncResultDto?> TestConnectionAsync(Guid id, CancellationToken ct = default);
 
+    /// <summary>Test ad-hoc connection data for a channel that has not been saved yet (create wizard).</summary>
+    Task<SalesChannelConnectionTestResultDto?> TestConnectionAsync(SalesChannelConnectionTestInputDto input, CancellationToken ct = default);
+
     /// <summary>Recent sync-run audit log for the channel.</summary>
     Task<List<ChannelSyncRunDto>> GetSyncRunsAsync(Guid id, int take = 50, int offset = 0, CancellationToken ct = default);
 
-    /// <summary>Synchronization log lines (last 24h) for the channel, optionally filtered by minimum level (e.g. "Warning").</summary>
-    Task<List<ChannelSyncLogDto>> GetSyncLogsAsync(Guid id, int take = 200, int offset = 0, string? minLevel = null, CancellationToken ct = default);
+    /// <summary>
+    /// Paginated synchronization log lines for the channel (newest first). Optional minimum level
+    /// (e.g. "Warning"), message search text, and time window (<paramref name="sinceHours"/>,
+    /// null = full history).
+    /// </summary>
+    Task<PaginatedResponse<ChannelSyncLogDto>> GetSyncLogsAsync(
+        Guid id,
+        int pageNumber = 0,
+        int pageSize = 50,
+        string? minLevel = null,
+        string? search = null,
+        int? sinceHours = null,
+        CancellationToken ct = default);
 
     /// <summary>Outbox rows currently in DeadLetter for the channel.</summary>
     Task<List<ChannelExportOutboxDto>> GetDeadLetterAsync(Guid id, CancellationToken ct = default);

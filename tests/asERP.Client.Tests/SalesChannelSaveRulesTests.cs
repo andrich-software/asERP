@@ -97,4 +97,77 @@ public class SalesChannelSaveRulesTests
     [TestCase("33.06", ExpectedResult = false)]
     public bool IsDbPortValid_AllowsEmptyOrTcpPortRange(string port) =>
         SalesChannelEditModel.IsDbPortValid(port);
+
+    /// <summary>Fully valid baseline for the "Test connection" button gate.</summary>
+    private static bool CanTest(
+        SalesChannelType type,
+        string url = "https://shop.example.org",
+        string username = "user",
+        string password = "secret",
+        string dbHost = "db.example.org",
+        string dbName = "wordpress",
+        string dbPort = "3306") =>
+        SalesChannelEditModel.CanTestConnectionCore(type, url, username, password, dbHost, dbName, dbPort);
+
+    [TestCase(SalesChannelType.Shopware6)]
+    [TestCase(SalesChannelType.WooCommerce)]
+    public void TestConnection_CredentialTypes_RequireUrlUsernameAndPassword(SalesChannelType type)
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(CanTest(type), Is.True, "valid baseline should be testable");
+            Assert.That(CanTest(type, url: ""), Is.False, "missing URL");
+            Assert.That(CanTest(type, username: ""), Is.False, "missing username");
+            Assert.That(CanTest(type, password: ""), Is.False, "missing password");
+        });
+    }
+
+    [Test]
+    public void TestConnection_WooCommerceDatabase_AdditionallyRequiresDbFields()
+    {
+        const SalesChannelType type = SalesChannelType.WooCommerceDatabase;
+        Assert.Multiple(() =>
+        {
+            Assert.That(CanTest(type), Is.True, "valid baseline should be testable");
+            Assert.That(CanTest(type, dbHost: ""), Is.False, "missing DB host");
+            Assert.That(CanTest(type, dbName: ""), Is.False, "missing DB name");
+            Assert.That(CanTest(type, dbPort: "70000"), Is.False, "invalid DB port");
+            Assert.That(CanTest(type, dbPort: ""), Is.True, "empty port falls back to 3306");
+        });
+    }
+
+    [TestCase(SalesChannelType.PointOfSale)]
+    [TestCase(SalesChannelType.AsShop)]
+    [TestCase(SalesChannelType.eBay)]
+    [TestCase(SalesChannelType.Amazon)]
+    public void TestConnection_NonCredentialTypes_AreNeverTestable(SalesChannelType type)
+    {
+        Assert.That(CanTest(type), Is.False);
+    }
+
+    [Test]
+    public void WizardSaveGate_BlocksUntilDetailsStepAndPassedTest()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(SalesChannelEditModel.WizardAllowsSaveCore(
+                isWizard: false, wizardStep: 1, isConnectionChannel: true, connectionTestPassed: false),
+                Is.True, "edit mode is never gated by the wizard");
+            Assert.That(SalesChannelEditModel.WizardAllowsSaveCore(
+                isWizard: true, wizardStep: 1, isConnectionChannel: false, connectionTestPassed: false),
+                Is.False, "type step cannot save");
+            Assert.That(SalesChannelEditModel.WizardAllowsSaveCore(
+                isWizard: true, wizardStep: 2, isConnectionChannel: true, connectionTestPassed: true),
+                Is.False, "connection step cannot save even after a passed test");
+            Assert.That(SalesChannelEditModel.WizardAllowsSaveCore(
+                isWizard: true, wizardStep: 3, isConnectionChannel: true, connectionTestPassed: false),
+                Is.False, "connection channel needs a passed test");
+            Assert.That(SalesChannelEditModel.WizardAllowsSaveCore(
+                isWizard: true, wizardStep: 3, isConnectionChannel: true, connectionTestPassed: true),
+                Is.True, "details step + passed test saves");
+            Assert.That(SalesChannelEditModel.WizardAllowsSaveCore(
+                isWizard: true, wizardStep: 3, isConnectionChannel: false, connectionTestPassed: false),
+                Is.True, "non-connection channel needs no test");
+        });
+    }
 }

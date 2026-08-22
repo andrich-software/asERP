@@ -58,7 +58,7 @@ public partial record SalesChannelListModel
     /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
-    public IState<SalesChannelPaginationInfo> Pagination => State<SalesChannelPaginationInfo>.Value(this, () => new SalesChannelPaginationInfo());
+    public IState<SalesChannelPaginationInfo> Pagination => State<SalesChannelPaginationInfo>.Value(this, () => new SalesChannelPaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of sales channels from the API.
@@ -193,6 +193,10 @@ public record SalesChannelPaginationInfo
     public SalesChannelPaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public SalesChannelPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public SalesChannelPaginationInfo(
         int currentPage,

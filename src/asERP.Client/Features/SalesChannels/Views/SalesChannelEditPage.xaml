@@ -123,6 +123,12 @@
                     MaxWidth="1400"
                     HorizontalAlignment="Stretch">
 
+          <!-- Wizard step indicator (create mode only) -->
+          <TextBlock Text="{Binding StepIndicatorText}"
+                     Style="{StaticResource LabelMedium}"
+                     Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                     Visibility="{Binding ShowWizardChrome, Converter={StaticResource BoolToVisibilityConverter}}" />
+
           <!-- Error Message Banner -->
           <Border Background="{ThemeResource ErrorContainerBrush}"
                   CornerRadius="8"
@@ -182,7 +188,8 @@
                     Grid.Row="0"
                     Margin="0,0,8,16"
                     Background="{ThemeResource SurfaceBrush}"
-                    CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
+                    CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
+                    Visibility="{Binding ShowBasicCard, Converter={StaticResource BoolToVisibilityConverter}}">
               <StackPanel Spacing="0">
                 <!-- Card Header -->
                 <Grid Padding="16,16,16,8">
@@ -200,8 +207,9 @@
                 <!-- Basic Fields -->
                 <StackPanel Padding="16,0,16,16"
                             Spacing="16">
-                  <!-- Sales Channel Type (Required) -->
-                  <StackPanel Spacing="4">
+                  <!-- Sales Channel Type (Required) — wizard step 1; always visible in edit mode -->
+                  <StackPanel Spacing="4"
+                              Visibility="{Binding ShowTypeSelector, Converter={StaticResource BoolToVisibilityConverter}}">
                     <TextBlock x:Uid="SalesChannelEditPage.Field.Type.Label"
                                Style="{StaticResource LabelMedium}"
                                Foreground="{ThemeResource OnSurfaceVariantBrush}" />
@@ -220,15 +228,17 @@
                     </ComboBox>
                   </StackPanel>
 
-                  <!-- Name (Required) -->
+                  <!-- Name (Required) — wizard details step; always visible in edit mode -->
                   <TextBox x:Uid="SalesChannelEditPage.Field.Name"
                            Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                           IsEnabled="{Binding IsNotLoading}" />
+                           IsEnabled="{Binding IsNotLoading}"
+                           Visibility="{Binding ShowNameField, Converter={StaticResource BoolToVisibilityConverter}}" />
 
                   <!-- Required Fields Note -->
                   <TextBlock x:Uid="SalesChannelEditPage.RequiredFieldsNote"
                              Style="{StaticResource LabelSmall}"
-                             Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                             Visibility="{Binding ShowNameField, Converter={StaticResource BoolToVisibilityConverter}}" />
                 </StackPanel>
               </StackPanel>
             </Border>
@@ -334,7 +344,7 @@
                     Margin="8,0,0,16"
                     Background="{ThemeResource SurfaceBrush}"
                     CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
-                    Visibility="{Binding IsOAuthChannel, Converter={StaticResource BoolToVisibilityConverter}}">
+                    Visibility="{Binding ShowOAuthCard, Converter={StaticResource BoolToVisibilityConverter}}">
               <StackPanel Spacing="0">
                 <Grid Padding="16,16,16,8">
                   <StackPanel Orientation="Horizontal">
@@ -384,6 +394,56 @@
               </StackPanel>
             </Border>
           </Grid>
+
+          <!-- Connection test success banner (wizard connection step, e.g. after navigating back) -->
+          <Border Background="{ThemeResource StatusSuccessBackgroundBrush}"
+                  CornerRadius="8"
+                  Padding="16"
+                  Visibility="{Binding ShowConnectionTestSuccess, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <FontIcon Grid.Column="0"
+                        Glyph="&#xE73E;"
+                        FontSize="20"
+                        Foreground="{ThemeResource StatusSuccessForegroundBrush}"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding ConnectionTestMessage}"
+                         Style="{StaticResource BodyMedium}"
+                         Foreground="{ThemeResource StatusSuccessForegroundBrush}"
+                         TextWrapping="Wrap"
+                         VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+
+          <!-- Connection test error banner (wizard connection step) -->
+          <Border Background="{ThemeResource ErrorContainerBrush}"
+                  CornerRadius="8"
+                  Padding="16"
+                  Visibility="{Binding ShowConnectionTestError, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <FontIcon Grid.Column="0"
+                        Glyph="&#xE783;"
+                        FontSize="20"
+                        Foreground="{ThemeResource OnErrorContainerBrush}"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding ConnectionTestMessage}"
+                         Style="{StaticResource BodyMedium}"
+                         Foreground="{ThemeResource OnErrorContainerBrush}"
+                         TextWrapping="Wrap"
+                         VerticalAlignment="Center" />
+            </Grid>
+          </Border>
 
           <!-- Shop Domains Card (asShop only) — inbound host bindings that route storefront
                requests to this channel. Managed after the channel has been saved. -->
@@ -736,9 +796,9 @@
             </Border>
           </Grid>
 
-          <!-- Warehouses Section -->
+          <!-- Warehouses Section (wizard details step) -->
           <StackPanel Spacing="12"
-                      Visibility="{Binding IsNotLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                      Visibility="{Binding ShowWarehousesSection, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel Orientation="Horizontal"
                         Spacing="12">
               <FontIcon Glyph="&#xE80F;"
@@ -916,6 +976,34 @@
                          TextWrapping="Wrap" />
             </Grid>
           </Border>
+
+          <!-- Wizard navigation (create mode only): back / next / test connection -->
+          <StackPanel Orientation="Horizontal"
+                      Spacing="8"
+                      Visibility="{Binding ShowWizardChrome, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Button x:Uid="SalesChannelEditPage.WizardBack"
+                    Style="{StaticResource OutlinedButtonStyle}"
+                    Click="WizardBackButton_Click"
+                    Visibility="{Binding ShowWizardBack, Converter={StaticResource BoolToVisibilityConverter}}" />
+            <Button x:Uid="SalesChannelEditPage.WizardNext"
+                    Style="{StaticResource FilledButtonStyle}"
+                    Click="WizardNextButton_Click"
+                    Visibility="{Binding ShowWizardNext, Converter={StaticResource BoolToVisibilityConverter}}" />
+            <Button x:Uid="SalesChannelEditPage.TestConnection"
+                    Style="{StaticResource FilledButtonStyle}"
+                    Click="TestConnectionButton_Click"
+                    IsEnabled="{Binding CanTestConnection}"
+                    Visibility="{Binding ShowStepConnection, Converter={StaticResource BoolToVisibilityConverter}}" />
+            <Button x:Uid="SalesChannelEditPage.WizardContinue"
+                    Style="{StaticResource OutlinedButtonStyle}"
+                    Click="WizardNextButton_Click"
+                    Visibility="{Binding ShowWizardContinue, Converter={StaticResource BoolToVisibilityConverter}}" />
+            <ProgressRing IsActive="{Binding IsTestingConnection}"
+                          Width="20"
+                          Height="20"
+                          VerticalAlignment="Center"
+                          Visibility="{Binding IsTestingConnection, Converter={StaticResource BoolToVisibilityConverter}}" />
+          </StackPanel>
 
         </StackPanel>
       </Grid>

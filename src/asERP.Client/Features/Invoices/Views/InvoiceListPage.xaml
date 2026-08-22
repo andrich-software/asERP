@@ -70,10 +70,10 @@
                 BorderThickness="0,0,0,1">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="120" />
+              <ColumnDefinition Width="140" />
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="120" />
-              <ColumnDefinition Width="120" />
+              <ColumnDefinition Width="170" />
               <ColumnDefinition Width="150" />
             </Grid.ColumnDefinitions>
 
@@ -125,10 +125,10 @@
                     <Grid BorderBrush="{ThemeResource OutlineVariantBrush}"
                           BorderThickness="0,0,0,1">
                       <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="140" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="120" />
-                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="170" />
                         <ColumnDefinition Width="150" />
                       </Grid.ColumnDefinitions>
 

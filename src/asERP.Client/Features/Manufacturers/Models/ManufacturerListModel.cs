@@ -57,7 +57,7 @@ public partial record ManufacturerListModel
     /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
-    public IState<ManufacturerPaginationInfo> Pagination => State<ManufacturerPaginationInfo>.Value(this, () => new ManufacturerPaginationInfo());
+    public IState<ManufacturerPaginationInfo> Pagination => State<ManufacturerPaginationInfo>.Value(this, () => new ManufacturerPaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of manufacturers from the API.
@@ -192,6 +192,10 @@ public record ManufacturerPaginationInfo
     public ManufacturerPaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public ManufacturerPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public ManufacturerPaginationInfo(
         int currentPage,

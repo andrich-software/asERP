@@ -64,7 +64,7 @@ public partial record ShippingListModel
     /// Pagination information from the last API response.
     /// </summary>
     public IState<ShippingPaginationInfo> Pagination =>
-        State<ShippingPaginationInfo>.Value(this, () => new ShippingPaginationInfo());
+        State<ShippingPaginationInfo>.Value(this, () => new ShippingPaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of shipments from the API.
@@ -225,6 +225,10 @@ public record ShippingPaginationInfo
     public ShippingPaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public ShippingPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public ShippingPaginationInfo(
         int currentPage,

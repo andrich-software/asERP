@@ -73,7 +73,7 @@ public partial record ProductAttributeListModel
     /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
-    public IState<ProductAttributePaginationInfo> Pagination => State<ProductAttributePaginationInfo>.Value(this, () => new ProductAttributePaginationInfo());
+    public IState<ProductAttributePaginationInfo> Pagination => State<ProductAttributePaginationInfo>.Value(this, () => new ProductAttributePaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of product attributes from the API.
@@ -192,6 +192,10 @@ public record ProductAttributePaginationInfo
     public ProductAttributePaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public ProductAttributePaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public ProductAttributePaginationInfo(
         int currentPage,

@@ -74,7 +74,7 @@ public partial record SuperadminCountryListModel
     /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
-    public IState<SuperadminCountryPaginationInfo> Pagination => State<SuperadminCountryPaginationInfo>.Value(this, () => new SuperadminCountryPaginationInfo());
+    public IState<SuperadminCountryPaginationInfo> Pagination => State<SuperadminCountryPaginationInfo>.Value(this, () => new SuperadminCountryPaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of countries from the API.
@@ -193,6 +193,10 @@ public record SuperadminCountryPaginationInfo
     public SuperadminCountryPaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public SuperadminCountryPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public SuperadminCountryPaginationInfo(
         int currentPage,

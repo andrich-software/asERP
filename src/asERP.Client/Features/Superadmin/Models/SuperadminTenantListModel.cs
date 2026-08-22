@@ -58,7 +58,7 @@ public partial record SuperadminTenantListModel
     /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
-    public IState<SuperadminTenantPaginationInfo> Pagination => State<SuperadminTenantPaginationInfo>.Value(this, () => new SuperadminTenantPaginationInfo());
+    public IState<SuperadminTenantPaginationInfo> Pagination => State<SuperadminTenantPaginationInfo>.Value(this, () => new SuperadminTenantPaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of tenants from the API.
@@ -185,6 +185,10 @@ public record SuperadminTenantPaginationInfo
     public SuperadminTenantPaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public SuperadminTenantPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public SuperadminTenantPaginationInfo(
         int currentPage,

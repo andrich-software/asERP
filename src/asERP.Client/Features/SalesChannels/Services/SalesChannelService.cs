@@ -132,6 +132,18 @@ public class SalesChannelService : ISalesChannelService
             AppJsonSerializerContext.Default.SalesChannelSyncResultDto, ct);
     }
 
+    public async Task<SalesChannelConnectionTestResultDto?> TestConnectionAsync(
+        SalesChannelConnectionTestInputDto input, CancellationToken ct = default)
+    {
+        var baseUrl = await GetBaseUrlAsync();
+        var url = $"{baseUrl}{ApiEndpoints.SalesChannels.TestConnectionDraft}";
+        var response = await _httpClient.PostAsJsonAsync(
+            url, input, AppJsonSerializerContext.Default.SalesChannelConnectionTestInputDto, ct);
+        await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
+        return await response.Content.ReadFromJsonAsync(
+            AppJsonSerializerContext.Default.SalesChannelConnectionTestResultDto, ct);
+    }
+
     public async Task<List<ChannelSyncRunDto>> GetSyncRunsAsync(Guid id, int take = 50, int offset = 0, CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();
@@ -141,18 +153,33 @@ public class SalesChannelService : ISalesChannelService
         return response ?? new List<ChannelSyncRunDto>();
     }
 
-    public async Task<List<ChannelSyncLogDto>> GetSyncLogsAsync(Guid id, int take = 200, int offset = 0, string? minLevel = null, CancellationToken ct = default)
+    public async Task<PaginatedResponse<ChannelSyncLogDto>> GetSyncLogsAsync(
+        Guid id,
+        int pageNumber = 0,
+        int pageSize = 50,
+        string? minLevel = null,
+        string? search = null,
+        int? sinceHours = null,
+        CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();
-        var url = $"{baseUrl}{ApiEndpoints.SalesChannels.SyncLogs(id)}?take={take}&offset={offset}";
+        var url = $"{baseUrl}{ApiEndpoints.SalesChannels.SyncLogs(id)}?pageNumber={pageNumber}&pageSize={pageSize}";
         if (!string.IsNullOrWhiteSpace(minLevel))
         {
             url += $"&minLevel={Uri.EscapeDataString(minLevel)}";
         }
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            url += $"&search={Uri.EscapeDataString(search)}";
+        }
+        if (sinceHours is { } hours)
+        {
+            url += $"&sinceHours={hours}";
+        }
 
         var response = await _httpClient.GetFromJsonAsync(
-            url, AppJsonSerializerContext.Default.ListChannelSyncLogDto, ct);
-        return response ?? new List<ChannelSyncLogDto>();
+            url, AppJsonSerializerContext.Default.PaginatedResponseChannelSyncLogDto, ct);
+        return response ?? new PaginatedResponse<ChannelSyncLogDto>();
     }
 
     public async Task<List<ChannelExportOutboxDto>> GetDeadLetterAsync(Guid id, CancellationToken ct = default)

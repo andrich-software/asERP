@@ -2071,6 +2071,63 @@
   <data name="SalesChannelDetailPage.LoadError.Text" xml:space="preserve">
     <value>Vertriebskanal konnte nicht geladen werden</value>
   </data>
+  <data name="SalesChannelDetailPage.TabSettings.Content" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="SalesChannelDetailPage.TabLog.Content" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogSearch.PlaceholderText" xml:space="preserve">
+    <value>Logeinträge durchsuchen...</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogLevelAll.Content" xml:space="preserve">
+    <value>Alle Level</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogLevelInformation.Content" xml:space="preserve">
+    <value>Info+</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogLevelWarning.Content" xml:space="preserve">
+    <value>Warnung+</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogLevelError.Content" xml:space="preserve">
+    <value>Fehler+</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogRefresh.ToolTip" xml:space="preserve">
+    <value>Log aktualisieren</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogHeader.Timestamp.Text" xml:space="preserve">
+    <value>Zeitpunkt</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogHeader.Level.Text" xml:space="preserve">
+    <value>Level</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogHeader.Operation.Text" xml:space="preserve">
+    <value>Operation</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogHeader.Message.Text" xml:space="preserve">
+    <value>Meldung</value>
+  </data>
+  <data name="SalesChannelDetailPage.NoLogs.Title" xml:space="preserve">
+    <value>Keine Logeinträge</value>
+  </data>
+  <data name="SalesChannelDetailPage.NoLogs.Message" xml:space="preserve">
+    <value>Für die aktuellen Filter wurden keine Logeinträge gefunden.</value>
+  </data>
+  <data name="SalesChannelDetailPage.PreviousLogPage.ToolTip" xml:space="preserve">
+    <value>Vorherige Seite</value>
+  </data>
+  <data name="SalesChannelDetailPage.NextLogPage.ToolTip" xml:space="preserve">
+    <value>Nächste Seite</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogItemsPerPage.Text" xml:space="preserve">
+    <value>Einträge pro Seite:</value>
+  </data>
+  <data name="Pagination.SyncLogsSingular" xml:space="preserve">
+    <value>1 Logeintrag</value>
+  </data>
+  <data name="Pagination.SyncLogsPlural" xml:space="preserve">
+    <value>{0} Logeinträge</value>
+  </data>
 
   <!-- Sales Channel Edit Page -->
   <data name="SalesChannelEditPage.TitleNew" xml:space="preserve">
@@ -2399,6 +2456,30 @@
   </data>
   <data name="SalesChannelEditPage.ToastImportFailed" xml:space="preserve">
     <value>Produktimport „{0}“ fehlgeschlagen: {1}</value>
+  </data>
+  <data name="SalesChannelEditPage.WizardStepFormat" xml:space="preserve">
+    <value>Schritt {0} von {1}</value>
+  </data>
+  <data name="SalesChannelEditPage.WizardBack.Content" xml:space="preserve">
+    <value>Zurück</value>
+  </data>
+  <data name="SalesChannelEditPage.WizardNext.Content" xml:space="preserve">
+    <value>Weiter</value>
+  </data>
+  <data name="SalesChannelEditPage.WizardContinue.Content" xml:space="preserve">
+    <value>Weiter</value>
+  </data>
+  <data name="SalesChannelEditPage.TestConnection.Content" xml:space="preserve">
+    <value>Verbindung testen</value>
+  </data>
+  <data name="SalesChannelEditPage.TestSuccess" xml:space="preserve">
+    <value>Verbindung erfolgreich</value>
+  </data>
+  <data name="SalesChannelEditPage.TestFailed" xml:space="preserve">
+    <value>Verbindung fehlgeschlagen: {0}</value>
+  </data>
+  <data name="SalesChannelEditPage.TestFailedPlain" xml:space="preserve">
+    <value>Verbindung fehlgeschlagen.</value>
   </data>
 
   <!-- Sales Channel Type Names -->
@@ -3173,7 +3254,7 @@
     <value>In Zustellung</value>
   </data>
   <data name="ShippingStatus.DeliveryFailed" xml:space="preserve">
-    <value>Zustellung fehlgeschlagen</value>
+    <value>Zustellfehler</value>
   </data>
   <data name="ShippingStatus.ReturnedToSender" xml:space="preserve">
     <value>Retour an Absender</value>

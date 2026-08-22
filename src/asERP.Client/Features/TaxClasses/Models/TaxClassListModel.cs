@@ -73,7 +73,7 @@ public partial record TaxClassListModel
     /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
-    public IState<TaxClassPaginationInfo> Pagination => State<TaxClassPaginationInfo>.Value(this, () => new TaxClassPaginationInfo());
+    public IState<TaxClassPaginationInfo> Pagination => State<TaxClassPaginationInfo>.Value(this, () => new TaxClassPaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of tax classes from the API.
@@ -192,6 +192,10 @@ public record TaxClassPaginationInfo
     public TaxClassPaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public TaxClassPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public TaxClassPaginationInfo(
         int currentPage,

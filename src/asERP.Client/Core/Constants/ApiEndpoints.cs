@@ -142,6 +142,7 @@ public static class ApiEndpoints
         public static string ById(Guid id) => $"{Base}/{id}";
         public static string Sync(Guid id, string operation) => $"{Base}/{id}/sync/{operation}";
         public static string TestConnection(Guid id) => $"{Base}/{id}/test-connection";
+        public const string TestConnectionDraft = $"{Base}/test-connection";
         public static string SyncRuns(Guid id) => $"{Base}/{id}/sync-runs";
         public static string SyncLogs(Guid id) => $"{Base}/{id}/sync-logs";
         public static string SyncStatus(Guid id) => $"{Base}/{id}/sync-status";

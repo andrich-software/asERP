@@ -57,7 +57,7 @@ public partial record AiModelListModel
     /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
-    public IState<AiModelPaginationInfo> Pagination => State<AiModelPaginationInfo>.Value(this, () => new AiModelPaginationInfo());
+    public IState<AiModelPaginationInfo> Pagination => State<AiModelPaginationInfo>.Value(this, () => new AiModelPaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of AI models from the API.
@@ -192,6 +192,10 @@ public record AiModelPaginationInfo
     public AiModelPaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public AiModelPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public AiModelPaginationInfo(
         int currentPage,

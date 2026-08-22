@@ -70,7 +70,7 @@ public partial record SalesChannelDashboardModel
     // Tab 2: Recent Sales (paginated, filtered by this SalesChannel)
     public IState<int> CurrentPage => State<int>.Value(this, () => 0);
     public IState<int> PageSize => State<int>.Value(this, () => 10);
-    public IState<SalesPaginationInfo> Pagination => State<SalesPaginationInfo>.Value(this, () => new SalesPaginationInfo());
+    public IState<SalesPaginationInfo> Pagination => State<SalesPaginationInfo>.Value(this, () => new SalesPaginationInfo(_localizer));
 
     public IListFeed<RecentSalesItem> RecentSaless => Feed
         .Combine(CurrentPage, PageSize, RefreshTick)
@@ -250,8 +250,10 @@ public partial record SalesChannelDashboardModel
                 _ => "Information",
             };
 
-            var logs = await _salesChannelService.GetSyncLogsAsync(_salesChannelId, take: 500, offset: 0, minLevel: minLevel, ct: ct);
-            return logs.Select(l => SyncStatusViewMapper.ToLogLine(l, _localizer)).ToImmutableList();
+            // The dashboard's terminal view keeps the previous behavior: last 24h, newest 500 lines.
+            var logs = await _salesChannelService.GetSyncLogsAsync(
+                _salesChannelId, pageNumber: 0, pageSize: 500, minLevel: minLevel, sinceHours: 24, ct: ct);
+            return logs.Data.Select(l => SyncStatusViewMapper.ToLogLine(l, _localizer)).ToImmutableList();
         }
         catch (Exception ex)
         {

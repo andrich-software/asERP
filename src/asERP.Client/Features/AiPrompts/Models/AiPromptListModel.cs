@@ -57,7 +57,7 @@ public partial record AiPromptListModel
     /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
-    public IState<AiPromptPaginationInfo> Pagination => State<AiPromptPaginationInfo>.Value(this, () => new AiPromptPaginationInfo());
+    public IState<AiPromptPaginationInfo> Pagination => State<AiPromptPaginationInfo>.Value(this, () => new AiPromptPaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of AI prompts from the API.
@@ -192,6 +192,10 @@ public record AiPromptPaginationInfo
     public AiPromptPaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public AiPromptPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public AiPromptPaginationInfo(
         int currentPage,
