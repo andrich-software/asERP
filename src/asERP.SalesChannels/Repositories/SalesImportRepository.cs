@@ -5,6 +5,7 @@ using asERP.Domain.Enums;
 using asERP.Persistence.DatabaseContext;
 using asERP.SalesChannels.Contracts;
 using asERP.SalesChannels.Models;
+using asERP.SalesChannels.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -274,7 +275,8 @@ public class SalesImportRepository : ISalesImportRepository
                 {
                     var newSalesItem = new SalesItem
                     {
-                        Name = item.Name,
+                        // WooCommerce delivers item names WordPress-HTML-encoded ("&amp;" etc.)
+                        Name = ChannelText.DecodeEntities(item.Name),
                         Quantity = item.Quantity,
                         Price = item.Price,
                         TaxRate = item.TaxRate

@@ -87,12 +87,12 @@
                 BorderThickness="0,0,0,1">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="120" />
+              <ColumnDefinition Width="140" />
               <ColumnDefinition Width="*" />
               <ColumnDefinition Width="100" />
               <ColumnDefinition Width="140" />
               <ColumnDefinition Width="220" />
-              <ColumnDefinition Width="150" />
+              <ColumnDefinition Width="180" />
             </Grid.ColumnDefinitions>
 
             <controls:SortHeaderButton Grid.Column="0"
@@ -150,12 +150,12 @@
                     <Grid BorderBrush="{ThemeResource OutlineVariantBrush}"
                           BorderThickness="0,0,0,1">
                       <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="140" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="100" />
                         <ColumnDefinition Width="140" />
                         <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="180" />
                       </Grid.ColumnDefinitions>
 
                       <!-- Problem tint spanning the whole row (theme-aware) -->

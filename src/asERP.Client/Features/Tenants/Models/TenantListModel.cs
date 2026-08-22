@@ -58,7 +58,7 @@ public partial record TenantListModel
     /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
-    public IState<TenantPaginationInfo> Pagination => State<TenantPaginationInfo>.Value(this, () => new TenantPaginationInfo());
+    public IState<TenantPaginationInfo> Pagination => State<TenantPaginationInfo>.Value(this, () => new TenantPaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of tenants from the API.
@@ -193,6 +193,10 @@ public record TenantPaginationInfo
     public TenantPaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public TenantPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public TenantPaginationInfo(
         int currentPage,

@@ -95,6 +95,107 @@ public sealed class ChannelExportOutboxEnqueuer
     }
 
     /// <summary>
+    /// Bulk variant of <see cref="EnqueueAsync"/> for one channel × many aggregates (e.g. a stock re-push
+    /// for every listed product after the channel's warehouse set changed). Loads the channel's existing
+    /// rows for the operation in one query instead of one lookup per aggregate — with catalogues of
+    /// thousands of products the per-row variant would issue thousands of queries and saves. A concurrent
+    /// enqueue losing the idempotency race is retried once from a fresh read (the per-aggregate swallow of
+    /// <see cref="SaveEnqueuedAsync"/> would silently drop all remaining rows of the batch here).
+    /// </summary>
+    public async Task EnqueueForAggregatesAsync(
+        Guid salesChannelId,
+        ChannelSyncOperation operation,
+        ChannelOutboxAggregateType aggregateType,
+        IReadOnlyList<Guid> aggregateIds,
+        Guid? tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        if (aggregateIds.Count == 0)
+        {
+            return;
+        }
+
+        var distinctAggregateIds = aggregateIds.Distinct().ToList();
+
+        for (var attempt = 0; ; attempt++)
+        {
+            var existingByAggregate = await _context.ChannelExportOutbox
+                .IgnoreQueryFilters()
+                .Where(o => o.SalesChannelId == salesChannelId
+                            && o.Operation == operation
+                            && o.AggregateType == aggregateType)
+                .ToDictionaryAsync(o => o.AggregateId, cancellationToken);
+
+            var now = DateTime.UtcNow;
+
+            foreach (var aggregateId in distinctAggregateIds)
+            {
+                if (!existingByAggregate.TryGetValue(aggregateId, out var existing))
+                {
+                    _context.ChannelExportOutbox.Add(new ChannelExportOutbox
+                    {
+                        Id = Guid.NewGuid(),
+                        TenantId = tenantId,
+                        SalesChannelId = salesChannelId,
+                        Operation = operation,
+                        AggregateType = aggregateType,
+                        AggregateId = aggregateId,
+                        PayloadJson = string.Empty, // Drainer hydrates from current DB state.
+                        IdempotencyKey = BuildIdempotencyKey(operation, aggregateType, aggregateId, salesChannelId),
+                        AttemptCount = 0,
+                        NextAttemptAt = now,
+                        Status = ChannelOutboxStatus.Pending,
+                    });
+                    continue;
+                }
+
+                switch (existing.Status)
+                {
+                    case ChannelOutboxStatus.Pending:
+                        existing.NextAttemptAt = now;
+                        break;
+
+                    case ChannelOutboxStatus.InFlight:
+                        // Drainer is mid-flight; it'll re-read state. Nothing to do.
+                        break;
+
+                    case ChannelOutboxStatus.Done:
+                    case ChannelOutboxStatus.DeadLetter:
+                        existing.Status = ChannelOutboxStatus.Pending;
+                        existing.AttemptCount = 0;
+                        existing.NextAttemptAt = now;
+                        existing.LastError = null;
+                        existing.CompletedAt = null;
+                        break;
+                }
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            catch (DbUpdateException ex)
+            {
+                DetachAddedOutboxRows();
+
+                if (IsIdempotencyRace(ex) && attempt == 0)
+                {
+                    _logger.LogDebug(ex,
+                        "Bulk outbox enqueue race for op={Op} channel={Channel} — retrying from a fresh read.",
+                        operation, salesChannelId);
+                    continue;
+                }
+
+                _logger.LogWarning(ex,
+                    "Bulk outbox enqueue failed for op={Op} channel={Channel} ({Count} aggregates).",
+                    operation, salesChannelId, distinctAggregateIds.Count);
+                throw;
+            }
+        }
+    }
+
+    /// <summary>
     /// Enqueue one outbox row per channel, each carrying a captured payload snapshot. Used when the
     /// aggregate is gone by drain time (e.g. delist after a product delete), so the drainer cannot
     /// hydrate from live DB state and must use the snapshot instead.

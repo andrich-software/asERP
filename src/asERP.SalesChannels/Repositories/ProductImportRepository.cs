@@ -94,8 +94,31 @@ public class ProductImportRepository : IProductImportRepository
         }
     }
 
+    /// <summary>
+    /// WooCommerce delivers name-like fields WordPress-HTML-encoded ("Schnittmuster &amp;amp; Nähanleitung").
+    /// Decoded once up front so the create path and the update change-detection compare the same plain-text
+    /// value; a no-op for channels that already deliver plain text.
+    /// </summary>
+    private static void DecodeNameFields(SalesChannelImportProduct importProduct)
+    {
+        importProduct.Name = ChannelText.DecodeEntities(importProduct.Name);
+
+        for (var i = 0; i < importProduct.VariantAxes.Count; i++)
+        {
+            importProduct.VariantAxes[i] = ChannelText.DecodeEntities(importProduct.VariantAxes[i]);
+        }
+
+        foreach (var option in importProduct.Variants.SelectMany(v => v.Options))
+        {
+            option.AttributeName = ChannelText.DecodeEntities(option.AttributeName);
+            option.Value = ChannelText.DecodeEntities(option.Value);
+        }
+    }
+
     private async Task ImportOrUpdateCoreAsync(Guid salesChannelId, SalesChannelImportProduct importProduct)
     {
+        DecodeNameFields(importProduct);
+
         var taxClass = await _taxClassRepository.GetByTaxRateAsync(importProduct.TaxRate);
 
         if (taxClass == null)

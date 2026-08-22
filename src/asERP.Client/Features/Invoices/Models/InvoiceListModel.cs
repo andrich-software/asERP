@@ -58,7 +58,7 @@ public partial record InvoiceListModel
     /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
-    public IState<InvoicePaginationInfo> Pagination => State<InvoicePaginationInfo>.Value(this, () => new InvoicePaginationInfo());
+    public IState<InvoicePaginationInfo> Pagination => State<InvoicePaginationInfo>.Value(this, () => new InvoicePaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of invoices from the API.
@@ -185,6 +185,10 @@ public record InvoicePaginationInfo
     public InvoicePaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public InvoicePaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public InvoicePaginationInfo(
         int currentPage,

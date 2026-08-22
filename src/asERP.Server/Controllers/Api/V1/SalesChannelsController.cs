@@ -246,6 +246,58 @@ public class SalesChannelsController(
         return Ok(new { success = result.Success, message = result.Message });
     }
 
+    /// <summary>
+    /// Test credentials/connectivity for a channel that has not been persisted yet — used by the
+    /// create wizard to validate the connection before the channel is saved. Nothing is stored.
+    /// </summary>
+    [HttpPost("test-connection")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SalesChannelConnectionTestResultDto>> TestConnectionDraft(
+        SalesChannelConnectionTestInputDto input, CancellationToken cancellationToken)
+    {
+        var connector = connectorRegistry.Resolve(input.SalesChannelType);
+        if (connector is null)
+        {
+            return BadRequest(new { Error = $"No connector registered for {input.SalesChannelType}" });
+        }
+
+        var tenantId = tenantContext.GetCurrentTenantId();
+
+        // Transient entity — carries the user-entered credentials into the connector context.
+        // The context factory re-decrypts Password as a plaintext-passthrough guard, so the raw
+        // value from the request works here just like a decrypted stored one.
+        var salesChannel = new SalesChannel
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            Type = input.SalesChannelType,
+            Name = "connection-test",
+            Url = input.Url,
+            Username = input.Username,
+            Password = input.Password,
+            AdditionalConfigJson = input.AdditionalConfigJson,
+        };
+
+        var run = new ChannelSyncRun
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            SalesChannelId = salesChannel.Id,
+            Operation = ChannelSyncOperation.ImportProducts,
+            TriggerSource = ChannelSyncTriggerSource.Manual,
+            Status = ChannelSyncRunStatus.Success,
+            StartedAt = DateTime.UtcNow,
+            FinishedAt = DateTime.UtcNow,
+            CorrelationId = Guid.NewGuid(),
+        };
+
+        var context = contextFactory.Create(salesChannel, run, cancellationToken);
+        var result = await connector.TestConnectionAsync(context);
+
+        return Ok(new SalesChannelConnectionTestResultDto { Success = result.Success, Message = result.Message });
+    }
+
     /// <summary>Recent sync-run audit log for the channel.</summary>
     [HttpGet("{id:guid}/sync-runs")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -394,18 +446,31 @@ public class SalesChannelsController(
     }
 
     /// <summary>
-    /// Synchronization log lines for the channel (last 24h). Optional <paramref name="minLevel"/>
-    /// filters by minimum severity (e.g. "Warning"); optional <paramref name="correlationId"/> narrows
-    /// to one run's lines (drill-down from a failed run card). Newest first. Tenant-isolated.
+    /// Synchronization log lines for the channel, paginated (zero-based) and newest first. Optional
+    /// <paramref name="minLevel"/> filters by minimum severity (e.g. "Warning"), <paramref name="search"/>
+    /// matches the message text, <paramref name="correlationId"/> narrows to one run's lines, and
+    /// <paramref name="sinceHours"/> limits the time window (null = full history). Tenant-isolated.
     /// </summary>
     [HttpGet("{id:guid}/sync-logs")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult> GetSyncLogs(Guid id, int take = 200, int offset = 0, string? minLevel = null, Guid? correlationId = null, CancellationToken cancellationToken = default)
+    public async Task<ActionResult> GetSyncLogs(
+        Guid id,
+        int pageNumber = 0,
+        int pageSize = 50,
+        string? minLevel = null,
+        string? search = null,
+        Guid? correlationId = null,
+        int? sinceHours = null,
+        CancellationToken cancellationToken = default)
     {
-        var cutoff = DateTime.UtcNow.AddHours(-24);
-
         var query = dbContext.ChannelSyncLog
-            .Where(l => l.SalesChannelId == id && l.Timestamp >= cutoff);
+            .Where(l => l.SalesChannelId == id);
+
+        if (sinceHours is { } hours)
+        {
+            var cutoff = DateTime.UtcNow.AddHours(-hours);
+            query = query.Where(l => l.Timestamp >= cutoff);
+        }
 
         if (correlationId is { } cid)
         {
@@ -417,10 +482,20 @@ public class SalesChannelsController(
             query = query.Where(l => l.Level >= level);
         }
 
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(l => l.Message.Contains(search));
+        }
+
+        pageNumber = Math.Max(0, pageNumber);
+        pageSize = Math.Clamp(pageSize, 1, 500);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
         var logs = await query
             .OrderByDescending(l => l.Timestamp)
-            .Skip(offset)
-            .Take(Math.Clamp(take, 1, 500))
+            .Skip(pageNumber * pageSize)
+            .Take(pageSize)
             .Select(l => new ChannelSyncLogDto
             {
                 Id = l.Id,
@@ -434,7 +509,7 @@ public class SalesChannelsController(
             })
             .ToListAsync(cancellationToken);
 
-        return Ok(logs);
+        return Ok(PaginatedResult<ChannelSyncLogDto>.Success(logs, totalCount, pageNumber, pageSize));
     }
 
     /// <summary>Outbox rows currently in DeadLetter for the channel.</summary>

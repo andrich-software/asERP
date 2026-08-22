@@ -55,7 +55,7 @@ public partial record FeedDetailModel
     public IState<int> LogPage => State<int>.Value(this, () => 0);
 
     /// <summary>Pagination info from the last log query.</summary>
-    public IState<FeedPaginationInfo> LogPagination => State<FeedPaginationInfo>.Value(this, () => new FeedPaginationInfo());
+    public IState<FeedPaginationInfo> LogPagination => State<FeedPaginationInfo>.Value(this, () => new FeedPaginationInfo(_localizer));
 
     /// <summary>Public-access log entries for this feed (newest first).</summary>
     public IListFeed<FeedLogDto> Logs => Feed
@@ -118,7 +118,7 @@ public partial record FeedDetailModel
     public IState<string> ProductSort => State<string>.Value(this, () => "Name Ascending");
     public IState<string> ProductActiveSortField => State<string>.Value(this, () => "Name");
     public IState<bool> ProductSortAscending => State<bool>.Value(this, () => true);
-    public IState<FeedPaginationInfo> ProductPagination => State<FeedPaginationInfo>.Value(this, () => new FeedPaginationInfo());
+    public IState<FeedPaginationInfo> ProductPagination => State<FeedPaginationInfo>.Value(this, () => new FeedPaginationInfo(_localizer));
 
     /// <summary>Read-only product selection for this feed (catalog metadata + inclusion flag).</summary>
     public IListFeed<FeedProductSelectionDto> Products => Feed

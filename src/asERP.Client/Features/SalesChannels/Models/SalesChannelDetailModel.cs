@@ -19,15 +19,18 @@ public partial record SalesChannelDetailModel
 {
     private readonly ISalesChannelService _salesChannelService;
     private readonly INavigator _navigator;
+    private readonly IStringLocalizer _localizer;
     private readonly Guid _salesChannelId;
 
     public SalesChannelDetailModel(
         ISalesChannelService salesChannelService,
         INavigator navigator,
+        IStringLocalizer localizer,
         SalesChannelDetailData data)
     {
         _salesChannelService = salesChannelService;
         _navigator = navigator;
+        _localizer = localizer;
         _salesChannelId = data.SalesChannelId;
     }
 
@@ -54,27 +57,102 @@ public partial record SalesChannelDetailModel
         return rows.ToImmutableList();
     });
 
-    /// <summary>Minimum severity for the log explorer ("Information" | "Warning" | "Error").</summary>
-    public IState<string> LogLevelFilter => State<string>.Value(this, () => "Information");
+    /// <summary>Set true when the Log tab is first selected, unlocking the log query.</summary>
+    public IState<bool> LogsRequested => State<bool>.Value(this, () => false);
 
-    /// <summary>Bump to force the log feed to re-query (manual refresh button).</summary>
-    public IState<int> LogRefreshToken => State<int>.Value(this, () => 0);
+    /// <summary>Minimum severity for the log tab (empty = all levels including Debug).</summary>
+    public IState<string> LogLevelFilter => State<string>.Value(this, () => string.Empty);
 
-    /// <summary>Synchronization log lines (last 24h). Re-queries when the level filter or refresh token changes.</summary>
+    /// <summary>Free-text filter over the log message.</summary>
+    public IState<string> LogSearch => State<string>.Value(this, () => string.Empty);
+
+    /// <summary>Current log page (0-based).</summary>
+    public IState<int> LogPage => State<int>.Value(this, () => 0);
+
+    /// <summary>Log entries per page.</summary>
+    public IState<int> LogPageSize => State<int>.Value(this, () => 50);
+
+    /// <summary>Pagination info from the last log query.</summary>
+    public IState<SyncLogPaginationInfo> LogPagination => State<SyncLogPaginationInfo>.Value(this, () => new SyncLogPaginationInfo(_localizer));
+
+    /// <summary>
+    /// Synchronization log lines (full history, newest first). Re-queries when the level filter,
+    /// search text, page, or page size changes; idle until the Log tab is first selected.
+    /// </summary>
     public IListFeed<ChannelSyncLogDto> SyncLogs => Feed
-        .Combine(LogLevelFilter, LogRefreshToken)
+        .Combine(LogsRequested, LogLevelFilter, LogSearch, Feed.Combine(LogPage, LogPageSize))
         .SelectAsync(async (combined, ct) =>
         {
-            var (minLevel, _) = combined;
-            var logs = await _salesChannelService.GetSyncLogsAsync(_salesChannelId, take: 200, offset: 0, minLevel: minLevel, ct);
-            return logs.ToImmutableList();
+            var (requested, minLevel, search, paging) = combined;
+            if (!requested)
+            {
+                return ImmutableList<ChannelSyncLogDto>.Empty;
+            }
+
+            var (page, pageSize) = paging;
+            var response = await _salesChannelService.GetSyncLogsAsync(
+                _salesChannelId,
+                pageNumber: page,
+                pageSize: pageSize,
+                minLevel: string.IsNullOrEmpty(minLevel) ? null : minLevel,
+                search: string.IsNullOrWhiteSpace(search) ? null : search,
+                sinceHours: null,
+                ct);
+
+            await LogPagination.UpdateAsync(_ => new SyncLogPaginationInfo(
+                response.CurrentPage,
+                response.TotalPages,
+                response.TotalCount,
+                response.PageSize,
+                response.HasPreviousPage,
+                response.HasNextPage,
+                _localizer), ct);
+
+            return response.Data.ToImmutableList();
         })
         .AsListFeed();
 
-    public async Task ShowAllLogs() => await LogLevelFilter.SetAsync("Information");
-    public async Task ShowWarningLogs() => await LogLevelFilter.SetAsync("Warning");
-    public async Task ShowErrorLogs() => await LogLevelFilter.SetAsync("Error");
-    public async Task RefreshLogs() => await LogRefreshToken.UpdateAsync(v => v + 1);
+    /// <summary>Called by the page when the Log tab is selected the first time.</summary>
+    public async Task ActivateLogTab() => await LogsRequested.SetAsync(true);
+
+    /// <summary>Sets the minimum severity ("" | "Information" | "Warning" | "Error") and resets to page 0.</summary>
+    public async Task SetLogLevel(string minLevel)
+    {
+        await LogPage.UpdateAsync(_ => 0);
+        await LogLevelFilter.SetAsync(minLevel);
+    }
+
+    /// <summary>Sets the message search text and resets to page 0.</summary>
+    public async Task SetLogSearch(string search)
+    {
+        await LogPage.UpdateAsync(_ => 0);
+        await LogSearch.SetAsync(search);
+    }
+
+    /// <summary>Sets the page size and resets to page 0.</summary>
+    public async Task SetLogPageSize(int pageSize)
+    {
+        await LogPage.UpdateAsync(_ => 0);
+        await LogPageSize.SetAsync(pageSize);
+    }
+
+    public async Task GoToPreviousLogPage(CancellationToken ct = default)
+    {
+        var pagination = await LogPagination.Value(ct);
+        if (pagination?.HasPreviousPage == true)
+        {
+            await LogPage.UpdateAsync(p => Math.Max(0, p - 1), ct);
+        }
+    }
+
+    public async Task GoToNextLogPage(CancellationToken ct = default)
+    {
+        var pagination = await LogPagination.Value(ct);
+        if (pagination?.HasNextPage == true)
+        {
+            await LogPage.UpdateAsync(p => p + 1, ct);
+        }
+    }
 
     /// <summary>User-facing status line for the most recent orchestration action.</summary>
     public IState<string> StatusMessage => State<string>.Value(this, () => string.Empty);
@@ -163,6 +241,89 @@ public partial record SalesChannelDetailModel
         finally
         {
             await IsBusy.SetAsync(false);
+        }
+    }
+}
+
+/// <summary>x:Bind visual functions for the sync-log table rows (kept static for testability).</summary>
+public static class SyncLogRowVisuals
+{
+    /// <summary>UTC timestamp → local short date + time (e.g. "22.08.2026 10:33").</summary>
+    public static string FormatTimestamp(DateTime value) =>
+        value.ToLocalTime().ToString("g");
+}
+
+/// <summary>
+/// Holds pagination state information for the sync-log table.
+/// </summary>
+public record SyncLogPaginationInfo
+{
+    private readonly IStringLocalizer? _localizer;
+
+    public SyncLogPaginationInfo()
+    {
+    }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public SyncLogPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
+
+    public SyncLogPaginationInfo(
+        int currentPage,
+        int totalPages,
+        int totalCount,
+        int pageSize,
+        bool hasPreviousPage,
+        bool hasNextPage,
+        IStringLocalizer localizer)
+    {
+        CurrentPage = currentPage;
+        TotalPages = totalPages;
+        TotalCount = totalCount;
+        PageSize = pageSize;
+        HasPreviousPage = hasPreviousPage;
+        HasNextPage = hasNextPage;
+        _localizer = localizer;
+    }
+
+    public int CurrentPage { get; init; }
+    public int TotalPages { get; init; }
+    public int TotalCount { get; init; }
+    public int PageSize { get; init; }
+    public bool HasPreviousPage { get; init; }
+    public bool HasNextPage { get; init; }
+
+    /// <summary>
+    /// Display text for current page info (e.g., "Page 1 of 5").
+    /// </summary>
+    public string PageInfo
+    {
+        get
+        {
+            if (TotalPages <= 0)
+            {
+                return _localizer?["Pagination.NoResults"] ?? "No results";
+            }
+
+            var format = _localizer?["Pagination.PageInfo"] ?? "Page {0} of {1}";
+            return string.Format(format, CurrentPage + 1, TotalPages);
+        }
+    }
+
+    /// <summary>
+    /// Display text for total count info (e.g., "120 log entries").
+    /// </summary>
+    public string CountInfo
+    {
+        get
+        {
+            if (TotalCount == 1)
+            {
+                return _localizer?["Pagination.SyncLogsSingular"] ?? "1 log entry";
+            }
+
+            var format = _localizer?["Pagination.SyncLogsPlural"] ?? "{0} log entries";
+            return string.Format(format, TotalCount);
         }
     }
 }

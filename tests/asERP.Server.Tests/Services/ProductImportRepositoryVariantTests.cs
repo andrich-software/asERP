@@ -393,4 +393,80 @@ public class ProductImportRepositoryVariantTests : TenantIsolatedTestBase
             .CountAsync(t => t.TaxRate == unseededRate && t.TenantId == TenantConstants.TestTenant1Id);
         TestAssertions.AssertEqual(1, classCount);
     }
+
+    [Fact]
+    public async Task Import_HtmlEncodedNameAndOptionValue_StoresDecodedText()
+    {
+        // WooCommerce delivers name-like fields WordPress-HTML-encoded.
+        await SeedBaseDataAsync();
+        var repo = CreateImportRepository();
+
+        var importProduct = BuildImportProduct(parentSku: "ENC-1", variants: new List<SalesChannelImportVariant>
+        {
+            new()
+            {
+                RemoteVariantId = "201",
+                Sku = null,
+                Price = 3.05m,
+                Options = new List<SalesChannelImportVariantOption>
+                {
+                    new() { AttributeName = "Länge", Value = "22 &amp; 44" }
+                }
+            }
+        });
+        importProduct.Name = "Schnittmuster &amp; Nähanleitung";
+
+        await repo.ImportOrUpdateFromSalesChannel(SalesChannel1Id, importProduct);
+
+        DbContext.ChangeTracker.Clear();
+        var parent = await DbContext.Product.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Sku == "ENC-1");
+        TestAssertions.AssertNotNull(parent);
+        TestAssertions.AssertEqual("Schnittmuster & Nähanleitung", parent!.Name);
+
+        var attribute = await DbContext.ProductAttribute.IgnoreQueryFilters()
+            .Include(a => a.Values)
+            .FirstOrDefaultAsync(a => a.Name == "Länge");
+        TestAssertions.AssertNotNull(attribute);
+        TestAssertions.AssertTrue(attribute!.Values.Any(v => v.Value == "22 & 44"));
+
+        // The variant name is built from the decoded parent name and option value.
+        var variant = await DbContext.Product.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Sku == "ENC-1-V201");
+        TestAssertions.AssertNotNull(variant);
+        TestAssertions.AssertEqual("Schnittmuster & Nähanleitung - 22 & 44", variant!.Name);
+    }
+
+    [Fact]
+    public async Task Import_ExistingProductWithEncodedName_HealsToDecodedNameOnReimport()
+    {
+        // Rows imported before entity decoding existed still hold "&amp;" — the update
+        // change-detection compares against the decoded name and rewrites them.
+        await SeedBaseDataAsync();
+
+        var first = BuildImportProduct(parentSku: "ENC-2", remoteProductId: "300");
+        first.IsVariantParent = false;
+        first.VariantAxes.Clear();
+        first.Variants.Clear();
+        first.Name = "Schnittmuster &amp; Nähanleitung";
+        await CreateImportRepository().ImportOrUpdateFromSalesChannel(SalesChannel1Id, first);
+
+        // Simulate a legacy row: force the encoded name back into the database.
+        DbContext.ChangeTracker.Clear();
+        var legacy = await DbContext.Product.IgnoreQueryFilters().FirstAsync(p => p.Sku == "ENC-2");
+        legacy.Name = "Schnittmuster &amp; Nähanleitung";
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        var second = BuildImportProduct(parentSku: "ENC-2", remoteProductId: "300");
+        second.IsVariantParent = false;
+        second.VariantAxes.Clear();
+        second.Variants.Clear();
+        second.Name = "Schnittmuster &amp; Nähanleitung";
+        await CreateImportRepository().ImportOrUpdateFromSalesChannel(SalesChannel1Id, second);
+
+        DbContext.ChangeTracker.Clear();
+        var healed = await DbContext.Product.IgnoreQueryFilters().FirstAsync(p => p.Sku == "ENC-2");
+        TestAssertions.AssertEqual("Schnittmuster & Nähanleitung", healed.Name);
+    }
 }

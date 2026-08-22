@@ -2071,6 +2071,63 @@
   <data name="SalesChannelDetailPage.LoadError.Text" xml:space="preserve">
     <value>Failed to load sales channel</value>
   </data>
+  <data name="SalesChannelDetailPage.TabSettings.Content" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SalesChannelDetailPage.TabLog.Content" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogSearch.PlaceholderText" xml:space="preserve">
+    <value>Search log entries...</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogLevelAll.Content" xml:space="preserve">
+    <value>All levels</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogLevelInformation.Content" xml:space="preserve">
+    <value>Info+</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogLevelWarning.Content" xml:space="preserve">
+    <value>Warning+</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogLevelError.Content" xml:space="preserve">
+    <value>Error+</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogRefresh.ToolTip" xml:space="preserve">
+    <value>Refresh log</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogHeader.Timestamp.Text" xml:space="preserve">
+    <value>Timestamp</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogHeader.Level.Text" xml:space="preserve">
+    <value>Level</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogHeader.Operation.Text" xml:space="preserve">
+    <value>Operation</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogHeader.Message.Text" xml:space="preserve">
+    <value>Message</value>
+  </data>
+  <data name="SalesChannelDetailPage.NoLogs.Title" xml:space="preserve">
+    <value>No log entries</value>
+  </data>
+  <data name="SalesChannelDetailPage.NoLogs.Message" xml:space="preserve">
+    <value>No log entries were found for the current filters.</value>
+  </data>
+  <data name="SalesChannelDetailPage.PreviousLogPage.ToolTip" xml:space="preserve">
+    <value>Previous page</value>
+  </data>
+  <data name="SalesChannelDetailPage.NextLogPage.ToolTip" xml:space="preserve">
+    <value>Next page</value>
+  </data>
+  <data name="SalesChannelDetailPage.LogItemsPerPage.Text" xml:space="preserve">
+    <value>Items per page:</value>
+  </data>
+  <data name="Pagination.SyncLogsSingular" xml:space="preserve">
+    <value>1 log entry</value>
+  </data>
+  <data name="Pagination.SyncLogsPlural" xml:space="preserve">
+    <value>{0} log entries</value>
+  </data>
 
   <!-- Sales Channel Edit Page -->
   <data name="SalesChannelEditPage.TitleNew" xml:space="preserve">
@@ -2399,6 +2456,30 @@
   </data>
   <data name="SalesChannelEditPage.ToastImportFailed" xml:space="preserve">
     <value>Product import "{0}" failed: {1}</value>
+  </data>
+  <data name="SalesChannelEditPage.WizardStepFormat" xml:space="preserve">
+    <value>Step {0} of {1}</value>
+  </data>
+  <data name="SalesChannelEditPage.WizardBack.Content" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="SalesChannelEditPage.WizardNext.Content" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="SalesChannelEditPage.WizardContinue.Content" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="SalesChannelEditPage.TestConnection.Content" xml:space="preserve">
+    <value>Test connection</value>
+  </data>
+  <data name="SalesChannelEditPage.TestSuccess" xml:space="preserve">
+    <value>Connection successful</value>
+  </data>
+  <data name="SalesChannelEditPage.TestFailed" xml:space="preserve">
+    <value>Connection failed: {0}</value>
+  </data>
+  <data name="SalesChannelEditPage.TestFailedPlain" xml:space="preserve">
+    <value>Connection failed.</value>
   </data>
 
   <!-- Sales Channel Type Names -->

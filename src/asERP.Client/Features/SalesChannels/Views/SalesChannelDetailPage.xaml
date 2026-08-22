@@ -3,6 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:local="using:asERP.Client.Features.SalesChannels.Views"
       xmlns:models="using:asERP.Client.Features.SalesChannels.Models"
+      xmlns:dtos="using:asERP.Domain.Dtos.SalesChannel"
       xmlns:mvux="using:Uno.Extensions.Reactive.UI"
       xmlns:utu="using:Uno.Toolkit.UI"
       xmlns:controls="using:asERP.Client.Controls"
@@ -10,6 +11,7 @@
 
   <Grid utu:SafeArea.Insets="VisibleBounds">
     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
@@ -28,9 +30,29 @@
       </utu:NavigationBar.PrimaryCommands>
     </utu:NavigationBar>
 
-    <!-- Sales Channel Details Content -->
-    <mvux:FeedView Grid.Row="1"
-                   Source="{Binding SalesChannel}">
+    <!-- Tabs: Settings | Log -->
+    <utu:TabBar x:Name="DetailTabs"
+                Grid.Row="1"
+                Margin="24,8,24,0"
+                HorizontalAlignment="Left"
+                Style="{StaticResource MaterialTopTabBarStyle}"
+                Loaded="DetailTabs_Loaded"
+                SelectionChanged="DetailTabs_SelectionChanged">
+      <utu:TabBar.Items>
+        <utu:TabBarItem x:Uid="SalesChannelDetailPage.TabSettings"
+                        Style="{StaticResource MaterialTopTabBarItemStyle}"
+                        IsSelected="True" />
+        <utu:TabBarItem x:Uid="SalesChannelDetailPage.TabLog"
+                        Style="{StaticResource MaterialTopTabBarItemStyle}" />
+      </utu:TabBar.Items>
+    </utu:TabBar>
+
+    <!-- Tab content -->
+    <Grid Grid.Row="2">
+
+      <!-- Tab: Settings (read-only channel configuration) -->
+      <Grid x:Name="SettingsTab">
+        <mvux:FeedView Source="{Binding SalesChannel}">
       <mvux:FeedView.ValueTemplate>
         <DataTemplate>
           <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -530,186 +552,6 @@
                   </Grid>
                 </Border>
 
-                <!-- Orchestration: manual sync, test connection, status, sync-run history, dead-letter retry. -->
-                <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
-                  <StackPanel Spacing="12" Padding="16">
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                      <FontIcon Glyph="&#xE895;"
-                                FontSize="20"
-                                Foreground="{ThemeResource PrimaryBrush}" />
-                      <TextBlock Text="Orchestration"
-                                 Style="{StaticResource TitleMedium}"
-                                 Foreground="{ThemeResource OnSurfaceBrush}" />
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <Button Content="Test connection"
-                              Command="{Binding TestConnection}" />
-                      <Button Content="Sync products"
-                              Command="{Binding TriggerSyncProducts}" />
-                      <Button Content="Sync saless"
-                              Command="{Binding TriggerSyncSaless}" />
-                      <Button Content="Sync customers"
-                              Command="{Binding TriggerSyncCustomers}" />
-                    </StackPanel>
-
-                    <TextBlock Text="{Binding StatusMessage}"
-                               Style="{StaticResource BodyMedium}"
-                               Foreground="{ThemeResource OnSurfaceVariantBrush}"
-                               TextWrapping="Wrap" />
-
-                    <TextBlock Text="Recent sync runs"
-                               Style="{StaticResource LabelLarge}"
-                               Foreground="{ThemeResource OnSurfaceBrush}"
-                               Margin="0,8,0,0" />
-                    <ItemsRepeater ItemsSource="{Binding SyncRuns}">
-                      <ItemsRepeater.Layout>
-                        <StackLayout Orientation="Vertical" Spacing="4" />
-                      </ItemsRepeater.Layout>
-                      <ItemsRepeater.ItemTemplate>
-                        <DataTemplate>
-                          <Grid Padding="0,4"
-                                BorderBrush="{ThemeResource OutlineVariantBrush}"
-                                BorderThickness="0,0,0,1">
-                            <Grid.ColumnDefinitions>
-                              <ColumnDefinition Width="160" />
-                              <ColumnDefinition Width="120" />
-                              <ColumnDefinition Width="100" />
-                              <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0"
-                                       Text="{Binding StartedAt}"
-                                       Style="{StaticResource BodySmall}" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Operation}"
-                                       Style="{StaticResource BodySmall}" />
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding Status}"
-                                       Style="{StaticResource BodySmall}" />
-                            <TextBlock Grid.Column="3"
-                                       Text="{Binding ErrorSummary}"
-                                       Style="{StaticResource BodySmall}"
-                                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
-                                       TextTrimming="CharacterEllipsis" />
-                          </Grid>
-                        </DataTemplate>
-                      </ItemsRepeater.ItemTemplate>
-                    </ItemsRepeater>
-
-                    <TextBlock Text="Dead-letter (manual retry)"
-                               Style="{StaticResource LabelLarge}"
-                               Foreground="{ThemeResource ErrorBrush}"
-                               Margin="0,8,0,0" />
-                    <ItemsRepeater ItemsSource="{Binding DeadLetterRows}">
-                      <ItemsRepeater.Layout>
-                        <StackLayout Orientation="Vertical" Spacing="4" />
-                      </ItemsRepeater.Layout>
-                      <ItemsRepeater.ItemTemplate>
-                        <DataTemplate>
-                          <Grid Padding="0,4"
-                                BorderBrush="{ThemeResource OutlineVariantBrush}"
-                                BorderThickness="0,0,0,1">
-                            <Grid.ColumnDefinitions>
-                              <ColumnDefinition Width="160" />
-                              <ColumnDefinition Width="120" />
-                              <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0"
-                                       Text="{Binding NextAttemptAt}"
-                                       Style="{StaticResource BodySmall}" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding Operation}"
-                                       Style="{StaticResource BodySmall}" />
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding LastError}"
-                                       Style="{StaticResource BodySmall}"
-                                       Foreground="{ThemeResource ErrorBrush}"
-                                       TextTrimming="CharacterEllipsis" />
-                          </Grid>
-                        </DataTemplate>
-                      </ItemsRepeater.ItemTemplate>
-                    </ItemsRepeater>
-                  </StackPanel>
-                </Border>
-
-                <!-- Sync log explorer: per-channel synchronization log lines (last 24h), filterable by level. -->
-                <Border Background="{ThemeResource SurfaceBrush}"
-                        CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1">
-                  <StackPanel Spacing="12" Padding="16">
-                    <Grid>
-                      <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                      </Grid.ColumnDefinitions>
-                      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
-                        <FontIcon Glyph="&#xE9D9;"
-                                  FontSize="20"
-                                  Foreground="{ThemeResource PrimaryBrush}" />
-                        <TextBlock Text="Sync log (last 24h)"
-                                   Style="{StaticResource TitleMedium}"
-                                   Foreground="{ThemeResource OnSurfaceBrush}" />
-                      </StackPanel>
-                      <Button Grid.Column="1"
-                              Content="Refresh"
-                              Command="{Binding RefreshLogs}" />
-                    </Grid>
-
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <Button Content="All"
-                              Command="{Binding ShowAllLogs}" />
-                      <Button Content="Warnings+"
-                              Command="{Binding ShowWarningLogs}" />
-                      <Button Content="Errors"
-                              Command="{Binding ShowErrorLogs}" />
-                    </StackPanel>
-
-                    <ItemsRepeater ItemsSource="{Binding SyncLogs}">
-                      <ItemsRepeater.Layout>
-                        <StackLayout Orientation="Vertical" Spacing="4" />
-                      </ItemsRepeater.Layout>
-                      <ItemsRepeater.ItemTemplate>
-                        <DataTemplate>
-                          <StackPanel Padding="0,4"
-                                      Spacing="2"
-                                      BorderBrush="{ThemeResource OutlineVariantBrush}"
-                                      BorderThickness="0,0,0,1">
-                            <Grid>
-                              <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="150" />
-                                <ColumnDefinition Width="80" />
-                                <ColumnDefinition Width="120" />
-                                <ColumnDefinition Width="*" />
-                              </Grid.ColumnDefinitions>
-                              <TextBlock Grid.Column="0"
-                                         Text="{Binding Timestamp}"
-                                         Style="{StaticResource BodySmall}"
-                                         Foreground="{ThemeResource OnSurfaceVariantBrush}" />
-                              <TextBlock Grid.Column="1"
-                                         Text="{Binding Level}"
-                                         Style="{StaticResource BodySmall}"
-                                         Foreground="{Binding Level, Converter={StaticResource SyncLogLevelToForegroundConverter}}" />
-                              <TextBlock Grid.Column="2"
-                                         Text="{Binding Operation}"
-                                         Style="{StaticResource BodySmall}"
-                                         Foreground="{ThemeResource OnSurfaceVariantBrush}" />
-                              <TextBlock Grid.Column="3"
-                                         Text="{Binding Message}"
-                                         Style="{StaticResource BodySmall}"
-                                         Foreground="{ThemeResource OnSurfaceBrush}"
-                                         TextWrapping="Wrap" />
-                            </Grid>
-                            <TextBlock Text="{Binding Exception}"
-                                       Style="{StaticResource BodySmall}"
-                                       Foreground="{ThemeResource ErrorBrush}"
-                                       TextWrapping="Wrap"
-                                       Visibility="{Binding Exception, Converter={StaticResource StringToVisibilityConverter}}" />
-                          </StackPanel>
-                        </DataTemplate>
-                      </ItemsRepeater.ItemTemplate>
-                    </ItemsRepeater>
-                  </StackPanel>
-                </Border>
               </StackPanel>
             </Grid>
           </ScrollViewer>
@@ -753,5 +595,253 @@
         </DataTemplate>
       </mvux:FeedView.ErrorTemplate>
     </mvux:FeedView>
+      </Grid>
+
+      <!-- Tab: Log (paginated, filterable sync-log table) -->
+      <Grid x:Name="LogTab"
+            Visibility="Collapsed"
+            Padding="24,16,24,0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Filter bar: message search, minimum level, refresh -->
+        <Grid Grid.Row="0"
+              Margin="0,0,0,16"
+              ColumnSpacing="8">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+
+          <TextBox x:Name="LogSearchBox"
+                   Grid.Column="0"
+                   x:Uid="SalesChannelDetailPage.LogSearch"
+                   TextChanged="LogSearchBox_TextChanged" />
+
+          <ComboBox x:Name="LogLevelComboBox"
+                    Grid.Column="1"
+                    MinWidth="150"
+                    VerticalAlignment="Center"
+                    SelectedIndex="0"
+                    SelectionChanged="LogLevelComboBox_SelectionChanged">
+            <ComboBoxItem x:Uid="SalesChannelDetailPage.LogLevelAll" />
+            <ComboBoxItem x:Uid="SalesChannelDetailPage.LogLevelInformation" />
+            <ComboBoxItem x:Uid="SalesChannelDetailPage.LogLevelWarning" />
+            <ComboBoxItem x:Uid="SalesChannelDetailPage.LogLevelError" />
+          </ComboBox>
+
+          <Button Grid.Column="2"
+                  x:Uid="SalesChannelDetailPage.LogRefresh"
+                  Style="{StaticResource IconButtonStyle}"
+                  VerticalAlignment="Center"
+                  Click="RefreshLogs_Click">
+            <FontIcon Glyph="&#xE72C;"
+                      FontSize="16" />
+          </Button>
+        </Grid>
+
+        <!-- Log table -->
+        <Border Grid.Row="1"
+                Style="{StaticResource TableCardStyle}">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Table Header -->
+            <Border Grid.Row="0"
+                    Background="{ThemeResource SurfaceBrush}"
+                    CornerRadius="8,8,0,0"
+                    BorderBrush="{ThemeResource OutlineVariantBrush}"
+                    BorderThickness="0,0,0,1">
+              <Grid Padding="16,12">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="140" />
+                  <ColumnDefinition Width="110" />
+                  <ColumnDefinition Width="150" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           x:Uid="SalesChannelDetailPage.LogHeader.Timestamp"
+                           Style="{StaticResource LabelLarge}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                <TextBlock Grid.Column="1"
+                           x:Uid="SalesChannelDetailPage.LogHeader.Level"
+                           Style="{StaticResource LabelLarge}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                <TextBlock Grid.Column="2"
+                           x:Uid="SalesChannelDetailPage.LogHeader.Operation"
+                           Style="{StaticResource LabelLarge}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                <TextBlock Grid.Column="3"
+                           x:Uid="SalesChannelDetailPage.LogHeader.Message"
+                           Style="{StaticResource LabelLarge}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+              </Grid>
+            </Border>
+
+            <!-- Table Body -->
+            <mvux:FeedView x:Name="LogsFeedView"
+                           Grid.Row="1"
+                           Source="{Binding SyncLogs}">
+              <mvux:FeedView.ValueTemplate>
+                <DataTemplate>
+                  <ListView ItemsSource="{Binding Data}"
+                            Style="{StaticResource TableListViewStyle}"
+                            ItemContainerStyle="{StaticResource TableItemContainerStyle}"
+                            SelectionMode="None">
+                    <ListView.ItemTemplate>
+                      <DataTemplate x:DataType="dtos:ChannelSyncLogDto">
+                        <Grid BorderBrush="{ThemeResource OutlineVariantBrush}"
+                              BorderThickness="0,0,0,1"
+                              Padding="16,10">
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                          </Grid.ColumnDefinitions>
+
+                          <TextBlock Grid.Column="0"
+                                     Text="{x:Bind models:SyncLogRowVisuals.FormatTimestamp(Timestamp)}"
+                                     Style="{StaticResource BodySmall}"
+                                     Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                     VerticalAlignment="Top" />
+                          <TextBlock Grid.Column="1"
+                                     Text="{x:Bind Level}"
+                                     Style="{StaticResource BodySmall}"
+                                     Foreground="{x:Bind Level, Converter={StaticResource SyncLogLevelToForegroundConverter}}"
+                                     VerticalAlignment="Top" />
+                          <TextBlock Grid.Column="2"
+                                     Text="{x:Bind Operation}"
+                                     Style="{StaticResource BodySmall}"
+                                     Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                     VerticalAlignment="Top" />
+                          <StackPanel Grid.Column="3"
+                                      Spacing="2">
+                            <TextBlock Text="{x:Bind Message}"
+                                       Style="{StaticResource BodySmall}"
+                                       Foreground="{ThemeResource OnSurfaceBrush}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Text="{x:Bind Exception}"
+                                       Style="{StaticResource BodySmall}"
+                                       Foreground="{ThemeResource ErrorBrush}"
+                                       TextWrapping="Wrap"
+                                       Visibility="{x:Bind Exception, Converter={StaticResource StringToVisibilityConverter}}" />
+                          </StackPanel>
+                        </Grid>
+                      </DataTemplate>
+                    </ListView.ItemTemplate>
+                  </ListView>
+                </DataTemplate>
+              </mvux:FeedView.ValueTemplate>
+
+              <mvux:FeedView.ProgressTemplate>
+                <DataTemplate>
+                  <ProgressRing IsActive="True"
+                                Width="48"
+                                Height="48"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Margin="48" />
+                </DataTemplate>
+              </mvux:FeedView.ProgressTemplate>
+
+              <mvux:FeedView.NoneTemplate>
+                <DataTemplate>
+                  <controls:EmptyState x:Uid="SalesChannelDetailPage.NoLogs"
+                                       Glyph="&#xE9D9;" />
+                </DataTemplate>
+              </mvux:FeedView.NoneTemplate>
+            </mvux:FeedView>
+          </Grid>
+        </Border>
+
+        <!-- Pagination Controls -->
+        <Border Grid.Row="2"
+                Background="{ThemeResource SurfaceBrush}"
+                BorderBrush="{ThemeResource OutlineVariantBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="16,8">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Count Info (Left) -->
+            <mvux:FeedView Source="{Binding LogPagination}"
+                           Grid.Column="0">
+              <mvux:FeedView.ValueTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding Data.CountInfo}"
+                             Style="{StaticResource BodySmall}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                             VerticalAlignment="Center" />
+                </DataTemplate>
+              </mvux:FeedView.ValueTemplate>
+            </mvux:FeedView>
+
+            <!-- Page Navigation (Center) -->
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="8">
+              <Button x:Uid="SalesChannelDetailPage.PreviousLogPage"
+                      Style="{StaticResource IconButtonStyle}"
+                      Click="PreviousLogPage_Click">
+                <FontIcon Glyph="&#xE76B;"
+                          FontSize="16" />
+              </Button>
+
+              <mvux:FeedView Source="{Binding LogPagination}">
+                <mvux:FeedView.ValueTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Data.PageInfo}"
+                               Style="{StaticResource BodyMedium}"
+                               VerticalAlignment="Center"
+                               MinWidth="100"
+                               TextAlignment="Center" />
+                  </DataTemplate>
+                </mvux:FeedView.ValueTemplate>
+              </mvux:FeedView>
+
+              <Button x:Uid="SalesChannelDetailPage.NextLogPage"
+                      Style="{StaticResource IconButtonStyle}"
+                      Click="NextLogPage_Click">
+                <FontIcon Glyph="&#xE76C;"
+                          FontSize="16" />
+              </Button>
+            </StackPanel>
+
+            <!-- Page Size Selection (Right) -->
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="8">
+              <TextBlock x:Uid="SalesChannelDetailPage.LogItemsPerPage"
+                         Style="{StaticResource BodySmall}"
+                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                         VerticalAlignment="Center" />
+              <ComboBox x:Name="LogPageSizeComboBox"
+                        Style="{StaticResource PageSizeComboBoxStyle}"
+                        SelectionChanged="LogPageSizeComboBox_SelectionChanged"
+                        SelectedIndex="1">
+                <ComboBoxItem Content="25" Tag="25" />
+                <ComboBoxItem Content="50" Tag="50" />
+                <ComboBoxItem Content="100" Tag="100" />
+                <ComboBoxItem Content="200" Tag="200" />
+              </ComboBox>
+            </StackPanel>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
   </Grid>
 </Page>

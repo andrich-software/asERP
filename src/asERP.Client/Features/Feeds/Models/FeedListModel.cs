@@ -43,7 +43,7 @@ public partial record FeedListModel
     public IState<bool> SortAscending => State<bool>.Value(this, () => false);
 
     /// <summary>Pagination information from the last API response.</summary>
-    public IState<FeedPaginationInfo> Pagination => State<FeedPaginationInfo>.Value(this, () => new FeedPaginationInfo());
+    public IState<FeedPaginationInfo> Pagination => State<FeedPaginationInfo>.Value(this, () => new FeedPaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of feeds from the API. Refreshes when SearchQuery, CurrentPage, PageSize, or SortOrder changes.
@@ -152,6 +152,10 @@ public record FeedPaginationInfo
     public FeedPaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public FeedPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public FeedPaginationInfo(
         int currentPage,

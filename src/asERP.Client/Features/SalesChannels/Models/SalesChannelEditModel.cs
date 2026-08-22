@@ -90,6 +90,14 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private bool _isSaving;
     private string _errorMessage = string.Empty;
 
+    // Create wizard state — in create mode the page is a stepper (1 = type, 2 = connection + test,
+    // 3 = remaining fields). Edit mode keeps the classic single-page form and never touches these.
+    private int _wizardStep = 1;
+    private bool _isTestingConnection;
+    private bool _connectionTestPassed;
+    private bool _connectionTestFailed;
+    private string _connectionTestMessage = string.Empty;
+
     public SalesChannelEditModel(
         ISalesChannelService salesChannelService,
         IShopDomainService shopDomainService,
@@ -268,6 +276,16 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 OnPropertyChanged(nameof(PasswordPlaceholder));
                 OnPropertyChanged(nameof(ShowPasswordKeepHint));
                 OnPropertyChanged(nameof(ConnectionHintText));
+
+                // Wizard: the step flow and its labels depend on whether the type has a testable
+                // connection; a type switch also voids any previous test result.
+                OnPropertyChanged(nameof(ShowOAuthCard));
+                OnPropertyChanged(nameof(StepIndicatorText));
+                OnPropertyChanged(nameof(CanTestConnection));
+                if (_connectionTestPassed || _connectionTestFailed)
+                {
+                    SetConnectionTestState(passed: false, failed: false, message: string.Empty);
+                }
             }
         }
     }
@@ -283,12 +301,20 @@ public class SalesChannelEditModel : AsyncInitializableModel
     public bool IsOAuthChannel => SalesChannelType is SalesChannelType.eBay or SalesChannelType.Amazon;
 
     /// <summary>
+    /// True for credential-style channels (Shopware6, WooCommerce, WooCommerceDatabase) — the ones
+    /// whose connection can be tested before the channel exists. The internal channels
+    /// (PointOfSale, AsShop) have no remote endpoint; OAuth channels connect after save.
+    /// </summary>
+    private bool IsConnectionChannel =>
+        SalesChannelType is not (SalesChannelType.PointOfSale or SalesChannelType.AsShop) && !IsOAuthChannel;
+
+    /// <summary>
     /// Shows the Username/Password connection block for credential-style channels (Shopware6,
     /// WooCommerce). The internal channels (PointOfSale, AsShop) skip it entirely; OAuth
-    /// channels use <see cref="ShowOAuthSection"/>.
+    /// channels use <see cref="ShowOAuthSection"/>. In the create wizard the block is confined
+    /// to the connection step.
     /// </summary>
-    public bool ShowConnectionInfo =>
-        SalesChannelType is not (SalesChannelType.PointOfSale or SalesChannelType.AsShop) && !IsOAuthChannel;
+    public bool ShowConnectionInfo => IsConnectionChannel && (!IsWizard || WizardStep == 2);
 
     /// <summary>OAuth section is only useful once the channel has been persisted (we need its id).</summary>
     public bool ShowOAuthSection => IsOAuthChannel && IsEditMode;
@@ -299,7 +325,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
     #region Shop Domains (asShop)
 
     /// <summary>The whole shop-domains card — only meaningful for the asShop channel type.</summary>
-    public bool ShowShopDomainsCard => SalesChannelType == SalesChannelType.AsShop;
+    public bool ShowShopDomainsCard => SalesChannelType == SalesChannelType.AsShop && ShowStepDetails;
 
     /// <summary>Domain management needs the persisted channel id — hidden until first save.</summary>
     public bool ShowShopDomainsContent => ShowShopDomainsCard && IsEditMode;
@@ -458,9 +484,15 @@ public class SalesChannelEditModel : AsyncInitializableModel
     public bool ShowDatabaseSettings => IsWooCommerceDb;
 
     /// <summary>
-    /// Shows import/export settings for all types except PointOfSale.
+    /// Shows import/export settings for all types except PointOfSale (details step in the wizard).
     /// </summary>
-    public bool ShowImportExportSettings => SalesChannelType != SalesChannelType.PointOfSale;
+    public bool ShowImportExportSettings => SalesChannelType != SalesChannelType.PointOfSale && ShowStepDetails;
+
+    /// <summary>OAuth card (eBay/Amazon) — shown on the details step in the wizard.</summary>
+    public bool ShowOAuthCard => IsOAuthChannel && ShowStepDetails;
+
+    /// <summary>Warehouses section — shown on the details step in the wizard.</summary>
+    public bool ShowWarehousesSection => IsNotLoading && ShowStepDetails;
 
     /// <summary>
     /// Shows the bottom-of-page hint that explains URL/credentials configuration.
@@ -468,6 +500,255 @@ public class SalesChannelEditModel : AsyncInitializableModel
     /// PointOfSale (no remote endpoint) and OAuth channels (eBay/Amazon — no URL/credentials).
     /// </summary>
     public bool ShowConnectionHint => IsNotLoading && ShowConnectionInfo;
+
+    #endregion
+
+    #region Create Wizard
+
+    /// <summary>Create mode runs as a step wizard; edit mode keeps the classic single-page form.</summary>
+    public bool IsWizard => !IsEditMode;
+
+    public int WizardStep
+    {
+        get => _wizardStep;
+        private set
+        {
+            if (SetProperty(ref _wizardStep, value))
+            {
+                RaiseWizardStepDependents();
+            }
+        }
+    }
+
+    public bool ShowStepType => IsWizard && WizardStep == 1;
+    public bool ShowStepConnection => IsWizard && WizardStep == 2;
+    public bool ShowStepDetails => !IsWizard || WizardStep == 3;
+
+    /// <summary>Type selection — first wizard step; always visible in edit mode.</summary>
+    public bool ShowTypeSelector => !IsWizard || WizardStep == 1;
+
+    /// <summary>Name input — details step in the wizard; always visible in edit mode.</summary>
+    public bool ShowNameField => ShowStepDetails;
+
+    /// <summary>The basic-info card is hidden on the connection step (both its fields are elsewhere).</summary>
+    public bool ShowBasicCard => ShowTypeSelector || ShowNameField;
+
+    /// <summary>Step indicator + wizard button row (create mode, form loaded).</summary>
+    public bool ShowWizardChrome => IsWizard && IsNotLoading;
+
+    public bool ShowWizardBack => IsWizard && WizardStep > 1;
+    public bool ShowWizardNext => ShowStepType;
+
+    /// <summary>"Weiter" on the connection step — only after a successful test (re-visit via back).</summary>
+    public bool ShowWizardContinue => ShowStepConnection && ConnectionTestPassed;
+
+    /// <summary>"Schritt x von y" — channels without a testable connection skip the connection step.</summary>
+    public string StepIndicatorText
+    {
+        get
+        {
+            if (!IsWizard) return string.Empty;
+            var total = IsConnectionChannel ? 3 : 2;
+            var current = WizardStep == 3 && !IsConnectionChannel ? 2 : WizardStep;
+            return string.Format(_localizer["SalesChannelEditPage.WizardStepFormat"], current, total);
+        }
+    }
+
+    public void WizardNext()
+    {
+        if (WizardStep == 1)
+        {
+            WizardStep = IsConnectionChannel ? 2 : 3;
+        }
+        else if (WizardStep == 2 && ConnectionTestPassed)
+        {
+            WizardStep = 3;
+        }
+    }
+
+    public void WizardBack()
+    {
+        if (WizardStep == 3)
+        {
+            WizardStep = IsConnectionChannel ? 2 : 1;
+        }
+        else if (WizardStep == 2)
+        {
+            WizardStep = 1;
+        }
+    }
+
+    public bool IsTestingConnection
+    {
+        get => _isTestingConnection;
+        private set
+        {
+            if (SetProperty(ref _isTestingConnection, value))
+            {
+                OnPropertyChanged(nameof(CanTestConnection));
+            }
+        }
+    }
+
+    public bool ConnectionTestPassed => _connectionTestPassed;
+    public bool ConnectionTestFailed => _connectionTestFailed;
+    public string ConnectionTestMessage => _connectionTestMessage;
+
+    /// <summary>Success banner only on the connection step (the wizard auto-advances on success).</summary>
+    public bool ShowConnectionTestSuccess => ShowStepConnection && ConnectionTestPassed;
+    public bool ShowConnectionTestError => ShowStepConnection && ConnectionTestFailed;
+
+    public bool CanTestConnection => !IsTestingConnection && !IsLoading &&
+        CanTestConnectionCore(SalesChannelType, Url, Username, Password, DbHost, DbName, DbPort);
+
+    /// <summary>
+    /// Pure required-field check for the "Test connection" button — the connection subset of
+    /// <see cref="CanSaveCore"/>. Static so it is testable headless (tests/asERP.Client.Tests).
+    /// </summary>
+    internal static bool CanTestConnectionCore(
+        SalesChannelType type,
+        string url,
+        string username,
+        string password,
+        string dbHost,
+        string dbName,
+        string dbPort) => type switch
+    {
+        SalesChannelType.WooCommerceDatabase =>
+            !string.IsNullOrWhiteSpace(url) &&
+            !string.IsNullOrWhiteSpace(username) &&
+            !string.IsNullOrWhiteSpace(password) &&
+            !string.IsNullOrWhiteSpace(dbHost) &&
+            !string.IsNullOrWhiteSpace(dbName) &&
+            IsDbPortValid(dbPort),
+        SalesChannelType.Shopware6 or SalesChannelType.WooCommerce =>
+            !string.IsNullOrWhiteSpace(url) &&
+            !string.IsNullOrWhiteSpace(username) &&
+            !string.IsNullOrWhiteSpace(password),
+        _ => false
+    };
+
+    /// <summary>
+    /// Save gate contributed by the wizard: saving is only possible on the details step, and for
+    /// connection channels only after a successful connection test. Edit mode is unaffected.
+    /// </summary>
+    internal static bool WizardAllowsSaveCore(bool isWizard, int wizardStep, bool isConnectionChannel, bool connectionTestPassed) =>
+        !isWizard || (wizardStep == 3 && (!isConnectionChannel || connectionTestPassed));
+
+    /// <summary>
+    /// Tests the entered connection data against the (not yet saved) channel via the Server's
+    /// ad-hoc test endpoint. On success the wizard advances to the details step automatically.
+    /// </summary>
+    public async Task TestConnectionAsync(CancellationToken ct = default)
+    {
+        if (!CanTestConnection) return;
+
+        // Normalize like SaveAsync so the tested URL equals the one that gets persisted.
+        if (IsWooCommerce)
+        {
+            Url = NormalizeWooCommerceUrl(Url);
+        }
+        else if (IsWooCommerceDb)
+        {
+            Url = NormalizeShopBaseUrl(Url);
+        }
+
+        IsTestingConnection = true;
+        ErrorMessage = string.Empty;
+        SetConnectionTestState(passed: false, failed: false, message: string.Empty);
+
+        try
+        {
+            var input = new SalesChannelConnectionTestInputDto
+            {
+                SalesChannelType = SalesChannelType,
+                Url = Url,
+                Username = Username,
+                Password = Password,
+                AdditionalConfigJson = IsWooCommerceDb
+                    ? BuildDatabaseConfigJson(DbHost, DbPort, DbName, DbTablePrefix)
+                    : null
+            };
+
+            var result = await _salesChannelService.TestConnectionAsync(input, ct);
+
+            RunOnUi(() =>
+            {
+                if (result?.Success == true)
+                {
+                    var success = _localizer["SalesChannelEditPage.TestSuccess"];
+                    SetConnectionTestState(
+                        passed: true,
+                        failed: false,
+                        string.IsNullOrWhiteSpace(result.Message) ? success : $"{success} — {result.Message}");
+
+                    // The remaining fields only appear once the connection works — advance for the user.
+                    WizardStep = 3;
+                }
+                else
+                {
+                    SetConnectionTestState(passed: false, failed: true, FormatTestFailure(result?.Message));
+                }
+            });
+        }
+        catch (ApiException ex)
+        {
+            RunOnUi(() => SetConnectionTestState(passed: false, failed: true, FormatTestFailure(ex.CombinedMessage)));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Sales channel connection test failed");
+            RunOnUi(() => SetConnectionTestState(passed: false, failed: true, FormatTestFailure(ex.Message)));
+        }
+        finally
+        {
+            RunOnUi(() => IsTestingConnection = false);
+        }
+    }
+
+    private string FormatTestFailure(string? message) => string.IsNullOrWhiteSpace(message)
+        ? _localizer["SalesChannelEditPage.TestFailedPlain"]
+        : string.Format(_localizer["SalesChannelEditPage.TestFailed"], message);
+
+    private void SetConnectionTestState(bool passed, bool failed, string message)
+    {
+        _connectionTestPassed = passed;
+        _connectionTestFailed = failed;
+        _connectionTestMessage = message;
+        OnPropertyChanged(nameof(ConnectionTestPassed));
+        OnPropertyChanged(nameof(ConnectionTestFailed));
+        OnPropertyChanged(nameof(ConnectionTestMessage));
+        OnPropertyChanged(nameof(ShowConnectionTestSuccess));
+        OnPropertyChanged(nameof(ShowConnectionTestError));
+        OnPropertyChanged(nameof(ShowWizardContinue));
+        OnPropertyChanged(nameof(CanSave));
+    }
+
+    private void RaiseWizardStepDependents()
+    {
+        OnPropertyChanged(nameof(ShowStepType));
+        OnPropertyChanged(nameof(ShowStepConnection));
+        OnPropertyChanged(nameof(ShowStepDetails));
+        OnPropertyChanged(nameof(ShowTypeSelector));
+        OnPropertyChanged(nameof(ShowNameField));
+        OnPropertyChanged(nameof(ShowBasicCard));
+        OnPropertyChanged(nameof(ShowConnectionInfo));
+        OnPropertyChanged(nameof(ShowConnectionHint));
+        OnPropertyChanged(nameof(ShowPasswordKeepHint));
+        OnPropertyChanged(nameof(ShowOAuthCard));
+        OnPropertyChanged(nameof(ShowShopDomainsCard));
+        OnPropertyChanged(nameof(ShowShopDomainsContent));
+        OnPropertyChanged(nameof(ShowShopDomainsSaveFirstHint));
+        OnPropertyChanged(nameof(ShowImportExportSettings));
+        OnPropertyChanged(nameof(ShowWarehousesSection));
+        OnPropertyChanged(nameof(ShowWizardBack));
+        OnPropertyChanged(nameof(ShowWizardNext));
+        OnPropertyChanged(nameof(ShowWizardContinue));
+        OnPropertyChanged(nameof(ShowConnectionTestSuccess));
+        OnPropertyChanged(nameof(ShowConnectionTestError));
+        OnPropertyChanged(nameof(StepIndicatorText));
+        OnPropertyChanged(nameof(CanSave));
+    }
 
     #endregion
 
@@ -812,9 +1093,11 @@ public class SalesChannelEditModel : AsyncInitializableModel
     /// <summary>
     /// Determines if the save operation is allowed based on required fields per SalesChannelType.
     /// </summary>
-    public bool CanSave => !IsLoading && CanSaveCore(
-        SalesChannelType, IsEditMode, Name, Url, Username, Password,
-        DbHost, DbName, DbPort, HasSelectedWarehouse);
+    public bool CanSave => !IsLoading
+        && WizardAllowsSaveCore(IsWizard, WizardStep, IsConnectionChannel, ConnectionTestPassed)
+        && CanSaveCore(
+            SalesChannelType, IsEditMode, Name, Url, Username, Password,
+            DbHost, DbName, DbPort, HasSelectedWarehouse);
 
     /// <summary>
     /// Pure required-field validation matrix behind <see cref="CanSave"/> — one rule set per
@@ -1249,6 +1532,17 @@ public class SalesChannelEditModel : AsyncInitializableModel
             base.OnPropertyChanged(nameof(CanSave));
         }
 
+        // Editing any connection input voids a previous test result — the user must re-test.
+        if (propertyName is nameof(Url) or nameof(Username) or nameof(Password)
+            or nameof(DbHost) or nameof(DbPort) or nameof(DbName) or nameof(DbTablePrefix))
+        {
+            base.OnPropertyChanged(nameof(CanTestConnection));
+            if (_connectionTestPassed || _connectionTestFailed)
+            {
+                SetConnectionTestState(passed: false, failed: false, message: string.Empty);
+            }
+        }
+
         // Handle IsInitializing changes from base class
         if (propertyName is nameof(IsInitializing))
         {
@@ -1256,6 +1550,14 @@ public class SalesChannelEditModel : AsyncInitializableModel
             base.OnPropertyChanged(nameof(IsNotLoading));
             base.OnPropertyChanged(nameof(ShowConnectionHint));
             base.OnPropertyChanged(nameof(CanSave));
+        }
+
+        // Wizard chrome and the warehouses section follow the loading state.
+        if (propertyName is nameof(IsNotLoading))
+        {
+            base.OnPropertyChanged(nameof(ShowWizardChrome));
+            base.OnPropertyChanged(nameof(ShowWarehousesSection));
+            base.OnPropertyChanged(nameof(CanTestConnection));
         }
     }
 }

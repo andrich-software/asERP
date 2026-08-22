@@ -58,7 +58,7 @@ public partial record SalesListModel
     /// <summary>
     /// Pagination information from the last API response.
     /// </summary>
-    public IState<SalesPaginationInfo> Pagination => State<SalesPaginationInfo>.Value(this, () => new SalesPaginationInfo());
+    public IState<SalesPaginationInfo> Pagination => State<SalesPaginationInfo>.Value(this, () => new SalesPaginationInfo(_localizer));
 
     /// <summary>
     /// Feed of saless from the API.
@@ -193,6 +193,10 @@ public record SalesPaginationInfo
     public SalesPaginationInfo()
     {
     }
+
+    /// <summary>Initial state before the first load: no counts yet, but the localizer, so the
+    /// placeholder texts ("No results", count label) are localized instead of English fallbacks.</summary>
+    public SalesPaginationInfo(IStringLocalizer localizer) => _localizer = localizer;
 
     public SalesPaginationInfo(
         int currentPage,

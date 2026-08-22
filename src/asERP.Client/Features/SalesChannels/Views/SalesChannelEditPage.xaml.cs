@@ -66,6 +66,30 @@ public sealed partial class SalesChannelEditPage : Page
         }
     }
 
+    private void WizardNextButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SalesChannelEditModel model)
+        {
+            model.WizardNext();
+        }
+    }
+
+    private void WizardBackButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SalesChannelEditModel model)
+        {
+            model.WizardBack();
+        }
+    }
+
+    private async void TestConnectionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SalesChannelEditModel model)
+        {
+            await model.TestConnectionAsync();
+        }
+    }
+
     private async void ConnectOAuthButton_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is SalesChannelEditModel model)
