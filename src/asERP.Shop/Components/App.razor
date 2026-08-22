@@ -1,0 +1,60 @@
+@using Microsoft.AspNetCore.Http
+@*
+    Root component of the asShop storefront (static SSR). The root guard keeps the globally
+    mapped component routes invisible on non-shop hosts: without the request feature set by
+    ShopHostMiddleware the response is a bare 404 — exactly how "/" behaved on the API host
+    before the shop existed.
+*@
+@if (_isShopRequest)
+{
+    <!DOCTYPE html>
+    <html lang="de">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <base href="/"/>
+        <link rel="stylesheet" href="/_content/asERP.Shop/shop.css"/>
+        @if (_trackingEnabled)
+        {
+            @* Built-in web analytics (cookieless): first-party tracker posting to the same-origin
+               /asshop/e collector — the channel is resolved from the Host header, no token involved. *@
+            <script src="/_content/asERP.Shop/aserp-shop.js" defer></script>
+        }
+        <HeadOutlet/>
+    </head>
+    <body>
+        <Routes/>
+    </body>
+    </html>
+}
+else
+{
+    <!DOCTYPE html>
+    <html lang="de">
+    <head>
+        <meta charset="utf-8"/>
+        <title>Not Found</title>
+    </head>
+    <body>Not Found</body>
+    </html>
+}
+
+@code {
+    private bool _isShopRequest;
+    private bool _trackingEnabled;
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var feature = HttpContext?.Features.Get<IShopRequestFeature>();
+        _isShopRequest = feature is not null;
+        _trackingEnabled = feature?.Binding.TrackingEnabled == true;
+
+        if (!_isShopRequest && HttpContext is not null)
+        {
+            HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        }
+    }
+}

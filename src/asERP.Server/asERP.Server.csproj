@@ -77,5 +77,6 @@
         <ProjectReference Include="../asERP.Persistence.SQLite/asERP.Persistence.SQLite.csproj" />
         <ProjectReference Include="../asERP.SalesChannels/asERP.SalesChannels.csproj" />
         <ProjectReference Include="../asERP.Shipping/asERP.Shipping.csproj" />
+        <ProjectReference Include="../asERP.Shop/asERP.Shop.csproj" />
     </ItemGroup>
 </Project>

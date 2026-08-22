@@ -68,6 +68,7 @@
     <Project Path="src/asERP.Persistence/asERP.Persistence.csproj" />
     <Project Path="src/asERP.SalesChannels/asERP.SalesChannels.csproj" />
     <Project Path="src/asERP.Shipping/asERP.Shipping.csproj" />
+    <Project Path="src/asERP.Shop/asERP.Shop.csproj" />
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="tests/asERP.Client.Tests/asERP.Client.Tests.csproj" />

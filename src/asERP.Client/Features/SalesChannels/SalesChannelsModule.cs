@@ -19,6 +19,7 @@ public static class SalesChannelsModule
         // Feature-specific services
         // SalesChannelService: Transient - stateless, creates new instance per request
         services.AddTransient<ISalesChannelService, SalesChannelService>();
+        services.AddTransient<IShopDomainService, ShopDomainService>();
 
         // Page models
         services.AddTransient<SalesChannelOverviewModel>();

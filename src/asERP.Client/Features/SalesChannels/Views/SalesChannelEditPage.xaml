@@ -385,6 +385,107 @@
             </Border>
           </Grid>
 
+          <!-- Shop Domains Card (asShop only) — inbound host bindings that route storefront
+               requests to this channel. Managed after the channel has been saved. -->
+          <Border Background="{ThemeResource SurfaceBrush}"
+                  CornerRadius="8" BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
+                  Margin="0,0,0,16"
+                  Visibility="{Binding ShowShopDomainsCard, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel Spacing="0">
+              <!-- Card Header -->
+              <Grid Padding="16,16,16,8">
+                <StackPanel Orientation="Horizontal">
+                  <FontIcon Glyph="&#xE719;"
+                            FontSize="20"
+                            Foreground="{ThemeResource PrimaryBrush}"
+                            Margin="0,0,12,0" />
+                  <TextBlock x:Uid="SalesChannelEditPage.Section.ShopDomains"
+                             Style="{StaticResource TitleMedium}"
+                             Foreground="{ThemeResource OnSurfaceBrush}" />
+                </StackPanel>
+              </Grid>
+
+              <StackPanel Padding="16,0,16,16"
+                          Spacing="12">
+                <TextBlock x:Uid="SalesChannelEditPage.DomainsSaveFirstHint"
+                           Style="{StaticResource BodySmall}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                           TextWrapping="Wrap"
+                           Visibility="{Binding ShowShopDomainsSaveFirstHint, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                <StackPanel Spacing="12"
+                            Visibility="{Binding ShowShopDomainsContent, Converter={StaticResource BoolToVisibilityConverter}}">
+                  <TextBlock x:Uid="SalesChannelEditPage.DomainsIntro"
+                             Style="{StaticResource BodySmall}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                             TextWrapping="Wrap" />
+
+                  <TextBlock x:Uid="SalesChannelEditPage.DomainsEmpty"
+                             Style="{StaticResource BodyMedium}"
+                             Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                             Visibility="{Binding HasNoShopDomains, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                  <ItemsControl ItemsSource="{Binding ShopDomains}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Grid Padding="0,6"
+                              ColumnSpacing="8"
+                              BorderBrush="{ThemeResource OutlineVariantBrush}"
+                              BorderThickness="0,0,0,1">
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+                          <TextBlock Grid.Column="0"
+                                     Text="{Binding Host}"
+                                     Style="{StaticResource BodyMedium}"
+                                     Foreground="{ThemeResource OnSurfaceBrush}"
+                                     VerticalAlignment="Center" />
+                          <Border Grid.Column="1"
+                                  Background="{ThemeResource SurfaceVariantBrush}"
+                                  CornerRadius="999"
+                                  Padding="8,2"
+                                  VerticalAlignment="Center"
+                                  Visibility="{Binding IsPrimary, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBlock x:Uid="SalesChannelEditPage.DomainPrimaryBadge"
+                                       Style="{StaticResource LabelSmall}"
+                                       Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                          </Border>
+                          <Button Grid.Column="2"
+                                  Style="{StaticResource TextButtonStyle}"
+                                  Click="DeleteShopDomainButton_Click"
+                                  VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE74D;"
+                                      FontSize="14"
+                                      Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                          </Button>
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Uid="SalesChannelEditPage.DomainHostInput"
+                             Grid.Column="0"
+                             Text="{Binding NewDomainHost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             IsEnabled="{Binding IsNotLoading}" />
+                    <Button x:Uid="SalesChannelEditPage.DomainAdd"
+                            Grid.Column="1"
+                            Style="{StaticResource OutlinedButtonStyle}"
+                            VerticalAlignment="Bottom"
+                            Click="AddShopDomainButton_Click"
+                            IsEnabled="{Binding CanAddShopDomain}" />
+                  </Grid>
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
           <!-- Synchronization Settings Section Header (hidden for PointOfSale) -->
           <StackPanel Orientation="Horizontal"
                       Spacing="12"

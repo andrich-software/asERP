@@ -126,7 +126,12 @@ public class TenantCreateHandler : IRequestHandler<TenantCreateCommand, Result<G
                 Name = "Kasse Hauptlager",
                 Type = SalesChannelType.PointOfSale,
                 TenantId = tenantToCreate.Id,
-                Warehouses = new List<Domain.Entities.Warehouse> { defaultWarehouse }
+                Warehouses = new List<Domain.Entities.Warehouse> { defaultWarehouse },
+                // Every channel owns a 1:1 sync-state row — the orchestrator dereferences it
+                // unconditionally, so a channel without one breaks the whole poll tick.
+                // TenantId must be explicit: during tenant creation there is no ambient tenant
+                // context the save hook could stamp it from.
+                SyncState = new SalesChannelSyncState { TenantId = tenantToCreate.Id }
             };
             _salesChannelRepository.Add(defaultSalesChannel);
 

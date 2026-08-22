@@ -99,6 +99,12 @@ public class SalesChannel : BaseEntity, IBaseEntity, IConcurrencyStamped
     public ICollection<Warehouse> Warehouses { get; set; } = null!;
 
     /// <summary>
+    /// Inbound host bindings for <see cref="SalesChannelType.AsShop"/> channels (empty for all other
+    /// types). Managed via the ShopDomain CRUD endpoints; deleted explicitly on channel delete.
+    /// </summary>
+    public ICollection<ShopDomain> ShopDomains { get; set; } = [];
+
+    /// <summary>
     /// 1:1 synchronization bookkeeping (import cursors, initial-import flags, last poll time). Held on a
     /// SEPARATE, non-concurrency-stamped entity so the sync machinery's concurrent per-operation updates
     /// (order backfill cursor vs. customer import cursor, etc.) don't collide on this channel's optimistic-

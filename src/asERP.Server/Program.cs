@@ -4,8 +4,8 @@ using System.Threading.RateLimiting;
 using asERP.Analytics;
 using asERP.Application;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Feeds.Rendering;
 using asERP.Application.Contracts.Services;
+using asERP.Application.Feeds.Rendering;
 using asERP.Application.Models.Grafana;
 using asERP.Domain.Enums;
 using asERP.Identity;
@@ -25,8 +25,11 @@ using asERP.Server.Infrastructure.Logging;
 using asERP.Server.ServiceRegistrations;
 using asERP.Server.Services;
 using asERP.Shipping;
+using asERP.Shop;
+using asERP.Shop.Hosting;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -81,8 +84,31 @@ builder.WebHost.ConfigureKestrel(options =>
     options.AddServerHeader = false;
 });
 
+// IExceptionHandlers run in registration order: the shop handler declines non-shop requests
+// (returns false), so /api keeps its JSON problem details byte-identical; shop-marked requests
+// get an HTML error page instead.
+builder.Services.AddExceptionHandler<ShopHtmlExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+
+// Honor X-Forwarded-For/Proto/Host from explicitly trusted proxies only (Cloudflare, nginx).
+// Networks come from configuration (ForwardedHeaders:KnownNetworks, CIDR notation); with no
+// networks configured the middleware trusts nothing and forwarded headers are ignored —
+// identical to the behavior before this option existed. Request.Scheme/Host then reflect the
+// public edge values, which host-based shop routing and absolute URL generation depend on.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+
+    var knownNetworks = builder.Configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [];
+    foreach (var cidr in knownNetworks)
+    {
+        options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(cidr));
+    }
+});
 
 // DataProtection key persistence — required so SalesChannel credentials encrypted with
 // IDataProtector survive server restarts. Filesystem-backed for v1 (Single-Server Deployments
@@ -235,7 +261,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 
 builder.Services.AddResponseCaching(options =>
 {
-    options.MaximumBodySize = 1024; // 1 MB
+    options.MaximumBodySize = 1024 * 1024; // 1 MB
     options.UseCaseSensitivePaths = true;
 });
 
@@ -281,6 +307,20 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0
             });
     });
+
+    // Built-in asShop web-analytics collector: beacons come straight from visitors' browsers, so
+    // partition strictly by visitor IP (ForwardedHeaders already rewrote RemoteIpAddress behind
+    // trusted proxies). Deliberately never keyed by a header — a client-supplied header would let
+    // callers mint their own partitions and bypass the per-IP limit.
+    options.AddPolicy("shop-analytics", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 120,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
 });
 
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -303,6 +343,10 @@ else
     // ClickHouse hosted services (schema bootstrapper + batch writer) — tests have no ClickHouse.
     builder.Services.AddAnalyticsServices(includeBackgroundServices: false);
 }
+
+// Storefront (asShop): Razor Components + host resolver. No background services — safe in
+// every environment including Testing.
+builder.Services.AddShopServices();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddApplicationServices();
@@ -339,6 +383,7 @@ builder.Services.AddScoped<IProductImageRepository, ProductImageRepository>();
 builder.Services.AddScoped<IProductAttributeRepository, ProductAttributeRepository>();
 builder.Services.AddScoped<IProductSalesChannelRepository, ProductSalesChannelRepository>();
 builder.Services.AddScoped<ISalesChannelRepository, SalesChannelRepository>();
+builder.Services.AddScoped<IShopDomainRepository, ShopDomainRepository>();
 builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
 builder.Services.AddScoped<IManufacturerRepository, ManufacturerRepository>();
 builder.Services.AddScoped<ITaxClassRepository, TaxClassRepository>();
@@ -412,6 +457,10 @@ using (var scope = app.Services.CreateScope())
     app.Logger.LogInformation("Settings initialization completed");
 }
 
+// Must run first so Request.Scheme/Host/RemoteIp are rewritten before anything
+// (HTTPS redirection, security headers, host-based routing) reads them.
+app.UseForwardedHeaders();
+
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
@@ -419,13 +468,34 @@ app.UseHttpsRedirection();
 // the reverse proxy protects it with basic auth in production.
 app.UseGrafanaTelemetry(grafanaSettings);
 
+// Shop host routing: marks requests whose Host header is bound to an asShop channel and binds
+// the tenant from the domain row. Reserved paths (/api, /swagger, ...) and unbound hosts pass
+// through untouched. Must run before the security headers (shop pages get their own CSP) and
+// before TenantMiddleware (which skips shop-marked requests).
+app.UseMiddleware<ShopHostMiddleware>();
+
 // Security headers
 app.Use(async (context, next) =>
 {
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     context.Response.Headers["X-Frame-Options"] = "DENY";
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-    context.Response.Headers["Content-Security-Policy"] = "default-src 'self'";
+
+    if (context.Features.Get<IShopRequestFeature>() is not null)
+    {
+        // Storefront CSP: blazor.web.js + websocket circuits are same-origin; component styles
+        // need 'unsafe-inline'; images may come from data: URIs. script-src stays 'self', which
+        // forbids [StreamRendering] (its framework-injected inline scripts would be blocked).
+        context.Response.Headers["Content-Security-Policy"] =
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data:; connect-src 'self' wss:; frame-ancestors 'none'; " +
+            "base-uri 'self'; form-action 'self'";
+    }
+    else
+    {
+        context.Response.Headers["Content-Security-Policy"] = "default-src 'self'";
+    }
+
     context.Response.Headers["X-Permitted-Cross-Domain-Policies"] = "none";
 
     if (!app.Environment.IsDevelopment())
@@ -445,6 +515,11 @@ app.UseAuthentication(); // who are you?
 app.UseMiddleware<asERP.Server.Middleware.ClientVersionMiddleware>(); // enforce minimum client version
 app.UseMiddleware<asERP.Server.Middleware.TenantMiddleware>(); // set tenant context
 app.UseAuthorization(); // what are you allowed to do?
+
+// Required by MapRazorComponents (throws at startup without it). Only endpoints carrying
+// antiforgery metadata are enforced — attribute-routed API controllers carry none.
+app.UseAntiforgery();
+
 app.UseRateLimiter();
 
 if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
@@ -453,6 +528,14 @@ if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"
 
     app.Use(async (context, next) =>
     {
+        // Shop pages own their cache headers (output caching arrives with the template
+        // system) — stamping them no-store here would kill storefront cacheability.
+        if (context.Features.Get<IShopRequestFeature>() is not null)
+        {
+            await next();
+            return;
+        }
+
         // Authenticated, per-tenant and API responses must never be marked publicly
         // cacheable: a shared cache (CDN/reverse proxy) keys by path only and would
         // serve one window's response for a different `hours`/query value, since Vary
@@ -490,11 +573,6 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Map all endpoints after all middleware
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Web}/{action=Index}/{id?}");
-
 // In Testing environment, allow anonymous access for test infrastructure
 if (app.Environment.IsEnvironment("Testing"))
 {
@@ -504,6 +582,10 @@ else
 {
     app.MapControllers();
 }
+
+// Storefront pages (static SSR). Mapped globally — isolation comes from the root guard in
+// App.razor (non-shop hosts get a bare 404) plus the tenant binding in ShopHostMiddleware.
+app.MapRazorComponents<asERP.Shop.Components.App>();
 
 // Add health check endpoint
 app.MapHealthChecks("/health", new HealthCheckOptions

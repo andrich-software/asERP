@@ -2088,6 +2088,36 @@
   <data name="SalesChannelEditPage.Section.BasicInfo.Text" xml:space="preserve">
     <value>Basic Information</value>
   </data>
+  <data name="SalesChannelEditPage.Section.ShopDomains.Text" xml:space="preserve">
+    <value>Shop Domains</value>
+  </data>
+  <data name="SalesChannelEditPage.DomainsSaveFirstHint.Text" xml:space="preserve">
+    <value>Save the sales channel first — afterwards you can manage the shop's domains here.</value>
+  </data>
+  <data name="SalesChannelEditPage.DomainsIntro.Text" xml:space="preserve">
+    <value>Incoming requests with these hostnames are routed to this shop. The primary domain is the redirect target.</value>
+  </data>
+  <data name="SalesChannelEditPage.DomainsEmpty.Text" xml:space="preserve">
+    <value>No domain configured yet.</value>
+  </data>
+  <data name="SalesChannelEditPage.DomainPrimaryBadge.Text" xml:space="preserve">
+    <value>Primary</value>
+  </data>
+  <data name="SalesChannelEditPage.DomainHostInput.Header" xml:space="preserve">
+    <value>Add domain</value>
+  </data>
+  <data name="SalesChannelEditPage.DomainHostInput.PlaceholderText" xml:space="preserve">
+    <value>e.g. shop.your-domain.com</value>
+  </data>
+  <data name="SalesChannelEditPage.DomainAdd.Content" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="SalesChannelEditPage.DomainAddError" xml:space="preserve">
+    <value>The domain could not be added.</value>
+  </data>
+  <data name="SalesChannelEditPage.DomainDeleteError" xml:space="preserve">
+    <value>The domain could not be deleted.</value>
+  </data>
   <data name="SalesChannelEditPage.Section.ConnectionInfo.Text" xml:space="preserve">
     <value>Connection</value>
   </data>
@@ -2374,6 +2404,9 @@
   <!-- Sales Channel Type Names -->
   <data name="SalesChannelType.PointOfSale" xml:space="preserve">
     <value>Point of Sale</value>
+  </data>
+  <data name="SalesChannelType.AsShop" xml:space="preserve">
+    <value>asShop</value>
   </data>
   <data name="SalesChannelType.Shopware6" xml:space="preserve">
     <value>Shopware 6</value>

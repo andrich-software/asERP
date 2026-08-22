@@ -375,6 +375,8 @@ MigrationBackup/
 FodyWeavers.xsd
 src/asERP.Server/aserp_dev.db
 src/asERP.Server/aserp.db
+# SQLite DB created when running the server from the repo root (dotnet run --project ...)
+/aserp.db*
 src/asERP.Server/aserp.db-shm
 src/asERP.Server/aserp.db-wal
 /.run
@@ -384,5 +386,8 @@ src/asERP.Server/appsettings.Production.json
 
 # Product images downloaded by the importer
 src/asERP.Server/App_Data/files/products/
+
+# DataProtection key ring persisted by local dev/test runs
+src/asERP.Server/App_Data/dp-keys/
 /ToDo
 .mcp.json

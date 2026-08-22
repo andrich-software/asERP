@@ -1,0 +1,25 @@
+@page "/"
+@using Microsoft.AspNetCore.Http
+
+<PageTitle>Shop</PageTitle>
+
+<section class="shop-hero">
+    <h1>Willkommen</h1>
+    <p>Dieser Shop wird gerade eingerichtet.</p>
+    @if (_host is not null)
+    {
+        <p class="shop-hero-host">@_host</p>
+    }
+</section>
+
+@code {
+    private string? _host;
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _host = HttpContext?.Features.Get<IShopRequestFeature>()?.Binding.Host;
+    }
+}

@@ -9,6 +9,7 @@ using asERP.Client.Features.SalesChannels.Services;
 using asERP.Client.Features.Shell.Models;
 using asERP.Client.Features.Warehouses.Services;
 using asERP.Domain.Dtos.SalesChannel;
+using asERP.Domain.Dtos.ShopDomain;
 using asERP.Domain.Dtos.Warehouse;
 using asERP.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,7 @@ public record SalesChannelEditData(Guid? SalesChannelId = null);
 public class SalesChannelEditModel : AsyncInitializableModel
 {
     private readonly ISalesChannelService _salesChannelService;
+    private readonly IShopDomainService _shopDomainService;
     private readonly IWarehouseService _warehouseService;
     private readonly INavigator _navigator;
     private readonly IStringLocalizer _localizer;
@@ -73,6 +75,11 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private IReadOnlyCollection<Guid> _selectedWarehouseIds = Array.Empty<Guid>();
     private bool _isWarehousesLoading;
 
+    // Shop domains (asShop) — host bindings managed after the channel has been saved.
+    private ObservableCollection<ShopDomainListDto> _shopDomains = new();
+    private string _newDomainHost = string.Empty;
+    private bool _isDomainBusy;
+
     // OAuth state — populated for eBay / Amazon channels after the channel has been saved.
     private bool _hasRefreshToken;
     private DateTime? _tokenExpiresAt;
@@ -85,6 +92,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
 
     public SalesChannelEditModel(
         ISalesChannelService salesChannelService,
+        IShopDomainService shopDomainService,
         IWarehouseService warehouseService,
         INavigator navigator,
         IStringLocalizer localizer,
@@ -94,6 +102,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
         : base(logger)
     {
         _salesChannelService = salesChannelService;
+        _shopDomainService = shopDomainService;
         _warehouseService = warehouseService;
         _navigator = navigator;
         _localizer = localizer;
@@ -115,6 +124,11 @@ public class SalesChannelEditModel : AsyncInitializableModel
         if (_salesChannelId.HasValue)
         {
             await LoadSalesChannelAsync(ct);
+
+            if (SalesChannelType == SalesChannelType.AsShop)
+            {
+                await LoadShopDomainsAsync(ct);
+            }
         }
 
         _ = LoadWarehousesAsync(ct);
@@ -207,6 +221,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
     public IReadOnlyList<SalesChannelTypeOption> SalesChannelTypeOptions { get; } = new List<SalesChannelTypeOption>
     {
         new(SalesChannelType.PointOfSale, "SalesChannelType.PointOfSale"),
+        new(SalesChannelType.AsShop, "SalesChannelType.AsShop"),
         new(SalesChannelType.Shopware6, "SalesChannelType.Shopware6"),
         new(SalesChannelType.WooCommerce, "SalesChannelType.WooCommerce"),
         new(SalesChannelType.WooCommerceDatabase, "SalesChannelType.WooCommerceDatabase"),
@@ -239,6 +254,9 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 OnPropertyChanged(nameof(ShowUrlField));
                 OnPropertyChanged(nameof(ShowDatabaseSettings));
                 OnPropertyChanged(nameof(ShowImportExportSettings));
+                OnPropertyChanged(nameof(ShowShopDomainsCard));
+                OnPropertyChanged(nameof(ShowShopDomainsContent));
+                OnPropertyChanged(nameof(ShowShopDomainsSaveFirstHint));
                 OnPropertyChanged(nameof(CanSave));
 
                 // Connection field labels/placeholders are type-specific (e.g. WooCommerce
@@ -266,16 +284,129 @@ public class SalesChannelEditModel : AsyncInitializableModel
 
     /// <summary>
     /// Shows the Username/Password connection block for credential-style channels (Shopware6,
-    /// WooCommerce). PointOfSale skips it entirely; OAuth channels use <see cref="ShowOAuthSection"/>.
+    /// WooCommerce). The internal channels (PointOfSale, AsShop) skip it entirely; OAuth
+    /// channels use <see cref="ShowOAuthSection"/>.
     /// </summary>
     public bool ShowConnectionInfo =>
-        SalesChannelType != SalesChannelType.PointOfSale && !IsOAuthChannel;
+        SalesChannelType is not (SalesChannelType.PointOfSale or SalesChannelType.AsShop) && !IsOAuthChannel;
 
     /// <summary>OAuth section is only useful once the channel has been persisted (we need its id).</summary>
     public bool ShowOAuthSection => IsOAuthChannel && IsEditMode;
 
     /// <summary>Hint shown on the OAuth section when the channel has never been saved.</summary>
     public bool ShowOAuthSaveFirstHint => IsOAuthChannel && !IsEditMode;
+
+    #region Shop Domains (asShop)
+
+    /// <summary>The whole shop-domains card — only meaningful for the asShop channel type.</summary>
+    public bool ShowShopDomainsCard => SalesChannelType == SalesChannelType.AsShop;
+
+    /// <summary>Domain management needs the persisted channel id — hidden until first save.</summary>
+    public bool ShowShopDomainsContent => ShowShopDomainsCard && IsEditMode;
+
+    /// <summary>Hint shown on the shop-domains card when the channel has never been saved.</summary>
+    public bool ShowShopDomainsSaveFirstHint => ShowShopDomainsCard && !IsEditMode;
+
+    public ObservableCollection<ShopDomainListDto> ShopDomains
+    {
+        get => _shopDomains;
+        private set => SetProperty(ref _shopDomains, value);
+    }
+
+    public bool HasNoShopDomains => ShopDomains.Count == 0;
+
+    public string NewDomainHost
+    {
+        get => _newDomainHost;
+        set
+        {
+            if (SetProperty(ref _newDomainHost, value))
+            {
+                OnPropertyChanged(nameof(CanAddShopDomain));
+            }
+        }
+    }
+
+    public bool CanAddShopDomain => !_isDomainBusy && !string.IsNullOrWhiteSpace(NewDomainHost);
+
+    public async Task AddShopDomainAsync()
+    {
+        if (!_salesChannelId.HasValue || string.IsNullOrWhiteSpace(NewDomainHost))
+        {
+            return;
+        }
+
+        _isDomainBusy = true;
+        OnPropertyChanged(nameof(CanAddShopDomain));
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            await _shopDomainService.CreateShopDomainAsync(new ShopDomainInputDto
+            {
+                SalesChannelId = _salesChannelId.Value,
+                Host = NewDomainHost.Trim(),
+                Port = 0,
+                // The server makes the first binding primary automatically.
+                IsPrimary = false,
+                RedirectToPrimary = true
+            });
+
+            RunOnUi(() => NewDomainHost = string.Empty);
+            await LoadShopDomainsAsync(CancellationToken.None);
+        }
+        catch (ApiException ex)
+        {
+            RunOnUi(() => ErrorMessage = ex.CombinedMessage);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding shop domain");
+            RunOnUi(() => ErrorMessage = _localizer["SalesChannelEditPage.DomainAddError"]);
+        }
+        finally
+        {
+            _isDomainBusy = false;
+            RunOnUi(() => OnPropertyChanged(nameof(CanAddShopDomain)));
+        }
+    }
+
+    public async Task DeleteShopDomainAsync(ShopDomainListDto domain)
+    {
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            await _shopDomainService.DeleteShopDomainAsync(domain.Id);
+            await LoadShopDomainsAsync(CancellationToken.None);
+        }
+        catch (ApiException ex)
+        {
+            RunOnUi(() => ErrorMessage = ex.CombinedMessage);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting shop domain {Id}", domain.Id);
+            RunOnUi(() => ErrorMessage = _localizer["SalesChannelEditPage.DomainDeleteError"]);
+        }
+    }
+
+    private async Task LoadShopDomainsAsync(CancellationToken ct)
+    {
+        if (!_salesChannelId.HasValue)
+        {
+            return;
+        }
+
+        var domains = await _shopDomainService.GetShopDomainsAsync(_salesChannelId.Value, ct);
+        RunOnUi(() =>
+        {
+            ShopDomains = new ObservableCollection<ShopDomainListDto>(domains);
+            OnPropertyChanged(nameof(HasNoShopDomains));
+        });
+    }
+
+    #endregion
 
     public bool IsConnected => _hasRefreshToken;
 
@@ -712,8 +843,9 @@ public class SalesChannelEditModel : AsyncInitializableModel
         // Type-specific validation
         return type switch
         {
-            // PointOfSale: Only Name required
-            SalesChannelType.PointOfSale => true,
+            // Internal channels (PointOfSale, asShop): only Name required — no remote API.
+            // asShop host bindings are managed separately after the channel is saved.
+            SalesChannelType.PointOfSale or SalesChannelType.AsShop => true,
 
             // eBay / Amazon: only Name required at save time. The OAuth flow runs after save
             // (it needs the channel id) and persists the refresh token onto the channel.

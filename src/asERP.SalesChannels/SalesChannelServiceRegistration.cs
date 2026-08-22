@@ -1,6 +1,9 @@
-﻿using asERP.Application;
+using System.Net;
+using System.Net.Sockets;
+using asERP.Application;
 using asERP.SalesChannels.Abstractions;
 using asERP.SalesChannels.Connectors.Amazon;
+using asERP.SalesChannels.Connectors.AsShop;
 using asERP.SalesChannels.Connectors.Ebay;
 using asERP.SalesChannels.Connectors.Pos;
 using asERP.SalesChannels.Connectors.Shopware6;
@@ -13,8 +16,6 @@ using asERP.SalesChannels.Models.eBay;
 using asERP.SalesChannels.Models.Shopware6;
 using asERP.SalesChannels.Orchestration;
 using asERP.SalesChannels.Repositories;
-using System.Net;
-using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 
@@ -70,6 +71,7 @@ public static class SalesChannelServiceRegistration
         // Connectors (one per SalesChannelType). Resolved through the registry, never via
         // direct DI — keeps the channel-specific switch in one place.
         services.AddScoped<ISalesChannelConnector, PosConnector>();
+        services.AddScoped<ISalesChannelConnector, AsShopConnector>();
         services.AddScoped<ISalesChannelConnector, Shopware6Connector>();
         services.AddScoped<ISalesChannelConnector, WooCommerceConnector>();
         services.AddScoped<ISalesChannelConnector, WooCommerceDatabaseConnector>();
