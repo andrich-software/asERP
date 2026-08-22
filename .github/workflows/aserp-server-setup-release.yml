@@ -20,27 +20,29 @@ on:
       - 'installer/**'
   workflow_dispatch:
 
+# Rapid successive pushes: each run releases under its own tag, so cancelling a
+# superseded run just skips an already-outdated release.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  version:
-    runs-on: [self-hosted, Linux, X64]
+  build-installer:
+    runs-on: windows-latest
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
     steps:
-    - name: Generate version
-      id: version
-      run: |
-        VERSION=$(date +%Y.%m.%d).${GITHUB_RUN_NUMBER}
-        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-        echo "Generated version: $VERSION"
-
-  build-installer:
-    runs-on: windows-latest
-    needs: version
-    steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+
+    - name: Generate version
+      id: version
+      shell: pwsh
+      run: |
+        # YYYY.MM.DD.RunNumber — identical scheme to the other release workflows.
+        $version = "{0}.{1}" -f (Get-Date -Format 'yyyy.MM.dd'), $env:GITHUB_RUN_NUMBER
+        "VERSION=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        Write-Host "Generated version: $version"
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -53,7 +55,7 @@ jobs:
           --configuration Release `
           --runtime win-x64 `
           --self-contained true `
-          -p:Version=${{ needs.version.outputs.version }} `
+          -p:Version=${{ steps.version.outputs.VERSION }} `
           -p:GeneratePackageOnBuild=false `
           --output ./publish/server
       shell: pwsh
@@ -64,7 +66,7 @@ jobs:
           --configuration Release `
           --runtime win-x64 `
           --self-contained true `
-          -p:Version=${{ needs.version.outputs.version }} `
+          -p:Version=${{ steps.version.outputs.VERSION }} `
           --output ./publish/tray
       shell: pwsh
 
@@ -76,7 +78,7 @@ jobs:
           choco install innosetup -y --no-progress
         }
         & $iscc `
-          /DAppVersion=${{ needs.version.outputs.version }} `
+          /DAppVersion=${{ steps.version.outputs.VERSION }} `
           /DServerPublishDir=..\publish\server `
           /DTrayPublishDir=..\publish\tray `
           installer\asERP.Server.Setup.iss
@@ -86,13 +88,13 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: installer
-        path: installer/output/asERP-Server-Setup-${{ needs.version.outputs.version }}.exe
+        path: installer/output/asERP-Server-Setup-${{ steps.version.outputs.VERSION }}.exe
         # Hand-off to the release job only; final installer lives in the GitHub Release.
         retention-days: 1
 
   release:
     runs-on: [self-hosted, Linux, X64]
-    needs: [version, build-installer]
+    needs: build-installer
     permissions:
       contents: write
     steps:
@@ -106,17 +108,17 @@ jobs:
       with:
         # "server-v" prefix keeps server releases apart from desktop client tags ("v...");
         # the tray update checker filters on this prefix — never use /releases/latest.
-        tag_name: server-v${{ needs.version.outputs.version }}
-        name: asERP Server v${{ needs.version.outputs.version }}
+        tag_name: server-v${{ needs.build-installer.outputs.version }}
+        name: asERP Server v${{ needs.build-installer.outputs.version }}
         body: |
-          ## asERP Server v${{ needs.version.outputs.version }} (Windows)
+          ## asERP Server v${{ needs.build-installer.outputs.version }} (Windows)
 
           Self-contained Windows installer — no .NET runtime required.
           Installs the asERP server as a Windows service plus a tray app for
           status, start/stop, settings and database backup/restore.
 
           ### Installation
-          1. Download `asERP-Server-Setup-${{ needs.version.outputs.version }}.exe`
+          1. Download `asERP-Server-Setup-${{ needs.build-installer.outputs.version }}.exe`
           2. Run the installer (data is stored in `C:\ProgramData\asERP`)
           3. The service starts automatically; the tray icon appears after login
 

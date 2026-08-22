@@ -15,7 +15,13 @@ RUN apt-get update \
 ENV DatabaseConfig__Provider=Sqlite
 ENV DatabaseConfig__ConnectionString=Data Source=aserp.db
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# --platform=$BUILDPLATFORM + dotnet's own cross-compilation (-a $TARGETARCH):
+# the compiler always runs natively on the build host; only the runtime stage
+# below is the target architecture. Building arm64 under QEMU emulation was
+# ~5-10x slower and caused the OutOfMemory/SIGBUS crashes the env vars below
+# guard against.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG TARGETARCH
 # Tame the build's memory footprint on small/loaded hosts: workstation GC instead
 # of per-core server heaps, and pretend to have 2 cores so MSBuild's Copy task and
 # friends don't spawn a thread per real core. Prevents OutOfMemory/SIGBUS during
@@ -38,12 +44,12 @@ COPY ["src/asERP.Persistence.MSSQL/asERP.Persistence.MSSQL.csproj", "asERP.Persi
 COPY ["src/asERP.Persistence.PostgreSQL/asERP.Persistence.PostgreSQL.csproj", "asERP.Persistence.PostgreSQL/"]
 COPY ["src/asERP.Persistence.SQLite/asERP.Persistence.SQLite.csproj", "asERP.Persistence.SQLite/"]
 COPY ["src/asERP.SalesChannels/asERP.SalesChannels.csproj", "asERP.SalesChannels/"]
-RUN dotnet restore "asERP.Server/asERP.Server.csproj"
+RUN dotnet restore "asERP.Server/asERP.Server.csproj" -a $TARGETARCH
 COPY src/ .
 WORKDIR "/src/asERP.Server"
 # publish builds the project itself — no need for a separate `dotnet build` pass.
 # -m:1 + BuildInParallel=false build the projects serially to avoid memory spikes.
-RUN dotnet publish "asERP.Server.csproj" -c Release -o /app/publish \
+RUN dotnet publish "asERP.Server.csproj" -c Release -a $TARGETARCH -o /app/publish \
     /p:UseAppHost=false -m:1 -p:BuildInParallel=false
 
 FROM base AS final

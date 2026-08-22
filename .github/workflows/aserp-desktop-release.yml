@@ -1,4 +1,4 @@
-﻿name: Release asERP Desktop
+name: Release asERP Desktop
 
 on:
   push:
@@ -8,32 +8,36 @@ on:
       - 'src/asERP.Domain/**'
   workflow_dispatch:
 
+# Rapid successive pushes: each run releases under its own tag, so cancelling a
+# superseded run just skips an already-outdated release.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   # The self-hosted runner user cannot write to setup-dotnet's default
   # install dir (/usr/share/dotnet) — install into the runner's home instead.
   DOTNET_INSTALL_DIR: /opt/actions-runner/.dotnet
 
 jobs:
-  version:
+  # Single job on purpose: the runner has one job slot, so separate
+  # version/build/release jobs only queued behind each other and repeated
+  # checkout + workload restore three times. All three targets are
+  # cross-compiled on the same Linux runner anyway.
+  build-and-release:
     runs-on: [self-hosted, Linux, X64]
-    outputs:
-      version: ${{ steps.version.outputs.VERSION }}
+    permissions:
+      contents: write
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Generate version
       id: version
       run: |
         VERSION=$(date +%Y.%m.%d).${GITHUB_RUN_NUMBER}
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
         echo "Generated version: $VERSION"
-
-  build-windows:
-    runs-on: [self-hosted, Linux, X64]
-    needs: version
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -57,98 +61,19 @@ jobs:
           --framework net10.0-desktop \
           --runtime win-x64 \
           --self-contained false \
-          -p:Version=${{ needs.version.outputs.version }} \
+          -p:Version=${{ steps.version.outputs.VERSION }} \
           --output ./publish/windows
-
-    - name: Rename executable
-      run: |
-        if [ -f "./publish/windows/asERP.Client.exe" ]; then
-          mv ./publish/windows/asERP.Client.exe ./publish/windows/asERP.Desktop.exe
-        fi
-
-    - name: Create Windows archive
-      run: |
-        cd publish/windows
-        zip -r ../asERP.Desktop-${{ needs.version.outputs.version }}-windows.zip .
-
-    - name: Upload Windows artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows
-        path: ./publish/asERP.Desktop-${{ needs.version.outputs.version }}-windows.zip
-        # Only a hand-off to the release job in the same run — the final asset lives
-        # in the GitHub Release, so keep the CI artifact for the minimum time.
-        retention-days: 1
-
-  build-linux:
-    runs-on: [self-hosted, Linux, X64]
-    needs: version
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '10.x'
-
-    - name: Restore workloads
-      run: dotnet workload restore src/asERP.Client/asERP.Client.csproj
-
-    - name: Restore dependencies
-      run: dotnet restore src/asERP.Client/asERP.Client.csproj
 
     - name: Publish Linux
       run: |
         dotnet publish src/asERP.Client/asERP.Client.csproj \
           --configuration Release \
           --framework net10.0-desktop \
-          -p:Version=${{ needs.version.outputs.version }} \
+          -p:Version=${{ steps.version.outputs.VERSION }} \
           --output ./publish/linux
 
-    - name: Rename executable
-      run: |
-        if [ -f "./publish/linux/asERP.Client" ]; then
-          mv ./publish/linux/asERP.Client ./publish/linux/asERP.Desktop
-        fi
-
-    - name: Create Linux archive
-      run: |
-        cd publish/linux
-        tar -czf ../asERP.Desktop-${{ needs.version.outputs.version }}-linux.tar.gz .
-
-    - name: Upload Linux artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux
-        path: ./publish/asERP.Desktop-${{ needs.version.outputs.version }}-linux.tar.gz
-        retention-days: 1
-
-  build-macos:
-    runs-on: [self-hosted, Linux, X64]
-    needs: version
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '10.x'
-
-    - name: Restore workloads
-      run: dotnet workload restore src/asERP.Client/asERP.Client.csproj
-
-    - name: Restore dependencies
-      run: dotnet restore src/asERP.Client/asERP.Client.csproj
-
-    # Cross-compiled on the Linux runner. osx-arm64 matches what macos-latest (Apple
-    # Silicon) produced before; switch to osx-x64 if Intel Macs must be served natively.
-    # --self-contained false keeps it framework-dependent (needs the .NET 10 runtime).
+    # osx-arm64 matches what macos-latest (Apple Silicon) produced before; switch
+    # to osx-x64 if Intel Macs must be served natively.
     - name: Publish macOS
       run: |
         dotnet publish src/asERP.Client/asERP.Client.csproj \
@@ -156,46 +81,31 @@ jobs:
           --framework net10.0-desktop \
           --runtime osx-arm64 \
           --self-contained false \
-          -p:Version=${{ needs.version.outputs.version }} \
+          -p:Version=${{ steps.version.outputs.VERSION }} \
           --output ./publish/macos
 
-    - name: Rename executable
+    - name: Create archives
       run: |
+        if [ -f "./publish/windows/asERP.Client.exe" ]; then
+          mv ./publish/windows/asERP.Client.exe ./publish/windows/asERP.Desktop.exe
+        fi
+        if [ -f "./publish/linux/asERP.Client" ]; then
+          mv ./publish/linux/asERP.Client ./publish/linux/asERP.Desktop
+        fi
         if [ -f "./publish/macos/asERP.Client" ]; then
           mv ./publish/macos/asERP.Client ./publish/macos/asERP.Desktop
         fi
-
-    - name: Create macOS archive
-      run: |
-        cd publish/macos
-        tar -czf ../asERP.Desktop-${{ needs.version.outputs.version }}-macos.tar.gz .
-
-    - name: Upload macOS artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos
-        path: ./publish/asERP.Desktop-${{ needs.version.outputs.version }}-macos.tar.gz
-        retention-days: 1
-
-  release:
-    runs-on: [self-hosted, Linux, X64]
-    needs: [version, build-windows, build-linux, build-macos]
-    steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: ./artifacts
-
-    - name: List artifacts
-      run: find ./artifacts -type f
+        (cd publish/windows && zip -r ../asERP.Desktop-${{ steps.version.outputs.VERSION }}-windows.zip .)
+        (cd publish/linux && tar -czf ../asERP.Desktop-${{ steps.version.outputs.VERSION }}-linux.tar.gz .)
+        (cd publish/macos && tar -czf ../asERP.Desktop-${{ steps.version.outputs.VERSION }}-macos.tar.gz .)
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v${{ needs.version.outputs.version }}
-        name: asERP Desktop v${{ needs.version.outputs.version }}
+        tag_name: v${{ steps.version.outputs.VERSION }}
+        name: asERP Desktop v${{ steps.version.outputs.VERSION }}
         body: |
-          ## asERP Desktop Release v${{ needs.version.outputs.version }}
+          ## asERP Desktop Release v${{ steps.version.outputs.VERSION }}
 
           Automatisch erstelltes Release der asERP Desktop-Anwendung (Uno Platform).
 
@@ -203,9 +113,9 @@ jobs:
           - **.NET 10 Runtime** muss installiert sein: https://dotnet.microsoft.com/download/dotnet/10.0
 
           ### Downloads
-          - **Windows**: `asERP.Desktop-${{ needs.version.outputs.version }}-windows.zip`
-          - **Linux**: `asERP.Desktop-${{ needs.version.outputs.version }}-linux.tar.gz`
-          - **macOS**: `asERP.Desktop-${{ needs.version.outputs.version }}-macos.tar.gz`
+          - **Windows**: `asERP.Desktop-${{ steps.version.outputs.VERSION }}-windows.zip`
+          - **Linux**: `asERP.Desktop-${{ steps.version.outputs.VERSION }}-linux.tar.gz`
+          - **macOS**: `asERP.Desktop-${{ steps.version.outputs.VERSION }}-macos.tar.gz`
 
           ### Installation
           1. Installieren Sie die .NET 10 Runtime (falls noch nicht vorhanden)
@@ -219,7 +129,7 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          artifacts/windows/*.zip
-          artifacts/linux/*.tar.gz
-          artifacts/macos/*.tar.gz
+          publish/asERP.Desktop-${{ steps.version.outputs.VERSION }}-windows.zip
+          publish/asERP.Desktop-${{ steps.version.outputs.VERSION }}-linux.tar.gz
+          publish/asERP.Desktop-${{ steps.version.outputs.VERSION }}-macos.tar.gz
         token: ${{ secrets.GITHUB_TOKEN }}

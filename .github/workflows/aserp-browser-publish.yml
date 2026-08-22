@@ -1,4 +1,4 @@
-﻿name: asERP.Client Browser Publish
+name: asERP.Client Browser Publish
 
 on:
   push:
@@ -7,10 +7,10 @@ on:
       - 'src/asERP.Domain/**'
       - 'src/asERP.Client/**'
 
-env:
-  # The self-hosted runner user cannot write to setup-dotnet's default
-  # install dir (/usr/share/dotnet) — install into the runner's home instead.
-  DOTNET_INSTALL_DIR: /opt/actions-runner/.dotnet
+# Rapid successive pushes: only the newest image matters — cancel superseded runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   push_to_registry:
@@ -20,17 +20,12 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.x
+      # No dotnet setup/restore here on purpose: the entire build happens inside
+      # the Dockerfile, which does its own workload install and restore.
 
-      - name: Restore workloads
-        run: dotnet workload restore src/asERP.Client/asERP.Client.csproj
-
-      - name: Restore dependencies
-        run: dotnet restore src/asERP.Client/asERP.Client.csproj
-
+      # QEMU is still needed for the arm64 nginx runtime stage (RUN steps in the
+      # final image); the expensive .NET build itself runs natively via
+      # --platform=$BUILDPLATFORM in the Dockerfile.
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -58,3 +53,7 @@ jobs:
           push: true
           labels: ${{ steps.meta.outputs.labels }}
           tags: andrichsoftware/aserp-web:latest
+          # Registry-backed layer cache: reuses the workload-install and restore
+          # layers between runs as long as the project files are unchanged.
+          cache-from: type=registry,ref=andrichsoftware/aserp-web:buildcache
+          cache-to: type=registry,ref=andrichsoftware/aserp-web:buildcache,mode=max
