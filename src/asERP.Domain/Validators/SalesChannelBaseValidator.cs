@@ -1,6 +1,6 @@
-﻿using FluentValidation;
 using asERP.Domain.Enums;
 using asERP.Domain.Interfaces;
+using FluentValidation;
 
 namespace asERP.Domain.Validators;
 
@@ -65,6 +65,7 @@ public class SalesChannelBaseValidator<T> : AbstractValidator<T> where T : ISale
 
     private static bool RequiresCredentials(SalesChannelType type)
     {
-        return type != SalesChannelType.PointOfSale;
+        // PointOfSale and AsShop are fully internal channels — no remote API, no credentials.
+        return type is not (SalesChannelType.PointOfSale or SalesChannelType.AsShop);
     }
 }

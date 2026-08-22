@@ -142,6 +142,7 @@ public partial record SalesChannelOverviewModel
     internal static string FormatType(SalesChannelType type) => type switch
     {
         SalesChannelType.PointOfSale => "POS",
+        SalesChannelType.AsShop => "asShop",
         SalesChannelType.Shopware6 => "Shopware 6",
         SalesChannelType.WooCommerce => "WooCommerce",
         SalesChannelType.WooCommerceDatabase => "WooCommerce (DB)",
@@ -248,6 +249,7 @@ public partial record SalesChannelOverviewItem(
     public SolidColorBrush TypeAccentBrush => Type switch
     {
         SalesChannelType.PointOfSale => new SolidColorBrush(Color.FromArgb(0xFF, 0x63, 0x66, 0xF1)),
+        SalesChannelType.AsShop => new SolidColorBrush(Color.FromArgb(0xFF, 0xE8, 0x5D, 0x9A)),
         SalesChannelType.Shopware6 => new SolidColorBrush(Color.FromArgb(0xFF, 0x02, 0x84, 0xC7)),
         SalesChannelType.WooCommerce => new SolidColorBrush(Color.FromArgb(0xFF, 0x7C, 0x3A, 0xED)),
         SalesChannelType.WooCommerceDatabase => new SolidColorBrush(Color.FromArgb(0xFF, 0x7C, 0x3A, 0xED)),

@@ -79,6 +79,24 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
             // Map request to domain entity
             var salesChannelToCreate = MapToEntity(request);
 
+            // Link the requested warehouses. The validator guarantees the ids exist, but load
+            // tracked entities so EF inserts only the join rows alongside the new channel.
+            var warehouses = new List<Domain.Entities.Warehouse>();
+            foreach (var warehouseId in request.WarehouseIds)
+            {
+                var warehouse = await _warehouseRepository.GetByIdAsync(warehouseId);
+                if (warehouse == null)
+                {
+                    result.Succeeded = false;
+                    result.StatusCode = ResultStatusCode.BadRequest;
+                    result.Messages.Add($"The following warehouse IDs do not exist: {warehouseId}");
+                    return result;
+                }
+
+                warehouses.Add(warehouse);
+            }
+            salesChannelToCreate.Warehouses = warehouses;
+
             // Add the new sales channel to the database
             await _salesChannelRepository.CreateAsync(salesChannelToCreate);
 
@@ -124,6 +142,10 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
             ExportStock = command.ExportStock,
             PushSalesCancellations = command.PushSalesCancellations,
             ImportStock = command.ImportStock,
+            // asShop tracking is built-in (no plugin/token needed, cookieless by design), so new shop
+            // channels start with analytics on; DELETE /tracking turns it off. Plugin-served channel
+            // types stay off until a token is rotated.
+            TrackingEnabled = command.SalesChannelType == Domain.Enums.SalesChannelType.AsShop,
             // Every channel owns a 1:1 sync-state row (import cursors, completion flags). Created here so it
             // is inserted with the channel; the sync machinery mutates it thereafter (never the channel row).
             SyncState = new Domain.Entities.SalesChannelSyncState(),

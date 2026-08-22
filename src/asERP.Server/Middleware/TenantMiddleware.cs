@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Text.Json;
 using asERP.Application.Contracts.Services;
 using Microsoft.AspNetCore.Hosting;
@@ -51,10 +51,17 @@ public class TenantMiddleware
         // resolved server-side from the feed row inside the controller (SetCurrentTenantId). It carries
         // no X-Tenant-Id header, so skip tenant validation here — otherwise every feed fetch would 401.
         var isFeedPublic = pathLower != null && pathLower.StartsWith("/feed/");
+        // Storefront requests are anonymous; the tenant was already resolved server-side from the
+        // ShopDomain row by ShopHostMiddleware (which set the marker feature and the tenant context).
+        var isShopRequest = context.Features.Get<asERP.Shop.Hosting.IShopRequestFeature>() is not null;
+        // The built-in asShop web-analytics collector (/asshop/e) is anonymous. On shop hosts the
+        // marker feature above already skips; on non-shop hosts the collector answers 404 itself —
+        // it must never demand a tenant header.
+        var isShopCollector = pathLower != null && pathLower.StartsWith("/asshop/");
 
         logger.LogDebug($"🔍 TenantMiddleware - isAuthEndpoint: {isAuthEndpoint}, isSuperadminEndpoint: {isSuperadminEndpoint}, isSwaggerEndpoint: {isSwaggerEndpoint}, isOAuthCallback: {isOAuthCallback}");
 
-        if (isAuthEndpoint || isSuperadminEndpoint || isSwaggerEndpoint || isHealthEndpoint || isServerInfoEndpoint || isOAuthCallback || isStorefrontIngest || isFeedPublic)
+        if (isAuthEndpoint || isSuperadminEndpoint || isSwaggerEndpoint || isHealthEndpoint || isServerInfoEndpoint || isOAuthCallback || isStorefrontIngest || isFeedPublic || isShopRequest || isShopCollector)
         {
             logger.LogDebug($"✅  TenantMiddleware - Skipping tenant validation for: {path}");
             await _next(context);

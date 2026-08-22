@@ -1,0 +1,61 @@
+/* asShop base stylesheet — one precompiled file; theme values arrive later as CSS custom
+   properties (--shop-*) emitted per channel. Light, friendly SaaS defaults. */
+
+:root {
+    --shop-primary: #e85d9a;
+    --shop-primary-contrast: #ffffff;
+    --shop-surface: #ffffff;
+    --shop-surface-alt: #f7f5f2;
+    --shop-text: #1f2430;
+    --shop-text-muted: #6b7280;
+    --shop-border: #e5e7eb;
+    --shop-radius: 10px;
+    --shop-container-max: 1320px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--shop-text);
+    background: var(--shop-surface);
+}
+
+.shop-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.shop-main {
+    flex: 1;
+    width: 100%;
+    max-width: var(--shop-container-max);
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.shop-hero {
+    text-align: center;
+    padding: 6rem 1rem;
+    background: var(--shop-surface-alt);
+    border-radius: var(--shop-radius);
+    margin-top: 2rem;
+}
+
+.shop-hero h1 {
+    margin: 0 0 0.5rem;
+    font-size: 2.25rem;
+}
+
+.shop-hero p {
+    margin: 0.25rem 0;
+    color: var(--shop-text-muted);
+}
+
+.shop-hero-host {
+    font-size: 0.875rem;
+}

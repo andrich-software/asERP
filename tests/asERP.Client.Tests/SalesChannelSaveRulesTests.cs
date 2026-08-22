@@ -27,6 +27,7 @@ public class SalesChannelSaveRulesTests
             type, isEditMode, name, url, username, password, dbHost, dbName, dbPort, hasSelectedWarehouse);
 
     [TestCase(SalesChannelType.PointOfSale)]
+    [TestCase(SalesChannelType.AsShop)]
     [TestCase(SalesChannelType.Shopware6)]
     [TestCase(SalesChannelType.WooCommerce)]
     [TestCase(SalesChannelType.WooCommerceDatabase)]
@@ -44,6 +45,7 @@ public class SalesChannelSaveRulesTests
     }
 
     [TestCase(SalesChannelType.PointOfSale)]
+    [TestCase(SalesChannelType.AsShop)]
     [TestCase(SalesChannelType.eBay)]
     [TestCase(SalesChannelType.Amazon)]
     public void PosAndOAuthTypes_NeedNoUrlOrCredentials(SalesChannelType type)

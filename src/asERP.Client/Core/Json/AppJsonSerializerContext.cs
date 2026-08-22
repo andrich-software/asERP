@@ -18,6 +18,7 @@ using asERP.Domain.Dtos.SalesChannel;
 using asERP.Domain.Dtos.Search;
 using asERP.Domain.Dtos.ServerInfo;
 using asERP.Domain.Dtos.Shipping;
+using asERP.Domain.Dtos.ShopDomain;
 using asERP.Domain.Dtos.Statistic;
 using asERP.Domain.Dtos.Superadmin;
 using asERP.Domain.Dtos.TaxClass;
@@ -102,6 +103,7 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<List<ApplicableShippingRateDto>>))]
 [JsonSerializable(typeof(ApiResponse<ReturnShipmentDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<List<ReturnableSalesItemDto>>))]
+[JsonSerializable(typeof(ApiResponse<List<ShopDomainListDto>>))]
 
 // Direct response types
 [JsonSerializable(typeof(GlobalSearchResultDto))]
@@ -120,6 +122,7 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(CountryInputDto))]
 [JsonSerializable(typeof(ProductAttributeInputDto))]
 [JsonSerializable(typeof(SalesChannelInputDto))]
+[JsonSerializable(typeof(ShopDomainInputDto))]
 [JsonSerializable(typeof(FeedInputDto))]
 [JsonSerializable(typeof(FeedProductSelectionUpdateDto))]
 [JsonSerializable(typeof(ProductInputDto))]

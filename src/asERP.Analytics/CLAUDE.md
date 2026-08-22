@@ -14,7 +14,7 @@ Refer to the root `/CLAUDE.md` for cross-cutting rules. `TreatWarningsAsErrors=t
 | `Identity/` | `TrackingTokenResolver` — per-channel secret token → tenant/channel |
 | `Enrichment/` | `SessionHasher`, `IpMasker`, `UserAgentParser` |
 
-Server surface: `StorefrontController` (`/api/v1/storefront/e`, anonymous, rate-limited, always 202) for ingest; `WebStatisticsController` via CQRS handlers for reads.
+Server surface: `StorefrontController` (`/api/v1/storefront/e`, anonymous, rate-limited, always 202) for token-authenticated plugin ingest; `ShopCollectorController` (`/asshop/e`) for built-in asShop storefronts (channel from the shop host binding, no token); `WebStatisticsController` via CQRS handlers for reads.
 
 ## ClickHouse ≠ EF (critical)
 

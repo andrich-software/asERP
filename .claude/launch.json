@@ -2,6 +2,19 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "asERP.Server",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "src/asERP.Server/asERP.Server.csproj",
+        "--launch-profile",
+        "https"
+      ],
+      "port": 8443,
+      "url": "https://localhost:8443"
+    },
+    {
       "name": "asERP.Client (WASM)",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": [

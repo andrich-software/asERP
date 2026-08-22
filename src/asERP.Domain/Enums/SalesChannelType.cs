@@ -1,8 +1,15 @@
-﻿namespace asERP.Domain.Enums;
+namespace asERP.Domain.Enums;
 
 public enum SalesChannelType
 {
     PointOfSale = 1,
+
+    /// <summary>
+    /// asShop storefront hosted inside asERP.Server. Fully internal like PointOfSale: no remote API,
+    /// orders originate in-process; inbound requests are matched to the channel via its ShopDomain rows.
+    /// </summary>
+    AsShop = 2,
+
     Shopware6 = 11,
     WooCommerce = 20,
 

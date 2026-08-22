@@ -570,6 +570,30 @@ public class SalesChannelsController(
         });
     }
 
+    /// <summary>
+    /// Enables web-analytics tracking for the channel without touching any token. Built-in asShop
+    /// storefronts need exactly this (the collector resolves the channel from the request host — no
+    /// token exists); plugin-served channels additionally need a token, rotated via
+    /// <c>POST {id}/tracking-token</c>.
+    /// </summary>
+    [HttpPost("{id:guid}/tracking")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> EnableTracking(Guid id, CancellationToken cancellationToken)
+    {
+        var channel = await FindTenantChannelAsync(id, cancellationToken);
+        if (channel is null)
+        {
+            return NotFound();
+        }
+
+        channel.TrackingEnabled = true;
+        channel.DateModified = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
     /// <summary>Disables web-analytics tracking for the channel (keeps the stored token).</summary>
     [HttpDelete("{id:guid}/tracking")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

@@ -2,7 +2,9 @@ using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
 using asERP.Application.Mediator;
+using asERP.Application.Notifications;
 using asERP.Domain.Wrapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.SalesChannel.Commands.SalesChannelDelete;
 
@@ -10,14 +12,19 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
 {
     private readonly IAppLogger<SalesChannelDeleteHandler> _logger;
     private readonly ISalesChannelRepository _salesChannelRepository;
-
+    private readonly IShopDomainRepository _shopDomainRepository;
+    private readonly IMediator _mediator;
 
     public SalesChannelDeleteHandler(
         IAppLogger<SalesChannelDeleteHandler> logger,
-        ISalesChannelRepository salesChannelRepository)
+        ISalesChannelRepository salesChannelRepository,
+        IShopDomainRepository shopDomainRepository,
+        IMediator mediator)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _salesChannelRepository = salesChannelRepository ?? throw new ArgumentNullException(nameof(salesChannelRepository));
+        _shopDomainRepository = shopDomainRepository ?? throw new ArgumentNullException(nameof(shopDomainRepository));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
     public async Task<Result<Guid>> Handle(SalesChannelDeleteCommand request, CancellationToken cancellationToken)
@@ -57,8 +64,28 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
                 return result;
             }
 
+            // Delete children explicitly (repo rule: never rely on EF cascade defaults). Shop host
+            // bindings would otherwise keep routing requests to a dead channel until the DB-level
+            // cascade backstop — which the InMemory test provider doesn't have — cleans them up.
+            var shopDomains = await _shopDomainRepository.Entities
+                .Where(d => d.SalesChannelId == salesChannel.Id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var shopDomain in shopDomains)
+            {
+                await _shopDomainRepository.DeleteAsync(shopDomain);
+            }
+
             // Delete the entity - EF Core will handle cascade deletion of relationships
             await _salesChannelRepository.DeleteAsync(salesChannel);
+
+            if (shopDomains.Count > 0)
+            {
+                // Let the storefront host resolver drop its cached host map immediately.
+                await _mediator.Publish(
+                    new ShopDomainChangedNotification(salesChannel.Id, salesChannel.TenantId),
+                    cancellationToken);
+            }
 
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.NoContent;

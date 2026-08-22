@@ -9,6 +9,12 @@ secret token never reaches visitors' browsers.
 | asERP Web Analytics | WooCommerce (WordPress) | [`woocommerce-aserp-analytics/`](woocommerce-aserp-analytics/) |
 | asERP Web Analytics | Shopware 6 | [`shopware6-aserp-analytics/`](shopware6-aserp-analytics/) |
 
+> **asShop** needs no plugin: web analytics is built in. The storefront embeds
+> `src/asERP.Shop/wwwroot/aserp-shop.js` server-side and beacons go to the same-origin `/asshop/e`
+> collector, where the channel + tenant are resolved from the shop's Host header — no token exists
+> anywhere in that flow. Toggle it per channel via `POST/DELETE /api/v1/saleschannels/{id}/tracking`
+> (on by default for new asShop channels).
+
 ## How it fits together
 
 ```

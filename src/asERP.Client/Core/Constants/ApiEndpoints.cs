@@ -127,6 +127,14 @@ public static class ApiEndpoints
         public static string ById(Guid id) => $"{Base}/{id}";
     }
 
+    // Shop domains (asShop host bindings)
+    public static class ShopDomains
+    {
+        public const string Base = $"{ApiBase}/shopdomains";
+        public static string ById(Guid id) => $"{Base}/{id}";
+        public static string ByChannel(Guid salesChannelId) => $"{Base}?salesChannelId={salesChannelId}";
+    }
+
     // Sales Channels
     public static class SalesChannels
     {

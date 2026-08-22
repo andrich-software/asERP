@@ -332,6 +332,7 @@ public partial class ShellModel : INotifyPropertyChanged
                 var glyph = sc.SalesChannelType switch
                 {
                     SalesChannelType.PointOfSale => "\uE7BF",
+                    SalesChannelType.AsShop => "\uE719",
                     SalesChannelType.Shopware6 => "\uE774",
                     SalesChannelType.WooCommerce => "\uE774",
                     SalesChannelType.eBay => "\uE774",
