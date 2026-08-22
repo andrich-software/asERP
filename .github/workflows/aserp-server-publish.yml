@@ -20,6 +20,11 @@ on:
       - 'src/asERP.Application.UnitTests/**'
       - 'src/asERP.Server.Tests/**'
 
+env:
+  # The self-hosted runner user cannot write to setup-dotnet's default
+  # install dir (/usr/share/dotnet) — install into the runner's home instead.
+  DOTNET_INSTALL_DIR: /opt/actions-runner/.dotnet
+
 jobs:
   push_to_registry:
     name: Push Docker image to Docker Hub

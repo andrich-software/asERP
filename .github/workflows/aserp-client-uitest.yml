@@ -5,6 +5,11 @@ name: asERP.Client UI Smoke Test (WASM)
 on:
   workflow_dispatch:
 
+env:
+  # The self-hosted runner user cannot write to setup-dotnet's default
+  # install dir (/usr/share/dotnet) — install into the runner's home instead.
+  DOTNET_INSTALL_DIR: /opt/actions-runner/.dotnet
+
 jobs:
   uitest:
     runs-on: [self-hosted, Linux, X64]
