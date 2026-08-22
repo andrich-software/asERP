@@ -7,6 +7,9 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  # The self-hosted runner user cannot write to setup-dotnet's default
+  # install dir (/usr/share/dotnet) — install into the runner's home instead.
+  DOTNET_INSTALL_DIR: /opt/actions-runner/.dotnet
 
 jobs:
   build-and-deploy:
