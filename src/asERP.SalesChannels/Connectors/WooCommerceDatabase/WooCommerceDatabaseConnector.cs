@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using asERP.Domain.Enums;
 using asERP.SalesChannels.Abstractions;
 using asERP.SalesChannels.Connectors.Common;
@@ -32,6 +32,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
     private readonly ISalesImportRepository _salesImportRepository;
     private readonly ICustomerImportRepository _customerImportRepository;
     private readonly IStockImportRepository _stockImportRepository;
+    private readonly ICategoryImportRepository _categoryImportRepository;
     private readonly ILogger<WooCommerceDatabaseConnector> _logger;
 
     public WooCommerceDatabaseConnector(
@@ -39,22 +40,28 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         ISalesImportRepository salesImportRepository,
         ICustomerImportRepository customerImportRepository,
         IStockImportRepository stockImportRepository,
+        ICategoryImportRepository categoryImportRepository,
         ILogger<WooCommerceDatabaseConnector> logger)
     {
         _productImportRepository = productImportRepository;
         _salesImportRepository = salesImportRepository;
         _customerImportRepository = customerImportRepository;
         _stockImportRepository = stockImportRepository;
+        _categoryImportRepository = categoryImportRepository;
         _logger = logger;
     }
 
     public override SalesChannelType Type => SalesChannelType.WooCommerceDatabase;
 
+    // Categories are import-only on this channel: creating terms via direct SQL would have to
+    // maintain wp_terms/wp_term_taxonomy counts and taxonomy caches — too fragile against a live
+    // WordPress. Category pushes stay with the REST connector.
     public override SalesChannelCapabilities Capabilities =>
         SalesChannelCapabilities.ImportProducts |
         SalesChannelCapabilities.ImportSaless |
         SalesChannelCapabilities.ImportCustomers |
         SalesChannelCapabilities.ImportStock |
+        SalesChannelCapabilities.ImportCategories |
         SalesChannelCapabilities.UpdateStock |
         SalesChannelCapabilities.UpdatePrice;
 
@@ -182,6 +189,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
                 var variationsByParent = await LoadVariationsAsync(connection, db, parentIds, context.CancellationToken);
                 var attributesByParent = await LoadParentAttributesAsync(connection, db, parentIds, context.CancellationToken);
                 var termNames = await LoadTermNamesAsync(connection, db, variationsByParent, context.CancellationToken);
+                var categoryIdsByProduct = await LoadCategoryIdsAsync(connection, db, productIds, context.CancellationToken);
 
                 foreach (var row in batch)
                 {
@@ -213,6 +221,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
                             Description = row.Description,
                             IsVariantParent = row.IsVariable,
                             Images = imagesByProduct.GetValueOrDefault(row.Id) ?? [],
+                            RemoteCategoryIds = categoryIdsByProduct.GetValueOrDefault(row.Id) ?? [],
                         };
 
                         if (row.IsVariable)
@@ -265,6 +274,100 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         }
 
         return new SyncResult(processed, failed);
+    }
+
+    public override async Task<SyncResult> ImportCategoriesAsync(SalesChannelContext context)
+    {
+        Db db;
+        try
+        {
+            db = Prepare(context);
+        }
+        catch (Exception ex)
+        {
+            return SyncResult.Failed(ex.Message);
+        }
+
+        try
+        {
+            await using var connection = await OpenAsync(db, context.CancellationToken);
+
+            // The whole product_cat taxonomy in one sweep — category counts are small, and the
+            // repository's orphan handling needs the full set anyway. WordPress has no standard
+            // term ordering column, so fetch order (term id) stands in for the sort order.
+            var sql = $"""
+                SELECT t.term_id, t.name, t.slug, tt.parent, tt.description
+                FROM {db.Prefix}term_taxonomy tt
+                JOIN {db.Prefix}terms t ON t.term_id = tt.term_id
+                WHERE tt.taxonomy = 'product_cat'
+                ORDER BY t.term_id
+                """;
+
+            var remoteCategories = new List<SalesChannelImportCategory>();
+            await using (var cmd = new MySqlCommand(sql, connection))
+            await using (var reader = await cmd.ExecuteReaderAsync(context.CancellationToken))
+            {
+                while (await reader.ReadAsync(context.CancellationToken))
+                {
+                    var parent = ToUInt64(reader.GetValue(3));
+                    var description = AsNullableString(reader.GetValue(4));
+                    remoteCategories.Add(new SalesChannelImportCategory
+                    {
+                        RemoteCategoryId = ToUInt64(reader.GetValue(0)).ToString(CultureInfo.InvariantCulture),
+                        Name = AsString(reader.GetValue(1)),
+                        Slug = AsString(reader.GetValue(2)),
+                        ParentRemoteCategoryId = parent > 0 ? parent.ToString(CultureInfo.InvariantCulture) : null,
+                        Description = string.IsNullOrEmpty(description) ? null : description,
+                        SortOrder = remoteCategories.Count,
+                    });
+                }
+            }
+
+            return await _categoryImportRepository.ImportOrUpdateFromSalesChannel(
+                context.SalesChannel.Id, remoteCategories, context.CancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "WooCommerce DB category import aborted");
+            return SyncResult.Failed(ex.Message);
+        }
+    }
+
+    /// <summary>Loads the product_cat term ids per product for one import page (assignment sync).</summary>
+    private static async Task<Dictionary<ulong, List<string>>> LoadCategoryIdsAsync(
+        MySqlConnection connection, Db db, IReadOnlyList<ulong> productIds, CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<ulong, List<string>>();
+        if (productIds.Count == 0)
+        {
+            return result;
+        }
+
+        await using var cmd = connection.CreateCommand();
+        var inList = ParamList(cmd, "pid", productIds);
+        cmd.CommandText = $"""
+            SELECT tr.object_id, tt.term_id
+            FROM {db.Prefix}term_relationships tr
+            JOIN {db.Prefix}term_taxonomy tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'product_cat'
+            WHERE tr.object_id IN ({inList})
+            """;
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var productId = ToUInt64(reader.GetValue(0));
+            var termId = ToUInt64(reader.GetValue(1)).ToString(CultureInfo.InvariantCulture);
+            if (!result.TryGetValue(productId, out var list))
+            {
+                result[productId] = list = [];
+            }
+            list.Add(termId);
+        }
+        return result;
     }
 
     private sealed record ProductRow(ulong Id, string Name, string Description, string? Sku, decimal? MinPrice, string TaxStatus, string TaxClass, bool IsVariable);

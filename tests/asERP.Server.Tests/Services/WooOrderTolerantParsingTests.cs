@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using asERP.SalesChannels.Models.WooCommerce;
 using asERP.Server.Tests.Infrastructure;
 using Xunit;

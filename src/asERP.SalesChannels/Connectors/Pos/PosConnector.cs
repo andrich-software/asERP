@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Enums;
+using asERP.Domain.Enums;
 using asERP.SalesChannels.Abstractions;
 using asERP.SalesChannels.Connectors.Common;
 

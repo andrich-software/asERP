@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.WebAnalytics;
+using asERP.Domain.Dtos.WebAnalytics;
 
 namespace asERP.Application.Contracts.Persistence;
 

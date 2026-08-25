@@ -546,7 +546,7 @@
             </StackPanel>
           </Border>
 
-          <!-- Synchronization Settings Section Header (hidden for PointOfSale) -->
+          <!-- Synchronization Settings Section Header (hidden for PointOfSale and asShop) -->
           <StackPanel Orientation="Horizontal"
                       Spacing="12"
                       Visibility="{Binding ShowImportExportSettings, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -558,7 +558,7 @@
                        Foreground="{ThemeResource OnSurfaceBrush}" />
           </StackPanel>
 
-          <!-- Synchronization Cards Grid (hidden for PointOfSale) -->
+          <!-- Synchronization Cards Grid (hidden for PointOfSale and asShop) -->
           <Grid x:Name="SyncCardsGrid"
                 Visibility="{Binding ShowImportExportSettings, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.ColumnDefinitions>
@@ -645,6 +645,25 @@
                                VerticalAlignment="Center" />
                     <ToggleSwitch Grid.Column="1"
                                   IsOn="{Binding ImportSaless, Mode=TwoWay}"
+                                  IsEnabled="{Binding IsNotLoading}"
+                                  MinWidth="0"
+                                  OnContent=""
+                                  OffContent="" />
+                  </Grid>
+
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               x:Uid="SalesChannelEditPage.Field.ImportCategories"
+                               Style="{StaticResource BodyMedium}"
+                               Foreground="{ThemeResource OnSurfaceBrush}"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                    <ToggleSwitch Grid.Column="1"
+                                  IsOn="{Binding ImportCategories, Mode=TwoWay}"
                                   IsEnabled="{Binding IsNotLoading}"
                                   MinWidth="0"
                                   OnContent=""
@@ -786,6 +805,25 @@
                                VerticalAlignment="Center" />
                     <ToggleSwitch Grid.Column="1"
                                   IsOn="{Binding ImportStock, Mode=TwoWay}"
+                                  IsEnabled="{Binding IsNotLoading}"
+                                  MinWidth="0"
+                                  OnContent=""
+                                  OffContent="" />
+                  </Grid>
+
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               x:Uid="SalesChannelEditPage.Field.ExportCategories"
+                               Style="{StaticResource BodyMedium}"
+                               Foreground="{ThemeResource OnSurfaceBrush}"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                    <ToggleSwitch Grid.Column="1"
+                                  IsOn="{Binding ExportCategories, Mode=TwoWay}"
                                   IsEnabled="{Binding IsNotLoading}"
                                   MinWidth="0"
                                   OnContent=""

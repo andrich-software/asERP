@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Product;
+namespace asERP.Domain.Dtos.Product;
 
 public class ProductVariantListDto
 {

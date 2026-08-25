@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.AiPrompt;
+namespace asERP.Domain.Dtos.AiPrompt;
 
 public class AiPromptListDto
 {

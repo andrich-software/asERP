@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.GoodsReceipt;
+namespace asERP.Domain.Dtos.GoodsReceipt;
 
 public class GoodsReceiptDetailDto
 {

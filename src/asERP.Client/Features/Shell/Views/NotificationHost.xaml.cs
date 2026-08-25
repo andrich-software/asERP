@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Notifications;
+using asERP.Client.Core.Notifications;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI;
 using Microsoft.UI.Dispatching;

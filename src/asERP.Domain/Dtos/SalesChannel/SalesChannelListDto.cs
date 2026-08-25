@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.Warehouse;
+using asERP.Domain.Dtos.Warehouse;
 using asERP.Domain.Enums;
 
 namespace asERP.Domain.Dtos.SalesChannel;

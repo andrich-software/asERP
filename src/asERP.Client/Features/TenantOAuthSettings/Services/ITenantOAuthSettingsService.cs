@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.TenantOAuthAppSettings;
+using asERP.Domain.Dtos.TenantOAuthAppSettings;
 
 namespace asERP.Client.Features.TenantOAuthSettings.Services;
 

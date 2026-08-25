@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Auth.Services;
+using asERP.Client.Features.Auth.Services;
 #if __WASM__
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Uno.Extensions.Authentication;

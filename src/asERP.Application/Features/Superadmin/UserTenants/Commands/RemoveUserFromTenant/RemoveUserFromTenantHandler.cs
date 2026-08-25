@@ -1,9 +1,9 @@
-﻿using FluentValidation;
-using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
-using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using asERP.Application.Contracts.Persistence;
+using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
+using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Superadmin.UserTenants.Commands.RemoveUserFromTenant;
 

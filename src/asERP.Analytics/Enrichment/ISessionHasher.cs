@@ -1,4 +1,4 @@
-﻿namespace asERP.Analytics.Enrichment;
+namespace asERP.Analytics.Enrichment;
 
 internal interface ISessionHasher
 {

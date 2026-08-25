@@ -1,4 +1,4 @@
-﻿using asERP.Application.Mediator;
+using asERP.Application.Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 

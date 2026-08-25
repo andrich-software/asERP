@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Constants;
+using asERP.Client.Core.Constants;
 using asERP.Client.Features.AiModels.Models;
 using asERP.Client.Features.AiModels.Services;
 using asERP.Client.Features.AiModels.Views;

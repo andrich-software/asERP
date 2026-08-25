@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.ProductAttribute;
+namespace asERP.Domain.Dtos.ProductAttribute;
 
 public class ProductAttributeDetailDto
 {

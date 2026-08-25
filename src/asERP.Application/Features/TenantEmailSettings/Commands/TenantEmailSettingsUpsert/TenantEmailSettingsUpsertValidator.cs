@@ -1,5 +1,5 @@
-﻿using FluentValidation;
 using asERP.Domain.Enums;
+using FluentValidation;
 
 namespace asERP.Application.Features.TenantEmailSettings.Commands.TenantEmailSettingsUpsert;
 

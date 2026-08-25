@@ -1,4 +1,4 @@
-﻿using ClickHouse.Client.ADO;
+using ClickHouse.Client.ADO;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

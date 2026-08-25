@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Models;
+namespace asERP.Client.Core.Models;
 
 /// <summary>
 /// Wrapper for API responses that contain data in a nested "Data" property.

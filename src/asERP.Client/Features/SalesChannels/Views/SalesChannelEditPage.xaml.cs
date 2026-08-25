@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.SalesChannels.Models;
+using asERP.Client.Features.SalesChannels.Models;
 using asERP.Domain.Dtos.ShopDomain;
 using Microsoft.UI.Xaml.Controls;
 

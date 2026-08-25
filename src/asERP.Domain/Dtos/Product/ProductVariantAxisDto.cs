@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.ProductAttribute;
+using asERP.Domain.Dtos.ProductAttribute;
 
 namespace asERP.Domain.Dtos.Product;
 

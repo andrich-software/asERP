@@ -1,12 +1,12 @@
-﻿#nullable disable
+#nullable disable
 using System.Net;
+using asERP.Domain.Constants;
 using asERP.Domain.Dtos.SalesChannel;
+using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using asERP.Domain.Enums;
-using asERP.Domain.Constants;
 
 namespace asERP.Server.Tests.Features.SalesChannel.Commands;
 
@@ -309,7 +309,7 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         var listResponse1 = await Client.GetAsync("/api/v1/SalesChannels");
         TestAssertions.AssertHttpSuccess(listResponse1);
         var list1 = await ReadResponseAsync<PaginatedResult<SalesChannelListDto>>(listResponse1);
-        
+
         var tenant1SalesChannels = list1.Data ?? new List<SalesChannelListDto>();
         var tenant1SeesTenant2Data = tenant1SalesChannels.Any(s => s.Name == salesChannel2Dto.Name);
         var tenant1SeesOwnData = tenant1SalesChannels.Any(s => s.Name == salesChannel1Dto.Name);
@@ -322,7 +322,7 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         var listResponse2 = await Client.GetAsync("/api/v1/SalesChannels");
         TestAssertions.AssertHttpSuccess(listResponse2);
         var list2 = await ReadResponseAsync<PaginatedResult<SalesChannelListDto>>(listResponse2);
-        
+
         var tenant2SalesChannels = list2.Data ?? new List<SalesChannelListDto>();
         var tenant2SeesTenant1Data = tenant2SalesChannels.Any(s => s.Name == salesChannel1Dto.Name);
         var tenant2SeesOwnData = tenant2SalesChannels.Any(s => s.Name == salesChannel2Dto.Name);
@@ -470,6 +470,50 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
         TestAssertions.AssertNotEmpty(result.Messages);
+    }
+
+    [Fact]
+    public async Task CreateSalesChannel_AsShop_ForcesAllSyncFlagsOn()
+    {
+        await SeedTestDataAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        var salesChannelDto = new SalesChannelInputDto
+        {
+            SalesChannelType = SalesChannelType.AsShop,
+            Name = "asShop Storefront",
+            // All sync flags deliberately off — the handler must force them on for asShop.
+            ImportProducts = false,
+            ImportCustomers = false,
+            ImportSaless = false,
+            ExportProducts = false,
+            ExportCustomers = false,
+            ExportSaless = false,
+            ExportStock = false,
+            PushSalesCancellations = false,
+            ImportStock = false,
+            WarehouseIds = new List<Guid> { TestWarehouse1Id }
+        };
+
+        var response = await PostAsJsonAsync("/api/v1/SalesChannels", salesChannelDto);
+
+        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        var result = await ReadResponseAsync<Result<Guid>>(response);
+        TestAssertions.AssertTrue(result.Succeeded);
+
+        var getResponse = await Client.GetAsync($"/api/v1/SalesChannels/{result.Data}");
+        TestAssertions.AssertHttpSuccess(getResponse);
+        var salesChannelDetail = await ReadResponseAsync<Result<SalesChannelDetailDto>>(getResponse);
+        TestAssertions.AssertNotNull(salesChannelDetail?.Data);
+
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ImportProducts);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ImportCustomers);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ImportSaless);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ExportProducts);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ExportCustomers);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ExportSaless);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ExportStock);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.PushSalesCancellations);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ImportStock);
     }
 
     [Fact]

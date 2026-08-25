@@ -128,6 +128,13 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
 
     public void RemoveVariantOption(ProductVariantOption option) => Context.ProductVariantOption.Remove(option);
 
+    public async Task<List<ProductCategory>> GetCategoryLinksAsync(Guid productId) =>
+        await Context.ProductCategory.Where(pc => pc.ProductId == productId).ToListAsync();
+
+    public void AddProductCategory(ProductCategory link) => Context.ProductCategory.Add(link);
+
+    public void RemoveProductCategory(ProductCategory link) => Context.ProductCategory.Remove(link);
+
     private async Task RemoveProductDependentsAsync(Guid productId)
     {
         Context.ProductVariantOption.RemoveRange(
@@ -144,6 +151,9 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
 
         Context.ProductImage.RemoveRange(
             await Context.ProductImage.Where(pi => pi.ProductId == productId).ToListAsync());
+
+        Context.ProductCategory.RemoveRange(
+            await Context.ProductCategory.Where(pc => pc.ProductId == productId).ToListAsync());
     }
 
     public async Task<bool> UpdateStockAsync(Guid productId, Guid warehouseId, int newStock)

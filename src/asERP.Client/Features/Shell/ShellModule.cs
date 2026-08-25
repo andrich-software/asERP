@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Abstractions;
+using asERP.Client.Core.Abstractions;
 using asERP.Client.Core.Notifications;
 using asERP.Client.Features.Shell.Models;
 using asERP.Client.Features.Shell.Views;

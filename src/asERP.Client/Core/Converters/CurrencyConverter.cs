@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Formatting;
+using asERP.Client.Core.Formatting;
 using Microsoft.UI.Xaml.Data;
 
 namespace asERP.Client.Presentation;

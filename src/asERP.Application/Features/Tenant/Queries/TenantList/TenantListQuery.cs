@@ -1,6 +1,6 @@
-﻿using asERP.Domain.Dtos.Tenant;
-using asERP.Domain.Wrapper;
 using asERP.Application.Mediator;
+using asERP.Domain.Dtos.Tenant;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Tenant.Queries.TenantList;
 

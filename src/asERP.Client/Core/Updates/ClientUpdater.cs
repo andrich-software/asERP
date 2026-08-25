@@ -1,4 +1,4 @@
-﻿#if __DESKTOP__
+#if __DESKTOP__
 using System.Diagnostics;
 using asERP.Client.Core.Notifications;
 using Microsoft.UI.Xaml;

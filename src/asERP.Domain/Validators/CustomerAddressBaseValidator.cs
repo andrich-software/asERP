@@ -1,5 +1,5 @@
-﻿using FluentValidation;
 using asERP.Domain.Dtos.CustomerAddress;
+using FluentValidation;
 
 namespace asERP.Domain.Validators;
 

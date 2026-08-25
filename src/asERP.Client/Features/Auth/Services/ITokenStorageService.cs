@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Features.Auth.Services;
+namespace asERP.Client.Features.Auth.Services;
 
 public interface ITokenStorageService
 {

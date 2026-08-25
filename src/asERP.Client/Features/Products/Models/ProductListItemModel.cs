@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Media;
+using asERP.Client.Core.Media;
 using asERP.Domain.Dtos.Manufacturer;
 using asERP.Domain.Dtos.Product;
 using asERP.Domain.Enums;

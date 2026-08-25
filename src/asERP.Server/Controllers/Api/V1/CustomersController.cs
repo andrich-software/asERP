@@ -1,14 +1,14 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.Customer.Commands.CustomerCreate;
 using asERP.Application.Features.Customer.Commands.CustomerDelete;
 using asERP.Application.Features.Customer.Commands.CustomerUpdate;
 using asERP.Application.Features.Customer.Queries.CustomerDetail;
 using asERP.Application.Features.Customer.Queries.CustomerList;
 using asERP.Application.Features.Customer.Queries.CustomerListWithAddress;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Customer;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -82,7 +82,7 @@ public class CustomersController(IMediator mediator) : ControllerBase
         if (customerUpdateCommand.Id != Guid.Empty && customerUpdateCommand.Id != id)
         {
             var errorResponse = ProblemDetailsResult.BadRequest(
-                "Invalid Request", 
+                "Invalid Request",
                 $"ID in URL ({id}) must match ID in request body ({customerUpdateCommand.Id})",
                 "https://tools.ietf.org/html/rfc9110#section-15.5.1",
                 $"/api/v1/customers/{id}"

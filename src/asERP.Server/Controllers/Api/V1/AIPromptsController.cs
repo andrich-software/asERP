@@ -1,13 +1,13 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.AiPrompt.Commands.AiPromptCreate;
 using asERP.Application.Features.AiPrompt.Commands.AiPromptDelete;
 using asERP.Application.Features.AiPrompt.Commands.AiPromptUpdate;
 using asERP.Application.Features.AiPrompt.Queries.AiPromptDetail;
 using asERP.Application.Features.AiPrompt.Queries.AiPromptList;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.AiPrompt;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -64,7 +64,7 @@ public class AiPromptsController(IMediator mediator) : ControllerBase
         if (id == Guid.Empty)
         {
             var invalidIdResponse = ProblemDetailsResult.BadRequest(
-                "Invalid Request", 
+                "Invalid Request",
                 $"AiPrompt ID must be greater than zero",
                 "https://tools.ietf.org/html/rfc9110#section-15.5.1",
                 $"/api/v1/aiprompts/{id}"
@@ -76,7 +76,7 @@ public class AiPromptsController(IMediator mediator) : ControllerBase
         if (aIPromptUpdateCommand.Id != Guid.Empty && aIPromptUpdateCommand.Id != id)
         {
             var errorResponse = ProblemDetailsResult.BadRequest(
-                "Invalid Request", 
+                "Invalid Request",
                 $"ID in URL ({id}) must match ID in request body ({aIPromptUpdateCommand.Id})",
                 "https://tools.ietf.org/html/rfc9110#section-15.5.1",
                 $"/api/v1/aiprompts/{id}"
@@ -101,7 +101,7 @@ public class AiPromptsController(IMediator mediator) : ControllerBase
         if (!Guid.TryParse(id, out var guidId))
         {
             var invalidIdResponse = ProblemDetailsResult.BadRequest(
-                "Invalid Request", 
+                "Invalid Request",
                 $"AiPrompt ID must be a valid GUID",
                 "https://tools.ietf.org/html/rfc9110#section-15.5.1",
                 $"/api/v1/aiprompts/{id}"
@@ -113,7 +113,7 @@ public class AiPromptsController(IMediator mediator) : ControllerBase
         if (guidId == Guid.Empty)
         {
             var emptyIdResponse = ProblemDetailsResult.BadRequest(
-                "Invalid Request", 
+                "Invalid Request",
                 $"AiPrompt ID cannot be empty",
                 "https://tools.ietf.org/html/rfc9110#section-15.5.1",
                 $"/api/v1/aiprompts/{id}"

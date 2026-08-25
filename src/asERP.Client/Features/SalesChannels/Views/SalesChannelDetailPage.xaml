@@ -241,9 +241,10 @@
                   </StackPanel>
                 </Border>
 
-                <!-- Synchronization Settings Section Header -->
+                <!-- Synchronization Settings Section Header (hidden for PointOfSale and asShop) -->
                 <StackPanel Orientation="Horizontal"
-                            Spacing="12">
+                            Spacing="12"
+                            Visibility="{Binding Data.SalesChannelType, Converter={StaticResource SalesChannelTypeToSyncSettingsVisibilityConverter}}">
                   <FontIcon Glyph="&#xE895;"
                             FontSize="20"
                             Foreground="{ThemeResource SecondaryBrush}" />
@@ -252,8 +253,9 @@
                              Foreground="{ThemeResource OnSurfaceBrush}" />
                 </StackPanel>
 
-                <!-- Synchronization Cards Grid -->
-                <Grid x:Name="SyncGrid">
+                <!-- Synchronization Cards Grid (hidden for PointOfSale and asShop) -->
+                <Grid x:Name="SyncGrid"
+                      Visibility="{Binding Data.SalesChannelType, Converter={StaticResource SalesChannelTypeToSyncSettingsVisibilityConverter}}">
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition x:Name="SyncColumn1" Width="*" />
                     <ColumnDefinition x:Name="SyncColumn2" Width="*" />
@@ -420,6 +422,109 @@
                   </Border>
                 </Grid>
 
+                <!-- Shop Domains Section (asShop only — hidden when the channel has no host bindings) -->
+                <StackPanel Spacing="12"
+                            Visibility="{Binding Data.ShopDomains.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                  <StackPanel Orientation="Horizontal"
+                              Spacing="12">
+                    <FontIcon Glyph="&#xE719;"
+                              FontSize="20"
+                              Foreground="{ThemeResource SecondaryBrush}" />
+                    <TextBlock x:Uid="SalesChannelDetailPage.Section.ShopDomains"
+                               Style="{StaticResource TitleMedium}"
+                               Foreground="{ThemeResource OnSurfaceBrush}" />
+                  </StackPanel>
+
+                  <!-- Shop Domain Table -->
+                  <Border CornerRadius="8"
+                          BorderBrush="{ThemeResource OutlineVariantBrush}"
+                          BorderThickness="1"
+                          Background="{ThemeResource SurfaceBrush}">
+                    <Grid>
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                      </Grid.RowDefinitions>
+
+                      <!-- Table Header -->
+                      <Border Grid.Row="0"
+                              Background="{ThemeResource SurfaceBrush}"
+                              CornerRadius="8,8,0,0"
+                              BorderBrush="{ThemeResource OutlineVariantBrush}"
+                              BorderThickness="0,0,0,1">
+                        <Grid Padding="16,12">
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                          </Grid.ColumnDefinitions>
+
+                          <FontIcon Grid.Column="0"
+                                    Glyph="&#xE774;"
+                                    FontSize="16"
+                                    Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="1"
+                                     x:Uid="SalesChannelDetailPage.Header.ShopDomainHost"
+                                     Style="{StaticResource LabelLarge}"
+                                     Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                     VerticalAlignment="Center" />
+                        </Grid>
+                      </Border>
+
+                      <!-- Table Body -->
+                      <ItemsRepeater Grid.Row="1"
+                                     ItemsSource="{Binding Data.ShopDomains}">
+                        <ItemsRepeater.Layout>
+                          <StackLayout Orientation="Vertical" Spacing="0" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                          <DataTemplate>
+                            <Grid Padding="16,14"
+                                  BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                  BorderThickness="0,0,0,1">
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                              </Grid.ColumnDefinitions>
+
+                              <Border Grid.Column="0"
+                                      Width="32"
+                                      Height="32"
+                                      CornerRadius="16"
+                                      Background="{ThemeResource SecondaryContainerBrush}"
+                                      Margin="0,0,12,0">
+                                <FontIcon Glyph="&#xE774;"
+                                          FontSize="14"
+                                          Foreground="{ThemeResource OnSecondaryContainerBrush}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                              </Border>
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding Host}"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceBrush}"
+                                         VerticalAlignment="Center"
+                                         TextTrimming="CharacterEllipsis" />
+                              <Border Grid.Column="2"
+                                      Background="{ThemeResource SurfaceVariantBrush}"
+                                      CornerRadius="999"
+                                      Padding="8,2"
+                                      VerticalAlignment="Center"
+                                      Visibility="{Binding IsPrimary, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock x:Uid="SalesChannelDetailPage.DomainPrimaryBadge"
+                                           Style="{StaticResource LabelSmall}"
+                                           Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                              </Border>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                      </ItemsRepeater>
+                    </Grid>
+                  </Border>
+                </StackPanel>
+
                 <!-- Warehouses Section -->
                 <StackPanel Spacing="12">
                   <StackPanel Orientation="Horizontal"
@@ -529,10 +634,12 @@
                   </Border>
                 </StackPanel>
 
-                <!-- Usage Hint Card -->
+                <!-- Usage Hint Card — talks about syncing with external platforms, so it is
+                     hidden for the internal channel types (PointOfSale, asShop) -->
                 <Border Background="{ThemeResource SecondaryContainerBrush}"
                         CornerRadius="8"
-                        Padding="16">
+                        Padding="16"
+                        Visibility="{Binding Data.SalesChannelType, Converter={StaticResource SalesChannelTypeToSyncSettingsVisibilityConverter}}">
                   <Grid>
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition Width="Auto" />

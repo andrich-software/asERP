@@ -1,12 +1,12 @@
-﻿#nullable disable
+#nullable disable
 using System.Net;
+using asERP.Domain.Constants;
 using asERP.Domain.Dtos.SalesChannel;
+using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using asERP.Domain.Enums;
-using asERP.Domain.Constants;
 
 namespace asERP.Server.Tests.Features.SalesChannel.Commands;
 
@@ -39,7 +39,7 @@ public class SalesChannelUpdateCommandTests : TenantIsolatedTestBase
                 // Create test warehouses only if they don't exist
                 var existingWarehouse1 = await DbContext.Warehouse.IgnoreQueryFilters()
                     .FirstOrDefaultAsync(w => w.Id == TestWarehouse1Id);
-                    
+
                 var warehouse1 = new asERP.Domain.Entities.Warehouse();
                 var warehouse2 = new asERP.Domain.Entities.Warehouse();
                 var warehouse3 = new asERP.Domain.Entities.Warehouse();
@@ -52,21 +52,21 @@ public class SalesChannelUpdateCommandTests : TenantIsolatedTestBase
                         Name = "Test Warehouse 1",
                         TenantId = TenantConstants.TestTenant1Id
                     };
-                    
+
                     warehouse2 = new asERP.Domain.Entities.Warehouse
                     {
                         Id = TestWarehouse2Id,
-                        Name = "Test Warehouse 2", 
+                        Name = "Test Warehouse 2",
                         TenantId = TenantConstants.TestTenant1Id
                     };
-                    
+
                     warehouse3 = new asERP.Domain.Entities.Warehouse
                     {
                         Id = TestWarehouse3Id,
                         Name = "Test Warehouse 3",
                         TenantId = TenantConstants.TestTenant2Id
                     };
-                    
+
                     DbContext.Warehouse.AddRange(warehouse1, warehouse2, warehouse3);
                     await DbContext.SaveChangesAsync();
                 }
@@ -216,6 +216,51 @@ public class SalesChannelUpdateCommandTests : TenantIsolatedTestBase
     }
 
     [Fact]
+    public async Task UpdateSalesChannel_AsShop_ForcesAllSyncFlagsOn()
+    {
+        await SeedTestDataAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        var updateDto = new SalesChannelInputDto
+        {
+            Id = TestSalesChannel1Id,
+            SalesChannelType = SalesChannelType.AsShop,
+            Name = "asShop Storefront",
+            // All sync flags deliberately off — the handler must force them on for asShop.
+            ImportProducts = false,
+            ImportCustomers = false,
+            ImportSaless = false,
+            ExportProducts = false,
+            ExportCustomers = false,
+            ExportSaless = false,
+            ExportStock = false,
+            PushSalesCancellations = false,
+            ImportStock = false,
+            WarehouseIds = new List<Guid> { TestWarehouse1Id }
+        };
+
+        var response = await PutAsJsonAsync($"/api/v1/SalesChannels/{TestSalesChannel1Id}", updateDto);
+
+        TestAssertions.AssertEqual(HttpStatusCode.OK, response.StatusCode);
+        var result = await ReadResponseAsync<Result<Guid>>(response);
+        TestAssertions.AssertTrue(result.Succeeded);
+
+        var getResponse = await Client.GetAsync($"/api/v1/SalesChannels/{TestSalesChannel1Id}");
+        TestAssertions.AssertHttpSuccess(getResponse);
+        var salesChannelDetail = await ReadResponseAsync<Result<SalesChannelDetailDto>>(getResponse);
+        TestAssertions.AssertNotNull(salesChannelDetail?.Data);
+
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ImportProducts);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ImportCustomers);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ImportSaless);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ExportProducts);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ExportCustomers);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ExportSaless);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ExportStock);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.PushSalesCancellations);
+        TestAssertions.AssertTrue(salesChannelDetail.Data.ImportStock);
+    }
+
+    [Fact]
     public async Task UpdateSalesChannel_WithEmptyPassword_ShouldKeepStoredSecret()
     {
         await SeedTestDataAsync();
@@ -344,7 +389,7 @@ public class SalesChannelUpdateCommandTests : TenantIsolatedTestBase
         var getResponse1 = await Client.GetAsync($"/api/v1/SalesChannels/{TestSalesChannel1Id}");
         TestAssertions.AssertHttpSuccess(getResponse1);
         var salesChannel1 = await ReadResponseAsync<Result<SalesChannelDetailDto>>(getResponse1);
-        
+
         // Tenant 1 should not be able to access Tenant 2's sales channel
         var getTenant2Response = await Client.GetAsync($"/api/v1/SalesChannels/{TestSalesChannel3Id}");
         TestAssertions.AssertEqual(HttpStatusCode.NotFound, getTenant2Response.StatusCode);
@@ -353,15 +398,15 @@ public class SalesChannelUpdateCommandTests : TenantIsolatedTestBase
         var getResponse3 = await Client.GetAsync($"/api/v1/SalesChannels/{TestSalesChannel3Id}");
         TestAssertions.AssertHttpSuccess(getResponse3);
         var salesChannel3 = await ReadResponseAsync<Result<SalesChannelDetailDto>>(getResponse3);
-        
+
         // Tenant 2 should not be able to access Tenant 1's sales channel
         var getTenant1Response = await Client.GetAsync($"/api/v1/SalesChannels/{TestSalesChannel1Id}");
         TestAssertions.AssertEqual(HttpStatusCode.NotFound, getTenant1Response.StatusCode);
 
         // Verify that the updates were successful
-        TestAssertions.AssertTrue(salesChannel1.Data.Name.Contains($"Updated-T1-{uniqueId1}"), 
+        TestAssertions.AssertTrue(salesChannel1.Data.Name.Contains($"Updated-T1-{uniqueId1}"),
             $"Expected name to contain 'Updated-T1-{uniqueId1}', but got: {salesChannel1.Data.Name}");
-        TestAssertions.AssertTrue(salesChannel3.Data.Name.Contains($"Updated-T2-{uniqueId2}"), 
+        TestAssertions.AssertTrue(salesChannel3.Data.Name.Contains($"Updated-T2-{uniqueId2}"),
             $"Expected name to contain 'Updated-T2-{uniqueId2}', but got: {salesChannel3.Data.Name}");
     }
 

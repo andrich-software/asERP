@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Statistic;
+namespace asERP.Domain.Dtos.Statistic;
 
 /// <summary>
 /// DTO for revenue/sales statistics (first KPI card)

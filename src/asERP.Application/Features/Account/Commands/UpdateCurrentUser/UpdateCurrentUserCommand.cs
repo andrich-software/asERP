@@ -1,4 +1,4 @@
-﻿using asERP.Application.Mediator;
+using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Account.Commands.UpdateCurrentUser;

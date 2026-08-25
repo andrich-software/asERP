@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using asERP.Domain.Enums;
 using Microsoft.UI.Xaml.Data;

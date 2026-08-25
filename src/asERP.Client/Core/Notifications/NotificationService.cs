@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Notifications;
+namespace asERP.Client.Core.Notifications;
 
 /// <summary>
 /// Default <see cref="INotificationService"/> — a thin event bus. It does no UI work itself;

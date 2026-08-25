@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Models;
+namespace asERP.Client.Core.Models;
 
 /// <summary>
 /// Response wrapper for paginated API results.

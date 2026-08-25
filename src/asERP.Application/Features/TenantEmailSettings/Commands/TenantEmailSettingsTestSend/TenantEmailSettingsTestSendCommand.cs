@@ -1,4 +1,4 @@
-﻿using asERP.Application.Mediator;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.TenantEmailSettings;
 using asERP.Domain.Wrapper;
 

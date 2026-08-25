@@ -1,4 +1,3 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.Account.Commands.ChangePassword;
 using asERP.Application.Features.Account.Commands.UpdateCurrentUser;
 using asERP.Application.Features.Account.Queries.GetCurrentUser;
@@ -6,6 +5,7 @@ using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Account;
 using asERP.Domain.Wrapper;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

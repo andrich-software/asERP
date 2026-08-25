@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using asERP.Persistence.DatabaseContext;
 using asERP.SalesChannels.Logging;
 using Microsoft.EntityFrameworkCore;

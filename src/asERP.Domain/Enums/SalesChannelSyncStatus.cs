@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Enums;
+namespace asERP.Domain.Enums;
 
 /// <summary>
 /// Sync state of a single <c>ProductSalesChannel</c> row vis-à-vis its remote channel.

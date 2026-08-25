@@ -1,4 +1,3 @@
-using Asp.Versioning;
 using asERP.Application.Features.ShippingProvider.Commands.ShippingProviderCreate;
 using asERP.Application.Features.ShippingProvider.Commands.ShippingProviderDelete;
 using asERP.Application.Features.ShippingProvider.Commands.ShippingProviderUpdate;
@@ -14,6 +13,7 @@ using asERP.Domain.Dtos.ShippingProvider;
 using asERP.Domain.Dtos.ShippingProviderRate;
 using asERP.Domain.Wrapper;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

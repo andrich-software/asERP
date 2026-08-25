@@ -1,4 +1,4 @@
-﻿namespace asERP.Analytics.Enrichment;
+namespace asERP.Analytics.Enrichment;
 
 /// <summary>
 /// Minimal, dependency-free User-Agent classification into coarse browser / OS / device buckets. The

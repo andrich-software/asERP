@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Invoices.Services;
+using asERP.Client.Features.Invoices.Services;
 using asERP.Domain.Dtos.Invoice;
 
 namespace asERP.Client.Features.Invoices.Models;

@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Net.Http.Json;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Entities;

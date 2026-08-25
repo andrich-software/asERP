@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.ServerInfo;
+namespace asERP.Domain.Dtos.ServerInfo;
 
 public class ServerInfoResponseDto
 {

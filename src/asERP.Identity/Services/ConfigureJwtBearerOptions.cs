@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using asERP.Application.Contracts.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,41 +48,41 @@ public class ConfigureJwtBearerOptions : IConfigureOptions<JwtBearerOptions>
             logger.LogDebug("✅ TokenValidationParameters configured");
 
             options.Events = new JwtBearerEvents
-        {
-            OnAuthenticationFailed = context =>
             {
-                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
-                logger.LogError($"❌ JWT Authentication failed: {context.Exception.Message}");
-                logger.LogError($"   Path: {context.HttpContext.Request.Path}");
-                logger.LogError($"   Exception: {context.Exception.GetType().Name}");
-                return System.Threading.Tasks.Task.CompletedTask;
-            },
-            OnTokenValidated = context =>
-            {
-                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
-                logger.LogDebug($"✅ JWT Token validated successfully for: {context.Principal?.Identity?.Name}");
-                logger.LogDebug($"   Path: {context.HttpContext.Request.Path}");
-                var roles = context.Principal?.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value);
-                logger.LogDebug($"   Roles: {string.Join(", ", roles ?? Array.Empty<string>())}");
-                return System.Threading.Tasks.Task.CompletedTask;
-            },
-            OnChallenge = context =>
-            {
-                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
-                logger.LogWarning($"⚠️ JWT Challenge issued for: {context.HttpContext.Request.Path}");
-                logger.LogWarning($"   Error: {context.Error}");
-                logger.LogWarning($"   ErrorDescription: {context.ErrorDescription}");
-                return System.Threading.Tasks.Task.CompletedTask;
-            },
-            OnMessageReceived = context =>
-            {
-                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
-                var hasAuthHeader = context.HttpContext.Request.Headers.ContainsKey("Authorization");
-                logger.LogDebug($"📨 JWT Message received for: {context.HttpContext.Request.Path}");
-                logger.LogDebug($"   Authorization header present: {hasAuthHeader}");
-                return System.Threading.Tasks.Task.CompletedTask;
-            }
-        };
+                OnAuthenticationFailed = context =>
+                {
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
+                    logger.LogError($"❌ JWT Authentication failed: {context.Exception.Message}");
+                    logger.LogError($"   Path: {context.HttpContext.Request.Path}");
+                    logger.LogError($"   Exception: {context.Exception.GetType().Name}");
+                    return System.Threading.Tasks.Task.CompletedTask;
+                },
+                OnTokenValidated = context =>
+                {
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
+                    logger.LogDebug($"✅ JWT Token validated successfully for: {context.Principal?.Identity?.Name}");
+                    logger.LogDebug($"   Path: {context.HttpContext.Request.Path}");
+                    var roles = context.Principal?.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value);
+                    logger.LogDebug($"   Roles: {string.Join(", ", roles ?? Array.Empty<string>())}");
+                    return System.Threading.Tasks.Task.CompletedTask;
+                },
+                OnChallenge = context =>
+                {
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
+                    logger.LogWarning($"⚠️ JWT Challenge issued for: {context.HttpContext.Request.Path}");
+                    logger.LogWarning($"   Error: {context.Error}");
+                    logger.LogWarning($"   ErrorDescription: {context.ErrorDescription}");
+                    return System.Threading.Tasks.Task.CompletedTask;
+                },
+                OnMessageReceived = context =>
+                {
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ConfigureJwtBearerOptions>>();
+                    var hasAuthHeader = context.HttpContext.Request.Headers.ContainsKey("Authorization");
+                    logger.LogDebug($"📨 JWT Message received for: {context.HttpContext.Request.Path}");
+                    logger.LogDebug($"   Authorization header present: {hasAuthHeader}");
+                    return System.Threading.Tasks.Task.CompletedTask;
+                }
+            };
 
             logger.LogDebug("✅ JWT Bearer Events configured");
         }

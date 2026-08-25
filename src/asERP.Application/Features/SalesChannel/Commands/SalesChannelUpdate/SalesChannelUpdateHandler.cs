@@ -91,15 +91,21 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
                 existingSalesChannel.AdditionalConfigJson =
                     string.IsNullOrWhiteSpace(request.AdditionalConfigJson) ? null : request.AdditionalConfigJson;
             }
-            existingSalesChannel.ImportProducts = request.ImportProducts;
-            existingSalesChannel.ImportCustomers = request.ImportCustomers;
-            existingSalesChannel.ImportSaless = request.ImportSaless;
-            existingSalesChannel.ExportProducts = request.ExportProducts;
-            existingSalesChannel.ExportCustomers = request.ExportCustomers;
-            existingSalesChannel.ExportSaless = request.ExportSaless;
-            existingSalesChannel.ExportStock = request.ExportStock;
-            existingSalesChannel.PushSalesCancellations = request.PushSalesCancellations;
-            existingSalesChannel.ImportStock = request.ImportStock;
+            // asShop channels keep every sync direction always on (the client hides the toggles);
+            // forcing here also heals channels created before that rule existed. The connector's
+            // empty capability set keeps the orchestrator/outbox from acting on the flags.
+            var syncAlwaysOn = request.SalesChannelType == Domain.Enums.SalesChannelType.AsShop;
+            existingSalesChannel.ImportProducts = syncAlwaysOn || request.ImportProducts;
+            existingSalesChannel.ImportCustomers = syncAlwaysOn || request.ImportCustomers;
+            existingSalesChannel.ImportSaless = syncAlwaysOn || request.ImportSaless;
+            existingSalesChannel.ExportProducts = syncAlwaysOn || request.ExportProducts;
+            existingSalesChannel.ExportCustomers = syncAlwaysOn || request.ExportCustomers;
+            existingSalesChannel.ExportSaless = syncAlwaysOn || request.ExportSaless;
+            existingSalesChannel.ExportStock = syncAlwaysOn || request.ExportStock;
+            existingSalesChannel.PushSalesCancellations = syncAlwaysOn || request.PushSalesCancellations;
+            existingSalesChannel.ImportStock = syncAlwaysOn || request.ImportStock;
+            existingSalesChannel.ImportCategories = syncAlwaysOn || request.ImportCategories;
+            existingSalesChannel.ExportCategories = syncAlwaysOn || request.ExportCategories;
 
             // Update warehouse relationships
             var warehouses = new List<Domain.Entities.Warehouse>();
@@ -137,7 +143,7 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
             // A changed warehouse set (or freshly enabled ExportStock) shifts the effective stock of
             // every listed product — kick off a stock re-push for all of them via the export outbox.
             var newWarehouseIds = warehouses.Select(w => w.Id).ToHashSet();
-            if (request.ExportStock && (!previousExportStock || !newWarehouseIds.SetEquals(previousWarehouseIds)))
+            if (existingSalesChannel.ExportStock && (!previousExportStock || !newWarehouseIds.SetEquals(previousWarehouseIds)))
             {
                 await _mediator.Publish(
                     new SalesChannelStockScopeChangedNotification(existingSalesChannel.Id, existingSalesChannel.TenantId),

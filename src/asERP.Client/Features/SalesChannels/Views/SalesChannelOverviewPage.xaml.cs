@@ -1,4 +1,4 @@
-﻿using System.Windows.Input;
+using System.Windows.Input;
 using asERP.Client.Features.SalesChannels.Models;
 
 namespace asERP.Client.Features.SalesChannels.Views;

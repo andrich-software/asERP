@@ -1,5 +1,5 @@
-﻿using FluentValidation;
 using asERP.Domain.Interfaces;
+using FluentValidation;
 
 namespace asERP.Domain.Validators;
 

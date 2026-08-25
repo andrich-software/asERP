@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using Asp.Versioning;
+using System.Security.Claims;
 using asERP.Application.Features.SalesChannelOAuth.Commands.OAuthCallback;
 using asERP.Application.Features.SalesChannelOAuth.Commands.OAuthDisconnect;
 using asERP.Application.Features.SalesChannelOAuth.Commands.OAuthStart;
@@ -8,6 +7,7 @@ using asERP.Domain.Dtos.SalesChannelOAuth;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

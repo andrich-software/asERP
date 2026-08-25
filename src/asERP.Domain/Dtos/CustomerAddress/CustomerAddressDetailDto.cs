@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.CustomerAddress;
+namespace asERP.Domain.Dtos.CustomerAddress;
 
 public class CustomerAddressDetailDto
 {

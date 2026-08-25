@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Warehouse;
+namespace asERP.Domain.Dtos.Warehouse;
 
 public class WarehouseListDto
 {

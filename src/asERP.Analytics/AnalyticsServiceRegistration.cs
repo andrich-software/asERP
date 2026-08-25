@@ -1,10 +1,10 @@
-﻿using asERP.Analytics.ClickHouse;
+using asERP.Analytics.ClickHouse;
+using asERP.Analytics.Enrichment;
 using asERP.Analytics.Identity;
 using asERP.Analytics.Ingest;
 using asERP.Analytics.Query;
 using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Persistence;
-using asERP.Analytics.Enrichment;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace asERP.Analytics;

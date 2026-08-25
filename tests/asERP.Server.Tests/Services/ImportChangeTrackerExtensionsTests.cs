@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Constants;
+using asERP.Domain.Constants;
 using asERP.Domain.Entities;
 using asERP.SalesChannels.Repositories;
 using asERP.Server.Tests.Infrastructure;

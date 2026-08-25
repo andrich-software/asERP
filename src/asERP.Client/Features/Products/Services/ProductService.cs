@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using asERP.Client.Core.Constants;
 using asERP.Client.Core.Extensions;

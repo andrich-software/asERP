@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.SalesChannel;
+using asERP.Domain.Dtos.SalesChannel;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.Domain.Validators;
@@ -24,16 +24,19 @@ public class WooCommerceDatabaseConnectorTests
     public void Connector_IsResolvableByType_AndMirrorsRestCapabilities()
     {
         var connector = new WooCommerceDatabaseConnector(
-            null!, null!, null!, null!, NullLogger<WooCommerceDatabaseConnector>.Instance);
+            null!, null!, null!, null!, null!, NullLogger<WooCommerceDatabaseConnector>.Instance);
         var registry = new SalesChannelConnectorRegistry(new ISalesChannelConnector[] { connector });
 
         Assert.Same(connector, registry.Get(SalesChannelType.WooCommerceDatabase));
 
+        // Categories are the exception to the REST mirror: import-only (no ExportCategories /
+        // UpdateProductCategories — direct SQL term writes are too fragile against a live WordPress).
         var expected =
             SalesChannelCapabilities.ImportProducts |
             SalesChannelCapabilities.ImportSaless |
             SalesChannelCapabilities.ImportCustomers |
             SalesChannelCapabilities.ImportStock |
+            SalesChannelCapabilities.ImportCategories |
             SalesChannelCapabilities.UpdateStock |
             SalesChannelCapabilities.UpdatePrice;
         Assert.Equal(expected, connector.Capabilities);

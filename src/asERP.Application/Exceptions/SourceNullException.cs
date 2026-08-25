@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Exceptions;
+namespace asERP.Application.Exceptions;
 
 /// <summary>
 /// Custom exception for IEnumerable source not found errors

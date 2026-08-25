@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Dashboard.Models;
+using asERP.Client.Features.Dashboard.Models;
 
 namespace asERP.Client.Features.Dashboard.Views;
 

@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.TenantEmailSettings;
+namespace asERP.Domain.Dtos.TenantEmailSettings;
 
 /// <summary>
 /// Input DTO for the test-send endpoint. Sends a verification email using the

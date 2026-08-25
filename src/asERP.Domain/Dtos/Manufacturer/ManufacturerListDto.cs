@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Manufacturer;
+namespace asERP.Domain.Dtos.Manufacturer;
 
 public class ManufacturerListDto
 {

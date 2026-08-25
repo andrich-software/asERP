@@ -1,4 +1,4 @@
-﻿using asERP.SalesChannels.Models;
+using asERP.SalesChannels.Models;
 
 namespace asERP.SalesChannels.Contracts;
 

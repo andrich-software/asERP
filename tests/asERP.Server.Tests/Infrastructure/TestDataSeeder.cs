@@ -1,10 +1,10 @@
-﻿using asERP.Domain.Entities;
-using asERP.Domain.Enums;
-using asERP.Domain.Constants;
-using asERP.Persistence.DatabaseContext;
-using asERP.Application.Contracts.Services;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
+using asERP.Application.Contracts.Services;
+using asERP.Domain.Constants;
+using asERP.Domain.Entities;
+using asERP.Domain.Enums;
+using asERP.Persistence.DatabaseContext;
+using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Server.Tests.Infrastructure;
 

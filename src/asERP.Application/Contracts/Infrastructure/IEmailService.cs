@@ -1,4 +1,4 @@
-﻿using asERP.Application.Models.Email;
+using asERP.Application.Models.Email;
 using asERP.Domain.Enums;
 
 namespace asERP.Application.Contracts.Infrastructure;

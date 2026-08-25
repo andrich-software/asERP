@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json;
 using asERP.Client.Core.Exceptions;
 using asERP.Client.Core.Json;

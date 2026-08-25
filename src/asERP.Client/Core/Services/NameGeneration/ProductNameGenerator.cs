@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using asERP.Client.Core.Services.NameGeneration.WordLists;
 
 namespace asERP.Client.Core.Services.NameGeneration;

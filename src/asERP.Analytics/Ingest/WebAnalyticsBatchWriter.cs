@@ -1,6 +1,6 @@
-﻿using ClickHouse.Client.Copy;
 using asERP.Analytics.ClickHouse;
 using asERP.Domain.Dtos.WebAnalytics;
+using ClickHouse.Client.Copy;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

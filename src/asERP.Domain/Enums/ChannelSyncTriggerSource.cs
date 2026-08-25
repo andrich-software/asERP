@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Enums;
+namespace asERP.Domain.Enums;
 
 /// <summary>
 /// Why this sync run was started. Drives logging, metrics, and (later) per-trigger backoff policies.

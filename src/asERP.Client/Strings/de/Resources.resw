@@ -2065,6 +2065,15 @@
   <data name="SalesChannelDetailPage.Header.WarehouseName.Text" xml:space="preserve">
     <value>Lagername</value>
   </data>
+  <data name="SalesChannelDetailPage.Section.ShopDomains.Text" xml:space="preserve">
+    <value>Shop-Domains</value>
+  </data>
+  <data name="SalesChannelDetailPage.Header.ShopDomainHost.Text" xml:space="preserve">
+    <value>Domain</value>
+  </data>
+  <data name="SalesChannelDetailPage.DomainPrimaryBadge.Text" xml:space="preserve">
+    <value>Primär</value>
+  </data>
   <data name="SalesChannelDetailPage.UsageHint.Text" xml:space="preserve">
     <value>Dieser Vertriebskanal verbindet Ihr asERP-System mit externen Plattformen. Konfigurieren Sie Import- und Exporteinstellungen, um Produkte, Kunden und Verkäufe automatisch zu synchronisieren.</value>
   </data>
@@ -6069,5 +6078,116 @@
   </data>
   <data name="AppUpdate.NoUpdateFound" xml:space="preserve">
     <value>Es ist noch kein passendes Update verfügbar. Bitte versuchen Sie es später erneut.</value>
+  </data>
+  <data name="Shell.NavItem.Categories.Text" xml:space="preserve">
+    <value>Kategorien</value>
+  </data>
+  <data name="CategoryListPage.PageHeader.Title" xml:space="preserve">
+    <value>Kategorien</value>
+  </data>
+  <data name="CategoryListPage.PageHeader.Description" xml:space="preserve">
+    <value>Kategoriebaum verwalten und festlegen, auf welchen Verkaufskanälen jede Kategorie aktiv ist.</value>
+  </data>
+  <data name="CategoryListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Kategorie erstellen</value>
+  </data>
+  <data name="CategoryListPage.SaveButton.Content" xml:space="preserve">
+    <value>Änderungen speichern</value>
+  </data>
+  <data name="CategoryListPage.DiscardButton.Content" xml:space="preserve">
+    <value>Verwerfen</value>
+  </data>
+  <data name="CategoryListPage.SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Kategorien durchsuchen...</value>
+  </data>
+  <data name="CategoryListPage.Header.Name.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="CategoryListPage.Header.Products.Text" xml:space="preserve">
+    <value>Produkte</value>
+  </data>
+  <data name="CategoryListPage.NoCategories.Title" xml:space="preserve">
+    <value>Noch keine Kategorien</value>
+  </data>
+  <data name="CategoryListPage.NoCategories.Message" xml:space="preserve">
+    <value>Legen Sie die erste Kategorie an oder importieren Sie den Baum aus einem verbundenen Shop.</value>
+  </data>
+  <data name="CategoryListPage.ToastSaved" xml:space="preserve">
+    <value>Kanal-Aktivierung gespeichert.</value>
+  </data>
+  <data name="CategoryListPage.SaveFailed" xml:space="preserve">
+    <value>Speichern fehlgeschlagen: {0}</value>
+  </data>
+  <data name="CategoryEditPage.TitleNew" xml:space="preserve">
+    <value>Neue Kategorie</value>
+  </data>
+  <data name="CategoryEditPage.TitleEdit" xml:space="preserve">
+    <value>Kategorie bearbeiten</value>
+  </data>
+  <data name="CategoryEditPage.AppBarButton.Cancel.Label" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="CategoryEditPage.AppBarButton.Save.Label" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="CategoryEditPage.BasicCard.Header" xml:space="preserve">
+    <value>Kategorie</value>
+  </data>
+  <data name="CategoryEditPage.NameBox.Header" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="CategoryEditPage.NameBox.PlaceholderText" xml:space="preserve">
+    <value>z. B. Bekleidung</value>
+  </data>
+  <data name="CategoryEditPage.SlugBox.Header" xml:space="preserve">
+    <value>Slug (URL)</value>
+  </data>
+  <data name="CategoryEditPage.SlugBox.PlaceholderText" xml:space="preserve">
+    <value>Wird bei leerem Feld aus dem Namen erzeugt</value>
+  </data>
+  <data name="CategoryEditPage.ParentBox.Header" xml:space="preserve">
+    <value>Übergeordnete Kategorie</value>
+  </data>
+  <data name="CategoryEditPage.SortOrderBox.Header" xml:space="preserve">
+    <value>Sortierung</value>
+  </data>
+  <data name="CategoryEditPage.DescriptionBox.Header" xml:space="preserve">
+    <value>Beschreibung</value>
+  </data>
+  <data name="CategoryEditPage.DeleteButton.Content" xml:space="preserve">
+    <value>Kategorie löschen</value>
+  </data>
+  <data name="CategoryEditPage.NoParent" xml:space="preserve">
+    <value>(keine übergeordnete Kategorie)</value>
+  </data>
+  <data name="CategoryEditPage.ToastCreated" xml:space="preserve">
+    <value>Kategorie „{0}" wurde erstellt.</value>
+  </data>
+  <data name="CategoryEditPage.ToastUpdated" xml:space="preserve">
+    <value>Kategorie „{0}" wurde aktualisiert.</value>
+  </data>
+  <data name="CategoryEditPage.ToastDeleted" xml:space="preserve">
+    <value>Kategorie „{0}" wurde gelöscht.</value>
+  </data>
+  <data name="CategoryEditPage.SaveFailed" xml:space="preserve">
+    <value>Speichern fehlgeschlagen: {0}</value>
+  </data>
+  <data name="CategoryEditPage.DeleteConfirmTitle" xml:space="preserve">
+    <value>Kategorie löschen?</value>
+  </data>
+  <data name="CategoryEditPage.DeleteConfirmMessage" xml:space="preserve">
+    <value>Die Kategorie wird von allen Verkaufskanälen entfernt; Produktzuordnungen werden gelöscht. Dies kann nicht rückgängig gemacht werden.</value>
+  </data>
+  <data name="ProductEditPage.Section.Categories.Header" xml:space="preserve">
+    <value>Kategorien</value>
+  </data>
+  <data name="ProductEditPage.CategoriesEmptyHint.Text" xml:space="preserve">
+    <value>Produkt einer oder mehreren Kategorien zuordnen. Der Baum wird unter Stammdaten → Kategorien gepflegt.</value>
+  </data>
+  <data name="SalesChannelEditPage.Field.ImportCategories.Text" xml:space="preserve">
+    <value>Kategorien importieren</value>
+  </data>
+  <data name="SalesChannelEditPage.Field.ExportCategories.Text" xml:space="preserve">
+    <value>Kategorien &amp; Produktzuordnungen exportieren</value>
   </data>
 </root>

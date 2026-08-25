@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Features.Auth.Services;
+namespace asERP.Client.Features.Auth.Services;
 
 /// <summary>
 /// Manages session lifecycle: periodic token refresh, inactivity timeout, and app lifecycle.

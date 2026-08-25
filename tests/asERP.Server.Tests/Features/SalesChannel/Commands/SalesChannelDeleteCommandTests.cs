@@ -1,12 +1,12 @@
-﻿#nullable disable
+#nullable disable
 using System.Net;
 using asERP.Domain.Constants;
 using asERP.Domain.Dtos.SalesChannel;
+using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using asERP.Domain.Enums;
 
 namespace asERP.Server.Tests.Features.SalesChannel.Commands;
 
@@ -232,11 +232,11 @@ public class SalesChannelDeleteCommandTests : TenantIsolatedTestBase
     public async Task DeleteSalesChannel_MultipleDeletions_ShouldHandleCorrectly()
     {
         await SeedTestDataAsync();
-        
+
         // Create two test sales channels
         var salesChannelId1 = await CreateTestSalesChannelAsync(TenantConstants.TestTenant1Id, "Sales Channel 1");
         var salesChannelId2 = await CreateTestSalesChannelAsync(TenantConstants.TestTenant1Id, "Sales Channel 2");
-        
+
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
         // Delete first sales channel
@@ -343,7 +343,7 @@ public class SalesChannelDeleteCommandTests : TenantIsolatedTestBase
     public async Task DeleteSalesChannel_ConcurrentDeletion_ShouldHandleRaceCondition()
     {
         await SeedTestDataAsync();
-        
+
         // Create a test sales channel that will be deleted concurrently
         var salesChannelId = await CreateTestSalesChannelAsync(TenantConstants.TestTenant1Id, "Concurrent Test Sales Channel");
         SetTenantHeader(TenantConstants.TestTenant1Id);

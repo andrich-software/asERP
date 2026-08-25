@@ -216,6 +216,15 @@ public sealed partial class LoginOverlay : UserControl
             return;
         }
 
+        // Remember the selection itself (not just successful logins) so the picked server is
+        // preselected on the next start even when the user never got past the login form.
+        // Also fires for the programmatic initial selection — writing the same id back is a no-op.
+        var store = (Application.Current as App)?.Host?.Services?.GetService<IServerProfileStore>();
+        if (store != null)
+        {
+            _ = store.SetLastSelectedAsync(profile.Id);
+        }
+
         // Auto-fill the last email used for this server (don't clear an existing entry otherwise).
         if (!string.IsNullOrWhiteSpace(profile.LastUsedEmail))
         {

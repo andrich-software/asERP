@@ -1,12 +1,12 @@
-﻿#nullable disable
+#nullable disable
 using System.Net;
+using asERP.Domain.Constants;
 using asERP.Domain.Dtos.SalesChannel;
+using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using asERP.Domain.Enums;
-using asERP.Domain.Constants;
 
 namespace asERP.Server.Tests.Features.SalesChannel.Queries;
 
@@ -150,24 +150,24 @@ public class SalesChannelListQueryTests : TenantIsolatedTestBase
 
         TestAssertions.AssertNotNull(result1?.Data);
         TestAssertions.AssertEqual(4, result1.Data.Count);
-        
+
         var tenant1Channels = result1.Data.ToList();
-        TestAssertions.AssertTrue(tenant1Channels.Any(s => s.Name == "WooCommerce Store T1"), 
+        TestAssertions.AssertTrue(tenant1Channels.Any(s => s.Name == "WooCommerce Store T1"),
             "Tenant 1 should see WooCommerce Store T1");
-        TestAssertions.AssertTrue(tenant1Channels.Any(s => s.Name == "Shopware Store T1"), 
+        TestAssertions.AssertTrue(tenant1Channels.Any(s => s.Name == "Shopware Store T1"),
             "Tenant 1 should see Shopware Store T1");
-        TestAssertions.AssertFalse(tenant1Channels.Any(s => s.Name.Contains("T2")), 
+        TestAssertions.AssertFalse(tenant1Channels.Any(s => s.Name.Contains("T2")),
             "Tenant 1 should not see any T2 sales channels");
 
         // Verify specific IDs for Tenant 1
         var tenant1Ids = tenant1Channels.Select(s => s.Id).ToHashSet();
-        TestAssertions.AssertTrue(tenant1Ids.Contains(TestSalesChannel1Id), 
+        TestAssertions.AssertTrue(tenant1Ids.Contains(TestSalesChannel1Id),
             "Tenant 1 should see TestSalesChannel1Id");
-        TestAssertions.AssertTrue(tenant1Ids.Contains(TestSalesChannel2Id), 
+        TestAssertions.AssertTrue(tenant1Ids.Contains(TestSalesChannel2Id),
             "Tenant 1 should see TestSalesChannel2Id");
-        TestAssertions.AssertFalse(tenant1Ids.Contains(TestSalesChannel3Id), 
+        TestAssertions.AssertFalse(tenant1Ids.Contains(TestSalesChannel3Id),
             "Tenant 1 should not see TestSalesChannel3Id");
-        TestAssertions.AssertFalse(tenant1Ids.Contains(TestSalesChannel4Id), 
+        TestAssertions.AssertFalse(tenant1Ids.Contains(TestSalesChannel4Id),
             "Tenant 1 should not see TestSalesChannel4Id");
 
         // Test Tenant 2 isolation - should see only their own sales channels
@@ -178,24 +178,24 @@ public class SalesChannelListQueryTests : TenantIsolatedTestBase
 
         TestAssertions.AssertNotNull(result2?.Data);
         TestAssertions.AssertEqual(4, result2.Data.Count);
-        
+
         var tenant2Channels = result2.Data.ToList();
-        TestAssertions.AssertTrue(tenant2Channels.Any(s => s.Name == "eBay Store T2"), 
+        TestAssertions.AssertTrue(tenant2Channels.Any(s => s.Name == "eBay Store T2"),
             "Tenant 2 should see eBay Store T2");
-        TestAssertions.AssertTrue(tenant2Channels.Any(s => s.Name == "WooCommerce Store T2"), 
+        TestAssertions.AssertTrue(tenant2Channels.Any(s => s.Name == "WooCommerce Store T2"),
             "Tenant 2 should see WooCommerce Store T2");
-        TestAssertions.AssertFalse(tenant2Channels.Any(s => s.Name.Contains("T1")), 
+        TestAssertions.AssertFalse(tenant2Channels.Any(s => s.Name.Contains("T1")),
             "Tenant 2 should not see any T1 sales channels");
 
         // Verify specific IDs for Tenant 2
         var tenant2Ids = tenant2Channels.Select(s => s.Id).ToHashSet();
-        TestAssertions.AssertTrue(tenant2Ids.Contains(TestSalesChannel3Id), 
+        TestAssertions.AssertTrue(tenant2Ids.Contains(TestSalesChannel3Id),
             "Tenant 2 should see TestSalesChannel3Id");
-        TestAssertions.AssertTrue(tenant2Ids.Contains(TestSalesChannel4Id), 
+        TestAssertions.AssertTrue(tenant2Ids.Contains(TestSalesChannel4Id),
             "Tenant 2 should see TestSalesChannel4Id");
-        TestAssertions.AssertFalse(tenant2Ids.Contains(TestSalesChannel1Id), 
+        TestAssertions.AssertFalse(tenant2Ids.Contains(TestSalesChannel1Id),
             "Tenant 2 should not see TestSalesChannel1Id");
-        TestAssertions.AssertFalse(tenant2Ids.Contains(TestSalesChannel2Id), 
+        TestAssertions.AssertFalse(tenant2Ids.Contains(TestSalesChannel2Id),
             "Tenant 2 should not see TestSalesChannel2Id");
     }
 

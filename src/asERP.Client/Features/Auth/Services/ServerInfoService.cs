@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using asERP.Client.Core.Json;
 using asERP.Domain.Dtos.ServerInfo;
 

@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Auth;
+namespace asERP.Domain.Dtos.Auth;
 
 public class ForgotPasswordResponseDto
 {

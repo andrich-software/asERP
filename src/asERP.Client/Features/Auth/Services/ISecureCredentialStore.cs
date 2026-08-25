@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Features.Auth.Services;
+namespace asERP.Client.Features.Auth.Services;
 
 /// <summary>
 /// Abstraction over per-platform secure credential storage. Implementations should prefer the

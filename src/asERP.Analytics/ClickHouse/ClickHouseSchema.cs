@@ -1,4 +1,4 @@
-﻿namespace asERP.Analytics.ClickHouse;
+namespace asERP.Analytics.ClickHouse;
 
 /// <summary>
 /// ClickHouse DDL for the web-analytics store. Applied idempotently at startup

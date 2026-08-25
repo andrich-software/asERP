@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Constants;
+using asERP.Client.Core.Constants;
 using asERP.Client.Features.ProductAttributes.Models;
 using asERP.Client.Features.ProductAttributes.Services;
 using asERP.Client.Features.ProductAttributes.Views;

@@ -1,4 +1,4 @@
-﻿using asERP.Application.Services;
+using asERP.Application.Services;
 using asERP.Server.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;

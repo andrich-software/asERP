@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using asERP.Persistence.DatabaseContext;
 using Microsoft.Extensions.DependencyInjection;
 

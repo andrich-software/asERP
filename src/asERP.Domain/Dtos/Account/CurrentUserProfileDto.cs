@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Account;
+namespace asERP.Domain.Dtos.Account;
 
 public class CurrentUserProfileDto
 {

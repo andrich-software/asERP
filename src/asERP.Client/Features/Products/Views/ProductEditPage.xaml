@@ -407,6 +407,30 @@
             </controls:SectionCard>
           </Grid>
 
+          <!-- Categories: flattened tree with one checkbox per node -->
+          <controls:SectionCard x:Uid="ProductEditPage.Section.Categories"
+                                HeaderGlyph="&#xE71D;">
+            <StackPanel Spacing="8">
+              <ScrollViewer MaxHeight="320"
+                            VerticalScrollBarVisibility="Auto"
+                            HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding ProductCategories}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:SelectableCategory">
+                      <CheckBox Content="{x:Bind Name}"
+                                IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
+                                Margin="{x:Bind NameIndent}"
+                                MinWidth="0" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+              <TextBlock x:Uid="ProductEditPage.CategoriesEmptyHint"
+                         Style="{StaticResource LabelSmall}"
+                         Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+            </StackPanel>
+          </controls:SectionCard>
+
           <!-- Variants (only for variant parents) -->
           <controls:SectionCard x:Uid="ProductEditPage.Section.Variants"
                                 HeaderGlyph="&#xE8FD;"

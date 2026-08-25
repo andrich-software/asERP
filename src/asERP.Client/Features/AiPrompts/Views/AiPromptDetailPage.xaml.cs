@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.AiPrompts.Models;
+using asERP.Client.Features.AiPrompts.Models;
 using Microsoft.UI.Xaml.Controls;
 
 namespace asERP.Client.Features.AiPrompts.Views;

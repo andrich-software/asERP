@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using asERP.Domain.Dtos.Setting;
 using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;
@@ -398,7 +398,7 @@ public class SettingListQueryTests : GlobalTestBase
 
         // Verify that tenant1 only gets tenant1 test settings
         TestAssertions.AssertTrue(tenant1TestSettings?.All(s => s.Key.Contains("tenant1")) ?? false);
-        
+
         // Verify that tenant2 only gets tenant2 test settings
         TestAssertions.AssertTrue(tenant2TestSettings?.All(s => s.Key.Contains("tenant2")) ?? false);
 

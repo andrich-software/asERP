@@ -41,6 +41,11 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
     private readonly IProductAttributeRepository _productAttributeRepository;
 
     /// <summary>
+    /// Repository for category data operations
+    /// </summary>
+    private readonly ICategoryRepository _categoryRepository;
+
+    /// <summary>
     /// Tenant context for handling multi-tenancy
     /// </summary>
     private readonly ITenantContext _tenantContext;
@@ -59,6 +64,7 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
         ITaxClassRepository taxClassRepository,
         IManufacturerRepository manufacturerRepository,
         IProductAttributeRepository productAttributeRepository,
+        ICategoryRepository categoryRepository,
         ITenantContext tenantContext)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -66,6 +72,7 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
         _taxClassRepository = taxClassRepository ?? throw new ArgumentNullException(nameof(taxClassRepository));
         _manufacturerRepository = manufacturerRepository ?? throw new ArgumentNullException(nameof(manufacturerRepository));
         _productAttributeRepository = productAttributeRepository ?? throw new ArgumentNullException(nameof(productAttributeRepository));
+        _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
         _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
     }
 
@@ -171,6 +178,25 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
                         ProductAttributeValueId = valueId,
                         TenantId = currentTenantId.Value
                     }).ToList();
+            }
+
+            // Category assignments: verify the ids and stage the join rows so they insert together
+            // with the product in one SaveChanges.
+            var categoryIds = request.CategoryIds.Distinct().ToList();
+            foreach (var categoryId in categoryIds)
+            {
+                if (!await _categoryRepository.ExistsAsync(categoryId))
+                {
+                    return Result<Guid>.Fail(ResultStatusCode.BadRequest,
+                        $"The following category IDs do not exist: {categoryId}");
+                }
+
+                _productRepository.AddProductCategory(new Domain.Entities.ProductCategory
+                {
+                    ProductId = productToCreate.Id,
+                    CategoryId = categoryId,
+                    TenantId = currentTenantId.Value
+                });
             }
 
             // Add the new product to the database

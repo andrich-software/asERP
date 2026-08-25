@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Events;
+namespace asERP.Client.Core.Events;
 
 /// <summary>
 /// App-wide, cross-feature refresh signals. Mirrors the static-event pattern used by

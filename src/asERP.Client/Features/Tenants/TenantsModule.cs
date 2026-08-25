@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Constants;
+using asERP.Client.Core.Constants;
 using asERP.Client.Core.Services.NameGeneration;
 using asERP.Client.Features.Tenants.Models;
 using asERP.Client.Features.Tenants.Services;

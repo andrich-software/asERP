@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using asERP.Domain.Enums;
 using asERP.Domain.Interfaces;
 
@@ -57,4 +57,7 @@ public class ProductInputDto : IProductInputModel
     public List<Guid> VariantOptionValueIds { get; set; } = new();
 
     public List<Guid> ProductSalesChannel { get; set; } = new();
+
+    /// <summary>Categories the product is assigned to; reconciled explicitly on create/update.</summary>
+    public List<Guid> CategoryIds { get; set; } = new();
 }

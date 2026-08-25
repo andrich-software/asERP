@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Helpers;
+using asERP.Client.Core.Helpers;
 using asERP.Domain.Constants;
 
 namespace asERP.Client.Features.Auth.Services;

@@ -1,4 +1,3 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.TenantOAuthAppSettings.Commands.TenantOAuthAppSettingsDelete;
 using asERP.Application.Features.TenantOAuthAppSettings.Commands.TenantOAuthAppSettingsUpsert;
 using asERP.Application.Features.TenantOAuthAppSettings.Queries.TenantOAuthAppSettingsDetail;
@@ -8,6 +7,7 @@ using asERP.Domain.Dtos.TenantOAuthAppSettings;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

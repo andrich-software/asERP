@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Statistic;
+namespace asERP.Domain.Dtos.Statistic;
 
 /// <summary>
 /// DTO for best-selling products statistics (dashboard top products card)

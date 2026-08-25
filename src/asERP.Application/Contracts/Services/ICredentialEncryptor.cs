@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Contracts.Services;
+namespace asERP.Application.Contracts.Services;
 
 /// <summary>
 /// Encrypts/decrypts secret strings (sales-channel passwords, OAuth tokens) at rest.

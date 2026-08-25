@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Setting;
+namespace asERP.Domain.Dtos.Setting;
 
 public class SettingListDto
 {

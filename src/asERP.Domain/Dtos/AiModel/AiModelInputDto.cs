@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Enums;
+using asERP.Domain.Enums;
 using asERP.Domain.Interfaces;
 
 namespace asERP.Domain.Dtos.AiModel;

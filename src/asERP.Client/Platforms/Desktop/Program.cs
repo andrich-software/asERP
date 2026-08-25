@@ -1,4 +1,4 @@
-﻿using Uno.UI.Hosting;
+using Uno.UI.Hosting;
 
 namespace asERP.Client;
 

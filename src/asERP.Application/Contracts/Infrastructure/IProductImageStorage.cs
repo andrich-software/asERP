@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Contracts.Infrastructure;
+namespace asERP.Application.Contracts.Infrastructure;
 
 /// <summary>
 /// Result of persisting an uploaded image to the storage backend. All paths are

@@ -5,6 +5,7 @@ using asERP.Domain.Dtos.Account;
 using asERP.Domain.Dtos.AiModel;
 using asERP.Domain.Dtos.AiPrompt;
 using asERP.Domain.Dtos.Auth;
+using asERP.Domain.Dtos.Category;
 using asERP.Domain.Dtos.Country;
 using asERP.Domain.Dtos.Customer;
 using asERP.Domain.Dtos.Feed;
@@ -107,6 +108,9 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<ReturnShipmentDetailDto>))]
 [JsonSerializable(typeof(ApiResponse<List<ReturnableSalesItemDto>>))]
 [JsonSerializable(typeof(ApiResponse<List<ShopDomainListDto>>))]
+[JsonSerializable(typeof(ApiResponse<List<CategoryListDto>>))]
+[JsonSerializable(typeof(ApiResponse<CategoryDetailDto>))]
+[JsonSerializable(typeof(ApiResponse<int>))]
 
 // Direct response types
 [JsonSerializable(typeof(GlobalSearchResultDto))]
@@ -128,6 +132,8 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(ShopDomainInputDto))]
 [JsonSerializable(typeof(FeedInputDto))]
 [JsonSerializable(typeof(FeedProductSelectionUpdateDto))]
+[JsonSerializable(typeof(CategoryInputDto))]
+[JsonSerializable(typeof(CategoryChannelActivationUpdateDto))]
 [JsonSerializable(typeof(ProductInputDto))]
 [JsonSerializable(typeof(ProductVariantGenerateDto))]
 [JsonSerializable(typeof(ProductImageReorderDto))]

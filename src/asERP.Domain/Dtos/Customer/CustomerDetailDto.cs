@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.CustomerAddress;
+using asERP.Domain.Dtos.CustomerAddress;
 using asERP.Domain.Enums;
 
 namespace asERP.Domain.Dtos.Customer;

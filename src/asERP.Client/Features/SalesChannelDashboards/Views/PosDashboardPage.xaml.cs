@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Dashboard.Models;
+using asERP.Client.Features.Dashboard.Models;
 using asERP.Client.Features.SalesChannelDashboards.Models;
 using asERP.Domain.Dtos.Customer;
 using asERP.Domain.Dtos.Product;
@@ -64,37 +64,37 @@ public sealed partial class PosDashboardPage : Page
         switch (e.Key)
         {
             case VirtualKey.Down:
-            {
-                var nextIndex = _selectedProductIndex + 1;
-                if (_productResultsRepeater.TryGetElement(nextIndex) != null)
+                {
+                    var nextIndex = _selectedProductIndex + 1;
+                    if (_productResultsRepeater.TryGetElement(nextIndex) != null)
+                    {
+                        e.Handled = true;
+                        SetProductHighlight(nextIndex);
+                    }
+                    break;
+                }
+            case VirtualKey.Up:
                 {
                     e.Handled = true;
-                    SetProductHighlight(nextIndex);
+                    SetProductHighlight(Math.Max(_selectedProductIndex - 1, -1));
+                    break;
                 }
-                break;
-            }
-            case VirtualKey.Up:
-            {
-                e.Handled = true;
-                SetProductHighlight(Math.Max(_selectedProductIndex - 1, -1));
-                break;
-            }
             case VirtualKey.Enter when _selectedProductIndex >= 0:
-            {
-                e.Handled = true;
-                var element = _productResultsRepeater.TryGetElement(_selectedProductIndex);
-                if (element is FrameworkElement fe && fe.DataContext is ProductListDto product)
                 {
-                    _ = AddProductToCartAsync(product);
+                    e.Handled = true;
+                    var element = _productResultsRepeater.TryGetElement(_selectedProductIndex);
+                    if (element is FrameworkElement fe && fe.DataContext is ProductListDto product)
+                    {
+                        _ = AddProductToCartAsync(product);
+                    }
+                    break;
                 }
-                break;
-            }
             case VirtualKey.Escape:
-            {
-                e.Handled = true;
-                _ = ClearProductSearchAsync();
-                break;
-            }
+                {
+                    e.Handled = true;
+                    _ = ClearProductSearchAsync();
+                    break;
+                }
         }
     }
 

@@ -1,4 +1,4 @@
-﻿namespace asERP.SalesChannels.Abstractions;
+namespace asERP.SalesChannels.Abstractions;
 
 public sealed record ConnectionTestResult(bool Success, string? Message = null);
 

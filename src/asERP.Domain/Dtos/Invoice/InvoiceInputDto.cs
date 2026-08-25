@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using asERP.Domain.Enums;
 using asERP.Domain.Interfaces;
 

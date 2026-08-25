@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Services.NameGeneration;
+namespace asERP.Client.Core.Services.NameGeneration;
 
 /// <summary>
 /// Factory interface for creating name generators.

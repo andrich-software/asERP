@@ -1,4 +1,4 @@
-﻿#nullable disable
+#nullable disable
 using System.Net;
 using System.Net.Http.Json;
 using asERP.Domain.Constants;

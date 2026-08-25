@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using asERP.Domain.Entities;
 
 namespace asERP.SalesChannels.Abstractions;

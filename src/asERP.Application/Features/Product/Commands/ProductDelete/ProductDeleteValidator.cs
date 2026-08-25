@@ -1,5 +1,5 @@
-﻿using FluentValidation;
 using asERP.Application.Contracts.Persistence;
+using FluentValidation;
 
 namespace asERP.Application.Features.Product.Commands.ProductDelete;
 

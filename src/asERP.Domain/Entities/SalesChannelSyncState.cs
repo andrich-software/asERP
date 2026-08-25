@@ -27,6 +27,12 @@ public class SalesChannelSyncState : BaseEntity, IBaseEntity
 
     public bool InitialProductImportCompleted { get; set; }
 
+    /// <summary>
+    /// True once the first category sweep has completed. Product imports wait for this (when category
+    /// import is enabled) so imported products can link their category assignments immediately.
+    /// </summary>
+    public bool InitialCategoryImportCompleted { get; set; }
+
     public bool InitialProductExportCompleted { get; set; }
 
     public bool InitialCustomerImportCompleted { get; set; }

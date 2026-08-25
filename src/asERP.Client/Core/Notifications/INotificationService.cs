@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Notifications;
+namespace asERP.Client.Core.Notifications;
 
 /// <summary>
 /// Severity of an app-level notification — drives the toast's color and icon.

@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace asERP.Server.Infrastructure.JsonConverters;
@@ -21,7 +21,7 @@ public class StrictEnumConverter<T> : JsonConverter<T> where T : struct, Enum
             }
             throw new JsonException($"Invalid enum value '{stringValue}' for type {typeof(T).Name}");
         }
-        
+
         if (reader.TokenType == JsonTokenType.Number)
         {
             var numericValue = reader.GetInt32();

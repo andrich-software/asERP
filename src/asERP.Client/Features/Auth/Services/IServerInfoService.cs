@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.ServerInfo;
+using asERP.Domain.Dtos.ServerInfo;
 
 namespace asERP.Client.Features.Auth.Services;
 

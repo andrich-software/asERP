@@ -1,10 +1,10 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using asERP.Application.Contracts.Services;
 using asERP.Persistence.DatabaseContext;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
-using asERP.Application.Contracts.Services;
 
 namespace asERP.Server.Tests.Infrastructure;
 

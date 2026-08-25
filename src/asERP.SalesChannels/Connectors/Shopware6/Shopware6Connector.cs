@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using asERP.Application.Contracts.Persistence;
@@ -24,17 +24,20 @@ public sealed class Shopware6Connector : ConnectorBase
     private readonly Shopware6AuthHelper _auth;
     private readonly IProductImportRepository _productImportRepository;
     private readonly ISalesImportRepository _salesImportRepository;
+    private readonly ICategoryImportRepository _categoryImportRepository;
     private readonly ILogger<Shopware6Connector> _logger;
 
     public Shopware6Connector(
         Shopware6AuthHelper auth,
         IProductImportRepository productImportRepository,
         ISalesImportRepository salesImportRepository,
+        ICategoryImportRepository categoryImportRepository,
         ILogger<Shopware6Connector> logger)
     {
         _auth = auth;
         _productImportRepository = productImportRepository;
         _salesImportRepository = salesImportRepository;
+        _categoryImportRepository = categoryImportRepository;
         _logger = logger;
     }
 
@@ -43,6 +46,9 @@ public sealed class Shopware6Connector : ConnectorBase
     public override SalesChannelCapabilities Capabilities =>
         SalesChannelCapabilities.ImportProducts |
         SalesChannelCapabilities.ImportSaless |
+        SalesChannelCapabilities.ImportCategories |
+        SalesChannelCapabilities.ExportCategories |
+        SalesChannelCapabilities.UpdateProductCategories |
         SalesChannelCapabilities.UpdateStock |
         SalesChannelCapabilities.UpdatePrice |
         SalesChannelCapabilities.OAuth;
@@ -150,6 +156,7 @@ public sealed class Shopware6Connector : ConnectorBase
                             Description = description,
                             IsVariantParent = (p.ChildCount ?? 0) > 0,
                             Images = MapImages(p),
+                            RemoteCategoryIds = p.CategoryIds ?? [],
                         };
 
                         if (importProduct.IsVariantParent)
@@ -632,6 +639,221 @@ public sealed class Shopware6Connector : ConnectorBase
 
             var responseBody = await response.Content.ReadAsStringAsync(context.CancellationToken);
             return ExportResult.Fail($"HTTP {(int)response.StatusCode}: {Truncate(responseBody, 300)}");
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
+    }
+
+    public override async Task<SyncResult> ImportCategoriesAsync(SalesChannelContext context)
+    {
+        var salesChannel = context.SalesChannel;
+        try
+        {
+            SalesChannelUrlValidator.Validate(salesChannel.Url);
+        }
+        catch (ArgumentException ex)
+        {
+            return SyncResult.Failed($"Invalid sales channel URL: {ex.Message}");
+        }
+
+        try
+        {
+            var (_, accessToken) = await PrepareAsync(context);
+            ConfigureBearer(context, accessToken);
+            var baseUrl = salesChannel.Url.TrimEnd('/');
+
+            // Collect the full tree first (category counts are small) so the repository can run a
+            // safe orphan sweep over one consistent snapshot.
+            var remoteCategories = new List<SalesChannelImportCategory>();
+            var page = 1;
+            while (true)
+            {
+                var requestBody = new
+                {
+                    page,
+                    limit = PageSize,
+                    sort = new[] { new { field = "createdAt", order = "ASC" } },
+                };
+                var url = $"{baseUrl}/api/search/category";
+                var response = await context.HttpClient.PostAsJsonAsync(url, requestBody, context.CancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
+                    _logger.LogError("Shopware6 category search HTTP {Status}: {Body}", (int)response.StatusCode, body);
+                    return SyncResult.Failed($"HTTP {(int)response.StatusCode}");
+                }
+
+                var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
+                var result = JsonSerializer.Deserialize<Sw6SearchResult<Sw6Category>>(raw);
+                if (result?.Data is null || result.Data.Count == 0) break;
+
+                // Fetch order stands in for the sibling order — Shopware's afterCategoryId chain is
+                // deliberately not reconstructed.
+                foreach (var c in result.Data)
+                {
+                    remoteCategories.Add(new SalesChannelImportCategory
+                    {
+                        RemoteCategoryId = c.Id,
+                        ParentRemoteCategoryId = c.ParentId,
+                        Name = c.Translated?.Name ?? c.Name ?? string.Empty,
+                        Description = c.Translated?.Description ?? c.Description,
+                        SortOrder = remoteCategories.Count,
+                    });
+                }
+
+                if (result.Data.Count < PageSize) break;
+                page++;
+            }
+
+            return await _categoryImportRepository.ImportOrUpdateFromSalesChannel(
+                salesChannel.Id, remoteCategories, context.CancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return SyncResult.Failed(ex.Message);
+        }
+    }
+
+    public override async Task<ExportResult> ExportCategoryAsync(SalesChannelContext context, CategoryExportPayload payload)
+    {
+        try
+        {
+            var (_, accessToken) = await PrepareAsync(context);
+            ConfigureBearer(context, accessToken);
+            var baseUrl = context.SalesChannel.Url.TrimEnd('/');
+
+            if (string.IsNullOrEmpty(payload.RemoteCategoryId))
+            {
+                // Create with a client-generated id: POST /api/category answers 204 No Content by
+                // default, so supplying the UUID ourselves avoids response-format coupling.
+                var newId = Guid.NewGuid().ToString("N");
+                var createBody = new
+                {
+                    id = newId,
+                    name = payload.Name,
+                    parentId = payload.ParentRemoteCategoryId,
+                    description = payload.Description,
+                    active = true,
+                };
+                var response = await context.HttpClient.PostAsJsonAsync($"{baseUrl}/api/category", createBody, context.CancellationToken);
+                if (response.IsSuccessStatusCode) return ExportResult.Ok(newId);
+
+                var responseBody = await response.Content.ReadAsStringAsync(context.CancellationToken);
+                return ExportResult.Fail($"HTTP {(int)response.StatusCode}: {Truncate(responseBody, 300)}");
+            }
+
+            var updateBody = new
+            {
+                name = payload.Name,
+                parentId = payload.ParentRemoteCategoryId,
+                description = payload.Description,
+            };
+            var updateUrl = $"{baseUrl}/api/category/{Uri.EscapeDataString(payload.RemoteCategoryId)}";
+            var updateRequest = new HttpRequestMessage(HttpMethod.Patch, updateUrl) { Content = JsonContent.Create(updateBody) };
+            var updateResponse = await context.HttpClient.SendAsync(updateRequest, context.CancellationToken);
+            if (updateResponse.IsSuccessStatusCode) return ExportResult.Ok(payload.RemoteCategoryId);
+
+            var updateResponseBody = await updateResponse.Content.ReadAsStringAsync(context.CancellationToken);
+            return ExportResult.Fail($"HTTP {(int)updateResponse.StatusCode}: {Truncate(updateResponseBody, 300)}");
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
+    }
+
+    public override async Task<ExportResult> DeleteCategoryAsync(SalesChannelContext context, CategoryDeletePayload payload)
+    {
+        if (string.IsNullOrEmpty(payload.RemoteCategoryId))
+        {
+            return ExportResult.Ok();
+        }
+
+        try
+        {
+            var (_, accessToken) = await PrepareAsync(context);
+            ConfigureBearer(context, accessToken);
+
+            var url = context.SalesChannel.Url.TrimEnd('/') + $"/api/category/{Uri.EscapeDataString(payload.RemoteCategoryId)}";
+            var response = await context.HttpClient.DeleteAsync(url, context.CancellationToken);
+            if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // Already gone remotely counts as done.
+                return ExportResult.Ok();
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync(context.CancellationToken);
+            return ExportResult.Fail($"HTTP {(int)response.StatusCode}: {Truncate(responseBody, 300)}");
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
+    }
+
+    public override async Task<ExportResult> UpdateProductCategoriesAsync(SalesChannelContext context, ProductCategoriesUpdatePayload payload)
+    {
+        if (string.IsNullOrEmpty(payload.RemoteProductId))
+        {
+            return ExportResult.Fail("Shopware6 product id (RemoteProductId) is required for category assignment updates");
+        }
+
+        try
+        {
+            var (_, accessToken) = await PrepareAsync(context);
+            ConfigureBearer(context, accessToken);
+            var baseUrl = context.SalesChannel.Url.TrimEnd('/');
+            var productId = payload.RemoteProductId;
+
+            // PATCHing the categories association only ADDS mappings in Shopware — removed
+            // assignments must be deleted explicitly, so read the current set first.
+            var searchBody = new
+            {
+                limit = 1,
+                filter = new object[] { new { type = "equals", field = "id", value = productId } },
+            };
+            var searchResponse = await context.HttpClient.PostAsJsonAsync($"{baseUrl}/api/search/product", searchBody, context.CancellationToken);
+            if (!searchResponse.IsSuccessStatusCode)
+            {
+                var body = await searchResponse.Content.ReadAsStringAsync(context.CancellationToken);
+                return ExportResult.Fail($"HTTP {(int)searchResponse.StatusCode}: {Truncate(body, 300)}");
+            }
+
+            var raw = await searchResponse.Content.ReadAsStringAsync(context.CancellationToken);
+            var searchResult = JsonSerializer.Deserialize<Sw6SearchResult<Sw6Product>>(raw);
+            var currentIds = searchResult?.Data.FirstOrDefault()?.CategoryIds ?? [];
+            var desiredIds = payload.RemoteCategoryIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var categoryId in currentIds.Where(id => !desiredIds.Contains(id)))
+            {
+                var deleteUrl = $"{baseUrl}/api/product/{Uri.EscapeDataString(productId)}/categories/{Uri.EscapeDataString(categoryId)}";
+                var deleteResponse = await context.HttpClient.DeleteAsync(deleteUrl, context.CancellationToken);
+                if (!deleteResponse.IsSuccessStatusCode && deleteResponse.StatusCode != System.Net.HttpStatusCode.NotFound)
+                {
+                    var body = await deleteResponse.Content.ReadAsStringAsync(context.CancellationToken);
+                    return ExportResult.Fail($"HTTP {(int)deleteResponse.StatusCode}: {Truncate(body, 300)}");
+                }
+            }
+
+            if (payload.RemoteCategoryIds.Count > 0)
+            {
+                var patchBody = new
+                {
+                    categories = payload.RemoteCategoryIds.Select(id => new { id }).ToArray(),
+                };
+                var patchUrl = $"{baseUrl}/api/product/{Uri.EscapeDataString(productId)}";
+                var patchRequest = new HttpRequestMessage(HttpMethod.Patch, patchUrl) { Content = JsonContent.Create(patchBody) };
+                var patchResponse = await context.HttpClient.SendAsync(patchRequest, context.CancellationToken);
+                if (!patchResponse.IsSuccessStatusCode)
+                {
+                    var body = await patchResponse.Content.ReadAsStringAsync(context.CancellationToken);
+                    return ExportResult.Fail($"HTTP {(int)patchResponse.StatusCode}: {Truncate(body, 300)}");
+                }
+            }
+
+            return ExportResult.Ok(productId);
         }
         catch (Exception ex)
         {

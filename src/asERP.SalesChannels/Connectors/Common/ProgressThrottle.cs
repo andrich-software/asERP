@@ -1,4 +1,4 @@
-﻿using asERP.SalesChannels.Abstractions;
+using asERP.SalesChannels.Abstractions;
 
 namespace asERP.SalesChannels.Connectors.Common;
 

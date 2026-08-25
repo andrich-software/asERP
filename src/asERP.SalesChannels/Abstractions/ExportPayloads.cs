@@ -1,4 +1,4 @@
-﻿namespace asERP.SalesChannels.Abstractions;
+namespace asERP.SalesChannels.Abstractions;
 
 /// <summary>
 /// Channel-agnostic payload shapes drained from <c>ChannelExportOutbox</c> and translated by
@@ -59,3 +59,30 @@ public sealed record CancelSalesPayload(
     Guid SalesId,
     string? RemoteSalesId,
     string? Reason = null);
+
+/// <summary>
+/// Create-or-update of a single category. <paramref name="ParentRemoteCategoryId"/> is the
+/// channel-side id of the parent (null for roots) — the dispatcher fails the row while the parent
+/// is still unexported, so the outbox backoff naturally orders parents before children.
+/// </summary>
+public sealed record CategoryExportPayload(
+    Guid CategoryId,
+    Guid CategorySalesChannelId,
+    string Name,
+    string Slug,
+    string? Description,
+    int SortOrder,
+    string? RemoteCategoryId,
+    string? ParentRemoteCategoryId);
+
+public sealed record CategoryDeletePayload(
+    Guid CategoryId,
+    Guid SalesChannelId,
+    string? RemoteCategoryId);
+
+/// <summary>Push of a product's full category assignment set as a partial product update.</summary>
+public sealed record ProductCategoriesUpdatePayload(
+    Guid ProductId,
+    string? RemoteProductId,
+    string? ParentRemoteProductId,
+    IReadOnlyList<string> RemoteCategoryIds);

@@ -35,7 +35,7 @@
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.11" />
     <PackageVersion Include="Amazon.SellingPartnerAPIAA" Version="1.2.0" />
     <!-- Uno Platform -->
-    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.94.2" />
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.95.0" />
     <PackageVersion Include="Uno.CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.206" />
     <PackageVersion Include="Uno.Extensions.Navigation" Version="7.0.4" />
     <PackageVersion Include="Uno.UI.Adapter.Microsoft.Extensions.Logging" Version="6.4.242" />
@@ -65,13 +65,13 @@
     <PackageVersion Include="Xamarin.AndroidX.RecyclerView" Version="1.4.0.6" />
     <PackageVersion Include="Xamarin.Google.Android.Material" Version="1.14.0.6" />
     <!-- OpenTelemetry -->
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
     <!-- The Prometheus exporter has never shipped a stable release; the beta is the
          upstream-recommended way to expose an OTel /metrics scrape endpoint. -->
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.16.0-beta.1" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
     <!-- Logging -->
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Async" Version="2.1.0" />
@@ -96,7 +96,7 @@
     <PackageVersion Include="PDFsharp" Version="6.2.4" />
     <PackageVersion Include="PDFsharp-MigraDoc" Version="6.2.4" />
     <!-- Label printing on the desktop head (Windows only at runtime) -->
-    <PackageVersion Include="PDFtoImage" Version="5.3.0" />
+    <PackageVersion Include="PDFtoImage" Version="5.4.0" />
     <PackageVersion Include="System.Drawing.Common" Version="10.0.11" />
     <!-- Pinned to 3.119.2 to match the SkiaSharp version Uno 6.5.x resolves transitively.
          A higher pin (e.g. 3.119.4) mixes native asset versions and breaks WASM boot-config generation. -->

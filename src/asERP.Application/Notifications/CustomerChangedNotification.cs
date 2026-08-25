@@ -1,4 +1,4 @@
-﻿using asERP.Application.Mediator;
+using asERP.Application.Mediator;
 
 namespace asERP.Application.Notifications;
 

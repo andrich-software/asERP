@@ -1,13 +1,13 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.TaxClass.Commands.TaxClassCreate;
 using asERP.Application.Features.TaxClass.Commands.TaxClassDelete;
 using asERP.Application.Features.TaxClass.Commands.TaxClassUpdate;
 using asERP.Application.Features.TaxClass.Queries.TaxClassDetail;
 using asERP.Application.Features.TaxClass.Queries.TaxClassList;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.TaxClass;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

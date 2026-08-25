@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Constants;
+using asERP.Client.Core.Constants;
 using asERP.Client.Features.Dashboard.Models;
 using asERP.Client.Features.Dashboard.Services;
 using asERP.Client.Features.Dashboard.Views;

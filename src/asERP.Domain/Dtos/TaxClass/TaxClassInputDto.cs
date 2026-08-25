@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Interfaces;
+using asERP.Domain.Interfaces;
 
 namespace asERP.Domain.Dtos.TaxClass;
 

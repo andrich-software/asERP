@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Services;
+using asERP.Application.Contracts.Services;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.Persistence.DatabaseContext;
@@ -321,12 +321,16 @@ public class QueuedSyncTests
         public virtual Task<SyncResult> ImportSalessAsync(SalesChannelContext context) => Task.FromResult(SyncResult.Empty);
         public virtual Task<SyncResult> ImportCustomersAsync(SalesChannelContext context) => Task.FromResult(SyncResult.Empty);
         public virtual Task<SyncResult> ImportStockAsync(SalesChannelContext context) => Task.FromResult(SyncResult.Empty);
+        public virtual Task<SyncResult> ImportCategoriesAsync(SalesChannelContext context) => Task.FromResult(SyncResult.Empty);
         public Task<ExportResult> ExportProductAsync(SalesChannelContext context, ProductExportPayload payload) => Task.FromResult(ExportResult.Ok());
         public Task<ExportResult> UpdateStockAsync(SalesChannelContext context, StockUpdatePayload payload) => Task.FromResult(ExportResult.Ok());
         public Task<ExportResult> UpdatePriceAsync(SalesChannelContext context, PriceUpdatePayload payload) => Task.FromResult(ExportResult.Ok());
         public Task<ExportResult> UpdateSalesAsync(SalesChannelContext context, SalesUpdatePayload payload) => Task.FromResult(ExportResult.Ok());
         public Task<ExportResult> DelistProductAsync(SalesChannelContext context, DelistPayload payload) => Task.FromResult(ExportResult.Ok());
         public Task<ExportResult> CancelSalesAsync(SalesChannelContext context, CancelSalesPayload payload) => Task.FromResult(ExportResult.Ok());
+        public Task<ExportResult> ExportCategoryAsync(SalesChannelContext context, CategoryExportPayload payload) => Task.FromResult(ExportResult.Ok());
+        public Task<ExportResult> DeleteCategoryAsync(SalesChannelContext context, CategoryDeletePayload payload) => Task.FromResult(ExportResult.Ok());
+        public Task<ExportResult> UpdateProductCategoriesAsync(SalesChannelContext context, ProductCategoriesUpdatePayload payload) => Task.FromResult(ExportResult.Ok());
     }
 
     private sealed class CountingConnector : TestConnectorBase

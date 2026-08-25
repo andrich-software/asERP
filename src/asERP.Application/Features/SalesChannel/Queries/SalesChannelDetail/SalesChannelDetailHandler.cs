@@ -3,8 +3,10 @@ using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.SalesChannel;
+using asERP.Domain.Dtos.ShopDomain;
 using asERP.Domain.Dtos.Warehouse;
 using asERP.Domain.Wrapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.SalesChannel.Queries.SalesChannelDetail;
 
@@ -26,16 +28,24 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
     private readonly ISalesChannelRepository _salesChannelRepository;
 
     /// <summary>
+    /// Repository for asShop host bindings (shown on the detail view of asShop channels)
+    /// </summary>
+    private readonly IShopDomainRepository _shopDomainRepository;
+
+    /// <summary>
     /// Constructor that initializes the handler with required dependencies
     /// </summary>
     /// <param name="logger">Logger for recording operations</param>
     /// <param name="salesChannelRepository">Repository for sales channel data access</param>
+    /// <param name="shopDomainRepository">Repository for asShop host bindings</param>
     public SalesChannelDetailHandler(
         IAppLogger<SalesChannelDetailHandler> logger,
-        ISalesChannelRepository salesChannelRepository)
+        ISalesChannelRepository salesChannelRepository,
+        IShopDomainRepository shopDomainRepository)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _salesChannelRepository = salesChannelRepository ?? throw new ArgumentNullException(nameof(salesChannelRepository));
+        _shopDomainRepository = shopDomainRepository ?? throw new ArgumentNullException(nameof(shopDomainRepository));
     }
 
     /// <summary>
@@ -59,6 +69,27 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
 
             // Map entity to DTO using the mapping method
             var data = MapToDetailDto(salesChannel);
+
+            // asShop channels carry their host bindings on the detail view (same shape and
+            // ordering as the dedicated shop-domains list endpoint). Other types have none.
+            if (salesChannel.Type == Domain.Enums.SalesChannelType.AsShop)
+            {
+                data.ShopDomains = await _shopDomainRepository.Entities
+                    .Where(d => d.SalesChannelId == salesChannel.Id)
+                    .OrderByDescending(d => d.IsPrimary)
+                    .ThenBy(d => d.Host)
+                    .ThenBy(d => d.Port)
+                    .Select(d => new ShopDomainListDto
+                    {
+                        Id = d.Id,
+                        SalesChannelId = d.SalesChannelId,
+                        Host = d.Host,
+                        Port = d.Port,
+                        IsPrimary = d.IsPrimary,
+                        RedirectToPrimary = d.RedirectToPrimary
+                    })
+                    .ToListAsync(cancellationToken);
+            }
 
             // Set successful result with the sales channel details
             result.Succeeded = true;
@@ -115,6 +146,8 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
             ExportStock = entity.ExportStock,
             PushSalesCancellations = entity.PushSalesCancellations,
             ImportStock = entity.ImportStock,
+            ImportCategories = entity.ImportCategories,
+            ExportCategories = entity.ExportCategories,
             HasWebhookSecret = !string.IsNullOrEmpty(entity.WebhookSecret),
             Warehouses = entity.Warehouses?.Select(w => new WarehouseDetailDto
             {

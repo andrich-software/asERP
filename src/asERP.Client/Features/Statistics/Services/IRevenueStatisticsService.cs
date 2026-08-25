@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.Statistic;
+using asERP.Domain.Dtos.Statistic;
 
 namespace asERP.Client.Features.Statistics.Services;
 

@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Models.Telemetry;
+namespace asERP.Application.Models.Telemetry;
 
 public class TelemetrySettings
 {

@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using asERP.Domain.Constants;
 using asERP.Domain.Dtos.Warehouse;
 using asERP.Domain.Wrapper;
@@ -286,7 +286,7 @@ public class WarehouseDetailQueryTests : TenantIsolatedTestBase
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
         // Act & Assert for multiple valid IDs
-        var testIds = new[] { 
+        var testIds = new[] {
             ("10000001-0001-0001-0001-000000000001", Guid.Parse("10000001-0001-0001-0001-000000000001")),
             ("10000002-0002-0002-0002-000000000002", Guid.Parse("10000002-0002-0002-0002-000000000002"))
         };

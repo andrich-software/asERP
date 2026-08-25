@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Infrastructure;
+using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Persistence;
 using asERP.Domain.Entities;
 using asERP.SalesChannels.Contracts;

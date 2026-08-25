@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.TaxClasses.Models;
+using asERP.Client.Features.TaxClasses.Models;
 using Microsoft.UI.Xaml.Controls;
 
 namespace asERP.Client.Features.TaxClasses.Views;

@@ -1,4 +1,4 @@
-﻿namespace asERP.SalesChannels.Models;
+namespace asERP.SalesChannels.Models;
 
 public class SalesChannelImportSalesItem
 {

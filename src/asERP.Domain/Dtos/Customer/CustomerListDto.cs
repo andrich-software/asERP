@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Customer;
+namespace asERP.Domain.Dtos.Customer;
 
 public class CustomerListDto
 {

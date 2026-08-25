@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using asERP.Client.Core.Exceptions;
 using asERP.Client.Features.SalesChannels.Services;
 using asERP.Domain.Dtos.SalesChannel;

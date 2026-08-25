@@ -1,4 +1,4 @@
-﻿using asERP.Application.Mediator;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Search;
 using asERP.Domain.Wrapper;
 

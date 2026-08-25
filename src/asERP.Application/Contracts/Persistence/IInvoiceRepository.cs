@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 
 namespace asERP.Application.Contracts.Persistence;

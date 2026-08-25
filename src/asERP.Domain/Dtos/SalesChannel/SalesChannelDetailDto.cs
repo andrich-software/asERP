@@ -1,3 +1,4 @@
+using asERP.Domain.Dtos.ShopDomain;
 using asERP.Domain.Dtos.Warehouse;
 using asERP.Domain.Enums;
 
@@ -33,6 +34,12 @@ public class SalesChannelDetailDto
     /// <summary>This channel is the stock master — its levels are mirrored into the linked warehouse.</summary>
     public bool ImportStock { get; set; }
 
+    /// <summary>Pull the channel's category tree (runs before product imports).</summary>
+    public bool ImportCategories { get; set; }
+
+    /// <summary>Push local category changes and product category assignments to the channel.</summary>
+    public bool ExportCategories { get; set; }
+
     /// <summary>True when an inbound webhook secret is configured (the secret itself is never exposed).</summary>
     public bool HasWebhookSecret { get; set; }
 
@@ -46,5 +53,8 @@ public class SalesChannelDetailDto
     public DateTime? TokenExpiresAt { get; set; }
 
     public List<WarehouseDetailDto> Warehouses { get; set; } = new();
+
+    /// <summary>Host bindings of an asShop channel (empty for every other channel type).</summary>
+    public List<ShopDomainListDto> ShopDomains { get; set; } = new();
 }
 

@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace asERP.SalesChannels.Models.Shopware6;
 
@@ -39,6 +39,19 @@ public sealed class Sw6Product
     [JsonPropertyName("media")] public List<Sw6ProductMedia>? Media { get; set; }
     // The featured image (also one of the Media entries); promoted to the primary photo on import.
     [JsonPropertyName("cover")] public Sw6ProductMedia? Cover { get; set; }
+    // Computed field with the ids of the categories the product is directly assigned to.
+    [JsonPropertyName("categoryIds")] public List<string>? CategoryIds { get; set; }
+}
+
+// /api/search/category entity: the category tree (parentId adjacency). The afterCategoryId
+// sibling chain is deliberately not mapped — import order approximates the sibling order.
+public sealed class Sw6Category
+{
+    [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+    [JsonPropertyName("parentId")] public string? ParentId { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("description")] public string? Description { get; set; }
+    [JsonPropertyName("translated")] public Sw6Translated? Translated { get; set; }
 }
 
 public sealed class Sw6ProductMedia

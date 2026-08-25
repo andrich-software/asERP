@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Persistence;
+using asERP.Application.Contracts.Persistence;
 using asERP.Domain.Validators;
 
 namespace asERP.Application.Features.AiModel.Commands.AiModelCreate;

@@ -1,4 +1,4 @@
-﻿using asERP.Application.Models.Identity;
+using asERP.Application.Models.Identity;
 
 namespace asERP.Application.Contracts.Persistence;
 

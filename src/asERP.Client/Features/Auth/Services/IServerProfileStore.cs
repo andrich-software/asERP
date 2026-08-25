@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Auth.Models;
+using asERP.Client.Features.Auth.Models;
 
 namespace asERP.Client.Features.Auth.Services;
 
@@ -27,4 +27,11 @@ public interface IServerProfileStore
 
     /// <summary>Records the last successful login: marks the server as last used and stores the email.</summary>
     Task SetLastUsedAsync(Guid id, string? email);
+
+    /// <summary>
+    /// Remembers the server currently selected on the login screen so the selection survives a
+    /// restart even without a successful login. Unlike <see cref="SetLastUsedAsync"/> this does
+    /// NOT bump the profile's last-used timestamp or email — it only drives the default selection.
+    /// </summary>
+    Task SetLastSelectedAsync(Guid id);
 }

@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.Tenant;
+using asERP.Domain.Dtos.Tenant;
 
 namespace asERP.Application.Contracts.Identity;
 

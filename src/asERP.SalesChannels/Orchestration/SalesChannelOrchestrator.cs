@@ -1,7 +1,8 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.Persistence.DatabaseContext;
+using asERP.SalesChannels.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -349,11 +350,21 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             return;
         }
 
+        var connectorRegistry = scope.ServiceProvider.GetRequiredService<ISalesChannelConnectorRegistry>();
+
         foreach (var channel in dueChannels)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var dueOperations = ComputeDueOperations(channel);
+
+            // Never schedule an operation the channel's connector cannot perform: the internal
+            // channel types (PointOfSale, asShop) keep their sync flags always-on although their
+            // connectors declare no capabilities — dispatching would only close a Failed run
+            // ("no capable connector") every interval. A missing connector registration stays
+            // scheduled so the dispatcher surfaces the misconfiguration as a Failed run.
+            var connector = connectorRegistry.Resolve(channel.Type);
+            dueOperations.RemoveAll(op => connector is not null && !connector.Supports(op));
 
             // Skip operations still running in the background — a long run must not be re-launched every
             // tick. The dispatcher's per-(channel, op) lock is a second guard, but gating here also avoids
@@ -394,9 +405,16 @@ public sealed class SalesChannelOrchestrator : BackgroundService
     internal static List<ChannelSyncOperation> ComputeDueOperations(SalesChannel channel)
     {
         var initialCatalogueReady = !channel.ImportProducts || channel.SyncState.InitialProductImportCompleted;
+        var initialCategoriesReady = !channel.ImportCategories || channel.SyncState.InitialCategoryImportCompleted;
 
         var dueOperations = new List<ChannelSyncOperation>();
-        if (channel.ImportProducts && !channel.SyncState.InitialProductImportCompleted)
+        // Categories land before products so imported products can link their assignments
+        // immediately; the product import waits for the initial category sweep on such channels.
+        if (channel.ImportCategories && !channel.SyncState.InitialCategoryImportCompleted)
+        {
+            dueOperations.Add(ChannelSyncOperation.ImportCategories);
+        }
+        if (channel.ImportProducts && !channel.SyncState.InitialProductImportCompleted && initialCategoriesReady)
         {
             dueOperations.Add(ChannelSyncOperation.ImportProducts);
         }
@@ -547,6 +565,14 @@ public sealed class SalesChannelOrchestrator : BackgroundService
                 && run.Status is ChannelSyncRunStatus.Success or ChannelSyncRunStatus.PartialFailure)
             {
                 channel.SyncState.InitialProductImportCompleted = true;
+            }
+
+            // Same one-time gate for the category sweep: after the first completed run the scheduler
+            // stops re-pulling the tree every interval (webhooks/manual syncs cover later changes).
+            if (operation == ChannelSyncOperation.ImportCategories
+                && run.Status is ChannelSyncRunStatus.Success or ChannelSyncRunStatus.PartialFailure)
+            {
+                channel.SyncState.InitialCategoryImportCompleted = true;
             }
 
             // Persist cursor/flag progress — even after a partial or shutdown-canceled run — so the next

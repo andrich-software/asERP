@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Models;
+using asERP.Client.Core.Models;
 using asERP.Domain.Dtos.SalesChannel;
 
 namespace asERP.Client.Features.SalesChannels.Services;

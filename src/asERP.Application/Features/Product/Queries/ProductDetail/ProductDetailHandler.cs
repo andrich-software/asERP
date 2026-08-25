@@ -135,6 +135,10 @@ public class ProductDetailHandler : IRequestHandler<ProductDetailQuery, Result<P
                     .ToList()
             };
 
+            data.CategoryIds = (await _productRepository.GetCategoryLinksAsync(product.Id))
+                .Select(l => l.CategoryId)
+                .ToList();
+
             _logger.LogInformation("Product with ID {Id} retrieved successfully", request.Id);
 
             return Result<ProductDetailDto>.Success(data);

@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Interfaces;
+namespace asERP.Domain.Interfaces;
 
 public interface ITenantInputModel
 {

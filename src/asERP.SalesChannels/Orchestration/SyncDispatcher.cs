@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Entities;
@@ -163,6 +163,7 @@ public sealed class SyncDispatcher
                     ChannelSyncOperation.ImportSaless => await connector.ImportSalessAsync(context),
                     ChannelSyncOperation.ImportCustomers => await connector.ImportCustomersAsync(context),
                     ChannelSyncOperation.ImportStock => await connector.ImportStockAsync(context),
+                    ChannelSyncOperation.ImportCategories => await connector.ImportCategoriesAsync(context),
                     _ => SyncResult.Failed($"Operation {operation} is not an import"),
                 };
 
@@ -208,6 +209,18 @@ public sealed class SyncDispatcher
         if (connector is null)
         {
             return ExportResult.Fail($"No connector for {salesChannel.Type}");
+        }
+
+        // The enqueuer filters capability-less channels, but a row can predate a channel-type
+        // switch. There is nothing to push for a connector without the capability (internal
+        // channels read the ERP data directly) — complete the row instead of retrying it into
+        // DeadLetter.
+        if (!connector.Supports(outboxRow.Operation))
+        {
+            _logger.LogInformation(
+                "Outbox row {Outbox}: {ChannelType} does not support {Operation} — completed as no-op",
+                outboxRow.Id, salesChannel.Type, outboxRow.Operation);
+            return ExportResult.Ok();
         }
 
         // Exports do NOT create ChannelSyncRun rows: with per-sale stock pushes an audit row per outbox
@@ -354,20 +367,8 @@ public sealed class SyncDispatcher
         await _context.SaveChangesAsync(CancellationToken.None);
     }
 
-    private static bool ConnectorSupports(ISalesChannelConnector connector, ChannelSyncOperation operation) => operation switch
-    {
-        ChannelSyncOperation.ImportProducts => connector.Capabilities.HasFlag(SalesChannelCapabilities.ImportProducts),
-        ChannelSyncOperation.ImportSaless => connector.Capabilities.HasFlag(SalesChannelCapabilities.ImportSaless),
-        ChannelSyncOperation.ImportCustomers => connector.Capabilities.HasFlag(SalesChannelCapabilities.ImportCustomers),
-        ChannelSyncOperation.ImportStock => connector.Capabilities.HasFlag(SalesChannelCapabilities.ImportStock),
-        ChannelSyncOperation.ExportProduct => connector.Capabilities.HasFlag(SalesChannelCapabilities.ExportProducts),
-        ChannelSyncOperation.UpdateStock => connector.Capabilities.HasFlag(SalesChannelCapabilities.UpdateStock),
-        ChannelSyncOperation.UpdatePrice => connector.Capabilities.HasFlag(SalesChannelCapabilities.UpdatePrice),
-        ChannelSyncOperation.UpdateSales => connector.Capabilities.HasFlag(SalesChannelCapabilities.UpdateSaless),
-        ChannelSyncOperation.DelistProduct => connector.Capabilities.HasFlag(SalesChannelCapabilities.DelistProducts),
-        ChannelSyncOperation.CancelSales => connector.Capabilities.HasFlag(SalesChannelCapabilities.CancelSales),
-        _ => false,
-    };
+    private static bool ConnectorSupports(ISalesChannelConnector connector, ChannelSyncOperation operation)
+        => connector.Supports(operation);
 
     private async Task<ExportResult> DispatchExportAsync(
         ISalesChannelConnector connector,
@@ -385,6 +386,9 @@ public sealed class SyncDispatcher
             ChannelSyncOperation.UpdateSales => await UpdateSalesAsync(connector, context, outbox, cancellationToken),
             ChannelSyncOperation.DelistProduct => await DelistProductAsync(connector, context, outbox, cancellationToken),
             ChannelSyncOperation.CancelSales => await CancelSalesAsync(connector, context, outbox, cancellationToken),
+            ChannelSyncOperation.ExportCategory => await ExportCategoryAsync(connector, context, outbox, cancellationToken),
+            ChannelSyncOperation.DeleteCategory => await DeleteCategoryAsync(connector, context, outbox, cancellationToken),
+            ChannelSyncOperation.UpdateProductCategories => await UpdateProductCategoriesAsync(connector, context, outbox, cancellationToken),
             _ => ExportResult.Fail($"Unsupported export operation {outbox.Operation}"),
         };
     }
@@ -538,6 +542,162 @@ public sealed class SyncDispatcher
         return await connector.DelistProductAsync(context, new DelistPayload(
             psc.Id, psc.Product.Sku, psc.RemoteProductId, psc.ExternalListingId));
     }
+
+    private async Task<ExportResult> ExportCategoryAsync(ISalesChannelConnector connector, SalesChannelContext context, ChannelExportOutbox outbox, CancellationToken cancellationToken)
+    {
+        var link = await _context.CategorySalesChannel
+            .IgnoreQueryFilters()
+            .Include(l => l.Category)
+            .FirstOrDefaultAsync(l => l.CategoryId == outbox.AggregateId && l.SalesChannelId == outbox.SalesChannelId, cancellationToken);
+
+        if (link?.Category is null)
+        {
+            return ExportResult.Fail("CategorySalesChannel row not found at dispatch time");
+        }
+
+        if (!link.IsActive)
+        {
+            // Deactivated between enqueue and drain — the DeleteCategory row handles the remote removal.
+            return ExportResult.Ok();
+        }
+
+        string? parentRemoteCategoryId = null;
+        if (link.Category.ParentCategoryId is not null)
+        {
+            var parentLink = await _context.CategorySalesChannel
+                .IgnoreQueryFilters()
+                .Where(l => l.CategoryId == link.Category.ParentCategoryId && l.SalesChannelId == outbox.SalesChannelId)
+                .Select(l => new { l.IsActive, l.RemoteCategoryId })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (parentLink is null || !parentLink.IsActive)
+            {
+                return ExportResult.Fail("Parent category is not active on this channel");
+            }
+
+            if (string.IsNullOrEmpty(parentLink.RemoteCategoryId))
+            {
+                // Parent enqueued but not exported yet — fail so the outbox backoff retries this row
+                // after the parent's own row completed. This is what orders parents before children.
+                return ExportResult.Fail("Parent category has no remote id yet");
+            }
+
+            parentRemoteCategoryId = parentLink.RemoteCategoryId;
+        }
+
+        var payload = new CategoryExportPayload(
+            link.CategoryId,
+            link.Id,
+            link.Category.Name,
+            link.Category.Slug,
+            link.Category.Description,
+            link.Category.SortOrder,
+            link.RemoteCategoryId,
+            parentRemoteCategoryId);
+
+        var result = await connector.ExportCategoryAsync(context, payload);
+
+        if (result.Success)
+        {
+            link.RemoteCategoryId = result.RemoteId ?? link.RemoteCategoryId;
+            link.LastSyncedAt = DateTime.UtcNow;
+            link.LastErrorMessage = null;
+        }
+        else
+        {
+            link.LastErrorMessage = Truncate(result.ErrorMessage, 1000);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return result;
+    }
+
+    private async Task<ExportResult> DeleteCategoryAsync(ISalesChannelConnector connector, SalesChannelContext context, ChannelExportOutbox outbox, CancellationToken cancellationToken)
+    {
+        // Deletes are typically enqueued because the category (and its channel links) was removed;
+        // prefer the payload snapshot captured before deletion. Fall back to DB hydration for the
+        // deactivation of a still-existing link.
+        if (!string.IsNullOrEmpty(outbox.PayloadJson))
+        {
+            var snapshot = JsonSerializer.Deserialize<CategoryDeletePayload>(outbox.PayloadJson);
+            if (snapshot is not null)
+            {
+                // Never exported to the channel → nothing to remove remotely.
+                return string.IsNullOrEmpty(snapshot.RemoteCategoryId)
+                    ? ExportResult.Ok()
+                    : await connector.DeleteCategoryAsync(context, snapshot);
+            }
+        }
+
+        var link = await _context.CategorySalesChannel
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(l => l.CategoryId == outbox.AggregateId && l.SalesChannelId == outbox.SalesChannelId, cancellationToken);
+
+        if (link is null || string.IsNullOrEmpty(link.RemoteCategoryId))
+        {
+            return ExportResult.Ok();
+        }
+
+        if (link.IsActive)
+        {
+            // Re-activated between enqueue and drain — the ExportCategory row takes over.
+            return ExportResult.Ok();
+        }
+
+        var result = await connector.DeleteCategoryAsync(
+            context, new CategoryDeletePayload(link.CategoryId, link.SalesChannelId, link.RemoteCategoryId));
+
+        if (result.Success)
+        {
+            link.RemoteCategoryId = null;
+            link.LastSyncedAt = DateTime.UtcNow;
+            link.LastErrorMessage = null;
+        }
+        else
+        {
+            link.LastErrorMessage = Truncate(result.ErrorMessage, 1000);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return result;
+    }
+
+    private async Task<ExportResult> UpdateProductCategoriesAsync(ISalesChannelConnector connector, SalesChannelContext context, ChannelExportOutbox outbox, CancellationToken cancellationToken)
+    {
+        var psc = await _context.ProductSalesChannel
+            .IgnoreQueryFilters()
+            .Include(p => p.Product)
+            .FirstOrDefaultAsync(p => p.ProductId == outbox.AggregateId && p.SalesChannelId == outbox.SalesChannelId, cancellationToken);
+
+        if (psc?.Product is null)
+        {
+            return ExportResult.Fail("ProductSalesChannel row not found at dispatch time");
+        }
+
+        if (string.IsNullOrEmpty(psc.RemoteProductId))
+        {
+            return ExportResult.Fail("Product has no remote id on this channel yet");
+        }
+
+        // Map the product's assignments to this channel's remote category ids. Categories not (yet)
+        // exported to the channel are skipped; the next assignment change re-syncs them.
+        var remoteCategoryIds = await _context.ProductCategory
+            .IgnoreQueryFilters()
+            .Where(pc => pc.ProductId == psc.ProductId)
+            .Join(
+                _context.CategorySalesChannel.IgnoreQueryFilters()
+                    .Where(l => l.SalesChannelId == outbox.SalesChannelId && l.IsActive && l.RemoteCategoryId != null),
+                pc => pc.CategoryId,
+                l => l.CategoryId,
+                (pc, l) => l.RemoteCategoryId!)
+            .ToListAsync(cancellationToken);
+
+        var parentRemoteProductId = await GetParentRemoteProductIdAsync(psc.Product, outbox.SalesChannelId, cancellationToken);
+
+        return await connector.UpdateProductCategoriesAsync(context, new ProductCategoriesUpdatePayload(
+            psc.ProductId, psc.RemoteProductId, parentRemoteProductId, remoteCategoryIds));
+    }
+
 
     private async Task<int> ComputeChannelStockAsync(Guid salesChannelId, Guid productId, int stockBuffer, CancellationToken cancellationToken)
     {

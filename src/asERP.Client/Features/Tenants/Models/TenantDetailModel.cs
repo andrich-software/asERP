@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Constants;
+using asERP.Client.Core.Constants;
 using asERP.Client.Core.Exceptions;
 using asERP.Client.Features.Auth.Services;
 using asERP.Client.Features.Tenants.Services;

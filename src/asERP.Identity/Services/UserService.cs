@@ -1,4 +1,4 @@
-﻿#nullable disable
+#nullable disable
 
 using asERP.Application.Contracts.Identity;
 using asERP.Application.Models.Identity;

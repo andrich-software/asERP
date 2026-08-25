@@ -424,6 +424,18 @@
               </StackPanel>
             </Button>
 
+            <Button x:Name="NavItemCategories"
+                    Style="{StaticResource SidebarNavItemStyle}"
+                    Tag="Categories"
+                    Click="OnNavItemClick">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <FontIcon Glyph="&#xE71D;" FontSize="16" />
+                <TextBlock x:Uid="Shell.NavItem.Categories"
+                           Style="{StaticResource BodyMedium}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
             <Button x:Name="NavItemManufacturers"
                     Style="{StaticResource SidebarNavItemStyle}"
                     Tag="Manufacturers"

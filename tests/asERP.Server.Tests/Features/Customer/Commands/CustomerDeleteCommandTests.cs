@@ -1,14 +1,14 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json;
-using asERP.Domain.Wrapper;
-using asERP.Server.Tests.Infrastructure;
-using asERP.Persistence.DatabaseContext;
 using asERP.Application.Contracts.Services;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
-using Xunit;
-using asERP.Domain.Enums;
 using asERP.Domain.Constants;
+using asERP.Domain.Enums;
+using asERP.Domain.Wrapper;
+using asERP.Persistence.DatabaseContext;
+using asERP.Server.Tests.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace asERP.Server.Tests.Features.Customer.Commands;
 

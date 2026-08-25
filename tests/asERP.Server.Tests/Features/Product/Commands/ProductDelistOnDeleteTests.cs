@@ -1,6 +1,7 @@
-﻿using asERP.Application.Notifications;
+using asERP.Application.Notifications;
 using asERP.Domain.Constants;
 using asERP.Domain.Enums;
+using asERP.SalesChannels.Abstractions;
 using asERP.SalesChannels.NotificationHandlers;
 using asERP.SalesChannels.Orchestration;
 using asERP.Server.Tests.Infrastructure;
@@ -50,7 +51,9 @@ public class ProductDelistOnDeleteTests : TenantIsolatedTestBase
 
     private ProductChangedNotificationHandler CreateHandler()
     {
-        var enqueuer = new ChannelExportOutboxEnqueuer(DbContext, NullLogger<ChannelExportOutboxEnqueuer>.Instance);
+        // Empty registry: the enqueuer fails open for types without a registered connector.
+        var registry = new SalesChannelConnectorRegistry(Array.Empty<ISalesChannelConnector>());
+        var enqueuer = new ChannelExportOutboxEnqueuer(DbContext, registry, NullLogger<ChannelExportOutboxEnqueuer>.Instance);
         return new ProductChangedNotificationHandler(DbContext, enqueuer);
     }
 

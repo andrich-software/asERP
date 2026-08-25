@@ -60,6 +60,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         modelBuilder.Entity<AiModel>().ToTable("ai_model");
         modelBuilder.Entity<AiPrompt>().ToTable("ai_prompt");
+        modelBuilder.Entity<Category>().ToTable("category");
+        modelBuilder.Entity<CategorySalesChannel>().ToTable("category_saleschannel");
         modelBuilder.Entity<Country>().ToTable("country");
         modelBuilder.Entity<Customer>().ToTable("customer");
         modelBuilder.Entity<CustomerAddress>().ToTable("customer_address");
@@ -73,6 +75,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<SalesItem>().ToTable("sales_item");
         modelBuilder.Entity<SalesItemSerialNumber>().ToTable("sales_item_serialnumber");
         modelBuilder.Entity<Product>().ToTable("product");
+        modelBuilder.Entity<ProductCategory>().ToTable("product_category");
         modelBuilder.Entity<ProductAttribute>().ToTable("product_attribute");
         modelBuilder.Entity<ProductAttributeValue>().ToTable("product_attribute_value");
         modelBuilder.Entity<ProductVariantAxis>().ToTable("product_variant_axis");
@@ -148,6 +151,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new InvoiceConfiguration());
         modelBuilder.ApplyConfiguration(new SalesConfiguration());
         modelBuilder.ApplyConfiguration(new ProductConfiguration());
+        modelBuilder.ApplyConfiguration(new CategoryConfiguration());
+        modelBuilder.ApplyConfiguration(new CategorySalesChannelConfiguration());
+        modelBuilder.ApplyConfiguration(new ProductCategoryConfiguration());
         modelBuilder.ApplyConfiguration(new ProductAttributeConfiguration());
         modelBuilder.ApplyConfiguration(new ProductAttributeValueConfiguration());
         modelBuilder.ApplyConfiguration(new ProductVariantAxisConfiguration());
@@ -219,6 +225,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<AiModel> AiModel { get; set; } = null!;
     public DbSet<AiPrompt> AiPrompt { get; set; } = null!;
+    public DbSet<Category> Category { get; set; } = null!;
+    public DbSet<CategorySalesChannel> CategorySalesChannel { get; set; } = null!;
     public DbSet<Country> Country { get; set; } = null!;
     public DbSet<Customer> Customer { get; set; } = null!;
     public DbSet<CustomerAddress> CustomerAddress { get; set; } = null!;
@@ -230,6 +238,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SalesItem> SalesItem { get; set; } = null!;
     public DbSet<SalesItemSerialNumber> SalesItemSerialNumber { get; set; } = null!;
     public DbSet<Product> Product { get; set; } = null!;
+    public DbSet<ProductCategory> ProductCategory { get; set; } = null!;
     public DbSet<ProductAttribute> ProductAttribute { get; set; } = null!;
     public DbSet<ProductAttributeValue> ProductAttributeValue { get; set; } = null!;
     public DbSet<ProductVariantAxis> ProductVariantAxis { get; set; } = null!;

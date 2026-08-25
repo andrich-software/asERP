@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Saless.Models;
+using asERP.Client.Features.Saless.Models;
 using Microsoft.UI.Xaml.Controls;
 
 namespace asERP.Client.Features.Saless.Views;

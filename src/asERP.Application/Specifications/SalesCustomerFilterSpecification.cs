@@ -1,4 +1,4 @@
-﻿using asERP.Application.Specifications.Base;
+using asERP.Application.Specifications.Base;
 using asERP.Domain.Entities;
 
 namespace asERP.Application.Specifications;

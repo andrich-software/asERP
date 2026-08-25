@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Services.NameGeneration;
+namespace asERP.Client.Core.Services.NameGeneration;
 
 /// <summary>
 /// Configuration options for name generators.

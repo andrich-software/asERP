@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Invoices.Models;
+using asERP.Client.Features.Invoices.Models;
 using Microsoft.UI.Xaml.Controls;
 
 namespace asERP.Client.Features.Invoices.Views;

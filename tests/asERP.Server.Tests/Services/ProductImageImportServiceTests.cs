@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using asERP.Domain.Constants;
 using asERP.Persistence.Repositories;
 using asERP.SalesChannels.Models;
@@ -186,14 +186,21 @@ public class ProductImageImportServiceTests : TenantIsolatedTestBase
         TenantContext.SetCurrentTenantId(TenantConstants.TestTenant1Id);
         DbContext.ProductImage.Add(new asERP.Domain.Entities.ProductImage
         {
-            ProductId = productId, RelativePath = "p/manual.png", ThumbnailPath = "p/manual_thumb.png",
-            SortOrder = 0, TenantId = TenantConstants.TestTenant1Id
+            ProductId = productId,
+            RelativePath = "p/manual.png",
+            ThumbnailPath = "p/manual_thumb.png",
+            SortOrder = 0,
+            TenantId = TenantConstants.TestTenant1Id
         });
         DbContext.ProductImage.Add(new asERP.Domain.Entities.ProductImage
         {
-            ProductId = productId, SalesChannelId = ChannelB, RemoteImageId = "b1",
-            RelativePath = "p/b1.png", ThumbnailPath = "p/b1_thumb.png",
-            SortOrder = 1, TenantId = TenantConstants.TestTenant1Id
+            ProductId = productId,
+            SalesChannelId = ChannelB,
+            RemoteImageId = "b1",
+            RelativePath = "p/b1.png",
+            ThumbnailPath = "p/b1_thumb.png",
+            SortOrder = 1,
+            TenantId = TenantConstants.TestTenant1Id
         });
         await DbContext.SaveChangesAsync();
 

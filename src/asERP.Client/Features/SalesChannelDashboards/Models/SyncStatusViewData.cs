@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Globalization;
 using asERP.Domain.Dtos.SalesChannel;
 using asERP.Domain.Enums;

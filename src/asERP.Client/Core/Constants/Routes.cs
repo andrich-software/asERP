@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Constants;
+namespace asERP.Client.Core.Constants;
 
 /// <summary>
 /// Centralized route names for navigation.
@@ -44,6 +44,10 @@ public static class Routes
     public const string ManufacturerList = "Manufacturers";
     public const string ManufacturerDetail = "ManufacturerDetail";
     public const string ManufacturerEdit = "ManufacturerEdit";
+
+    // Categories
+    public const string CategoryList = "Categories";
+    public const string CategoryEdit = "CategoryEdit";
 
     // Inventory / Warehouses
     public const string WarehouseList = "Warehouses";

@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Enums;
+namespace asERP.Domain.Enums;
 
 /// <summary>
 /// Why a <c>StockMovement</c> was booked. asERP mirrors the master shop's stock (WooCommerce stays
