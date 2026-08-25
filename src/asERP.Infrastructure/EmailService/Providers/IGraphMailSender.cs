@@ -1,4 +1,4 @@
-﻿using asERP.Application.Models.Email;
+using asERP.Application.Models.Email;
 
 namespace asERP.Infrastructure.EmailService.Providers;
 

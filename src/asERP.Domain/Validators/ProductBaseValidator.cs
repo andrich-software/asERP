@@ -1,6 +1,6 @@
-﻿using FluentValidation;
 using asERP.Domain.Enums;
 using asERP.Domain.Interfaces;
+using FluentValidation;
 
 namespace asERP.Domain.Validators;
 

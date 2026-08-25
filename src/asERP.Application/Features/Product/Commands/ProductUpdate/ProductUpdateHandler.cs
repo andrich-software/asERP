@@ -15,6 +15,7 @@ public class ProductUpdateHandler : IRequestHandler<ProductUpdateCommand, Result
     private readonly ITaxClassRepository _taxClassRepository;
     private readonly IManufacturerRepository _manufacturerRepository;
     private readonly IProductAttributeRepository _productAttributeRepository;
+    private readonly ICategoryRepository _categoryRepository;
     private readonly IMediator _mediator;
 
     public ProductUpdateHandler(
@@ -23,6 +24,7 @@ public class ProductUpdateHandler : IRequestHandler<ProductUpdateCommand, Result
         ITaxClassRepository taxClassRepository,
         IManufacturerRepository manufacturerRepository,
         IProductAttributeRepository productAttributeRepository,
+        ICategoryRepository categoryRepository,
         IMediator mediator)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -30,6 +32,7 @@ public class ProductUpdateHandler : IRequestHandler<ProductUpdateCommand, Result
         _taxClassRepository = taxClassRepository ?? throw new ArgumentNullException(nameof(taxClassRepository));
         _manufacturerRepository = manufacturerRepository ?? throw new ArgumentNullException(nameof(manufacturerRepository));
         _productAttributeRepository = productAttributeRepository ?? throw new ArgumentNullException(nameof(productAttributeRepository));
+        _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
@@ -189,12 +192,52 @@ public class ProductUpdateHandler : IRequestHandler<ProductUpdateCommand, Result
                 }
             }
 
+            // Sync category assignments: remove unselected joins, add missing ones (explicitly via
+            // the DbSet — never through the UpdateAsync graph).
+            var requestedCategoryIds = request.CategoryIds.Distinct().ToList();
+            foreach (var categoryId in requestedCategoryIds)
+            {
+                if (!await _categoryRepository.ExistsAsync(categoryId))
+                {
+                    return Result<Guid>.Fail(ResultStatusCode.BadRequest,
+                        $"The following category IDs do not exist: {categoryId}");
+                }
+            }
+
+            var existingCategoryLinks = await _productRepository.GetCategoryLinksAsync(productToUpdate.Id);
+            var categoriesChanged = false;
+
+            foreach (var linkToRemove in existingCategoryLinks.Where(l => !requestedCategoryIds.Contains(l.CategoryId)))
+            {
+                _productRepository.RemoveProductCategory(linkToRemove);
+                categoriesChanged = true;
+            }
+
+            var existingCategoryIds = existingCategoryLinks.Select(l => l.CategoryId).ToHashSet();
+            foreach (var categoryId in requestedCategoryIds.Where(id => !existingCategoryIds.Contains(id)))
+            {
+                _productRepository.AddProductCategory(new Domain.Entities.ProductCategory
+                {
+                    ProductId = productToUpdate.Id,
+                    CategoryId = categoryId,
+                    TenantId = productToUpdate.TenantId
+                });
+                categoriesChanged = true;
+            }
+
             // Update in database
             await _productRepository.UpdateAsync(productToUpdate);
 
             await _mediator.Publish(
                 new ProductChangedNotification(productToUpdate.Id, productToUpdate.TenantId, ProductChangeKind.Updated),
                 cancellationToken);
+
+            if (categoriesChanged)
+            {
+                await _mediator.Publish(
+                    new ProductCategoriesChangedNotification(productToUpdate.Id, productToUpdate.TenantId),
+                    cancellationToken);
+            }
 
             _logger.LogInformation("Successfully updated product with ID: {Id}", productToUpdate.Id);
 

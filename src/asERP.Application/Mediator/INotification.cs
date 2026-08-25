@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Mediator;
+namespace asERP.Application.Mediator;
 
 /// <summary>
 /// Marker interface for notifications published via <see cref="IMediator.Publish{TNotification}"/>.

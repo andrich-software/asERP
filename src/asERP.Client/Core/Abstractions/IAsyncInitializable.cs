@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Abstractions;
+namespace asERP.Client.Core.Abstractions;
 
 /// <summary>
 /// Interface for view models that require asynchronous initialization.

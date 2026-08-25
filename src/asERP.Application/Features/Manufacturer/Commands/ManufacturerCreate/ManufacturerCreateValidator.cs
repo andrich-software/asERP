@@ -1,6 +1,6 @@
-﻿using FluentValidation;
 using asERP.Application.Contracts.Persistence;
 using asERP.Domain.Validators;
+using FluentValidation;
 
 namespace asERP.Application.Features.Manufacturer.Commands.ManufacturerCreate;
 

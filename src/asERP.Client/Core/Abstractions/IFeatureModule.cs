@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Abstractions;
+namespace asERP.Client.Core.Abstractions;
 
 /// <summary>
 /// Interface for feature modules to implement consistent registration pattern.

@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Formatting;
+using asERP.Client.Core.Formatting;
 using asERP.Client.Features.Statistics.Models;
 using asERP.Domain.Dtos.Statistic;
 using Microsoft.UI.Xaml.Input;

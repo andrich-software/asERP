@@ -108,7 +108,7 @@ public class LabelCapabilityToVisibilityConverter : IValueConverter
         }
 
         var capabilities = _capabilities.Value;
-        var supported = parameter as string switch
+        var supported = (parameter as string) switch
         {
             "Save" => capabilities.HasFlag(LabelCapabilities.Save),
             "Download" => capabilities.HasFlag(LabelCapabilities.Download),

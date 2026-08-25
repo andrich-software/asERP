@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;

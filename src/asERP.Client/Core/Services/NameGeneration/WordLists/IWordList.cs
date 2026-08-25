@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Services.NameGeneration.WordLists;
+namespace asERP.Client.Core.Services.NameGeneration.WordLists;
 
 /// <summary>
 /// Interface for language-specific word lists used in name generation.

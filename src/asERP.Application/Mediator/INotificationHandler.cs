@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Mediator;
+namespace asERP.Application.Mediator;
 
 /// <summary>
 /// Handler for a notification. Multiple handlers may be registered per notification type.

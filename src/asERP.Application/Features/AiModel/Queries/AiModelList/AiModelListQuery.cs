@@ -1,6 +1,6 @@
-﻿using asERP.Domain.Dtos.AiModel;
-using asERP.Domain.Wrapper;
 using asERP.Application.Mediator;
+using asERP.Domain.Dtos.AiModel;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.AiModel.Queries.AiModelList;
 

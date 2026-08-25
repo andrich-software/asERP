@@ -185,6 +185,14 @@ public static class ApiEndpoints
         public static string ById(Guid id) => $"{Base}/{id}";
     }
 
+    // Categories
+    public static class Categories
+    {
+        public const string Base = $"{ApiBase}/categories";
+        public static string ById(Guid id) => $"{Base}/{id}";
+        public const string Channels = $"{Base}/channels";
+    }
+
     // Tax Classes
     public static class TaxClasses
     {

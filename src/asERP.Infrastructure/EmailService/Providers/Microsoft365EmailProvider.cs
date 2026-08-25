@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Infrastructure;
+using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Models.Email;
 using asERP.Domain.Enums;
 using Microsoft.Extensions.Logging;

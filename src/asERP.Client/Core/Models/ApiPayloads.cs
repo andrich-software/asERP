@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Models;
+namespace asERP.Client.Core.Models;
 
 /// <summary>
 /// Payload for adding a user to a tenant by email.

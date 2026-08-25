@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Features.Auth.Services;
+namespace asERP.Client.Features.Auth.Services;
 
 /// <summary>
 /// Configuration settings for session management (keep-alive and inactivity timeout).

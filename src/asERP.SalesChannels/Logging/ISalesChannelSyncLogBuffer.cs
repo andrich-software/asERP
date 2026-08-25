@@ -1,4 +1,4 @@
-﻿namespace asERP.SalesChannels.Logging;
+namespace asERP.SalesChannels.Logging;
 
 /// <summary>
 /// Bounded, thread-safe hand-off buffer for captured sync log lines. The Serilog sink enqueues on

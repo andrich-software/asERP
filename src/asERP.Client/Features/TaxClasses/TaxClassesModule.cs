@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Constants;
+using asERP.Client.Core.Constants;
 using asERP.Client.Features.TaxClasses.Models;
 using asERP.Client.Features.TaxClasses.Services;
 using asERP.Client.Features.TaxClasses.Views;

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Models.Storage;
@@ -19,7 +20,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
-using System.Text.Json;
 
 namespace asERP.Server.Cli;
 

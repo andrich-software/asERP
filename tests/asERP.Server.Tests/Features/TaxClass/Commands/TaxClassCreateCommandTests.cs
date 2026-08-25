@@ -1,10 +1,10 @@
-﻿using System.Net;
+using System.Net;
+using asERP.Domain.Constants;
 using asERP.Domain.Dtos.TaxClass;
 using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using asERP.Domain.Constants;
 
 namespace asERP.Server.Tests.Features.TaxClass.Commands;
 

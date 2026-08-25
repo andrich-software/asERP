@@ -1,32 +1,31 @@
-﻿using asERP.Application.Specifications.Base;
+using asERP.Application.Specifications.Base;
 using asERP.Domain.Entities;
 
-namespace asERP.Application.Specifications
+namespace asERP.Application.Specifications;
+
+/// <summary>
+/// Specification for filtering sales channels
+/// </summary>
+public class SalesChannelFilterSpecification : FilterSpecification<SalesChannel>
 {
-    /// <summary>
-    /// Specification for filtering sales channels
-    /// </summary>
-    public class SalesChannelFilterSpecification : FilterSpecification<SalesChannel>
+    public SalesChannelFilterSpecification(string searchString)
     {
-        public SalesChannelFilterSpecification(string searchString)
-        {
-            Includes.Add(s => s.Warehouses);
+        Includes.Add(s => s.Warehouses);
 
-            if (!string.IsNullOrEmpty(searchString))
-            {
-                var lowerSearchString = searchString.ToLower();
-                Criteria = s => (s.Name.ToLower().Contains(lowerSearchString));
-            }
-            else
-            {
-                Criteria = p => true;
-            }
-        }
-
-        public SalesChannelFilterSpecification(Guid id)
+        if (!string.IsNullOrEmpty(searchString))
         {
-            Includes.Add(s => s.Warehouses);
-            Criteria = o => o.Id == id;
+            var lowerSearchString = searchString.ToLower();
+            Criteria = s => (s.Name.ToLower().Contains(lowerSearchString));
         }
+        else
+        {
+            Criteria = p => true;
+        }
+    }
+
+    public SalesChannelFilterSpecification(Guid id)
+    {
+        Includes.Add(s => s.Warehouses);
+        Criteria = o => o.Id == id;
     }
 }

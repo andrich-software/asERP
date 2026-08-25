@@ -1,12 +1,12 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.Manufacturer.Commands.ManufacturerCreate;
 using asERP.Application.Features.Manufacturer.Commands.ManufacturerDelete;
 using asERP.Application.Features.Manufacturer.Commands.ManufacturerUpdate;
 using asERP.Application.Features.Manufacturer.Queries.ManufacturerDetail;
 using asERP.Application.Features.Manufacturer.Queries.ManufacturerList;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Manufacturer;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

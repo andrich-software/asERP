@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Enums;
+using asERP.Domain.Enums;
 
 namespace asERP.SalesChannels.Abstractions;
 
@@ -20,6 +20,7 @@ public interface ISalesChannelConnector
     Task<SyncResult> ImportSalessAsync(SalesChannelContext context);
     Task<SyncResult> ImportCustomersAsync(SalesChannelContext context);
     Task<SyncResult> ImportStockAsync(SalesChannelContext context);
+    Task<SyncResult> ImportCategoriesAsync(SalesChannelContext context);
 
     Task<ExportResult> ExportProductAsync(SalesChannelContext context, ProductExportPayload payload);
     Task<ExportResult> UpdateStockAsync(SalesChannelContext context, StockUpdatePayload payload);
@@ -27,4 +28,7 @@ public interface ISalesChannelConnector
     Task<ExportResult> UpdateSalesAsync(SalesChannelContext context, SalesUpdatePayload payload);
     Task<ExportResult> DelistProductAsync(SalesChannelContext context, DelistPayload payload);
     Task<ExportResult> CancelSalesAsync(SalesChannelContext context, CancelSalesPayload payload);
+    Task<ExportResult> ExportCategoryAsync(SalesChannelContext context, CategoryExportPayload payload);
+    Task<ExportResult> DeleteCategoryAsync(SalesChannelContext context, CategoryDeletePayload payload);
+    Task<ExportResult> UpdateProductCategoriesAsync(SalesChannelContext context, ProductCategoriesUpdatePayload payload);
 }

@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Constants;
+using asERP.Domain.Constants;
 using asERP.Domain.Enums;
 using asERP.Persistence.Repositories;
 using asERP.SalesChannels.Contracts;

@@ -1,5 +1,5 @@
-﻿using asERP.Application.Contracts.Services;
 using System.Collections.Concurrent;
+using asERP.Application.Contracts.Services;
 
 namespace asERP.Server.Tests.Infrastructure;
 

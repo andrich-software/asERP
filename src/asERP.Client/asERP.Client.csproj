@@ -11,6 +11,14 @@
     <OutputType>Exe</OutputType>
     <UnoSingleProject>true</UnoSingleProject>
 
+    <!-- Uno's _UnoVSCleanupOtherTFMsForHR target (a Hot Reload workaround for
+         dotnet/maui#27612) deletes obj/<other-tfm>/asERP.Client.dll on every
+         implicit VS build. With four target frameworks built in parallel that
+         races the TFM currently emitting the file, so F5 fails with MSB3061
+         ("locked by VBCSCompiler"). Hot Reload only ever attaches to the one
+         head being debugged, so the cleanup buys us nothing here. -->
+    <UnoDisableVSCleanupOtherTFMsForHR>false</UnoDisableVSCleanupOtherTFMsForHR>
+
     <!-- Display name -->
     <ApplicationTitle>asERP.Client</ApplicationTitle>
     <!-- App Identifier -->

@@ -118,7 +118,11 @@ public class FeedPublicEndpointTests : TenantIsolatedTestBase
         var drop = await SeedProductAsync(TenantConstants.TestTenant1Id, "DROP-SKU", "Drop");
         DbContext.FeedProduct.Add(new asERP.Domain.Entities.FeedProduct
         {
-            Id = Guid.NewGuid(), TenantId = TenantConstants.TestTenant1Id, FeedId = feed.Id, ProductId = drop.Id, IsActive = false
+            Id = Guid.NewGuid(),
+            TenantId = TenantConstants.TestTenant1Id,
+            FeedId = feed.Id,
+            ProductId = drop.Id,
+            IsActive = false
         });
         await DbContext.SaveChangesAsync();
         GoAnonymous();

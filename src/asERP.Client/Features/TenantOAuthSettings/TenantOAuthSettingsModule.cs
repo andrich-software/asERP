@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Constants;
+using asERP.Client.Core.Constants;
 using asERP.Client.Features.TenantOAuthSettings.Models;
 using asERP.Client.Features.TenantOAuthSettings.Services;
 using asERP.Client.Features.TenantOAuthSettings.Views;

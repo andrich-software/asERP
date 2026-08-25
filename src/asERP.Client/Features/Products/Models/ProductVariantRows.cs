@@ -1,6 +1,6 @@
-﻿using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using asERP.Domain.Dtos.ProductAttribute;
 
 namespace asERP.Client.Features.Products.Models;

@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Warehouses.Services;
+using asERP.Client.Features.Warehouses.Services;
 using asERP.Domain.Dtos.Warehouse;
 
 namespace asERP.Client.Features.Warehouses.Models;

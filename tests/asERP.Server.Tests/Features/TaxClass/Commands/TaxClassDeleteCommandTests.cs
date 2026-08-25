@@ -1,9 +1,9 @@
-﻿using System.Net;
+using System.Net;
+using asERP.Domain.Constants;
 using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using asERP.Domain.Constants;
 
 namespace asERP.Server.Tests.Features.TaxClass.Commands;
 
@@ -130,7 +130,7 @@ public class TaxClassDeleteCommandTests : TenantIsolatedTestBase
         SetTenantHeader(TenantConstants.TestTenant1Id);
         var getResponse = await Client.GetAsync($"/api/v1/TaxClasses/{taxClassId}");
         TestAssertions.AssertHttpSuccess(getResponse);
-        
+
         // Verify the tax class data is still intact
         var result = await ReadResponseAsync<Result<asERP.Domain.Dtos.TaxClass.TaxClassDetailDto>>(getResponse);
         TestAssertions.AssertEqual(15.0, result.Data!.TaxRate);
@@ -430,7 +430,7 @@ public class TaxClassDeleteCommandTests : TenantIsolatedTestBase
         SetTenantHeader(TenantConstants.TestTenant1Id);
         var stillExists = await Client.GetAsync($"/api/v1/TaxClasses/{taxClassId1}");
         TestAssertions.AssertHttpSuccess(stillExists);
-        
+
         var result = await ReadResponseAsync<Result<asERP.Domain.Dtos.TaxClass.TaxClassDetailDto>>(stillExists);
         TestAssertions.AssertEqual(12.0, result.Data!.TaxRate); // Original value preserved
 

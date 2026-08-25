@@ -1,4 +1,4 @@
-﻿#if __DESKTOP__
+#if __DESKTOP__
 using System;
 using System.Globalization;
 using Microsoft.UI.Windowing;

@@ -41,6 +41,15 @@ public class SalesChannel : BaseEntity, IBaseEntity, IConcurrencyStamped
     public bool ExportCustomers { get; set; }
     public bool ExportSaless { get; set; }
 
+    /// <summary>Pull the channel's category tree (full sweep each run; runs before product imports).</summary>
+    public bool ImportCategories { get; set; }
+
+    /// <summary>
+    /// Push local category changes (create/update/delete) and product category assignments to the
+    /// channel. Ignored by connectors without the matching capability (AsShop, WooCommerceDatabase).
+    /// </summary>
+    public bool ExportCategories { get; set; }
+
     /// <summary>
     /// Push stock levels to this channel whenever the mirrored warehouse stock changes. Finer gate than
     /// <see cref="ExportProducts"/> — a channel can receive stock updates without full product exports.

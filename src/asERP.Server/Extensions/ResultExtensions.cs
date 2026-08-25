@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Wrapper;
+using asERP.Domain.Wrapper;
 using Microsoft.AspNetCore.Mvc;
 
 namespace asERP.Server.Extensions;
@@ -22,7 +22,7 @@ public static class ResultExtensions
         {
             return new StatusCodeResult((int)result.StatusCode);
         }
-        
+
         return new ObjectResult(result)
         {
             StatusCode = (int)result.StatusCode
@@ -41,7 +41,7 @@ public static class ResultExtensions
         {
             return new StatusCodeResult((int)result.StatusCode);
         }
-        
+
         return new ObjectResult(result)
         {
             StatusCode = (int)result.StatusCode

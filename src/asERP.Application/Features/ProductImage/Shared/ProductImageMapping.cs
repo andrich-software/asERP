@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.Product;
+using asERP.Domain.Dtos.Product;
 
 namespace asERP.Application.Features.ProductImage.Shared;
 

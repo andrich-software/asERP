@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Invoice;
+namespace asERP.Domain.Dtos.Invoice;
 
 public class InvoiceItemDto
 {

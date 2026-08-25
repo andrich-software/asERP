@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using asERP.Application.Extensions;
 using asERP.Domain.Entities.Common;
 

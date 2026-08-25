@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Superadmin;
+namespace asERP.Domain.Dtos.Superadmin;
 
 public class SuperadminTenantListDto : SuperadminTenantDtoBase
 {

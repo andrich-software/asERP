@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.AiPrompts.Services;
+using asERP.Client.Features.AiPrompts.Services;
 using asERP.Domain.Dtos.AiPrompt;
 
 namespace asERP.Client.Features.AiPrompts.Models;

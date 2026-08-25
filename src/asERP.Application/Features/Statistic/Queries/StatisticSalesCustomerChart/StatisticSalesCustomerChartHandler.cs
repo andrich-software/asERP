@@ -1,7 +1,7 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Wrapper;
 using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Statistic.Queries.StatisticSalesCustomerChart;

@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Enums;
+using asERP.Domain.Enums;
 
 namespace asERP.Domain.Interfaces;
 

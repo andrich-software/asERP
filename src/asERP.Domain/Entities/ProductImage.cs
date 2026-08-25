@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities.Common;
+using asERP.Domain.Entities.Common;
 
 namespace asERP.Domain.Entities;
 

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using asERP.Domain.Dtos.Manufacturer;
 using asERP.Domain.Enums;
 
@@ -66,6 +66,9 @@ public class ProductDetailDto
     public List<ProductVariantOptionDto> Options { get; set; } = new();
 
     public List<Guid> ProductSalesChannel { get; set; } = new();
+
+    /// <summary>Categories the product is assigned to.</summary>
+    public List<Guid> CategoryIds { get; set; } = new();
 
     public List<Guid> ProductStocks { get; set; } = new();
 

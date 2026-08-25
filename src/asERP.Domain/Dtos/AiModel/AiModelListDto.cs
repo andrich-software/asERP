@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.AiModel;
+namespace asERP.Domain.Dtos.AiModel;
 
 public class AiModelListDto
 {

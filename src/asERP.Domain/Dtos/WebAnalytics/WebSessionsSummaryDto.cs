@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.WebAnalytics;
+namespace asERP.Domain.Dtos.WebAnalytics;
 
 /// <summary>
 /// Session counts for the "Web-Statistiken" dashboard tab. A session is a distinct daily-salted

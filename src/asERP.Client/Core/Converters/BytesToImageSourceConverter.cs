@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media.Imaging;
 

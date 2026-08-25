@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Statistic;
+namespace asERP.Domain.Dtos.Statistic;
 
 /// <summary>
 /// DTO for products/inventory statistics (fourth KPI card)

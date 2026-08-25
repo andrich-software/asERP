@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Wrapper;
+namespace asERP.Domain.Wrapper;
 
 public enum ResultStatusCode
 {

@@ -1,4 +1,4 @@
-﻿#nullable disable
+#nullable disable
 using System.Globalization;
 using System.Text.Json;
 using asERP.Application.Contracts.Persistence;
@@ -25,6 +25,7 @@ public sealed class WooCommerceConnector : ConnectorBase
     private readonly ISalesImportRepository _salesImportRepository;
     private readonly ICustomerImportRepository _customerImportRepository;
     private readonly IStockImportRepository _stockImportRepository;
+    private readonly ICategoryImportRepository _categoryImportRepository;
     private readonly ILogger<WooCommerceConnector> _logger;
 
     public WooCommerceConnector(
@@ -32,12 +33,14 @@ public sealed class WooCommerceConnector : ConnectorBase
         ISalesImportRepository salesImportRepository,
         ICustomerImportRepository customerImportRepository,
         IStockImportRepository stockImportRepository,
+        ICategoryImportRepository categoryImportRepository,
         ILogger<WooCommerceConnector> logger)
     {
         _productImportRepository = productImportRepository;
         _salesImportRepository = salesImportRepository;
         _customerImportRepository = customerImportRepository;
         _stockImportRepository = stockImportRepository;
+        _categoryImportRepository = categoryImportRepository;
         _logger = logger;
     }
 
@@ -48,6 +51,9 @@ public sealed class WooCommerceConnector : ConnectorBase
         SalesChannelCapabilities.ImportSaless |
         SalesChannelCapabilities.ImportCustomers |
         SalesChannelCapabilities.ImportStock |
+        SalesChannelCapabilities.ImportCategories |
+        SalesChannelCapabilities.ExportCategories |
+        SalesChannelCapabilities.UpdateProductCategories |
         SalesChannelCapabilities.UpdateStock |
         SalesChannelCapabilities.UpdatePrice |
         SalesChannelCapabilities.CancelSales;
@@ -186,6 +192,10 @@ public sealed class WooCommerceConnector : ConnectorBase
                                 Description = remoteProduct.description,
                                 IsVariantParent = isVariable,
                                 Images = MapImages(remoteProduct.images),
+                                RemoteCategoryIds = remoteProduct.categories?
+                                    .Where(c => c.id.HasValue)
+                                    .Select(c => c.id!.Value.ToString())
+                                    .ToList() ?? [],
                             };
 
                             if (isVariable && remoteProduct.id.HasValue)
@@ -1221,6 +1231,179 @@ public sealed class WooCommerceConnector : ConnectorBase
             });
 
             return ExportResult.Ok(payload.RemoteSalesId);
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
+    }
+
+    public override async Task<SyncResult> ImportCategoriesAsync(SalesChannelContext context)
+    {
+        try
+        {
+            SalesChannelUrlValidator.Validate(context.SalesChannel.Url);
+        }
+        catch (ArgumentException ex)
+        {
+            return SyncResult.Failed($"Invalid sales channel URL: {ex.Message}");
+        }
+
+        try
+        {
+            var wc = BuildClient(context);
+
+            // Collect the full tree first (category counts are small) so the repository can run a
+            // safe orphan sweep over one consistent snapshot.
+            var remoteCategories = new List<SalesChannelImportCategory>();
+            for (var page = 1; page <= MaxPages; page++)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                var batch = await wc.Category.GetAll(new Dictionary<string, string>
+                {
+                    ["per_page"] = PageSize.ToString(),
+                    ["page"] = page.ToString(),
+                }).WaitAsync(PageFetchTimeout, context.CancellationToken);
+
+                if (batch is null || batch.Count == 0)
+                {
+                    break;
+                }
+
+                foreach (var c in batch.Where(c => c.id.HasValue))
+                {
+                    remoteCategories.Add(new SalesChannelImportCategory
+                    {
+                        RemoteCategoryId = c.id!.Value.ToString(),
+                        ParentRemoteCategoryId = c.parent is > 0 ? c.parent.Value.ToString() : null,
+                        Name = c.name ?? string.Empty,
+                        Slug = c.slug ?? string.Empty,
+                        Description = string.IsNullOrEmpty(c.description) ? null : c.description,
+                        SortOrder = (int)(c.menu_order ?? 0),
+                    });
+                }
+
+                if (batch.Count < PageSize)
+                {
+                    break;
+                }
+            }
+
+            return await _categoryImportRepository.ImportOrUpdateFromSalesChannel(
+                context.SalesChannel.Id, remoteCategories, context.CancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return SyncResult.Failed(ex.Message);
+        }
+    }
+
+    public override async Task<ExportResult> ExportCategoryAsync(SalesChannelContext context, CategoryExportPayload payload)
+    {
+        try
+        {
+            var wc = BuildClient(context);
+
+            uint? parentId = null;
+            if (!string.IsNullOrEmpty(payload.ParentRemoteCategoryId))
+            {
+                if (!uint.TryParse(payload.ParentRemoteCategoryId, out var parsedParent))
+                {
+                    return ExportResult.Fail("WooCommerce parent category id must be numeric");
+                }
+
+                parentId = parsedParent;
+            }
+
+            var category = new ProductCategory
+            {
+                name = payload.Name,
+                slug = string.IsNullOrEmpty(payload.Slug) ? null : payload.Slug,
+                parent = parentId ?? 0,
+                description = payload.Description ?? string.Empty,
+                menu_order = payload.SortOrder,
+            };
+
+            if (string.IsNullOrEmpty(payload.RemoteCategoryId))
+            {
+                var created = await wc.Category.Add(category);
+                return created?.id is null
+                    ? ExportResult.Fail("WooCommerce did not return an id for the created category")
+                    : ExportResult.Ok(created.id.Value.ToString());
+            }
+
+            if (!uint.TryParse(payload.RemoteCategoryId, out var categoryId))
+            {
+                return ExportResult.Fail("WooCommerce category id (numeric RemoteCategoryId) is required for updates");
+            }
+
+            await wc.Category.Update(categoryId, category);
+            return ExportResult.Ok(payload.RemoteCategoryId);
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
+    }
+
+    public override async Task<ExportResult> DeleteCategoryAsync(SalesChannelContext context, CategoryDeletePayload payload)
+    {
+        if (string.IsNullOrEmpty(payload.RemoteCategoryId) || !uint.TryParse(payload.RemoteCategoryId, out var categoryId))
+        {
+            return ExportResult.Ok();
+        }
+
+        try
+        {
+            var wc = BuildClient(context);
+
+            // Terms have no trash — WooCommerce requires force=true.
+            await wc.Category.Delete(categoryId, force: true);
+            return ExportResult.Ok();
+        }
+        catch (Exception ex) when (ex.Message.Contains("term_invalid", StringComparison.OrdinalIgnoreCase)
+                                   || ex.Message.Contains("404"))
+        {
+            // Already gone remotely counts as done.
+            return ExportResult.Ok();
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
+    }
+
+    public override async Task<ExportResult> UpdateProductCategoriesAsync(SalesChannelContext context, ProductCategoriesUpdatePayload payload)
+    {
+        if (string.IsNullOrEmpty(payload.RemoteProductId) || !uint.TryParse(payload.RemoteProductId, out var productId))
+        {
+            return ExportResult.Fail("WooCommerce product id (numeric RemoteProductId) is required for category assignment updates");
+        }
+
+        // Variations carry no own categories in WooCommerce — assignments live on the parent product.
+        if (!string.IsNullOrEmpty(payload.ParentRemoteProductId))
+        {
+            return ExportResult.Ok(payload.RemoteProductId);
+        }
+
+        try
+        {
+            var wc = BuildClient(context);
+
+            var categories = payload.RemoteCategoryIds
+                .Select(id => uint.TryParse(id, out var parsed) ? (uint?)parsed : null)
+                .Where(id => id.HasValue)
+                .Select(id => new ProductCategoryLine { id = id!.Value })
+                .ToList();
+
+            // PUT products/{id} with the full set replaces the assignment list.
+            await wc.Product.Update(productId, new Product
+            {
+                categories = categories,
+            });
+
+            return ExportResult.Ok(payload.RemoteProductId);
         }
         catch (Exception ex)
         {

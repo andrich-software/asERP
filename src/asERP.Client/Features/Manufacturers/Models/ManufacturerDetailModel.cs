@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Manufacturers.Services;
+using asERP.Client.Features.Manufacturers.Services;
 using asERP.Domain.Dtos.Manufacturer;
 
 namespace asERP.Client.Features.Manufacturers.Models;

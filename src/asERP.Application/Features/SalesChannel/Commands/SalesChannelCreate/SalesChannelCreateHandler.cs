@@ -125,6 +125,11 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
     /// <returns>A new sales channel entity with properties from the command</returns>
     private Domain.Entities.SalesChannel MapToEntity(SalesChannelCreateCommand command)
     {
+        // asShop is the built-in storefront on the ERP's own data: every sync direction is
+        // implicitly always on, the client hides the toggles, and the connector's empty
+        // capability set keeps the orchestrator/outbox from acting on the flags.
+        var syncAlwaysOn = command.SalesChannelType == Domain.Enums.SalesChannelType.AsShop;
+
         return new Domain.Entities.SalesChannel
         {
             Type = command.SalesChannelType,
@@ -133,15 +138,17 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
             Username = command.Username,
             Password = command.Password,
             AdditionalConfigJson = command.AdditionalConfigJson,
-            ImportProducts = command.ImportProducts,
-            ImportCustomers = command.ImportCustomers,
-            ImportSaless = command.ImportSaless,
-            ExportProducts = command.ExportProducts,
-            ExportCustomers = command.ExportCustomers,
-            ExportSaless = command.ExportSaless,
-            ExportStock = command.ExportStock,
-            PushSalesCancellations = command.PushSalesCancellations,
-            ImportStock = command.ImportStock,
+            ImportProducts = syncAlwaysOn || command.ImportProducts,
+            ImportCustomers = syncAlwaysOn || command.ImportCustomers,
+            ImportSaless = syncAlwaysOn || command.ImportSaless,
+            ExportProducts = syncAlwaysOn || command.ExportProducts,
+            ExportCustomers = syncAlwaysOn || command.ExportCustomers,
+            ExportSaless = syncAlwaysOn || command.ExportSaless,
+            ExportStock = syncAlwaysOn || command.ExportStock,
+            PushSalesCancellations = syncAlwaysOn || command.PushSalesCancellations,
+            ImportStock = syncAlwaysOn || command.ImportStock,
+            ImportCategories = syncAlwaysOn || command.ImportCategories,
+            ExportCategories = syncAlwaysOn || command.ExportCategories,
             // asShop tracking is built-in (no plugin/token needed, cookieless by design), so new shop
             // channels start with analytics on; DELETE /tracking turns it off. Plugin-served channel
             // types stay off until a token is rotated.

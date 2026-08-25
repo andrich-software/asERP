@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Models.Storage;
+namespace asERP.Application.Models.Storage;
 
 /// <summary>
 /// Configuration for filesystem-backed file storage (product images, …).

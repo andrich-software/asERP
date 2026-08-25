@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using PdfSharp.Fonts;
 
 namespace asERP.Infrastructure.PDF;

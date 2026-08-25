@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Enums;
+namespace asERP.Domain.Enums;
 
 /// <summary>
 /// Severity of a persisted sales-channel synchronization log entry. Mirrors the subset of

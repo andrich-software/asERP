@@ -1,9 +1,9 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.WebAnalytics.Queries.WebSessionsSummary;
 using asERP.Application.Features.WebAnalytics.Queries.WebTopProducts;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.WebAnalytics;
 using asERP.Domain.Wrapper;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

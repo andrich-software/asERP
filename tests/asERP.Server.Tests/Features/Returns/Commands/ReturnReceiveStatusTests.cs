@@ -58,14 +58,14 @@ public class ReturnReceiveStatusTests : TenantIsolatedTestBase
         Domain.Entities.ReturnShipment returnShipment,
         ReturnItemCondition condition = ReturnItemCondition.Resalable,
         List<string>? serialNumbers = null) => new()
-    {
-        Items = returnShipment.Items.Select(i => new ReturnReceiveItemInputDto
         {
-            ReturnShipmentItemId = i.Id,
-            Condition = condition,
-            SerialNumbers = serialNumbers ?? new List<string>()
-        }).ToList()
-    };
+            Items = returnShipment.Items.Select(i => new ReturnReceiveItemInputDto
+            {
+                ReturnShipmentItemId = i.Id,
+                Condition = condition,
+                SerialNumbers = serialNumbers ?? new List<string>()
+            }).ToList()
+        };
 
     [Fact]
     public async Task Receive_ShouldStampConditionReceivedAtAndStatus()

@@ -1,6 +1,6 @@
-﻿using FluentValidation;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
+using FluentValidation;
 
 namespace asERP.Application.Features.Tenant.Commands.TenantDelete;
 

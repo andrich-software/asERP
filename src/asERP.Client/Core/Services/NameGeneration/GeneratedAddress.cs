@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Services.NameGeneration;
+namespace asERP.Client.Core.Services.NameGeneration;
 
 /// <summary>
 /// Represents a generated address with all components.

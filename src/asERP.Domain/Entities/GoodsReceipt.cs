@@ -1,5 +1,5 @@
-﻿using asERP.Domain.Entities.Common;
 using System.ComponentModel.DataAnnotations;
+using asERP.Domain.Entities.Common;
 
 namespace asERP.Domain.Entities;
 

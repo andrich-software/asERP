@@ -1,4 +1,4 @@
-﻿namespace asERP.SalesChannels.Models;
+namespace asERP.SalesChannels.Models;
 
 /// <summary>
 /// A product photo referenced on the sales channel. The import downloads the file from

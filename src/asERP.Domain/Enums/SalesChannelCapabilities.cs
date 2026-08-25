@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Enums;
+namespace asERP.Domain.Enums;
 
 /// <summary>
 /// Bitmask of operations a connector supports. The orchestrator AND-combines this with the
@@ -25,4 +25,13 @@ public enum SalesChannelCapabilities
 
     /// <summary>Can push a local order cancellation back to the shop (dedicated CancelSales export).</summary>
     CancelSales = 1 << 11,
+
+    /// <summary>Can pull the channel's category tree.</summary>
+    ImportCategories = 1 << 12,
+
+    /// <summary>Can create/update/delete categories on the channel.</summary>
+    ExportCategories = 1 << 13,
+
+    /// <summary>Can push a product's category assignments as a partial product update.</summary>
+    UpdateProductCategories = 1 << 14,
 }

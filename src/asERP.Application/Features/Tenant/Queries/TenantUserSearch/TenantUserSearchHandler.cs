@@ -1,9 +1,9 @@
-﻿using FluentValidation;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.User;
 using asERP.Domain.Entities;
 using asERP.Domain.Wrapper;
+using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 

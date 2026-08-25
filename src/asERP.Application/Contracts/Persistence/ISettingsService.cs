@@ -1,4 +1,4 @@
-﻿using asERP.Application.Models.Analytics;
+using asERP.Application.Models.Analytics;
 using asERP.Application.Models.Email;
 using asERP.Application.Models.Grafana;
 using asERP.Application.Models.Identity;

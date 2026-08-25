@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.WebAnalytics;
+namespace asERP.Domain.Dtos.WebAnalytics;
 
 /// <summary>
 /// The most-visited products for the "Web-Statistiken" dashboard tab, scoped to one tenant + channel.

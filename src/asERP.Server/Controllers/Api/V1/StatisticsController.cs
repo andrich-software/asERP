@@ -1,19 +1,19 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.Statistic.Queries.CustomersToday;
-using asERP.Application.Features.Statistic.Queries.SalessLatest;
-using asERP.Application.Features.Statistic.Queries.SalessToday;
 using asERP.Application.Features.Statistic.Queries.ProductsBestSelling;
 using asERP.Application.Features.Statistic.Queries.ProductsToday;
 using asERP.Application.Features.Statistic.Queries.RevenueChart;
+using asERP.Application.Features.Statistic.Queries.SalessLatest;
+using asERP.Application.Features.Statistic.Queries.SalessToday;
 using asERP.Application.Features.Statistic.Queries.SalesToday;
+using asERP.Application.Features.Statistic.Queries.StatisticMostSellingProducts;
+using asERP.Application.Features.Statistic.Queries.StatisticProduct;
 using asERP.Application.Features.Statistic.Queries.StatisticSales;
 using asERP.Application.Features.Statistic.Queries.StatisticSalesCustomerChart;
-using asERP.Application.Features.Statistic.Queries.StatisticProduct;
 using asERP.Application.Features.Statistic.Queries.StatisticSalesOverview;
-using asERP.Application.Features.Statistic.Queries.StatisticMostSellingProducts;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Statistic;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

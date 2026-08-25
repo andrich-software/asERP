@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using asERP.Application.Contracts.Services;
 
 namespace asERP.Infrastructure.Services;

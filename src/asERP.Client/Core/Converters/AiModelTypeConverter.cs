@@ -1,5 +1,5 @@
-﻿using Microsoft.UI.Xaml.Data;
 using asERP.Domain.Enums;
+using Microsoft.UI.Xaml.Data;
 
 namespace asERP.Client.Core.Converters;
 

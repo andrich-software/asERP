@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 
 namespace asERP.Application.Features.Superadmin.UserTenants.Queries.GetUserTenants;
 

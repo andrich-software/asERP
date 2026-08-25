@@ -1,12 +1,12 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.Setting.Commands.SettingCreate;
 using asERP.Application.Features.Setting.Commands.SettingDelete;
 using asERP.Application.Features.Setting.Commands.SettingUpdate;
 using asERP.Application.Features.Setting.Queries.SettingDetail;
 using asERP.Application.Features.Setting.Queries.SettingList;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Setting;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

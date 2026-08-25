@@ -226,9 +226,46 @@ public partial class ShellModel : INotifyPropertyChanged
         }
 
         await _sessionManager.StopAsync();
-        IsAuthenticated = false;
+        ForceUnauthenticatedState();
         await _tenantContext.ClearAsync();
         // LoginOverlay is shown automatically via SetUnauthenticatedVisibility
+    }
+
+    /// <summary>
+    /// Explicit logout entry point (sidebar/menu "Logout"). Runs Uno's logout (server-side
+    /// revoke + token-cache clear, which normally raises <see cref="LoggedOut"/>), then forces
+    /// the unauthenticated shell state anyway: when an earlier teardown (e.g. a failed token
+    /// refresh) already emptied the caches, the LoggedOut round-trip can be swallowed and the
+    /// app would stay stuck on the last page instead of showing the login overlay. Every step
+    /// here is idempotent, so running after a regular LoggedOut is harmless.
+    /// </summary>
+    public async Task LogoutAsync()
+    {
+        await _authentication.LogoutAsync(CancellationToken.None);
+
+        await _sessionManager.StopAsync();
+        ForceUnauthenticatedState();
+        await _tenantContext.ClearAsync();
+    }
+
+    /// <summary>
+    /// Flips to unauthenticated and ALWAYS raises <see cref="AuthenticationStateChanged"/>,
+    /// even when the flag is already false. A genuine logout can arrive with the flag already
+    /// cleared (earlier refresh-failure teardown, duplicate LoggedOut from Uno's clear-then-set
+    /// token cache) — the change-gated <see cref="IsAuthenticated"/> setter would swallow the
+    /// event and the Shell would never switch to the login overlay. The Shell's handler only
+    /// toggles overlay visibility (idempotent, no auth calls), so re-raising cannot loop.
+    /// </summary>
+    private void ForceUnauthenticatedState()
+    {
+        if (_isAuthenticated)
+        {
+            IsAuthenticated = false;
+            return;
+        }
+
+        Console.WriteLine("[ShellModel] Forcing unauthenticated state (flag already false) — re-raising AuthenticationStateChanged");
+        AuthenticationStateChanged?.Invoke(this, false);
     }
 
     public async ValueTask NavigateToPage(string tag)
@@ -271,7 +308,7 @@ public partial class ShellModel : INotifyPropertyChanged
                 // await _navigator.NavigateViewModelAsync<SettingsModel>(this);
                 break;
             case "Logout":
-                await _authentication.LogoutAsync(CancellationToken.None);
+                await LogoutAsync();
                 break;
         }
     }

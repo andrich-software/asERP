@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Enums;
+using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Contracts.Services;

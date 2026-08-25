@@ -38,6 +38,12 @@ public class SalesChannelInputDto : ISalesChannelInputModel
     /// <summary>This channel is the stock master — its levels are mirrored into the linked warehouse.</summary>
     public bool ImportStock { get; set; }
 
+    /// <summary>Pull the channel's category tree (runs before product imports).</summary>
+    public bool ImportCategories { get; set; }
+
+    /// <summary>Push local category changes and product category assignments to the channel.</summary>
+    public bool ExportCategories { get; set; }
+
     public List<Guid> WarehouseIds { get; set; } = new();
 }
 

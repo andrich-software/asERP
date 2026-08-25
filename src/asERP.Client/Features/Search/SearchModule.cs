@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Constants;
+using asERP.Client.Core.Constants;
 using asERP.Client.Features.Search.Models;
 using asERP.Client.Features.Search.Services;
 using asERP.Client.Features.Search.Views;

@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Tests;
+namespace asERP.Client.Tests;
 
 public class AppInfoTests
 {

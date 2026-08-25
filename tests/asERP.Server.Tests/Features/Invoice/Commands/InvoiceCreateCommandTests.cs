@@ -1,14 +1,14 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Text.Json;
+using asERP.Application.Contracts.Services;
 using asERP.Domain.Constants;
 using asERP.Domain.Dtos.Invoice;
 using asERP.Domain.Wrapper;
-using asERP.Server.Tests.Infrastructure;
 using asERP.Persistence.DatabaseContext;
-using asERP.Application.Contracts.Services;
-using Microsoft.Extensions.DependencyInjection;
+using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace asERP.Server.Tests.Features.Invoice.Commands;
@@ -233,7 +233,8 @@ public class InvoiceCreateCommandTests : IDisposable
             InvoiceAddressCity = "Test City",
             InvoiceAddressZip = "12345",
             InvoiceAddressCountry = "Test Country"
-            ,DeliveryAddressFirstName = "John",
+            ,
+            DeliveryAddressFirstName = "John",
             DeliveryAddressLastName = "Doe",
             DeliveryAddressStreet = "123 Test St",
             DeliveryAddressCity = "Test City",

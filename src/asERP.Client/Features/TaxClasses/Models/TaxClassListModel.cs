@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Models;
+using asERP.Client.Core.Models;
 using asERP.Client.Features.TaxClasses.Services;
 using asERP.Domain.Dtos.TaxClass;
 

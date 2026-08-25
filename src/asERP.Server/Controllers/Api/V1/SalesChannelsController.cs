@@ -1,4 +1,3 @@
-﻿using Asp.Versioning;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Features.SalesChannel.Commands.SalesChannelCreate;
@@ -17,6 +16,7 @@ using asERP.Persistence.DatabaseContext;
 using asERP.SalesChannels.Abstractions;
 using asERP.SalesChannels.Orchestration;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -692,7 +692,8 @@ public class SalesChannelsController(
         is ChannelSyncOperation.ImportProducts
         or ChannelSyncOperation.ImportSaless
         or ChannelSyncOperation.ImportCustomers
-        or ChannelSyncOperation.ImportStock;
+        or ChannelSyncOperation.ImportStock
+        or ChannelSyncOperation.ImportCategories;
 
     /// <summary>
     /// Resolves the {operation} route token to an import operation. Accepts both the short tokens
@@ -707,6 +708,7 @@ public class SalesChannelsController(
             case "saless": op = ChannelSyncOperation.ImportSaless; return true;
             case "customers": op = ChannelSyncOperation.ImportCustomers; return true;
             case "stock": op = ChannelSyncOperation.ImportStock; return true;
+            case "categories": op = ChannelSyncOperation.ImportCategories; return true;
         }
 
         return Enum.TryParse(operation, ignoreCase: true, out op) && IsImportOperation(op);

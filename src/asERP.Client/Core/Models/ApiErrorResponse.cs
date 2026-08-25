@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Models;
+namespace asERP.Client.Core.Models;
 
 /// <summary>
 /// Model to deserialize API error responses.

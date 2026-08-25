@@ -1,7 +1,7 @@
-﻿using System.Data.Common;
-using ClickHouse.Client.ADO;
+using System.Data.Common;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Models.Analytics;
+using ClickHouse.Client.ADO;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace asERP.Analytics.ClickHouse;

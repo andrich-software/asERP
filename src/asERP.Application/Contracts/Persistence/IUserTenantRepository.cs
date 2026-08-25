@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.Tenant;
+using asERP.Domain.Dtos.Tenant;
 using asERP.Domain.Entities;
 
 namespace asERP.Application.Contracts.Persistence;

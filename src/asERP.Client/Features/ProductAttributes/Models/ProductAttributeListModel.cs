@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Models;
+using asERP.Client.Core.Models;
 using asERP.Client.Features.ProductAttributes.Services;
 using asERP.Domain.Dtos.ProductAttribute;
 

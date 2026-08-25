@@ -1,4 +1,4 @@
-﻿global using System.Collections.Immutable;
+global using System.Collections.Immutable;
 global using asERP.Client.Models;
 global using asERP.Client.Presentation;
 global using asERP.Client.Services.Endpoints;

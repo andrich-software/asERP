@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.ProductSalesChannel;
+namespace asERP.Domain.Dtos.ProductSalesChannel;
 
 public class ProductSalesChannelDetailDto
 {

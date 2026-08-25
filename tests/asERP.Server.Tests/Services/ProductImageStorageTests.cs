@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using asERP.Application.Models.Storage;
 using asERP.Infrastructure.Storage;
 using asERP.Server.Tests.Infrastructure;

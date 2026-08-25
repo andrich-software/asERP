@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.WebAnalytics;
+namespace asERP.Domain.Dtos.WebAnalytics;
 
 /// <summary>
 /// The minimal channel identity a tracking token resolves to. Loaded cross-tenant (the ingest path is

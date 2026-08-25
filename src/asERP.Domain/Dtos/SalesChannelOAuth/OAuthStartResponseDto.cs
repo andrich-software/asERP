@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.SalesChannelOAuth;
+namespace asERP.Domain.Dtos.SalesChannelOAuth;
 
 /// <summary>
 /// Returned by <c>POST /api/v1/saleschannels/{id}/oauth/{provider}/start</c>. The Client opens

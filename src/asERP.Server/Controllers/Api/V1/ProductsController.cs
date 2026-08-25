@@ -1,14 +1,14 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.Product.Commands.ProductCreate;
 using asERP.Application.Features.Product.Commands.ProductDelete;
 using asERP.Application.Features.Product.Commands.ProductUpdate;
 using asERP.Application.Features.Product.Commands.ProductVariantGenerate;
 using asERP.Application.Features.Product.Queries.ProductDetail;
 using asERP.Application.Features.Product.Queries.ProductList;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Product;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -96,7 +96,7 @@ public class ProductsController(IMediator mediator) : ControllerBase
         if (id == Guid.Empty)
         {
             var invalidIdResponse = ProblemDetailsResult.BadRequest(
-                "Invalid Request", 
+                "Invalid Request",
                 $"Product ID must be greater than zero",
                 "https://tools.ietf.org/html/rfc9110#section-15.5.1",
                 $"/api/v1/products/{id}"
@@ -108,7 +108,7 @@ public class ProductsController(IMediator mediator) : ControllerBase
         if (productUpdateCommand.Id != Guid.Empty && productUpdateCommand.Id != id)
         {
             var errorResponse = ProblemDetailsResult.BadRequest(
-                "Invalid Request", 
+                "Invalid Request",
                 $"ID in URL ({id}) must match ID in request body ({productUpdateCommand.Id})",
                 "https://tools.ietf.org/html/rfc9110#section-15.5.1",
                 $"/api/v1/products/{id}"

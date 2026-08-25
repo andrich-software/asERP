@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using asERP.Application.Features.Account.Commands.ChangePassword;
 using asERP.Application.Features.Account.Commands.UpdateCurrentUser;
 using asERP.Domain.Constants;

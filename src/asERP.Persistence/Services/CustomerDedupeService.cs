@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Services;
+using asERP.Application.Contracts.Services;
 using asERP.Domain.Dtos.Customer;
 using asERP.Domain.Enums;
 using asERP.Persistence.DatabaseContext;

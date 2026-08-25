@@ -1,4 +1,4 @@
-﻿using System.Threading.Channels;
+using System.Threading.Channels;
 using asERP.Domain.Dtos.WebAnalytics;
 
 namespace asERP.Analytics.Ingest;

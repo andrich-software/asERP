@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Constants;
 using asERP.Persistence.DatabaseContext;

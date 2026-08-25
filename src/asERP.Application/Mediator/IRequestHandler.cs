@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Mediator;
+namespace asERP.Application.Mediator;
 
 /// <summary>
 /// Handler interface for requests

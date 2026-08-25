@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Tenants.Models;
+using asERP.Client.Features.Tenants.Models;
 using Microsoft.UI.Xaml.Controls;
 
 namespace asERP.Client.Features.Tenants.Views;

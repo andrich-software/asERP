@@ -1,8 +1,8 @@
-﻿using ClickHouse.Client.ADO.Parameters;
 using asERP.Analytics.ClickHouse;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Dtos.WebAnalytics;
+using ClickHouse.Client.ADO.Parameters;
 using Microsoft.Extensions.Logging;
 
 namespace asERP.Analytics.Query;

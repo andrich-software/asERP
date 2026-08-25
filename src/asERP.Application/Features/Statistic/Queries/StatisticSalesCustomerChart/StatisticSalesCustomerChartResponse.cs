@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Features.Statistic.Queries.StatisticSalesCustomerChart;
+namespace asERP.Application.Features.Statistic.Queries.StatisticSalesCustomerChart;
 
 public class StatisticSalesCustomerChartResponse
 {

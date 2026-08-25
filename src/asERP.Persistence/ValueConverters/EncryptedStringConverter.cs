@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Services;
+using asERP.Application.Contracts.Services;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace asERP.Persistence.ValueConverters;

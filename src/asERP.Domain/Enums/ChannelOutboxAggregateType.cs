@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Enums;
+namespace asERP.Domain.Enums;
 
 public enum ChannelOutboxAggregateType
 {
@@ -6,4 +6,5 @@ public enum ChannelOutboxAggregateType
     Sales = 2,
     Stock = 3,
     Customer = 4,
+    Category = 5,
 }

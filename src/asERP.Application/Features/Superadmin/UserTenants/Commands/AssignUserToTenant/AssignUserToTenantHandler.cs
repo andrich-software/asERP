@@ -1,12 +1,12 @@
-﻿using FluentValidation;
-using asERP.Application.Contracts.Persistence;
-using asERP.Domain.Entities;
-using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
+using asERP.Application.Contracts.Persistence;
+using asERP.Application.Mediator;
+using asERP.Domain.Entities;
+using asERP.Domain.Wrapper;
+using FluentValidation;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Superadmin.UserTenants.Commands.AssignUserToTenant;
 

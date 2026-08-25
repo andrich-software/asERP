@@ -58,6 +58,7 @@
       <converters:PaymentStatusToTextConverter x:Key="PaymentStatusToTextConverter" />
       <converters:SalesStatusToTextConverter x:Key="SalesStatusToTextConverter" />
       <converters:SalesChannelTypeToTextConverter x:Key="SalesChannelTypeToTextConverter" />
+      <converters:SalesChannelTypeToSyncSettingsVisibilityConverter x:Key="SalesChannelTypeToSyncSettingsVisibilityConverter" />
       <converters:SyncLogLevelToForegroundConverter x:Key="SyncLogLevelToForegroundConverter" />
       <converters:SyncRunStatusToBrushConverter x:Key="SyncRunStatusToBrushConverter" />
       <converters:ProductTypeToTextConverter x:Key="ProductTypeToTextConverter" />

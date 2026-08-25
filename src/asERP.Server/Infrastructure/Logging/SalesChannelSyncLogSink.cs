@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Enums;
+using asERP.Domain.Enums;
 using asERP.SalesChannels.Logging;
 using Serilog.Core;
 using Serilog.Events;

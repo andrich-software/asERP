@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Statistics.Services;
+using asERP.Client.Features.Statistics.Services;
 using asERP.Domain.Dtos.Statistic;
 using Microsoft.Extensions.Logging;
 

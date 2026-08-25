@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.User;
+namespace asERP.Domain.Dtos.User;
 
 public class UserDetailDto
 {

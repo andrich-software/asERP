@@ -1,10 +1,10 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using asERP.Client.Core.Abstractions;
 using asERP.Client.Core.Exceptions;
 using asERP.Client.Core.Models;
-using asERP.Client.Features.Saless.Services;
 using asERP.Client.Features.SalesChannels.Services;
+using asERP.Client.Features.Saless.Services;
 using asERP.Domain.Dtos.Sales;
 using asERP.Domain.Dtos.SalesChannel;
 using asERP.Domain.Enums;

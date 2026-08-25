@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.AiModels.Services;
+using asERP.Client.Features.AiModels.Services;
 using asERP.Domain.Dtos.AiModel;
 
 namespace asERP.Client.Features.AiModels.Models;

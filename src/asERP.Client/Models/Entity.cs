@@ -1,3 +1,3 @@
-﻿namespace asERP.Client.Models;
+namespace asERP.Client.Models;
 
 public record Entity(string Name);

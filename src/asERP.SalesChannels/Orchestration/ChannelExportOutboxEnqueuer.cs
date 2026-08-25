@@ -1,6 +1,7 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.Persistence.DatabaseContext;
+using asERP.SalesChannels.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
@@ -19,12 +20,47 @@ namespace asERP.SalesChannels.Orchestration;
 public sealed class ChannelExportOutboxEnqueuer
 {
     private readonly ApplicationDbContext _context;
+    private readonly ISalesChannelConnectorRegistry _connectorRegistry;
     private readonly ILogger<ChannelExportOutboxEnqueuer> _logger;
 
-    public ChannelExportOutboxEnqueuer(ApplicationDbContext context, ILogger<ChannelExportOutboxEnqueuer> logger)
+    public ChannelExportOutboxEnqueuer(
+        ApplicationDbContext context,
+        ISalesChannelConnectorRegistry connectorRegistry,
+        ILogger<ChannelExportOutboxEnqueuer> logger)
     {
         _context = context;
+        _connectorRegistry = connectorRegistry;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Drops channels whose connector cannot perform <paramref name="operation"/> (per its declared
+    /// capabilities). The notification handlers filter on the channel's sync flags only — the internal
+    /// channel types (PointOfSale, asShop) keep those flags on even though their connectors are no-ops,
+    /// and enqueuing for them would churn rows the drainer can never deliver.
+    /// </summary>
+    private async Task<List<Guid>> FilterSupportedChannelsAsync(
+        IReadOnlyList<Guid> salesChannelIds,
+        ChannelSyncOperation operation,
+        CancellationToken cancellationToken)
+    {
+        var channelTypes = await _context.SalesChannel
+            .IgnoreQueryFilters()
+            .Where(s => salesChannelIds.Contains(s.Id))
+            .Select(s => new { s.Id, s.Type })
+            .ToListAsync(cancellationToken);
+
+        // Fail open when no connector is registered for the type: only a connector that positively
+        // declares it lacks the capability filters the row — a missing registration is a
+        // misconfiguration the drainer surfaces ("No connector for ..."), not something to hide here.
+        return channelTypes
+            .Where(c =>
+            {
+                var connector = _connectorRegistry.Resolve(c.Type);
+                return connector is null || connector.Supports(operation);
+            })
+            .Select(c => c.Id)
+            .ToList();
     }
 
     /// <summary>Enqueue one outbox row per channel that should receive this change.</summary>
@@ -41,9 +77,15 @@ public sealed class ChannelExportOutboxEnqueuer
             return;
         }
 
+        var supportedChannelIds = await FilterSupportedChannelsAsync(salesChannelIds, operation, cancellationToken);
+        if (supportedChannelIds.Count == 0)
+        {
+            return;
+        }
+
         var now = DateTime.UtcNow;
 
-        foreach (var salesChannelId in salesChannelIds)
+        foreach (var salesChannelId in supportedChannelIds)
         {
             var key = BuildIdempotencyKey(operation, aggregateType, aggregateId, salesChannelId);
 
@@ -111,6 +153,12 @@ public sealed class ChannelExportOutboxEnqueuer
         CancellationToken cancellationToken = default)
     {
         if (aggregateIds.Count == 0)
+        {
+            return;
+        }
+
+        var supportedChannelIds = await FilterSupportedChannelsAsync(new[] { salesChannelId }, operation, cancellationToken);
+        if (supportedChannelIds.Count == 0)
         {
             return;
         }
@@ -213,10 +261,18 @@ public sealed class ChannelExportOutboxEnqueuer
             return;
         }
 
+        var supportedChannelIds = (await FilterSupportedChannelsAsync(
+            perChannel.Select(p => p.SalesChannelId).Distinct().ToList(), operation, cancellationToken)).ToHashSet();
+
         var now = DateTime.UtcNow;
 
         foreach (var (salesChannelId, payloadJson) in perChannel)
         {
+            if (!supportedChannelIds.Contains(salesChannelId))
+            {
+                continue;
+            }
+
             var key = BuildIdempotencyKey(operation, aggregateType, aggregateId, salesChannelId);
 
             var existing = await _context.ChannelExportOutbox

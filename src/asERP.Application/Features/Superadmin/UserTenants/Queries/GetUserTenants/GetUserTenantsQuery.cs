@@ -1,7 +1,7 @@
-﻿using asERP.Domain.Dtos.User;
-using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using System.ComponentModel.DataAnnotations;
+using asERP.Application.Mediator;
+using asERP.Domain.Dtos.User;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Superadmin.UserTenants.Queries.GetUserTenants;
 

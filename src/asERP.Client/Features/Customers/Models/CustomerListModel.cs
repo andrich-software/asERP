@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Constants;
+using asERP.Client.Core.Constants;
 using asERP.Client.Core.Models;
 using asERP.Client.Features.Customers.Services;
 using asERP.Domain.Dtos.Customer;

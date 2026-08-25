@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Statistic;
+namespace asERP.Domain.Dtos.Statistic;
 
 /// <summary>
 /// DTO for the revenue line chart: a series of daily revenue data points

@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Enums;
+namespace asERP.Domain.Enums;
 
 /// <summary>
 /// Visitor-behaviour events captured by the sales-channel web tracker.

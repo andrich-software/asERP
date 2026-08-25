@@ -156,11 +156,18 @@ public class FeedCrudTests : TenantIsolatedTestBase
         var feed = await SeedFeedAsync(TenantConstants.TestTenant1Id, "Doomed");
         DbContext.FeedProduct.Add(new asERP.Domain.Entities.FeedProduct
         {
-            Id = Guid.NewGuid(), TenantId = TenantConstants.TestTenant1Id, FeedId = feed.Id, ProductId = Guid.NewGuid(), IsActive = false
+            Id = Guid.NewGuid(),
+            TenantId = TenantConstants.TestTenant1Id,
+            FeedId = feed.Id,
+            ProductId = Guid.NewGuid(),
+            IsActive = false
         });
         DbContext.FeedLog.Add(new asERP.Domain.Entities.FeedLog
         {
-            Id = Guid.NewGuid(), TenantId = TenantConstants.TestTenant1Id, FeedId = feed.Id, IpAddress = "1.2.3.4"
+            Id = Guid.NewGuid(),
+            TenantId = TenantConstants.TestTenant1Id,
+            FeedId = feed.Id,
+            IpAddress = "1.2.3.4"
         });
         await DbContext.SaveChangesAsync();
 

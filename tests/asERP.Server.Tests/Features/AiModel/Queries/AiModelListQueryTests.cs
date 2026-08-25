@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Constants;
+using asERP.Domain.Constants;
 using asERP.Domain.Dtos.AiModel;
 using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;

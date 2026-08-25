@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using asERP.Client.Core.Abstractions;
 using asERP.Client.Core.Exceptions;
 using asERP.Client.Features.Warehouses.Services;

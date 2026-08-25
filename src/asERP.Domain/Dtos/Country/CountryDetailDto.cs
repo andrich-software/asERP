@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Country;
+namespace asERP.Domain.Dtos.Country;
 
 public class CountryDetailDto
 {

@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.WebAnalytics;
+namespace asERP.Domain.Dtos.WebAnalytics;
 
 /// <summary>
 /// Returned once when a tracking token is generated/rotated. The plaintext <see cref="Token"/> is shown

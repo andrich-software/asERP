@@ -1,12 +1,12 @@
-﻿#nullable disable
+#nullable disable
 using System.Net;
+using asERP.Domain.Constants;
 using asERP.Domain.Dtos.SalesChannel;
+using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using asERP.Domain.Enums;
-using asERP.Domain.Constants;
 
 namespace asERP.Server.Tests.Features.SalesChannel.Queries;
 
@@ -107,6 +107,75 @@ public class SalesChannelDetailQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
+    public async Task GetSalesChannelDetail_AsShop_ReturnsShopDomainsPrimaryFirst()
+    {
+        await SeedTestDataAsync();
+
+        var asShopChannelId = Guid.NewGuid();
+        var currentTenant = TenantContext.GetCurrentTenantId();
+        TenantContext.SetCurrentTenantId(null);
+        try
+        {
+            DbContext.SalesChannel.Add(new asERP.Domain.Entities.SalesChannel
+            {
+                Id = asShopChannelId,
+                Type = SalesChannelType.AsShop,
+                Name = "asShop Storefront T1",
+                TenantId = TenantConstants.TestTenant1Id
+            });
+            DbContext.Set<asERP.Domain.Entities.ShopDomain>().AddRange(
+                new asERP.Domain.Entities.ShopDomain
+                {
+                    Id = Guid.NewGuid(),
+                    SalesChannelId = asShopChannelId,
+                    Host = "www.shop.example",
+                    Port = 0,
+                    IsPrimary = false,
+                    TenantId = TenantConstants.TestTenant1Id
+                },
+                new asERP.Domain.Entities.ShopDomain
+                {
+                    Id = Guid.NewGuid(),
+                    SalesChannelId = asShopChannelId,
+                    Host = "shop.example",
+                    Port = 0,
+                    IsPrimary = true,
+                    TenantId = TenantConstants.TestTenant1Id
+                });
+            await DbContext.SaveChangesAsync();
+        }
+        finally
+        {
+            TenantContext.SetCurrentTenantId(currentTenant);
+        }
+
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        var response = await Client.GetAsync($"/api/v1/SalesChannels/{asShopChannelId}");
+
+        TestAssertions.AssertEqual(HttpStatusCode.OK, response.StatusCode);
+        var result = await ReadResponseAsync<Result<SalesChannelDetailDto>>(response);
+        TestAssertions.AssertNotNull(result?.Data);
+        TestAssertions.AssertEqual(2, result.Data.ShopDomains.Count);
+        TestAssertions.AssertEqual("shop.example", result.Data.ShopDomains[0].Host);
+        TestAssertions.AssertTrue(result.Data.ShopDomains[0].IsPrimary);
+        TestAssertions.AssertEqual("www.shop.example", result.Data.ShopDomains[1].Host);
+    }
+
+    [Fact]
+    public async Task GetSalesChannelDetail_NonAsShop_ReturnsEmptyShopDomains()
+    {
+        await SeedTestDataAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var response = await Client.GetAsync($"/api/v1/SalesChannels/{TestSalesChannel1Id}");
+
+        TestAssertions.AssertEqual(HttpStatusCode.OK, response.StatusCode);
+        var result = await ReadResponseAsync<Result<SalesChannelDetailDto>>(response);
+        TestAssertions.AssertNotNull(result?.Data);
+        TestAssertions.AssertEmpty(result.Data.ShopDomains);
+    }
+
+    [Fact]
     public async Task GetSalesChannelDetail_WithValidIdAndTenant_ShouldReturnSuccess()
     {
         await SeedTestDataAsync();
@@ -175,7 +244,7 @@ public class SalesChannelDetailQueryTests : TenantIsolatedTestBase
         // Test Tenant 2 cannot access Tenant 1's data - should return NotFound
         var crossTenantResponse2 = await Client.GetAsync($"/api/v1/SalesChannels/{TestSalesChannel1Id}");
         TestAssertions.AssertEqual(HttpStatusCode.NotFound, crossTenantResponse2.StatusCode);
-        
+
         // Additional verification: Tenant 2 cannot access Tenant 1's other sales channel
         var crossTenantResponse3 = await Client.GetAsync($"/api/v1/SalesChannels/{TestSalesChannel2Id}");
         TestAssertions.AssertEqual(HttpStatusCode.NotFound, crossTenantResponse3.StatusCode);

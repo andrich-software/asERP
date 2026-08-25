@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using asERP.SalesChannels.Models;
 
 namespace asERP.SalesChannels.Contracts;

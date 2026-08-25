@@ -1,8 +1,8 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.Search.Queries.GlobalSearch;
-using asERP.Domain.Dtos.Search;
 using asERP.Application.Mediator;
+using asERP.Domain.Dtos.Search;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

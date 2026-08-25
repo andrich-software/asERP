@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Models;
+using asERP.Client.Core.Models;
 using asERP.Domain.Dtos.Sales;
 
 namespace asERP.Client.Features.Saless.Services;

@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Models.Identity;
+namespace asERP.Application.Models.Identity;
 
 public class AuthResponse
 {

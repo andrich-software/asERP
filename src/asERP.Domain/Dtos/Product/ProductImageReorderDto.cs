@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Product;
+namespace asERP.Domain.Dtos.Product;
 
 /// <summary>
 /// New ordering for a product's images. The list must contain exactly the product's image

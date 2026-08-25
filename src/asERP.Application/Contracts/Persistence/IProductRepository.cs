@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 
 namespace asERP.Application.Contracts.Persistence;
 
@@ -22,4 +22,9 @@ public interface IProductRepository : IGenericRepository<Product>
     void RemoveVariantAxis(ProductVariantAxis axis);
     void AddVariantOption(ProductVariantOption option);
     void RemoveVariantOption(ProductVariantOption option);
+
+    // Category assignments follow the same DbSet-routed pattern as axes/options above.
+    Task<List<ProductCategory>> GetCategoryLinksAsync(Guid productId);
+    void AddProductCategory(ProductCategory link);
+    void RemoveProductCategory(ProductCategory link);
 }

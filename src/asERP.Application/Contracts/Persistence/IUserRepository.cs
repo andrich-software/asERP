@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 
 namespace asERP.Application.Contracts.Persistence;

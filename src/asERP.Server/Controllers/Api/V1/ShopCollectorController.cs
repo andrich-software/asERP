@@ -1,7 +1,7 @@
-using Asp.Versioning;
 using asERP.Application.Contracts.Infrastructure;
 using asERP.Domain.Dtos.WebAnalytics;
 using asERP.Shop.Hosting;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;

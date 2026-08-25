@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using asERP.Client.Core.Abstractions;
 using asERP.Client.Core.Exceptions;

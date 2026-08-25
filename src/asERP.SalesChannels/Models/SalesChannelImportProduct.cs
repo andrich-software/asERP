@@ -1,4 +1,4 @@
-﻿namespace asERP.SalesChannels.Models;
+namespace asERP.SalesChannels.Models;
 
 public class SalesChannelImportProduct
 {
@@ -22,4 +22,7 @@ public class SalesChannelImportProduct
 
     /// <summary>Product photos referenced on the channel, downloaded and attached on import.</summary>
     public List<SalesChannelImportImage> Images { get; set; } = new();
+
+    /// <summary>Channel-side category ids the product is assigned to (mapped to local categories on import).</summary>
+    public List<string> RemoteCategoryIds { get; set; } = new();
 }

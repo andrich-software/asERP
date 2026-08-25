@@ -1,9 +1,9 @@
-﻿using asERP.Application.Contracts.Logging;
+using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Statistic;
 using asERP.Domain.Entities;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Statistic.Queries.ProductsBestSelling;

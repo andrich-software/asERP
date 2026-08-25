@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 
 namespace asERP.Application.Features.Customer.Queries.CustomerDetail;
 

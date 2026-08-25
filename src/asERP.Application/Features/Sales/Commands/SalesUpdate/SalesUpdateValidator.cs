@@ -1,7 +1,7 @@
-﻿using FluentValidation;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
 using asERP.Domain.Validators;
+using FluentValidation;
 
 namespace asERP.Application.Features.Sales.Commands.SalesUpdate;
 

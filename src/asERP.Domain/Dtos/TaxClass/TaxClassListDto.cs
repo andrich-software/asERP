@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.TaxClass;
+namespace asERP.Domain.Dtos.TaxClass;
 
 public class TaxClassListDto
 {

@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Dtos.Search;
+using asERP.Domain.Dtos.Search;
 
 namespace asERP.Client.Features.Search.Services;
 

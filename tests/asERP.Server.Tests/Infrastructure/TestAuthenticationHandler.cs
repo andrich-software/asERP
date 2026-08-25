@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using asERP.Domain.Constants;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using asERP.Domain.Constants;
 
 namespace asERP.Server.Tests.Infrastructure;
 

@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.ProductAttributes.Models;
+using asERP.Client.Features.ProductAttributes.Models;
 using Microsoft.UI.Xaml.Controls;
 
 namespace asERP.Client.Features.ProductAttributes.Views;

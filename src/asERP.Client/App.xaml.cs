@@ -1,32 +1,33 @@
-﻿using asERP.Client.Features.Account;
-using asERP.Client.Features.Auth;
-using asERP.Client.Features.Auth.Services;
-using asERP.Client.Features.Customers;
-using asERP.Client.Features.Dashboard;
-using asERP.Client.Features.Statistics;
-using asERP.Client.Features.Dashboard.Models;
-using asERP.Client.Features.Invoices;
-using asERP.Client.Features.Manufacturers;
-using asERP.Client.Features.Returns;
-using asERP.Client.Features.Saless;
-using asERP.Client.Features.Shippings;
-using asERP.Client.Features.Search;
-using asERP.Client.Features.Products;
-using asERP.Client.Features.Shell;
+using asERP.Client.Features.Account;
 using asERP.Client.Features.AiModels;
 using asERP.Client.Features.AiPrompts;
-using asERP.Client.Features.SalesChannels;
-using asERP.Client.Features.SalesChannelDashboards;
+using asERP.Client.Features.Auth;
+using asERP.Client.Features.Auth.Services;
+using asERP.Client.Features.Categories;
+using asERP.Client.Features.Customers;
+using asERP.Client.Features.Dashboard;
+using asERP.Client.Features.Dashboard.Models;
 using asERP.Client.Features.Feeds;
-using asERP.Client.Features.Superadmin;
+using asERP.Client.Features.GlobalSettings;
+using asERP.Client.Features.Invoices;
+using asERP.Client.Features.Manufacturers;
 using asERP.Client.Features.ProductAttributes;
+using asERP.Client.Features.Products;
+using asERP.Client.Features.Returns;
+using asERP.Client.Features.SalesChannelDashboards;
+using asERP.Client.Features.SalesChannels;
+using asERP.Client.Features.Saless;
+using asERP.Client.Features.Search;
+using asERP.Client.Features.Shell;
+using asERP.Client.Features.Shell.Models;
+using asERP.Client.Features.Shell.Views;
+using asERP.Client.Features.Shippings;
+using asERP.Client.Features.Statistics;
+using asERP.Client.Features.Superadmin;
 using asERP.Client.Features.TaxClasses;
+using asERP.Client.Features.TenantOAuthSettings;
 using asERP.Client.Features.Tenants;
 using asERP.Client.Features.Warehouses;
-using asERP.Client.Features.GlobalSettings;
-using asERP.Client.Features.TenantOAuthSettings;
-using asERP.Client.Features.Shell.Views;
-using asERP.Client.Features.Shell.Models;
 using asERP.Domain.Dtos.Auth;
 #if __WASM__
 using System.Runtime.InteropServices.JavaScript;
@@ -127,8 +128,8 @@ public partial class App : Application
                 .UseHttp((context, services) =>
                 {
 #if DEBUG
-                // DelegatingHandler will be automatically injected
-                services.AddTransient<DelegatingHandler, DebugHttpHandler>();
+                    // DelegatingHandler will be automatically injected
+                    services.AddTransient<DelegatingHandler, DebugHttpHandler>();
 #endif
                     // Add authentication handler for all HTTP requests
                     services.AddTransient<AuthenticationHandler>();
@@ -400,6 +401,7 @@ public partial class App : Application
         ReturnsModule.RegisterServices(services);
         ProductsModule.RegisterServices(services);
         ManufacturersModule.RegisterServices(services);
+        CategoriesModule.RegisterServices(services);
         InvoicesModule.RegisterServices(services);
         WarehousesModule.RegisterServices(services);
         AiModelsModule.RegisterServices(services);
@@ -432,6 +434,7 @@ public partial class App : Application
         ShippingsModule.RegisterViews(views);
         ProductsModule.RegisterViews(views);
         ManufacturersModule.RegisterViews(views);
+        CategoriesModule.RegisterViews(views);
         InvoicesModule.RegisterViews(views);
         WarehousesModule.RegisterViews(views);
         AiModelsModule.RegisterViews(views);
@@ -458,6 +461,7 @@ public partial class App : Application
         nestedRoutes.AddRange(ShippingsModule.GetRoutes(views));
         nestedRoutes.AddRange(ProductsModule.GetRoutes(views));
         nestedRoutes.AddRange(ManufacturersModule.GetRoutes(views));
+        nestedRoutes.AddRange(CategoriesModule.GetRoutes(views));
         nestedRoutes.AddRange(InvoicesModule.GetRoutes(views));
         nestedRoutes.AddRange(WarehousesModule.GetRoutes(views));
         nestedRoutes.AddRange(AiModelsModule.GetRoutes(views));

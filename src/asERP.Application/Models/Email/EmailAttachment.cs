@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Models.Email;
+namespace asERP.Application.Models.Email;
 
 public class EmailAttachment
 {

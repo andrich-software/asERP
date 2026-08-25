@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Constants;
+using asERP.Client.Core.Constants;
 using asERP.Client.Features.Invoices.Models;
 using asERP.Client.Features.Invoices.Services;
 using asERP.Client.Features.Invoices.Views;

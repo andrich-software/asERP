@@ -1,12 +1,12 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.AiModel.Commands.AiModelCreate;
 using asERP.Application.Features.AiModel.Commands.AiModelDelete;
 using asERP.Application.Features.AiModel.Commands.AiModelUpdate;
 using asERP.Application.Features.AiModel.Queries.AiModelDetail;
 using asERP.Application.Features.AiModel.Queries.AiModelList;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.AiModel;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -42,7 +42,7 @@ public class AiModelsController(IMediator mediator) : ControllerBase
         {
             return BadRequest(Result<AiModelDetailDto>.Fail(ResultStatusCode.BadRequest, "Invalid GUID format"));
         }
-        
+
         var response = await mediator.Send(new AiModelDetailQuery { Id = guidId });
         return StatusCode((int)response.StatusCode, response);
     }
@@ -69,7 +69,7 @@ public class AiModelsController(IMediator mediator) : ControllerBase
         {
             return BadRequest(Result<Guid>.Fail(ResultStatusCode.BadRequest, "Invalid GUID format"));
         }
-        
+
         aiModelUpdateCommand.Id = guidId;
         var response = await mediator.Send(aiModelUpdateCommand);
         return StatusCode((int)response.StatusCode, response);
@@ -87,7 +87,7 @@ public class AiModelsController(IMediator mediator) : ControllerBase
         {
             return BadRequest(Result.Fail("Invalid GUID format"));
         }
-        
+
         var command = new AiModelDeleteCommand { Id = guidId };
         await mediator.Send(command);
         return NoContent();

@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using asERP.Domain.Entities.Common;
 
 namespace asERP.Application.Specifications.Base;

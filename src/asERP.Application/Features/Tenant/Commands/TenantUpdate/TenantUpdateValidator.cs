@@ -1,7 +1,7 @@
-﻿using FluentValidation;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Validators;
+using FluentValidation;
 
 namespace asERP.Application.Features.Tenant.Commands.TenantUpdate;
 

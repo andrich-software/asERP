@@ -1,4 +1,4 @@
-﻿#nullable disable
+#nullable disable
 
 using asERP.Domain.Dtos.Tenant;
 

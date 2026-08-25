@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using asERP.Client.Core.Abstractions;
@@ -8,6 +8,7 @@ using asERP.Client.Core.Notifications;
 using asERP.Client.Features.SalesChannels.Services;
 using asERP.Client.Features.Shell.Models;
 using asERP.Client.Features.Warehouses.Services;
+using asERP.Client.Presentation;
 using asERP.Domain.Dtos.SalesChannel;
 using asERP.Domain.Dtos.ShopDomain;
 using asERP.Domain.Dtos.Warehouse;
@@ -59,6 +60,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private bool _importProducts;
     private bool _importCustomers;
     private bool _importSaless;
+    private bool _importCategories;
 
     // Export Settings
     private bool _exportProducts;
@@ -67,6 +69,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private bool _exportStock;
     private bool _pushSalesCancellations;
     private bool _importStock;
+    private bool _exportCategories;
 
     // Warehouses
     private ObservableCollection<SelectableWarehouse> _warehouses = new();
@@ -484,9 +487,11 @@ public class SalesChannelEditModel : AsyncInitializableModel
     public bool ShowDatabaseSettings => IsWooCommerceDb;
 
     /// <summary>
-    /// Shows import/export settings for all types except PointOfSale (details step in the wizard).
+    /// Shows import/export settings (details step in the wizard). Hidden for the internal channel
+    /// types — see <see cref="SalesChannelSyncSettingsVisibility"/> (shared with the detail page).
     /// </summary>
-    public bool ShowImportExportSettings => SalesChannelType != SalesChannelType.PointOfSale && ShowStepDetails;
+    public bool ShowImportExportSettings =>
+        SalesChannelSyncSettingsVisibility.HasSyncSettings(SalesChannelType) && ShowStepDetails;
 
     /// <summary>OAuth card (eBay/Amazon) — shown on the details step in the wizard.</summary>
     public bool ShowOAuthCard => IsOAuthChannel && ShowStepDetails;
@@ -613,20 +618,20 @@ public class SalesChannelEditModel : AsyncInitializableModel
         string dbHost,
         string dbName,
         string dbPort) => type switch
-    {
-        SalesChannelType.WooCommerceDatabase =>
-            !string.IsNullOrWhiteSpace(url) &&
-            !string.IsNullOrWhiteSpace(username) &&
-            !string.IsNullOrWhiteSpace(password) &&
-            !string.IsNullOrWhiteSpace(dbHost) &&
-            !string.IsNullOrWhiteSpace(dbName) &&
-            IsDbPortValid(dbPort),
-        SalesChannelType.Shopware6 or SalesChannelType.WooCommerce =>
-            !string.IsNullOrWhiteSpace(url) &&
-            !string.IsNullOrWhiteSpace(username) &&
-            !string.IsNullOrWhiteSpace(password),
-        _ => false
-    };
+        {
+            SalesChannelType.WooCommerceDatabase =>
+                !string.IsNullOrWhiteSpace(url) &&
+                !string.IsNullOrWhiteSpace(username) &&
+                !string.IsNullOrWhiteSpace(password) &&
+                !string.IsNullOrWhiteSpace(dbHost) &&
+                !string.IsNullOrWhiteSpace(dbName) &&
+                IsDbPortValid(dbPort),
+            SalesChannelType.Shopware6 or SalesChannelType.WooCommerce =>
+                !string.IsNullOrWhiteSpace(url) &&
+                !string.IsNullOrWhiteSpace(username) &&
+                !string.IsNullOrWhiteSpace(password),
+            _ => false
+        };
 
     /// <summary>
     /// Save gate contributed by the wizard: saving is only possible on the details step, and for
@@ -956,6 +961,12 @@ public class SalesChannelEditModel : AsyncInitializableModel
         set => SetProperty(ref _importSaless, value);
     }
 
+    public bool ImportCategories
+    {
+        get => _importCategories;
+        set => SetProperty(ref _importCategories, value);
+    }
+
     #endregion
 
     #region Export Settings
@@ -994,6 +1005,12 @@ public class SalesChannelEditModel : AsyncInitializableModel
     {
         get => _importStock;
         set => SetProperty(ref _importStock, value);
+    }
+
+    public bool ExportCategories
+    {
+        get => _exportCategories;
+        set => SetProperty(ref _exportCategories, value);
     }
 
     #endregion
@@ -1179,6 +1196,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
             ImportProducts = salesChannel.ImportProducts;
             ImportCustomers = salesChannel.ImportCustomers;
             ImportSaless = salesChannel.ImportSaless;
+            ImportCategories = salesChannel.ImportCategories;
             _originalImportProducts = salesChannel.ImportProducts;
 
             // Export Settings
@@ -1188,6 +1206,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
             ExportStock = salesChannel.ExportStock;
             PushSalesCancellations = salesChannel.PushSalesCancellations;
             ImportStock = salesChannel.ImportStock;
+            ExportCategories = salesChannel.ExportCategories;
 
             // OAuth status (only meaningful for eBay / Amazon channels).
             _hasRefreshToken = salesChannel.HasRefreshToken;
@@ -1320,6 +1339,10 @@ public class SalesChannelEditModel : AsyncInitializableModel
             Url = NormalizeShopBaseUrl(Url);
         }
 
+        // asShop hides the sync toggles — every direction is always on (the server enforces the
+        // same rule authoritatively).
+        var syncAlwaysOn = SalesChannelType == SalesChannelType.AsShop;
+
         try
         {
             var input = new SalesChannelInputDto
@@ -1334,15 +1357,17 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 AdditionalConfigJson = IsWooCommerceDb
                     ? BuildDatabaseConfigJson(DbHost, DbPort, DbName, DbTablePrefix)
                     : null,
-                ImportProducts = ImportProducts,
-                ImportCustomers = ImportCustomers,
-                ImportSaless = ImportSaless,
-                ExportProducts = ExportProducts,
-                ExportCustomers = ExportCustomers,
-                ExportSaless = ExportSaless,
-                ExportStock = ExportStock,
-                PushSalesCancellations = PushSalesCancellations,
-                ImportStock = ImportStock,
+                ImportProducts = syncAlwaysOn || ImportProducts,
+                ImportCustomers = syncAlwaysOn || ImportCustomers,
+                ImportSaless = syncAlwaysOn || ImportSaless,
+                ExportProducts = syncAlwaysOn || ExportProducts,
+                ExportCustomers = syncAlwaysOn || ExportCustomers,
+                ExportSaless = syncAlwaysOn || ExportSaless,
+                ExportStock = syncAlwaysOn || ExportStock,
+                PushSalesCancellations = syncAlwaysOn || PushSalesCancellations,
+                ImportStock = syncAlwaysOn || ImportStock,
+                ImportCategories = syncAlwaysOn || ImportCategories,
+                ExportCategories = syncAlwaysOn || ExportCategories,
                 WarehouseIds = Warehouses.Where(w => w.IsSelected).Select(w => w.Id).ToList()
             };
 
@@ -1371,8 +1396,10 @@ public class SalesChannelEditModel : AsyncInitializableModel
             // Kick off a product import immediately when products should be imported and either the
             // channel is new or product import was just enabled. Otherwise the orchestrator would only
             // pick it up after its poll interval, with no feedback to the user. OAuth channels
-            // (eBay/Amazon) are skipped — they must complete the OAuth connect step first.
-            var shouldImportNow = ImportProducts && (isNew || !_originalImportProducts) && !IsOAuthChannel;
+            // (eBay/Amazon) are skipped — they must complete the OAuth connect step first. asShop is
+            // skipped too: its flags are always on but there is no remote shop to import from.
+            var shouldImportNow = ImportProducts && (isNew || !_originalImportProducts) && !IsOAuthChannel
+                && SalesChannelType != SalesChannelType.AsShop;
             if (shouldImportNow && channelId != Guid.Empty)
             {
                 StartBackgroundProductImport(channelId, Name);

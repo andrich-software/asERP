@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.WebAnalytics;
+namespace asERP.Domain.Dtos.WebAnalytics;
 
 /// <summary>
 /// A fully server-enriched analytics event, ready to be written to ClickHouse. Built from a

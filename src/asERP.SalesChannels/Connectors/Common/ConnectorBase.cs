@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Enums;
+using asERP.Domain.Enums;
 using asERP.SalesChannels.Abstractions;
 
 namespace asERP.SalesChannels.Connectors.Common;
@@ -28,6 +28,9 @@ public abstract class ConnectorBase : ISalesChannelConnector
     public virtual Task<SyncResult> ImportStockAsync(SalesChannelContext context)
         => Task.FromResult(SyncResult.Empty);
 
+    public virtual Task<SyncResult> ImportCategoriesAsync(SalesChannelContext context)
+        => Task.FromResult(SyncResult.Empty);
+
     public virtual Task<ExportResult> ExportProductAsync(SalesChannelContext context, ProductExportPayload payload)
         => Task.FromResult(ExportResult.Fail($"{Type} does not support ExportProduct"));
 
@@ -45,4 +48,13 @@ public abstract class ConnectorBase : ISalesChannelConnector
 
     public virtual Task<ExportResult> CancelSalesAsync(SalesChannelContext context, CancelSalesPayload payload)
         => Task.FromResult(ExportResult.Fail($"{Type} does not support CancelSales"));
+
+    public virtual Task<ExportResult> ExportCategoryAsync(SalesChannelContext context, CategoryExportPayload payload)
+        => Task.FromResult(ExportResult.Fail($"{Type} does not support ExportCategory"));
+
+    public virtual Task<ExportResult> DeleteCategoryAsync(SalesChannelContext context, CategoryDeletePayload payload)
+        => Task.FromResult(ExportResult.Fail($"{Type} does not support DeleteCategory"));
+
+    public virtual Task<ExportResult> UpdateProductCategoriesAsync(SalesChannelContext context, ProductCategoriesUpdatePayload payload)
+        => Task.FromResult(ExportResult.Fail($"{Type} does not support UpdateProductCategories"));
 }

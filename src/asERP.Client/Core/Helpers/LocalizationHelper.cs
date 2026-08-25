@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Presentation;
+namespace asERP.Client.Presentation;
 
 /// <summary>
 /// Helper to access localized strings from converters and other non-DI contexts.

@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Enums;
+namespace asERP.Domain.Enums;
 
 /// <summary>
 /// Who fulfills a per-channel listing. Drives whether the ERP pushes stock or treats it as

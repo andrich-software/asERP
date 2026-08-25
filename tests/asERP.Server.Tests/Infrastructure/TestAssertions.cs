@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using Xunit;
 
 namespace asERP.Server.Tests.Infrastructure;

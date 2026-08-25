@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Models.Analytics;
+namespace asERP.Application.Models.Analytics;
 
 /// <summary>
 /// ClickHouse connection settings, read from the <c>Setting</c> entity (keys <c>ClickHouse.*</c>) so an

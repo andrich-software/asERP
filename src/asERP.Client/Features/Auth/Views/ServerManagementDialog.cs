@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.Auth.Models;
+using asERP.Client.Features.Auth.Models;
 using asERP.Client.Features.Auth.Services;
 using Microsoft.UI;
 using Microsoft.UI.Text;

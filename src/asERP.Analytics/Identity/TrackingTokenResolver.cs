@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Persistence;
+using asERP.Application.Contracts.Persistence;
 using asERP.Domain.Dtos.WebAnalytics;
 using asERP.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;

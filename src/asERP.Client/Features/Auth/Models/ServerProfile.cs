@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Features.Auth.Models;
+namespace asERP.Client.Features.Auth.Models;
 
 /// <summary>
 /// A locally stored asERP server the user can connect to from the login screen.

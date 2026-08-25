@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Enums;
+using asERP.Domain.Enums;
 using Microsoft.UI.Xaml.Data;
 
 namespace asERP.Client.Presentation;

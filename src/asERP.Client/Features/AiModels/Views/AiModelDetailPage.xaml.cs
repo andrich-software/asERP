@@ -1,4 +1,4 @@
-﻿using asERP.Client.Features.AiModels.Models;
+using asERP.Client.Features.AiModels.Models;
 using Microsoft.UI.Xaml.Controls;
 
 namespace asERP.Client.Features.AiModels.Views;

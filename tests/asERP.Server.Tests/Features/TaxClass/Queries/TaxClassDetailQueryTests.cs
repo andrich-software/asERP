@@ -1,10 +1,10 @@
-﻿using System.Net;
+using System.Net;
+using asERP.Domain.Constants;
 using asERP.Domain.Dtos.TaxClass;
 using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using asERP.Domain.Constants;
 
 namespace asERP.Server.Tests.Features.TaxClass.Queries;
 
@@ -368,7 +368,7 @@ public class TaxClassDetailQueryTests : TenantIsolatedTestBase
         var listResponse = await Client.GetAsync("/api/v1/TaxClasses");
         var listResult = await ReadResponseAsync<PaginatedResult<TaxClassListDto>>(listResponse);
         var taxClassIds = listResult.Data?.Take(2).Select(tc => tc.Id).ToArray() ?? new Guid[0];
-        
+
         foreach (var id in taxClassIds)
         {
             var response = await Client.GetAsync($"/api/v1/TaxClasses/{id}");

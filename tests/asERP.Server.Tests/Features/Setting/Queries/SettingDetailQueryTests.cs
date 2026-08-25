@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using asERP.Domain.Dtos.Setting;
 using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;

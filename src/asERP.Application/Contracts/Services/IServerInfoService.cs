@@ -1,4 +1,4 @@
-﻿namespace asERP.Application.Contracts.Services;
+namespace asERP.Application.Contracts.Services;
 
 public interface IServerInfoService
 {

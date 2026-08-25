@@ -1,6 +1,6 @@
-﻿using FluentValidation;
 using asERP.Application.Contracts.Persistence;
 using asERP.Domain.Validators;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Tenant.Commands.TenantCreate;

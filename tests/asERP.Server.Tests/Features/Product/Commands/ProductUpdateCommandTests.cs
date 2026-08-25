@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json;
 using asERP.Application.Contracts.Services;
 using asERP.Domain.Constants;
@@ -204,7 +204,7 @@ public class ProductUpdateCommandTests : TenantIsolatedTestBase
     {
         await SeedTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
-        
+
         var nonExistentId = Guid.NewGuid();
         var updateDto = CreateUpdateProductDto(nonExistentId);
 

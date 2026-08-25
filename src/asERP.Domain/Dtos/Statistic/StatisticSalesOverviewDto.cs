@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Statistic;
+namespace asERP.Domain.Dtos.Statistic;
 
 public class DailyStatistic
 {

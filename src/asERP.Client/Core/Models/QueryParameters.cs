@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Core.Models;
+namespace asERP.Client.Core.Models;
 
 /// <summary>
 /// Parameters for paginated API queries.

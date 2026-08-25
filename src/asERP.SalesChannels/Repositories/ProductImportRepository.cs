@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Persistence;
+using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
@@ -257,9 +257,65 @@ public class ProductImportRepository : IProductImportRepository
         // and update paths and never fails the product import.
         await _productImageImportService.ImportImagesAsync(productId, salesChannelId, importProduct.Images, CancellationToken.None);
 
+        await SyncCategoryAssignmentsAsync(productId, salesChannelId, importProduct.RemoteCategoryIds);
+
         if (importProduct.IsVariantParent && importProduct.Variants.Count > 0)
         {
             await ImportVariantsAsync(salesChannelId, productId, importProduct);
+        }
+    }
+
+    /// <summary>
+    /// Reconciles the product's category assignments from the channel's remote category ids.
+    /// Only categories mapped to THIS channel are touched — assignments to categories the channel
+    /// does not know (manually maintained or asShop-only) are preserved. Requires the category
+    /// import to have run first so the remote ids resolve; unknown ids are skipped silently.
+    /// </summary>
+    private async Task SyncCategoryAssignmentsAsync(Guid productId, Guid salesChannelId, List<string> remoteCategoryIds)
+    {
+        var channelLinks = await _context.CategorySalesChannel
+            .Where(l => l.SalesChannelId == salesChannelId && l.RemoteCategoryId != null)
+            .Select(l => new { l.CategoryId, l.RemoteCategoryId })
+            .ToListAsync();
+
+        if (channelLinks.Count == 0)
+        {
+            return;
+        }
+
+        var channelCategoryIds = channelLinks.Select(l => l.CategoryId).ToHashSet();
+        var desiredCategoryIds = channelLinks
+            .Where(l => remoteCategoryIds.Contains(l.RemoteCategoryId!))
+            .Select(l => l.CategoryId)
+            .ToHashSet();
+
+        var existingLinks = await _context.ProductCategory
+            .Where(pc => pc.ProductId == productId)
+            .ToListAsync();
+
+        var changed = false;
+
+        foreach (var link in existingLinks.Where(l =>
+                     channelCategoryIds.Contains(l.CategoryId) && !desiredCategoryIds.Contains(l.CategoryId)))
+        {
+            _context.ProductCategory.Remove(link);
+            changed = true;
+        }
+
+        var existingCategoryIds = existingLinks.Select(l => l.CategoryId).ToHashSet();
+        foreach (var categoryId in desiredCategoryIds.Where(id => !existingCategoryIds.Contains(id)))
+        {
+            _context.ProductCategory.Add(new ProductCategory
+            {
+                ProductId = productId,
+                CategoryId = categoryId
+            });
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await _context.SaveChangesAsync();
         }
     }
 

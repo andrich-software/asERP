@@ -1,9 +1,10 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using asERP.Client.Core.Abstractions;
 using asERP.Client.Core.Exceptions;
 using asERP.Client.Core.Models;
+using asERP.Client.Features.Categories.Services;
 using asERP.Client.Features.Manufacturers.Services;
 using asERP.Client.Features.ProductAttributes.Services;
 using asERP.Client.Features.Products.Services;
@@ -13,6 +14,7 @@ using asERP.Domain.Dtos.Product;
 using asERP.Domain.Dtos.ProductAttribute;
 using asERP.Domain.Dtos.TaxClass;
 using asERP.Domain.Enums;
+using asERP.Domain.Services;
 using Microsoft.Extensions.Logging;
 
 namespace asERP.Client.Features.Products.Models;
@@ -27,6 +29,7 @@ public class ProductEditModel : AsyncInitializableModel
     private readonly ITaxClassService _taxClassService;
     private readonly IManufacturerService _manufacturerService;
     private readonly IProductAttributeService _productAttributeService;
+    private readonly ICategoryService _categoryService;
     private readonly INavigator _navigator;
     private readonly IStringLocalizer _localizer;
     private readonly Guid? _productId;
@@ -72,6 +75,9 @@ public class ProductEditModel : AsyncInitializableModel
     private ObservableCollection<ProductImageRow> _images = new();
     private bool _isImageBusy;
 
+    // Category assignment (flattened tree with checkboxes)
+    private ObservableCollection<SelectableCategory> _productCategories = new();
+
     // UI State
     private bool _isSaving;
     private string _errorMessage = string.Empty;
@@ -81,6 +87,7 @@ public class ProductEditModel : AsyncInitializableModel
         ITaxClassService taxClassService,
         IManufacturerService manufacturerService,
         IProductAttributeService productAttributeService,
+        ICategoryService categoryService,
         INavigator navigator,
         IStringLocalizer localizer,
         ILogger<ProductEditModel> logger,
@@ -91,6 +98,7 @@ public class ProductEditModel : AsyncInitializableModel
         _taxClassService = taxClassService;
         _manufacturerService = manufacturerService;
         _productAttributeService = productAttributeService;
+        _categoryService = categoryService;
         _navigator = navigator;
         _localizer = localizer;
         _productId = data?.ProductId;
@@ -105,7 +113,8 @@ public class ProductEditModel : AsyncInitializableModel
         await Task.WhenAll(
             LoadTaxClassesAsync(ct),
             LoadManufacturersAsync(ct),
-            LoadAttributesAsync(ct)
+            LoadAttributesAsync(ct),
+            LoadCategoryOptionsAsync(ct)
         );
 
         if (_productId.HasValue)
@@ -113,6 +122,25 @@ public class ProductEditModel : AsyncInitializableModel
             await LoadProductAsync(ct);
             await LoadImagesAsync(ct);
         }
+    }
+
+    public ObservableCollection<SelectableCategory> ProductCategories
+    {
+        get => _productCategories;
+        private set => SetProperty(ref _productCategories, value);
+    }
+
+    private async Task LoadCategoryOptionsAsync(CancellationToken ct)
+    {
+        var categories = await _categoryService.GetCategoriesAsync(ct);
+        var options = CategoryTreeBuilder.Flatten(categories)
+            .Select(node => new SelectableCategory
+            {
+                Id = node.Category.Id,
+                Name = node.Category.Name,
+                Level = node.Level
+            });
+        ProductCategories = new ObservableCollection<SelectableCategory>(options);
     }
 
     private async Task LoadAttributesAsync(CancellationToken ct)
@@ -788,6 +816,13 @@ public class ProductEditModel : AsyncInitializableModel
                 LoadVariantsFrom(product.Variants);
             }
 
+            // Category assignment (options were loaded in the initial WhenAll)
+            var assignedCategoryIds = product.CategoryIds.ToHashSet();
+            foreach (var option in ProductCategories)
+            {
+                option.IsSelected = assignedCategoryIds.Contains(option.Id);
+            }
+
             OnPropertyChanged(nameof(CanGenerateVariants));
             OnPropertyChanged(nameof(ShowSaveFirstHint));
         }
@@ -868,7 +903,8 @@ public class ProductEditModel : AsyncInitializableModel
                 Depth = Depth,
                 TaxClassId = TaxClassId,
                 ManufacturerId = ManufacturerId,
-                ProductType = ProductType
+                ProductType = ProductType,
+                CategoryIds = ProductCategories.Where(c => c.IsSelected).Select(c => c.Id).ToList()
             };
 
             if (ProductType == ProductType.Variant)
@@ -953,7 +989,9 @@ public class ProductEditModel : AsyncInitializableModel
                 ProductType = ProductType.Variant,
                 ParentProductId = existing.ParentProductId ?? _productId,
                 VariantSortOrder = existing.VariantSortOrder,
-                VariantOptionValueIds = existing.Options.Select(o => o.ProductAttributeValueId).ToList()
+                VariantOptionValueIds = existing.Options.Select(o => o.ProductAttributeValueId).ToList(),
+                // Preserve the variant's own category assignments — the server reconciles the list.
+                CategoryIds = existing.CategoryIds
             };
 
             await _productService.UpdateProductAsync(row.Id, variantInput, ct);
@@ -988,3 +1026,35 @@ public class ProductEditModel : AsyncInitializableModel
 /// Navigation data for product edit page.
 /// </summary>
 public record ProductEditData(Guid? ProductId);
+
+/// <summary>
+/// A category option in the product editor's assignment list — the flattened tree with the
+/// indentation carried by <see cref="Level"/>. Mutable members are UI-thread only.
+/// </summary>
+public sealed class SelectableCategory : System.ComponentModel.INotifyPropertyChanged
+{
+    private bool _isSelected;
+
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+
+    /// <summary>Tree depth (0 = root) — drives the name indentation.</summary>
+    public int Level { get; init; }
+
+    public Thickness NameIndent => new(Level * 20, 0, 0, 0);
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected != value)
+            {
+                _isSelected = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsSelected)));
+            }
+        }
+    }
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+}

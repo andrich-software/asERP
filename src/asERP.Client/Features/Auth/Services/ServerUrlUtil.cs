@@ -1,4 +1,4 @@
-﻿namespace asERP.Client.Features.Auth.Services;
+namespace asERP.Client.Features.Auth.Services;
 
 /// <summary>
 /// Normalization helpers for user-entered server URLs. Mirrors the inline logic that

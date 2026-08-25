@@ -1,13 +1,13 @@
-﻿using Asp.Versioning;
 using asERP.Application.Features.ProductAttribute.Commands.ProductAttributeCreate;
 using asERP.Application.Features.ProductAttribute.Commands.ProductAttributeDelete;
 using asERP.Application.Features.ProductAttribute.Commands.ProductAttributeUpdate;
 using asERP.Application.Features.ProductAttribute.Queries.ProductAttributeDetail;
 using asERP.Application.Features.ProductAttribute.Queries.ProductAttributeList;
+using asERP.Application.Mediator;
 using asERP.Domain.Dtos.ProductAttribute;
 using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using asERP.Server.Extensions;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

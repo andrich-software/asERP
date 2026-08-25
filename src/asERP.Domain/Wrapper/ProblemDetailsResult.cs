@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Wrapper;
+namespace asERP.Domain.Wrapper;
 
 /// <summary>
 /// RFC 7807 Problem Details implementation for structured error responses.

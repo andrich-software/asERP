@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using asERP.Client.Features.Products.Models;
 using Microsoft.UI.Xaml.Controls;

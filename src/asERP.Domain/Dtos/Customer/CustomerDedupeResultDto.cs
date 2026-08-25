@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Customer;
+namespace asERP.Domain.Dtos.Customer;
 
 /// <summary>
 /// Result of a single customer-dedupe run (dry or live). One <see cref="CustomerDedupeGroupDto"/>

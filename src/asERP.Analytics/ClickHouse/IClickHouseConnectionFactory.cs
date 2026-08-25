@@ -1,5 +1,5 @@
-﻿using ClickHouse.Client.ADO;
 using asERP.Application.Models.Analytics;
+using ClickHouse.Client.ADO;
 
 namespace asERP.Analytics.ClickHouse;
 

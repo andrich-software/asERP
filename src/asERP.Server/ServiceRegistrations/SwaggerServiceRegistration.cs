@@ -1,6 +1,6 @@
-﻿using Microsoft.OpenApi;
-using asERP.Server.Filters;
 using System.Reflection;
+using asERP.Server.Filters;
+using Microsoft.OpenApi;
 
 namespace asERP.Server.ServiceRegistrations;
 

@@ -1,30 +1,30 @@
 using asERP.Client.Features.Account.Models;
-using asERP.Client.Features.Shell.Models;
+using asERP.Client.Features.AiModels.Models;
+using asERP.Client.Features.AiPrompts.Models;
 using asERP.Client.Features.Auth.Services;
-using Microsoft.UI.Xaml.Controls;
-using asERP.Domain.Dtos.Tenant;
-using asERP.Client.Features.Dashboard.Models;
-using asERP.Client.Features.Statistics.Models;
+using asERP.Client.Features.Customers;
 using asERP.Client.Features.Customers.Models;
+using asERP.Client.Features.Dashboard.Models;
 using asERP.Client.Features.Invoices.Models;
 using asERP.Client.Features.Manufacturers.Models;
+using asERP.Client.Features.ProductAttributes.Models;
+using asERP.Client.Features.Products.Models;
+using asERP.Client.Features.SalesChannelDashboards.Models;
+using asERP.Client.Features.SalesChannels.Models;
 using asERP.Client.Features.Saless;
 using asERP.Client.Features.Saless.Models;
-using asERP.Client.Features.Customers;
-using asERP.Client.Features.Products.Models;
 using asERP.Client.Features.Search;
 using asERP.Client.Features.Search.Services;
-using asERP.Domain.Dtos.Search;
-using asERP.Client.Features.SalesChannels.Models;
-using asERP.Client.Features.SalesChannelDashboards.Models;
+using asERP.Client.Features.Shell.Models;
+using asERP.Client.Features.Statistics.Models;
 using asERP.Client.Features.Superadmin.Models;
-using asERP.Domain.Enums;
-using asERP.Client.Features.ProductAttributes.Models;
 using asERP.Client.Features.TaxClasses.Models;
 using asERP.Client.Features.Tenants.Models;
 using asERP.Client.Features.Warehouses.Models;
-using asERP.Client.Features.AiModels.Models;
-using asERP.Client.Features.AiPrompts.Models;
+using asERP.Domain.Dtos.Search;
+using asERP.Domain.Dtos.Tenant;
+using asERP.Domain.Enums;
+using Microsoft.UI.Xaml.Controls;
 using Uno.Toolkit.UI;
 
 namespace asERP.Client.Features.Shell.Views;
@@ -100,6 +100,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
             { "Customers", NavItemCustomers },
             { "Products", NavItemProducts },
             { "Manufacturers", NavItemManufacturers },
+            { "Categories", NavItemCategories },
             { "Saless", NavItemSaless },
             { "Shippings", NavItemShippings },
             { "Invoices", NavItemInvoices },
@@ -347,6 +348,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         NavItemCustomers.Visibility = Visibility.Visible;
         NavItemProducts.Visibility = Visibility.Visible;
         NavItemManufacturers.Visibility = Visibility.Visible;
+        NavItemCategories.Visibility = Visibility.Visible;
         NavItemSaless.Visibility = Visibility.Visible;
         NavItemInvoices.Visibility = Visibility.Visible;
         NavItemRevenue.Visibility = Visibility.Visible;
@@ -598,6 +600,9 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                 case "Manufacturers":
                     await navigator.NavigateViewModelAsync<ManufacturerListModel>(this);
                     break;
+                case "Categories":
+                    await navigator.NavigateViewModelAsync<asERP.Client.Features.Categories.Models.CategoryListModel>(this);
+                    break;
                 case "Invoices":
                     await navigator.NavigateViewModelAsync<InvoiceListModel>(this);
                     break;
@@ -652,8 +657,10 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                     var app = Application.Current as App;
                     if (app?.Host?.Services != null)
                     {
-                        var auth = app.Host.Services.GetRequiredService<IAuthenticationService>();
-                        await auth.LogoutAsync(CancellationToken.None);
+                        // Route through the ShellModel so the unauthenticated state is forced
+                        // even when Uno's LoggedOut event gets swallowed (already-empty caches).
+                        var shellModel = app.Host.Services.GetRequiredService<ShellModel>();
+                        await shellModel.LogoutAsync();
                     }
                     break;
                 default:

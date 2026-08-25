@@ -1,6 +1,6 @@
-﻿using asERP.Domain.Wrapper;
-using asERP.Application.Mediator;
 using System.ComponentModel.DataAnnotations;
+using asERP.Application.Mediator;
+using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Superadmin.UserTenants.Commands.RemoveUserFromTenant;
 

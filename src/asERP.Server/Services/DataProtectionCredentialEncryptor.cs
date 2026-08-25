@@ -1,4 +1,4 @@
-﻿using asERP.Application.Contracts.Services;
+using asERP.Application.Contracts.Services;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace asERP.Server.Services;

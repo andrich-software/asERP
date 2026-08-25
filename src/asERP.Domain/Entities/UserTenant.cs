@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using asERP.Domain.Entities.Common;
 
@@ -23,5 +23,5 @@ public class UserTenant : BaseEntityWithoutTenant
 
     public bool RoleManageTenant { get; set; }
     public bool RoleManageUser { get; set; }
-    
+
 }

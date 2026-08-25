@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using asERP.Client.Core.Json;
 using asERP.Client.Features.Auth.Models;
 using Windows.Storage;
@@ -10,9 +10,6 @@ public class ServerProfileStore : IServerProfileStore
     private const string ProfilesKey = "server_profiles";
     private const string LastUsedIdKey = "last_used_server_id";
     private const string LegacyServerUrlKey = "server_url";
-#if DEBUG
-    private const string DevProfileSeededKey = "dev_profile_seeded";
-#endif
 
     private readonly ILogger<ServerProfileStore> _logger;
 
@@ -24,7 +21,7 @@ public class ServerProfileStore : IServerProfileStore
     public Task<IReadOnlyList<ServerProfile>> GetAllAsync()
     {
 #if DEBUG
-        SeedDevProfileOnce();
+        EnsureLocalDevProfile();
 #endif
         var profiles = LoadProfiles();
         EnsureBuiltIn(profiles);
@@ -41,33 +38,33 @@ public class ServerProfileStore : IServerProfileStore
 
 #if DEBUG
     /// <summary>
-    /// Dev convenience: on a fresh client, seed a "Local Dev" server profile pointing at the local
-    /// Server and pre-select it, so the prefilled dev credentials log in against localhost instead of
-    /// the built-in asERP Cloud entry. Runs once (guarded by a flag) so a developer can still edit or
-    /// delete the profile without it reappearing.
+    /// Dev convenience: DEBUG builds (debugger / <c>dotnet run</c>) always carry a server profile
+    /// pointing at the local dev Server (https://localhost:8443). Matched by URL, not id — a
+    /// profile the developer created or renamed for the same URL counts, so no duplicate appears
+    /// and edits stick. On a fresh client the entry is also pre-selected so the prefilled dev
+    /// credentials log in against localhost instead of the built-in asERP Cloud entry.
+    /// (Deleting it only lasts until the next load; use a Release build to get rid of it.)
     /// </summary>
-    private void SeedDevProfileOnce()
+    private void EnsureLocalDevProfile()
     {
-        var values = ApplicationData.Current.LocalSettings.Values;
-        if (values.TryGetValue(DevProfileSeededKey, out var seeded) && seeded is bool already && already)
+        var profiles = LoadProfiles();
+        // The id check covers a Local-Dev entry the developer re-pointed at another URL —
+        // re-adding would duplicate the fixed LocalDevId; respect the edit instead.
+        if (profiles.Any(p => p.Id == ServerProfile.LocalDevId
+                || string.Equals(ServerUrlUtil.Normalize(p.Url), ServerProfile.LocalDevUrl, StringComparison.OrdinalIgnoreCase)))
         {
             return;
         }
 
-        var profiles = LoadProfiles();
-        if (profiles.All(p => p.Id != ServerProfile.LocalDevId))
-        {
-            profiles.Add(ServerProfile.CreateLocalDev());
-            SaveProfiles(profiles);
-        }
+        profiles.Add(ServerProfile.CreateLocalDev());
+        SaveProfiles(profiles);
 
         // Pre-select the local dev server unless the user has already chosen one.
+        var values = ApplicationData.Current.LocalSettings.Values;
         if (!values.ContainsKey(LastUsedIdKey))
         {
             values[LastUsedIdKey] = ServerProfile.LocalDevId.ToString();
         }
-
-        values[DevProfileSeededKey] = true;
     }
 #endif
 
@@ -172,6 +169,21 @@ public class ServerProfileStore : IServerProfileStore
         }
 
         ApplicationData.Current.LocalSettings.Values[LastUsedIdKey] = id.ToString();
+        return Task.CompletedTask;
+    }
+
+    public Task SetLastSelectedAsync(Guid id)
+    {
+        // Selection only — the profile's LastUsedAt/LastUsedEmail stay untouched (those mean
+        // "logged in successfully here", which drives ordering and the email prefill).
+        try
+        {
+            ApplicationData.Current.LocalSettings.Values[LastUsedIdKey] = id.ToString();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error persisting selected server id");
+        }
         return Task.CompletedTask;
     }
 

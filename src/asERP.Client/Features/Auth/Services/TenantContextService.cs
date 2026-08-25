@@ -1,4 +1,4 @@
-﻿using asERP.Client.Core.Models;
+using asERP.Client.Core.Models;
 using asERP.Client.Features.Tenants.Services;
 using asERP.Domain.Dtos.Tenant;
 using Microsoft.Extensions.DependencyInjection;

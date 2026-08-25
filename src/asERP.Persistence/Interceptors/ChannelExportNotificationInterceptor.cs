@@ -108,6 +108,14 @@ public sealed class ChannelExportNotificationInterceptor : SaveChangesIntercepto
             .GroupBy(psc => psc.ProductId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
+        // Same pattern for category deletes: the channel links vanish in the same SaveChanges, so
+        // capture their remote ids now for the remote-delete snapshots.
+        var deletedLinksByCategory = changeTracker.Entries<CategorySalesChannel>()
+            .Where(e => e.State == EntityState.Deleted)
+            .Select(e => e.Entity)
+            .GroupBy(csc => csc.CategoryId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         foreach (var entry in changeTracker.Entries())
         {
             if (entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
@@ -152,6 +160,31 @@ public sealed class ChannelExportNotificationInterceptor : SaveChangesIntercepto
                     notifications.Add(new CustomerChangedNotification(
                         customer.Id, customer.TenantId, MapCustomerKind(entry.State)));
                     break;
+
+                case Category category:
+                    IReadOnlyList<CategoryDeleteSnapshot>? deleteSnapshots = null;
+                    if (entry.State == EntityState.Deleted
+                        && deletedLinksByCategory.TryGetValue(category.Id, out var categoryLinks))
+                    {
+                        deleteSnapshots = categoryLinks
+                            .Select(csc => new CategoryDeleteSnapshot(
+                                csc.SalesChannelId, csc.Id, csc.RemoteCategoryId, csc.IsActive))
+                            .ToList();
+                    }
+
+                    notifications.Add(new CategoryChangedNotification(
+                        category.Id, category.TenantId, MapCategoryKind(entry.State), deleteSnapshots));
+                    break;
+
+                case CategorySalesChannel csc:
+                    notifications.Add(new CategorySalesChannelChangedNotification(
+                        csc.Id, csc.CategoryId, csc.SalesChannelId, csc.TenantId));
+                    break;
+
+                case ProductCategory productCategory:
+                    notifications.Add(new ProductCategoriesChangedNotification(
+                        productCategory.ProductId, productCategory.TenantId));
+                    break;
             }
         }
 
@@ -179,6 +212,15 @@ public sealed class ChannelExportNotificationInterceptor : SaveChangesIntercepto
                 await mediator.Publish(n, cancellationToken);
                 break;
             case CustomerChangedNotification n:
+                await mediator.Publish(n, cancellationToken);
+                break;
+            case CategoryChangedNotification n:
+                await mediator.Publish(n, cancellationToken);
+                break;
+            case CategorySalesChannelChangedNotification n:
+                await mediator.Publish(n, cancellationToken);
+                break;
+            case ProductCategoriesChangedNotification n:
                 await mediator.Publish(n, cancellationToken);
                 break;
         }
@@ -221,5 +263,12 @@ public sealed class ChannelExportNotificationInterceptor : SaveChangesIntercepto
         EntityState.Added => CustomerChangeKind.Created,
         EntityState.Deleted => CustomerChangeKind.Deleted,
         _ => CustomerChangeKind.Updated,
+    };
+
+    private static CategoryChangeKind MapCategoryKind(EntityState state) => state switch
+    {
+        EntityState.Added => CategoryChangeKind.Created,
+        EntityState.Deleted => CategoryChangeKind.Deleted,
+        _ => CategoryChangeKind.Updated,
     };
 }

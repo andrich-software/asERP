@@ -1,4 +1,4 @@
-﻿namespace asERP.Domain.Dtos.Product;
+namespace asERP.Domain.Dtos.Product;
 
 /// <summary>
 /// Metadata for a single product image. The binary is fetched separately from the authed

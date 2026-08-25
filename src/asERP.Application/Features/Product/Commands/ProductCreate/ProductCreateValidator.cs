@@ -1,6 +1,6 @@
-﻿using FluentValidation;
 using asERP.Application.Contracts.Persistence;
 using asERP.Domain.Validators;
+using FluentValidation;
 
 namespace asERP.Application.Features.Product.Commands.ProductCreate;
 
@@ -33,8 +33,8 @@ public class ProductCreateValidator : ProductBaseValidator<ProductCreateCommand>
     /// <param name="taxClassRepository">Repository for tax class data access</param>
     /// <param name="manufacturerRepository">Repository for manufacturer data access</param>
     public ProductCreateValidator(
-        IProductRepository productRepository, 
-        ITaxClassRepository taxClassRepository, 
+        IProductRepository productRepository,
+        ITaxClassRepository taxClassRepository,
         IManufacturerRepository manufacturerRepository)
     {
         _productRepository = productRepository;
