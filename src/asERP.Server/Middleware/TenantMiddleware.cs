@@ -38,6 +38,10 @@ public class TenantMiddleware
         // pings it before login to decide whether to show the registration
         // link. It must not require an X-Tenant-Id header.
         var isServerInfoEndpoint = pathLower != null && pathLower.EndsWith("/server-info");
+        // The initial-setup endpoint is anonymous and runs before any user or tenant exists —
+        // it must not require an X-Tenant-Id header. The handler itself refuses once any user
+        // account exists or the setup was completed.
+        var isSetupEndpoint = pathLower != null && pathLower.EndsWith("/setup");
         // OAuth callback comes from a third-party redirect (eBay / Amazon) and carries no
         // X-Tenant-Id header. Tenant resolution happens via the persisted OAuthState row inside
         // OAuthCallbackHandler (it calls TenantContext.SetCurrentTenantId after state lookup).
@@ -61,7 +65,7 @@ public class TenantMiddleware
 
         logger.LogDebug($"🔍 TenantMiddleware - isAuthEndpoint: {isAuthEndpoint}, isSuperadminEndpoint: {isSuperadminEndpoint}, isSwaggerEndpoint: {isSwaggerEndpoint}, isOAuthCallback: {isOAuthCallback}");
 
-        if (isAuthEndpoint || isSuperadminEndpoint || isSwaggerEndpoint || isHealthEndpoint || isServerInfoEndpoint || isOAuthCallback || isStorefrontIngest || isFeedPublic || isShopRequest || isShopCollector)
+        if (isAuthEndpoint || isSuperadminEndpoint || isSwaggerEndpoint || isHealthEndpoint || isServerInfoEndpoint || isSetupEndpoint || isOAuthCallback || isStorefrontIngest || isFeedPublic || isShopRequest || isShopCollector)
         {
             logger.LogDebug($"✅  TenantMiddleware - Skipping tenant validation for: {path}");
             await _next(context);

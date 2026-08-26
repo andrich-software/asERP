@@ -13,14 +13,15 @@ namespace asERP.Server.Controllers.Api.V1;
 // (/api/v1/server-info). The default [controller] token would expand to
 // ServerInfo (no separator) and produce 404s.
 [Route("/api/v{version:apiVersion}/server-info")]
-public class ServerInfoController(IServerInfoService serverInfo) : ControllerBase
+public class ServerInfoController(IServerInfoService serverInfo, ISetupStatusService setupStatus) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public ActionResult<ServerInfoResponseDto> Get() => Ok(new ServerInfoResponseDto
+    public async Task<ActionResult<ServerInfoResponseDto>> Get() => Ok(new ServerInfoResponseDto
     {
         RegistrationEnabled = serverInfo.IsRegistrationEnabled,
         Version = serverInfo.Version,
-        MinimumClientVersion = serverInfo.MinimumClientVersion?.ToString()
+        MinimumClientVersion = serverInfo.MinimumClientVersion?.ToString(),
+        SetupRequired = await setupStatus.IsSetupRequiredAsync()
     });
 }

@@ -9,7 +9,15 @@ public interface IUserRepository
     Task<ApplicationUser?> GetByIdAsync(string userId);
     Task<ApplicationUser?> GetByIdWithTenantsAsync(string userId);
     Task<bool> EmailExistsAsync(string email);
+    Task<bool> AnyUsersAsync();
     Task<IEnumerable<IdentityError>> CreateAsync(ApplicationUser userToCreate, string password);
+
+    /// <summary>
+    /// Creates a user and assigns the Superadmin role (ensuring the role rows exist).
+    /// Used by the initial-setup flow; the user is deleted again when the role
+    /// assignment fails so no half-configured account remains.
+    /// </summary>
+    Task<IEnumerable<IdentityError>> CreateSuperadminAsync(ApplicationUser userToCreate, string password);
     Task<ApplicationUser> UpdateWithDetailsAsync(ApplicationUser userUpdateDto);
     Task<bool> Exists(string id);
     Task<bool> TenantsExistAsync(IEnumerable<Guid> tenantIds);

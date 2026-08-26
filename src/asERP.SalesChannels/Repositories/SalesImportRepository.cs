@@ -125,7 +125,11 @@ public class SalesImportRepository : ISalesImportRepository
                     VatNumber = importSales.Customer?.VatNumber ?? string.Empty,
                     Note = importSales.Customer?.Note ?? string.Empty,
                     CustomerStatus = importSales.Customer?.CustomerStatus ?? CustomerStatus.Active,
-                    DateEnrollment = importSales.Customer?.DateEnrollment ?? DateTime.UtcNow,
+                    // The shop's registration date (falling back to the order date in the connector), so an
+                    // initial import reproduces the customer history instead of using the import date.
+                    DateEnrollment = importSales.Customer is { DateEnrollment: var enrollment } && enrollment != default
+                        ? ToUtcOffset(enrollment)
+                        : DateTimeOffset.UtcNow,
                 };
 
                 // Deferred: added to the context now, committed with the order in one SaveChanges below.
@@ -140,7 +144,7 @@ public class SalesImportRepository : ISalesImportRepository
             // A customer must never be "newer" than an order they placed. An existing customer may have been
             // created earlier from a later order (or out of order), leaving DateEnrollment after this order.
             // Mutation only — persisted by the single SaveChanges after the order graph is built.
-            FloorCustomerEnrollment(customer, importSales.DateSalesed);
+            FloorCustomerEnrollment(customer, EnrollmentFloorFor(importSales));
 
             Guid billingAddressId = Guid.Empty;
             Guid shippingAddressId = Guid.Empty;
@@ -344,7 +348,7 @@ public class SalesImportRepository : ISalesImportRepository
             var existingCustomer = await _customerRepository.GetByCustomerIdAsync(existingSales.CustomerId);
             if (existingCustomer != null)
             {
-                customerFloored = FloorCustomerEnrollment(existingCustomer, importSales.DateSalesed);
+                customerFloored = FloorCustomerEnrollment(existingCustomer, EnrollmentFloorFor(importSales));
             }
 
             if (existingSales.Status != importSales.Status)
@@ -570,7 +574,7 @@ public class SalesImportRepository : ISalesImportRepository
             return false;
         }
 
-        var floor = new DateTimeOffset(DateTime.SpecifyKind(orderDate, DateTimeKind.Utc));
+        var floor = ToUtcOffset(orderDate);
         if (floor < customer.DateEnrollment)
         {
             _logger.LogDebug("Customer {0}: lowering DateEnrollment from {1} to order date {2}", customer.Id, customer.DateEnrollment, floor);
@@ -580,6 +584,39 @@ public class SalesImportRepository : ISalesImportRepository
 
         return false;
     }
+
+    /// <summary>
+    /// The earliest date this order proves the customer already existed: the shop's registration date when
+    /// the connector supplied one, otherwise the order date. Re-importing orders therefore also heals the
+    /// enrollment date of customers that were created before the registration date was imported.
+    /// </summary>
+    private static DateTime EnrollmentFloorFor(SalesChannelImportSales importSales)
+    {
+        var registered = importSales.Customer?.DateEnrollment ?? default;
+        if (registered == default)
+        {
+            return importSales.DateSalesed;
+        }
+
+        if (importSales.DateSalesed == default)
+        {
+            return registered;
+        }
+
+        return ToUtcOffset(registered) < ToUtcOffset(importSales.DateSalesed) ? registered : importSales.DateSalesed;
+    }
+
+    /// <summary>
+    /// Converts an import date to a UTC offset. Connectors deliver UTC-kind dates, but a date parsed from
+    /// a shop payload can arrive as local kind; converting instead of relabelling keeps the imported
+    /// history free of the server's time-zone offset.
+    /// </summary>
+    private static DateTimeOffset ToUtcOffset(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => new DateTimeOffset(value),
+        DateTimeKind.Local => new DateTimeOffset(value.ToUniversalTime()),
+        _ => new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc)),
+    };
 
     private static bool AddressesEqual(SalesChannelImportCustomerAddress a, SalesChannelImportCustomerAddress b)
     {

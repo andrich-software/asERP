@@ -10,13 +10,16 @@ namespace asERP.Persistence.Repositories;
 public class UserRepository : IUserRepository
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly RoleManager<IdentityRole> _roleManager;
     private readonly ApplicationDbContext _dbContext;
 
     public UserRepository(
         UserManager<ApplicationUser> userManager,
+        RoleManager<IdentityRole> roleManager,
         ApplicationDbContext dbContext)
     {
         _userManager = userManager;
+        _roleManager = roleManager;
         _dbContext = dbContext;
     }
 
@@ -50,6 +53,44 @@ public class UserRepository : IUserRepository
 
         var normalizedEmail = _userManager.NormalizeEmail(email);
         return await _userManager.Users.AnyAsync(u => u.NormalizedEmail == normalizedEmail);
+    }
+
+    public async Task<bool> AnyUsersAsync()
+    {
+        return await _userManager.Users.AnyAsync();
+    }
+
+    public async Task<IEnumerable<IdentityError>> CreateSuperadminAsync(ApplicationUser userToCreate, string password)
+    {
+        // Fresh databases may lack the role rows (e.g. InMemory test hosts) — ensure both
+        // like the superadmin CLI does before assigning.
+        foreach (var roleName in new[] { "Superadmin", "User" })
+        {
+            if (!await _roleManager.RoleExistsAsync(roleName))
+            {
+                var roleResult = await _roleManager.CreateAsync(new IdentityRole(roleName));
+                if (!roleResult.Succeeded)
+                {
+                    return roleResult.Errors;
+                }
+            }
+        }
+
+        var createResult = await _userManager.CreateAsync(userToCreate, password);
+        if (!createResult.Succeeded)
+        {
+            return createResult.Errors;
+        }
+
+        var assignResult = await _userManager.AddToRoleAsync(userToCreate, "Superadmin");
+        if (!assignResult.Succeeded)
+        {
+            // Mirror the CLI: don't leave a half-configured account behind.
+            await _userManager.DeleteAsync(userToCreate);
+            return assignResult.Errors;
+        }
+
+        return [];
     }
 
     public async Task<IEnumerable<IdentityError>> CreateAsync(ApplicationUser userToCreate, string password)

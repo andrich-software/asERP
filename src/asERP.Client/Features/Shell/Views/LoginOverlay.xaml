@@ -146,40 +146,61 @@
                            Visibility="Collapsed" />
               </StackPanel>
 
-              <TextBox x:Name="LoginEmail"
-                       x:Uid="Shell.Login.Email"
-                       InputScope="EmailSmtpAddress"
-                       AutomationProperties.Name="Email"
-                       AutomationProperties.AutomationId="login-email"
-                       KeyDown="LoginInput_KeyDown" />
+              <StackPanel x:Name="LoginCredentialsPanel"
+                          Spacing="18">
+                <TextBox x:Name="LoginEmail"
+                         x:Uid="Shell.Login.Email"
+                         InputScope="EmailSmtpAddress"
+                         AutomationProperties.Name="Email"
+                         AutomationProperties.AutomationId="login-email"
+                         KeyDown="LoginInput_KeyDown" />
 
-              <PasswordBox x:Name="LoginPassword"
-                           x:Uid="Shell.Login.Password"
-                           AutomationProperties.Name="Password"
-                           AutomationProperties.AutomationId="login-password"
-                           KeyDown="LoginInput_KeyDown" />
+                <PasswordBox x:Name="LoginPassword"
+                             x:Uid="Shell.Login.Password"
+                             AutomationProperties.Name="Password"
+                             AutomationProperties.AutomationId="login-password"
+                             KeyDown="LoginInput_KeyDown" />
 
-              <StackPanel Margin="0,2,0,0"
-                          Spacing="0">
-                <CheckBox x:Name="LoginRememberMe"
-                          x:Uid="Shell.Login.RememberMe"
-                          IsChecked="False"
-                          HorizontalAlignment="Left" />
-                <!-- Windows desktop only (DPAPI-backed); hidden elsewhere — see LoginOverlay.Reset. -->
-                <CheckBox x:Name="LoginSavePassword"
-                          x:Uid="Shell.Login.SavePassword"
-                          IsChecked="False"
-                          Visibility="Collapsed"
-                          HorizontalAlignment="Left" />
+                <StackPanel Margin="0,2,0,0"
+                            Spacing="0">
+                  <CheckBox x:Name="LoginRememberMe"
+                            x:Uid="Shell.Login.RememberMe"
+                            IsChecked="False"
+                            HorizontalAlignment="Left" />
+                  <!-- Windows desktop only (DPAPI-backed); hidden elsewhere — see LoginOverlay.Reset. -->
+                  <CheckBox x:Name="LoginSavePassword"
+                            x:Uid="Shell.Login.SavePassword"
+                            IsChecked="False"
+                            Visibility="Collapsed"
+                            HorizontalAlignment="Left" />
+                </StackPanel>
+
+                <Button x:Name="LoginButton"
+                        x:Uid="Shell.Login.LoginButton"
+                        Style="{StaticResource FilledButtonStyle}"
+                        HorizontalAlignment="Stretch"
+                        Height="40"
+                        Margin="0,4,0,0"
+                        Click="LoginButton_Click" />
               </StackPanel>
 
-              <Button x:Name="LoginButton"
-                      x:Uid="Shell.Login.LoginButton"
-                      Style="{StaticResource FilledButtonStyle}"
-                      HorizontalAlignment="Stretch"
-                      Height="40"
-                      Margin="0,4,0,0"
-                      Click="LoginButton_Click" />
+              <!-- Shown instead of the credentials while the selected server still awaits
+                   its initial setup (server-info: SetupRequired) — see ApplySetupState. -->
+              <StackPanel x:Name="SetupRequiredPanel"
+                          Spacing="12"
+                          Visibility="Collapsed">
+                <TextBlock x:Uid="Shell.Login.SetupHint"
+                           Style="{StaticResource BodySmall}"
+                           Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                           TextWrapping="Wrap" />
+                <Button x:Name="SetupStartButton"
+                        x:Uid="Shell.Login.SetupStartButton"
+                        Style="{StaticResource FilledButtonStyle}"
+                        HorizontalAlignment="Stretch"
+                        Height="40"
+                        AutomationProperties.AutomationId="setup-start"
+                        Click="SetupStart_Click" />
+              </StackPanel>
 
               <ProgressRing x:Name="LoginProgress"
                             IsActive="False"

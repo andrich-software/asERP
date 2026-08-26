@@ -18,6 +18,7 @@ using asERP.Domain.Dtos.Sales;
 using asERP.Domain.Dtos.SalesChannel;
 using asERP.Domain.Dtos.Search;
 using asERP.Domain.Dtos.ServerInfo;
+using asERP.Domain.Dtos.Setup;
 using asERP.Domain.Dtos.Shipping;
 using asERP.Domain.Dtos.ShopDomain;
 using asERP.Domain.Dtos.Statistic;
@@ -147,6 +148,7 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(RefreshTokenRequestDto))]
 [JsonSerializable(typeof(RegisterRequestDto))]
 [JsonSerializable(typeof(ServerInfoResponseDto))]
+[JsonSerializable(typeof(InitialSetupInputDto))]
 [JsonSerializable(typeof(ServerProfile))]
 [JsonSerializable(typeof(List<ServerProfile>))]
 [JsonSerializable(typeof(AddUserToTenantPayload))]

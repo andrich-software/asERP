@@ -108,6 +108,7 @@
                        Padding="8,12" />
             <ItemsControl Grid.Column="2"
                           Margin="0,0,16,0"
+                          Width="{Binding ChannelsWidth}"
                           ItemsSource="{Binding ChannelColumns}"
                           VerticalAlignment="Center">
               <ItemsControl.ItemsPanel>
@@ -119,7 +120,7 @@
                 <DataTemplate x:DataType="models:CategoryChannelColumn">
                   <TextBlock Width="90"
                              Text="{x:Bind Name}"
-                             ToolTipService.ToolTip="{x:Bind Name}"
+                             ToolTipService.ToolTip="{x:Bind Hint}"
                              Style="{StaticResource LabelLarge}"
                              Foreground="{ThemeResource OnSurfaceVariantBrush}"
                              TextAlignment="Center"
@@ -168,6 +169,7 @@
                   <!-- One checkbox per shop channel (same fixed width as the header cells) -->
                   <ItemsControl Grid.Column="2"
                                 Margin="0,0,16,0"
+                                Width="{x:Bind CellsWidth}"
                                 ItemsSource="{x:Bind Cells}"
                                 VerticalAlignment="Center">
                     <ItemsControl.ItemsPanel>
@@ -179,6 +181,7 @@
                       <DataTemplate x:DataType="models:CategoryChannelCell">
                         <Grid Width="90">
                           <CheckBox IsChecked="{x:Bind IsActive, Mode=TwoWay}"
+                                    ToolTipService.ToolTip="{x:Bind ActivationHint}"
                                     MinWidth="0"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center" />
@@ -195,7 +198,7 @@
                                Glyph="&#xE8FD;"
                                Background="Transparent"
                                VerticalAlignment="Center"
-                               Visibility="{Binding HasCategories, Converter={StaticResource BoolToInverseVisibilityConverter}}" />
+                               Visibility="{Binding ShowEmptyState, Converter={StaticResource BoolToVisibilityConverter}}" />
 
           <ProgressRing IsActive="{Binding IsLoading}"
                         Width="48"

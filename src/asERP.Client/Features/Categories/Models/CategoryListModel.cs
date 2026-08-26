@@ -69,8 +69,20 @@ public class CategoryListModel : AsyncInitializableModel
     public ObservableCollection<CategoryChannelColumn> ChannelColumns
     {
         get => _channelColumns;
-        private set => SetProperty(ref _channelColumns, value);
+        private set
+        {
+            if (SetProperty(ref _channelColumns, value))
+            {
+                OnPropertyChanged(nameof(ChannelsWidth));
+            }
+        }
     }
+
+    /// <summary>
+    /// Total width of the header's checkbox area, mirroring <see cref="CategoryRow.CellsWidth"/> so
+    /// the column captions always sit above the checkboxes they label.
+    /// </summary>
+    public double ChannelsWidth => ChannelColumns.Count * CategoryChannelColumns.ColumnWidth;
 
     public ObservableCollection<CategoryRow> Rows
     {
@@ -85,6 +97,12 @@ public class CategoryListModel : AsyncInitializableModel
     }
 
     public bool HasCategories => Rows.Count > 0;
+
+    /// <summary>
+    /// The "no categories yet" placeholder belongs on screen only once loading finished without
+    /// data - not while the spinner runs and not on top of an error banner.
+    /// </summary>
+    public bool ShowEmptyState => !HasCategories && !IsLoading && string.IsNullOrEmpty(ErrorMessage);
 
     public string SearchText
     {
@@ -231,7 +249,10 @@ public class CategoryListModel : AsyncInitializableModel
         var columns = response.Data
             .Where(c => CategoryChannelColumns.HasColumn(c.SalesChannelType))
             .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(c => new CategoryChannelColumn(c.Id, c.Name, c.SalesChannelType))
+            .Select(c => new CategoryChannelColumn(c.Id, c.Name, c.SalesChannelType)
+            {
+                Hint = string.Format(_localizer["CategoryListPage.ChannelHint"], c.Name)
+            })
             .ToList();
 
         ChannelColumns = new ObservableCollection<CategoryChannelColumn>(columns);
@@ -272,6 +293,7 @@ public class CategoryListModel : AsyncInitializableModel
                         CategoryId = node.Category.Id,
                         SalesChannelId = column.SalesChannelId,
                         ServerIsActive = serverIsActive,
+                        ActivationHint = string.Format(_localizer["CategoryListPage.ChannelHint"], column.Name),
                         IsActive = _pendingChanges.TryGetValue((node.Category.Id, column.SalesChannelId), out var pending)
                             ? pending
                             : serverIsActive
@@ -284,7 +306,7 @@ public class CategoryListModel : AsyncInitializableModel
                 rows.Add(new CategoryRow
                 {
                     Id = node.Category.Id,
-                    Name = node.Category.Name,
+                    Name = DisplayName(node),
                     Level = node.Level,
                     ProductCount = node.Category.ProductCount,
                     Cells = cells
@@ -375,15 +397,61 @@ public class CategoryListModel : AsyncInitializableModel
         OnPropertyChanged(nameof(CanSave));
     }
 
+    /// <summary>
+    /// Falls back to a placeholder for categories the shop imported without a name, so the row is
+    /// never an unclickable-looking blank line.
+    /// </summary>
+    private string DisplayName(CategoryTreeNode node)
+    {
+        if (!string.IsNullOrWhiteSpace(node.Category.Name))
+        {
+            return node.Category.Name;
+        }
+
+        return _localizer[node.Level == 0 ? "CategoryListPage.RootCategory" : "CategoryListPage.UnnamedCategory"];
+    }
+
     protected override void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        base.OnPropertyChanged(propertyName);
-
-        if (propertyName is nameof(IsInitializing))
+        // Initialization/refresh continuations resume on a background thread, and classic {Binding}
+        // updates raised from there are dropped on Desktop/Skia - that is what left the empty state
+        // and the channel column headers stuck on their initial (empty) values.
+        RunOnUi(() =>
         {
-            base.OnPropertyChanged(nameof(IsLoading));
-            base.OnPropertyChanged(nameof(IsNotLoading));
-            base.OnPropertyChanged(nameof(CanSave));
+            RaisePropertyChanged(propertyName);
+
+            if (propertyName is nameof(IsInitializing))
+            {
+                RaisePropertyChanged(nameof(IsLoading));
+                RaisePropertyChanged(nameof(IsNotLoading));
+                RaisePropertyChanged(nameof(CanSave));
+            }
+
+            if (propertyName is nameof(HasCategories) or nameof(IsInitializing)
+                or nameof(IsSaving) or nameof(ErrorMessage))
+            {
+                RaisePropertyChanged(nameof(ShowEmptyState));
+            }
+        });
+    }
+
+    // base.OnPropertyChanged cannot be called from inside a lambda, hence the trampoline.
+    private void RaisePropertyChanged(string? propertyName) => base.OnPropertyChanged(propertyName);
+
+    /// <summary>
+    /// Runs a UI-affecting action on the UI thread, inline when already there so property changes
+    /// raised from user input stay synchronous (two-way checkbox bindings depend on that).
+    /// </summary>
+    private static void RunOnUi(Action action)
+    {
+        var dispatcher = App.UiDispatcher;
+        if (dispatcher is null || dispatcher.HasThreadAccess)
+        {
+            action();
+        }
+        else
+        {
+            dispatcher.TryEnqueue(() => action());
         }
     }
 }

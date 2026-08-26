@@ -95,7 +95,11 @@ public class CustomerImportRepository : ICustomerImportRepository
                 VatNumber = importCustomer.VatNumber ?? string.Empty,
                 Note = importCustomer.Note ?? string.Empty,
                 CustomerStatus = importCustomer.CustomerStatus != 0 ? importCustomer.CustomerStatus : CustomerStatus.Active,
-                DateEnrollment = importCustomer.DateEnrollment != DateTime.MinValue ? importCustomer.DateEnrollment : DateTime.UtcNow
+                // The shop's registration date, so an initial import reproduces the customer history
+                // instead of stamping every customer with the import date.
+                DateEnrollment = importCustomer.DateEnrollment != DateTime.MinValue
+                    ? ToUtcOffset(importCustomer.DateEnrollment)
+                    : DateTimeOffset.UtcNow
             };
 
             // Deferred: added to the context now, committed with the link + addresses in one SaveChanges below.
@@ -121,7 +125,7 @@ public class CustomerImportRepository : ICustomerImportRepository
             // is never newer than their history; re-running the customer import then heals stale dates.
             if (importCustomer.DateEnrollment != DateTime.MinValue)
             {
-                var registered = new DateTimeOffset(DateTime.SpecifyKind(importCustomer.DateEnrollment, DateTimeKind.Utc));
+                var registered = ToUtcOffset(importCustomer.DateEnrollment);
                 if (registered < existingCustomer.DateEnrollment)
                 {
                     existingCustomer.DateEnrollment = registered;
@@ -200,6 +204,18 @@ public class CustomerImportRepository : ICustomerImportRepository
         _dbContext.CustomerAddress.Add(newAddress);
         _logger.LogDebug("New address added for customer {CustomerId}", customer.Id);
     }
+
+    /// <summary>
+    /// Converts an import date to a UTC offset. Connectors deliver UTC-kind dates, but a date parsed from
+    /// a shop payload can arrive as local kind; converting instead of relabelling keeps the imported
+    /// history free of the server's time-zone offset.
+    /// </summary>
+    private static DateTimeOffset ToUtcOffset(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => new DateTimeOffset(value),
+        DateTimeKind.Local => new DateTimeOffset(value.ToUniversalTime()),
+        _ => new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc)),
+    };
 
     /// <summary>Adds a customer↔sales-channel link to the context (deferred; committed with the customer).</summary>
     private void AddCustomerSalesChannelLink(Guid customerId, Guid salesChannelId, string remoteCustomerId)

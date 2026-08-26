@@ -1,3 +1,5 @@
+using asERP.Domain.Constants;
+
 namespace asERP.Application.Features.GlobalSettings;
 
 /// <summary>
@@ -10,11 +12,14 @@ public static class GlobalSettingsRules
     /// <summary>
     /// Keys never exposed or editable through the generic endpoint. <c>Jwt.Key</c> is the
     /// machine-generated signing key (rotated by <c>SettingsInitializer</c>); a UI edit could
-    /// only break authentication.
+    /// only break authentication. <c>System.SetupCompleted</c> is maintained by the setup
+    /// flow/CLI/<c>SettingsInitializer</c>; resetting it by hand would only mislead clients
+    /// into offering a setup that the server refuses anyway once users exist.
     /// </summary>
     private static readonly HashSet<string> HiddenKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "Jwt.Key",
+        SettingKeys.SetupCompleted,
     };
 
     /// <summary>

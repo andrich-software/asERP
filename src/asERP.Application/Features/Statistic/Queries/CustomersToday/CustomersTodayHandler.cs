@@ -28,23 +28,27 @@ public class CustomersTodayHandler : IRequestHandler<CustomersTodayQuery, Result
 
             var dto = new CustomersTodayDto();
 
-            var now = DateTime.UtcNow;
-            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            // DateTimeOffset throughout: the window bounds are compared against Customer.DateEnrollment,
+            // and matching the column's type keeps the comparison translatable on every provider.
+            var now = DateTimeOffset.UtcNow;
+            var monthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
             var lastMonthStart = monthStart.AddMonths(-1);
             var lastMonthEnd = monthStart;
 
             // Customer calculations
             dto.CustomersTotal = await _customerRepository.Entities.CountAsync(cancellationToken);
 
+            // Counted by DateEnrollment (the customer's date in the shop), not by DateCreated: the latter is
+            // the row's insert timestamp, so an import would report its whole customer base as new that day.
             dto.CustomersNewThisMonth = await _customerRepository.Entities
-                .Where(c => c.DateCreated >= monthStart)
+                .Where(c => c.DateEnrollment >= monthStart)
                 .CountAsync(cancellationToken);
 
             // Period window: last N hours when requested, otherwise the current month
             var periodStart = request.Hours.HasValue ? now.AddHours(-request.Hours.Value) : monthStart;
             dto.CustomersNew = request.Hours.HasValue
                 ? await _customerRepository.Entities
-                    .Where(c => c.DateCreated >= periodStart)
+                    .Where(c => c.DateEnrollment >= periodStart)
                     .CountAsync(cancellationToken)
                 : dto.CustomersNewThisMonth;
 
@@ -52,7 +56,7 @@ public class CustomersTodayHandler : IRequestHandler<CustomersTodayQuery, Result
             var previousStart = request.Hours.HasValue ? periodStart.AddHours(-request.Hours.Value) : lastMonthStart;
             var previousEnd = request.Hours.HasValue ? periodStart : lastMonthEnd;
             var customersPrevious = await _customerRepository.Entities
-                .Where(c => c.DateCreated >= previousStart && c.DateCreated < previousEnd)
+                .Where(c => c.DateEnrollment >= previousStart && c.DateEnrollment < previousEnd)
                 .CountAsync(cancellationToken);
 
             dto.CustomersChangePercent = customersPrevious > 0

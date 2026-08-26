@@ -2,6 +2,7 @@ using System.Text.Json;
 using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Models.Storage;
+using asERP.Domain.Constants;
 using asERP.Domain.Entities;
 using asERP.Identity.Services;
 using asERP.Infrastructure.Storage;
@@ -119,7 +120,7 @@ internal static class CliRunner
 
         return args[0] switch
         {
-            "create" => await CreateAsync(users, roles),
+            "create" => await CreateAsync(users, roles, scope.ServiceProvider.GetRequiredService<ApplicationDbContext>()),
             "update" => await UpdateAsync(users, args[1..]),
             "delete" => await DeleteAsync(users, args[1..]),
             "list" => await ListAsync(users),
@@ -400,7 +401,7 @@ internal static class CliRunner
         }
     }
 
-    private static async Task<int> CreateAsync(UserManager<ApplicationUser> users, RoleManager<IdentityRole> roles)
+    private static async Task<int> CreateAsync(UserManager<ApplicationUser> users, RoleManager<IdentityRole> roles, ApplicationDbContext db)
     {
         // Inputs are passed via env vars by cli.sh — keeps passwords out of argv
         // and out of any audit logs that capture command lines.
@@ -457,6 +458,20 @@ internal static class CliRunner
             await users.DeleteAsync(user);
             return Fail($"could not assign Superadmin role: {Describe(assign)}");
         }
+
+        // A superadmin now exists, so the client-facing initial-setup wizard is obsolete —
+        // mark it completed right away instead of waiting for the next server restart
+        // (SettingsInitializer would self-heal the flag then anyway).
+        var setupFlag = await db.Setting.FirstOrDefaultAsync(s => s.Key == SettingKeys.SetupCompleted);
+        if (setupFlag == null)
+        {
+            db.Setting.Add(new Setting { Key = SettingKeys.SetupCompleted, Value = "True" });
+        }
+        else
+        {
+            setupFlag.Value = "True";
+        }
+        await db.SaveChangesAsync();
 
         Console.WriteLine($"Superadmin '{email}' created.");
         return 0;

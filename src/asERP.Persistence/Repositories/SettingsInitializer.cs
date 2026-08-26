@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using asERP.Domain.Constants;
 using asERP.Domain.Entities;
 using asERP.Persistence.DatabaseContext;
 using Microsoft.EntityFrameworkCore;
@@ -72,6 +73,44 @@ public class SettingsInitializer
         await ReplaceLegacyJwtKeyPlaceholderAsync(existingSettings);
         await ReplaceLegacyLokiEndpointDefaultAsync(existingSettings);
         await RemoveLegacyCompanySettingsAsync(existingSettings);
+        await EnsureSetupCompletedFlagAsync(existingSettings);
+    }
+
+    /// <summary>
+    /// Maintains the System.SetupCompleted flag that gates the anonymous initial-setup
+    /// endpoint (deliberately not part of <see cref="GetRequiredSettings"/> — its default
+    /// depends on the database's state). Installations with any existing user account are
+    /// marked completed so the client never offers the setup wizard against a database
+    /// that predates the flag; only a genuinely empty database starts with it unset.
+    /// Also self-heals after out-of-band superadmin creation (CLI/tray).
+    /// </summary>
+    private async Task EnsureSetupCompletedFlagAsync(List<Setting> existingSettings)
+    {
+        var anyUsers = await _context.Users.AnyAsync();
+
+        var flag = existingSettings.FirstOrDefault(s => s.Key == SettingKeys.SetupCompleted);
+        if (flag == null)
+        {
+            await _context.Setting.AddAsync(new Setting
+            {
+                Key = SettingKeys.SetupCompleted,
+                Value = anyUsers ? "True" : "False"
+            });
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Added {Key} setting with value {Value}",
+                SettingKeys.SetupCompleted, anyUsers ? "True" : "False");
+            return;
+        }
+
+        if (anyUsers && !string.Equals(flag.Value, "True", StringComparison.OrdinalIgnoreCase))
+        {
+            flag.Value = "True";
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Marked {Key} as completed — user accounts already exist",
+                SettingKeys.SetupCompleted);
+        }
     }
 
     /// <summary>

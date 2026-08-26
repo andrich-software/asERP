@@ -84,6 +84,75 @@ public class CustomerImportRepositoryTests
         Assert.Equal(1, await ctx.CustomerSalesChannel.IgnoreQueryFilters().CountAsync());
     }
 
+    [Fact]
+    public async Task Import_KeepsShopRegistrationDate_NotImportDate()
+    {
+        var options = NewOptions();
+        var tenant = new TestTenantContext();
+        await using var ctx = new ApplicationDbContext(options, tenant);
+
+        var channel = NewChannel();
+        ctx.SalesChannel.Add(channel);
+        await ctx.SaveChangesAsync();
+
+        var registered = new DateTime(2019, 3, 7, 8, 30, 0, DateTimeKind.Utc);
+        var import = NewImport("WC-1", "buyer@example.de");
+        import.DateEnrollment = registered;
+
+        var repo = BuildRepository(ctx, tenant);
+        await repo.ImportOrUpdateFromSalesChannel(channel, import);
+
+        var customer = await ctx.Customer.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(new DateTimeOffset(registered), customer.DateEnrollment);
+    }
+
+    [Fact]
+    public async Task Import_LocalKindRegistrationDate_IsConvertedToUtc()
+    {
+        var options = NewOptions();
+        var tenant = new TestTenantContext();
+        await using var ctx = new ApplicationDbContext(options, tenant);
+
+        var channel = NewChannel();
+        ctx.SalesChannel.Add(channel);
+        await ctx.SaveChangesAsync();
+
+        // System.Text.Json turns a shop date carrying an explicit offset into a local-kind value.
+        var registeredUtc = new DateTime(2019, 3, 7, 8, 30, 0, DateTimeKind.Utc);
+        var import = NewImport("WC-1", "buyer@example.de");
+        import.DateEnrollment = registeredUtc.ToLocalTime();
+
+        var repo = BuildRepository(ctx, tenant);
+        await repo.ImportOrUpdateFromSalesChannel(channel, import);
+
+        var customer = await ctx.Customer.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(registeredUtc, customer.DateEnrollment.UtcDateTime);
+    }
+
+    [Fact]
+    public async Task Reimport_WithEarlierShopDate_LowersEnrollmentDate()
+    {
+        var options = NewOptions();
+        var tenant = new TestTenantContext();
+        await using var ctx = new ApplicationDbContext(options, tenant);
+
+        var channel = NewChannel();
+        ctx.SalesChannel.Add(channel);
+        await ctx.SaveChangesAsync();
+
+        var repo = BuildRepository(ctx, tenant);
+        var first = NewImport("WC-1", "buyer@example.de");
+        first.DateEnrollment = new DateTime(2021, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        await repo.ImportOrUpdateFromSalesChannel(channel, first);
+
+        var earlier = NewImport("WC-1", "buyer@example.de");
+        earlier.DateEnrollment = new DateTime(2018, 1, 2, 0, 0, 0, DateTimeKind.Utc);
+        await repo.ImportOrUpdateFromSalesChannel(channel, earlier);
+
+        var customer = await ctx.Customer.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(new DateTimeOffset(earlier.DateEnrollment), customer.DateEnrollment);
+    }
+
     private static SalesChannel NewChannel() => new()
     {
         Id = Guid.NewGuid(),
