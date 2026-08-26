@@ -45,11 +45,19 @@ public class StatisticSalesOverviewHandler : IRequestHandler<StatisticSalesOverv
                 .Select(g => new { Date = g.Key, SalesCount = g.Count() })
                 .ToDictionaryAsync(x => x.Date, x => x.SalesCount, cancellationToken);
 
-            var dailyNewCustomers = await _customerRepository.Entities
-                .Where(c => c.DateCreated >= thirtyDaysAgo)
-                .GroupBy(c => c.DateCreated.Date)
-                .Select(g => new { Date = g.Key, CustomerCount = g.Count() })
-                .ToDictionaryAsync(x => x.Date, x => x.CustomerCount, cancellationToken);
+            var thirtyDaysAgoOffset = new DateTimeOffset(thirtyDaysAgo, TimeSpan.Zero);
+
+            // Grouped by DateEnrollment (the customer's date in the shop), not by DateCreated: the latter is
+            // the row's insert timestamp, so an import would report its whole customer base as new that day.
+            // The window is 30 days, so grouping the fetched dates in memory keeps the query provider-agnostic.
+            var enrollmentDates = await _customerRepository.Entities
+                .Where(c => c.DateEnrollment >= thirtyDaysAgoOffset)
+                .Select(c => c.DateEnrollment)
+                .ToListAsync(cancellationToken);
+
+            var dailyNewCustomers = enrollmentDates
+                .GroupBy(d => d.UtcDateTime.Date)
+                .ToDictionary(g => g.Key, g => g.Count());
 
             // Combine the results for each day
             for (var date = thirtyDaysAgo; date <= DateTime.UtcNow.Date; date = date.AddDays(1))

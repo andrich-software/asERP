@@ -3,14 +3,14 @@
     "Name": "Server und Client",
     "Projects": [
       {
-        "Path": "src\\asERP.Client\\asERP.Client.csproj",
-        "Action": "Start",
-        "DebugTarget": "asERP.Client (Desktop)"
-      },
-      {
         "Path": "src\\asERP.Server\\asERP.Server.csproj",
         "Action": "Start",
         "DebugTarget": "https"
+      },
+      {
+        "Path": "src\\asERP.Client\\asERP.Client.csproj",
+        "Action": "Start",
+        "DebugTarget": "asERP.Client (Desktop)"
       }
     ]
   }

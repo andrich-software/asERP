@@ -1,4 +1,4 @@
-using asERP.Domain.Entities;
+﻿using asERP.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -61,11 +61,14 @@ internal static class ImportChangeTrackerExtensions
     /// Detaches all committed (Unchanged) entries after an item's SaveChanges so the tracker stays small
     /// over a long import run. Without this, every imported order/customer/product graph stays tracked and
     /// DetectChanges scans an ever-growing set — per-item cost rises linearly until a 15-minute run spends
-    /// most of its time in change tracking. The dispatcher's <see cref="ChannelSyncRun"/> row and the
-    /// <see cref="SalesChannel"/> entity are exempt: both carry mid-run state (progress counts, backfill
-    /// cursors) that later SaveChanges calls in the same run must still flush. Pending (Added/Modified/
-    /// Deleted) entries are left alone — trimming runs on the success path where none should exist, and a
-    /// dirty channel cursor between checkpoints must survive.
+    /// most of its time in change tracking. The dispatcher's <see cref="ChannelSyncRun"/> row, the
+    /// <see cref="SalesChannel"/> entity and its <see cref="SalesChannelSyncState"/> row are exempt: they
+    /// carry the mid-run state (progress counts, import cursors, initial-import flags) that later
+    /// SaveChanges calls in the same run must still flush. Detaching the sync state made every cursor
+    /// write land on an untracked entity — silently, since EF neither re-tracks nor errors on it — so a
+    /// resumable import restarted from page 1 forever. Pending (Added/Modified/Deleted) entries are left
+    /// alone — trimming runs on the success path where none should exist, and a dirty channel cursor
+    /// between checkpoints must survive.
     /// </summary>
     public static void TrimCommittedEntries(this DbContext context)
     {
@@ -85,7 +88,7 @@ internal static class ImportChangeTrackerExtensions
                     continue;
                 }
 
-                if (entry.Entity is ChannelSyncRun or SalesChannel)
+                if (entry.Entity is ChannelSyncRun or SalesChannel or SalesChannelSyncState)
                 {
                     continue;
                 }

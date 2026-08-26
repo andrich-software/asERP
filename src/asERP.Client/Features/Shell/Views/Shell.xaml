@@ -424,18 +424,6 @@
               </StackPanel>
             </Button>
 
-            <Button x:Name="NavItemCategories"
-                    Style="{StaticResource SidebarNavItemStyle}"
-                    Tag="Categories"
-                    Click="OnNavItemClick">
-              <StackPanel Orientation="Horizontal" Spacing="12">
-                <FontIcon Glyph="&#xE71D;" FontSize="16" />
-                <TextBlock x:Uid="Shell.NavItem.Categories"
-                           Style="{StaticResource BodyMedium}"
-                           VerticalAlignment="Center" />
-              </StackPanel>
-            </Button>
-
             <Button x:Name="NavItemManufacturers"
                     Style="{StaticResource SidebarNavItemStyle}"
                     Tag="Manufacturers"
@@ -474,6 +462,18 @@
             </Grid>
           </Button>
           <StackPanel x:Name="GroupEinstellungenContent" Visibility="Collapsed">
+            <Button x:Name="NavItemCategories"
+                    Style="{StaticResource SidebarNavItemStyle}"
+                    Tag="Categories"
+                    Click="OnNavItemClick">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <FontIcon Glyph="&#xE71D;" FontSize="16" />
+                <TextBlock x:Uid="Shell.NavItem.Categories"
+                           Style="{StaticResource BodyMedium}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
             <Button x:Name="NavItemTaxClasses"
                     Style="{StaticResource SidebarNavItemStyle}"
                     Tag="TaxClasses"
@@ -803,6 +803,12 @@
                                Grid.Column="0"
                                Grid.ColumnSpan="2"
                                Visibility="Collapsed" />
+
+    <!-- Initial Server Setup Overlay (shown when the selected server reports SetupRequired) - spans both columns -->
+    <views:SetupOverlay x:Name="SetupOverlay"
+                        Grid.Column="0"
+                        Grid.ColumnSpan="2"
+                        Visibility="Collapsed" />
 
     <!-- First Tenant Creation Overlay - spans both columns -->
     <views:FirstTenantOverlay x:Name="FirstTenantOverlay"

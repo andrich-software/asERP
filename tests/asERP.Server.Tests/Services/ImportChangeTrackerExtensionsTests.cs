@@ -1,5 +1,6 @@
-using asERP.Domain.Constants;
+﻿using asERP.Domain.Constants;
 using asERP.Domain.Entities;
+using asERP.Domain.Enums;
 using asERP.SalesChannels.Repositories;
 using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -185,5 +186,42 @@ public class ImportChangeTrackerExtensionsTests : TenantIsolatedTestBase
         DbContext.DiscardPendingChanges();
 
         TestAssertions.AssertEqual(0, DbContext.ChangeTracker.Entries().Count());
+    }
+
+    [Fact]
+    public async Task TrimCommittedEntries_KeepsSyncStateTracked_SoCursorProgressPersists()
+    {
+        TenantContext.SetCurrentTenantId(TenantConstants.TestTenant1Id);
+
+        var channelId = Guid.NewGuid();
+        DbContext.SalesChannel.Add(new SalesChannel
+        {
+            Id = channelId,
+            Type = SalesChannelType.WooCommerceDatabase,
+            Name = "Trim Sync State Channel",
+            Url = "https://shop.example.com",
+            Username = "key",
+            Password = "secret",
+            IsEnabled = true,
+            ImportCustomers = true,
+            TenantId = TenantConstants.TestTenant1Id,
+            SyncState = new SalesChannelSyncState { TenantId = TenantConstants.TestTenant1Id }
+        });
+        await DbContext.SaveChangesAsync();
+
+        // What a long import run does after every committed item: trim the tracker, then advance the
+        // page cursor on the channel's sync state and flush it with the next item / checkpoint.
+        DbContext.TrimCommittedEntries();
+
+        var channel = DbContext.ChangeTracker.Entries<SalesChannel>().Single().Entity;
+        channel.SyncState.CustomerImportPageCursor = 7;
+        channel.SyncState.InitialCustomerImportCompleted = true;
+        await DbContext.SaveChangesAsync();
+
+        DbContext.ChangeTracker.Clear();
+
+        var reloaded = await DbContext.SalesChannelSyncState.SingleAsync(s => s.SalesChannelId == channelId);
+        TestAssertions.AssertEqual(7, reloaded.CustomerImportPageCursor);
+        TestAssertions.AssertTrue(reloaded.InitialCustomerImportCompleted);
     }
 }

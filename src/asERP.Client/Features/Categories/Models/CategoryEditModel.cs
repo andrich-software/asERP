@@ -288,18 +288,44 @@ public class CategoryEditModel : AsyncInitializableModel
 
     protected override void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        base.OnPropertyChanged(propertyName);
-
-        if (propertyName is nameof(Name))
+        // Initialization/save continuations resume on a background thread, and classic {Binding}
+        // updates raised from there are dropped on Desktop/Skia - the form would stay empty after
+        // loading an existing category.
+        RunOnUi(() =>
         {
-            base.OnPropertyChanged(nameof(CanSave));
+            RaisePropertyChanged(propertyName);
+
+            if (propertyName is nameof(Name))
+            {
+                RaisePropertyChanged(nameof(CanSave));
+            }
+
+            if (propertyName is nameof(IsInitializing))
+            {
+                RaisePropertyChanged(nameof(IsLoading));
+                RaisePropertyChanged(nameof(IsNotLoading));
+                RaisePropertyChanged(nameof(CanSave));
+            }
+        });
+    }
+
+    // base.OnPropertyChanged cannot be called from inside a lambda, hence the trampoline.
+    private void RaisePropertyChanged(string? propertyName) => base.OnPropertyChanged(propertyName);
+
+    /// <summary>
+    /// Runs a UI-affecting action on the UI thread, inline when already there so property changes
+    /// raised from user input stay synchronous (the two-way text bindings depend on that).
+    /// </summary>
+    private static void RunOnUi(Action action)
+    {
+        var dispatcher = App.UiDispatcher;
+        if (dispatcher is null || dispatcher.HasThreadAccess)
+        {
+            action();
         }
-
-        if (propertyName is nameof(IsInitializing))
+        else
         {
-            base.OnPropertyChanged(nameof(IsLoading));
-            base.OnPropertyChanged(nameof(IsNotLoading));
-            base.OnPropertyChanged(nameof(CanSave));
+            dispatcher.TryEnqueue(() => action());
         }
     }
 }

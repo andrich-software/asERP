@@ -124,6 +124,18 @@ public sealed class Sw6SalesCustomer
     [JsonPropertyName("lastName")] public string? LastName { get; set; }
     [JsonPropertyName("company")] public string? Company { get; set; }
     [JsonPropertyName("customerId")] public string? CustomerId { get; set; }
+
+    // The shop's customer record behind the order snapshot (null for orders whose customer was deleted).
+    // It carries the registration date the import uses as the customer's enrollment date.
+    [JsonPropertyName("customer")] public Sw6Customer? Customer { get; set; }
+}
+
+public sealed class Sw6Customer
+{
+    [JsonPropertyName("createdAt")] public DateTime? CreatedAt { get; set; }
+
+    // Date-only field in Shopware ("first login"); for guest customers it is usually null.
+    [JsonPropertyName("firstLogin")] public DateTime? FirstLogin { get; set; }
 }
 
 public sealed class Sw6Address

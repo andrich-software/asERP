@@ -213,6 +213,30 @@
   <data name="Shell.Register.Submit.Content" xml:space="preserve">
     <value>Registrieren</value>
   </data>
+  <data name="Shell.Login.SetupHint.Text" xml:space="preserve">
+    <value>Dieser Server wurde noch nicht eingerichtet. Erstellen Sie zunächst das Superadmin-Konto und die erste Organisation.</value>
+  </data>
+  <data name="Shell.Login.SetupStartButton.Content" xml:space="preserve">
+    <value>Einrichtung starten</value>
+  </data>
+  <data name="Shell.Setup.Title.Text" xml:space="preserve">
+    <value>Server einrichten</value>
+  </data>
+  <data name="Shell.Setup.Subtitle.Text" xml:space="preserve">
+    <value>Erstellen Sie das Superadmin-Konto und die erste Organisation für diesen Server.</value>
+  </data>
+  <data name="Shell.Setup.AdminFormTitle.Text" xml:space="preserve">
+    <value>Superadmin-Konto</value>
+  </data>
+  <data name="Shell.Setup.TenantFormTitle.Text" xml:space="preserve">
+    <value>Erste Organisation</value>
+  </data>
+  <data name="Shell.Setup.Cancel.Content" xml:space="preserve">
+    <value>Zurück zum Login</value>
+  </data>
+  <data name="Shell.Setup.Submit.Content" xml:space="preserve">
+    <value>Einrichtung abschließen</value>
+  </data>
 
   <!-- Dashboard Page -->
   <data name="DashboardPage.Header.Welcome.Text" xml:space="preserve">
@@ -6105,6 +6129,15 @@
   </data>
   <data name="CategoryListPage.Header.Products.Text" xml:space="preserve">
     <value>Produkte</value>
+  </data>
+  <data name="CategoryListPage.RootCategory" xml:space="preserve">
+    <value>Root-Kategorie</value>
+  </data>
+  <data name="CategoryListPage.UnnamedCategory" xml:space="preserve">
+    <value>(Ohne Namen)</value>
+  </data>
+  <data name="CategoryListPage.ChannelHint" xml:space="preserve">
+    <value>Kategorie im Verkaufskanal »{0}« aktiv</value>
   </data>
   <data name="CategoryListPage.NoCategories.Title" xml:space="preserve">
     <value>Noch keine Kategorien</value>

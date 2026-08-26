@@ -4,7 +4,11 @@ using asERP.Domain.Enums;
 namespace asERP.Client.Features.Categories.Models;
 
 /// <summary>One checkbox column on the category matrix — a sales channel of a shop-like type.</summary>
-public partial record CategoryChannelColumn(Guid SalesChannelId, string Name, SalesChannelType Type);
+public partial record CategoryChannelColumn(Guid SalesChannelId, string Name, SalesChannelType Type)
+{
+    /// <summary>Localized "category is active in &lt;channel&gt;" caption tooltip.</summary>
+    public string Hint { get; init; } = string.Empty;
+}
 
 /// <summary>
 /// One row of the category matrix. Static per data load — only the cells mutate.
@@ -23,6 +27,13 @@ public sealed class CategoryRow
     public IReadOnlyList<CategoryChannelCell> Cells { get; init; } = [];
 
     public Thickness NameIndent => new(Level * 20, 0, 0, 0);
+
+    /// <summary>
+    /// Total width of the checkbox area. Set explicitly so the row and the table header reserve the
+    /// same space even while one of them is still empty - an Auto column sized from a late-filled
+    /// ItemsControl leaves the header labels sitting over the wrong column.
+    /// </summary>
+    public double CellsWidth => Cells.Count * CategoryChannelColumns.ColumnWidth;
 }
 
 /// <summary>
@@ -36,6 +47,9 @@ public sealed class CategoryChannelCell : INotifyPropertyChanged
     public Guid CategoryId { get; init; }
     public Guid SalesChannelId { get; init; }
     public bool ServerIsActive { get; set; }
+
+    /// <summary>Localized "category is listed in &lt;channel&gt;" hint shown as the checkbox tooltip.</summary>
+    public string ActivationHint { get; init; } = string.Empty;
 
     public bool IsActive
     {

@@ -548,7 +548,9 @@ public sealed class Shopware6Connector : ConnectorBase
             ["total-count-mode"] = 1,
             ["associations"] = new
             {
-                orderCustomer = new { },
+                // The nested customer carries the shop-side registration date (createdAt/firstLogin),
+                // which the import uses as the customer's enrollment date instead of the import time.
+                orderCustomer = new { associations = new { customer = new { } } },
                 billingAddress = new { associations = new { country = new { } } },
                 deliveries = new { associations = new { shippingOrderAddress = new { associations = new { country = new { } } } } },
                 lineItems = new { },
@@ -911,7 +913,7 @@ public sealed class Shopware6Connector : ConnectorBase
         {
             RemoteSalesId = sales.Id,
             RemoteCustomerId = sales.SalesCustomer?.CustomerId ?? string.Empty,
-            DateSalesed = sales.SalesDateTime,
+            DateSalesed = ToUtc(sales.SalesDateTime),
             Status = MapSalesStatus(sales.StateMachineState?.TechnicalName),
             PaymentStatus = PaymentStatus.Unknown,
             Subtotal = sales.AmountNet,
@@ -925,7 +927,7 @@ public sealed class Shopware6Connector : ConnectorBase
                 CompanyName = sales.SalesCustomer?.Company ?? string.Empty,
                 Email = sales.SalesCustomer?.Email ?? string.Empty,
                 Phone = billing?.PhoneNumber ?? string.Empty,
-                DateEnrollment = DateTime.UtcNow,
+                DateEnrollment = MapEnrollment(sales),
             },
             BillingAddress = billingAddress,
             ShippingAddress = shippingAddress,
@@ -943,6 +945,35 @@ public sealed class Shopware6Connector : ConnectorBase
                 }).ToList(),
         };
     }
+
+    /// <summary>
+    /// Resolves the customer's enrollment date from the shop's own registration data so an initial import
+    /// reproduces the customer history instead of stamping every customer with the import date. Shopware
+    /// exposes both the record's creation date and the (date-only) first login; the earlier of the two
+    /// wins. Falls back to the order date when the order carries no customer record.
+    /// </summary>
+    private static DateTime MapEnrollment(Sw6Sales sales)
+    {
+        var customer = sales.SalesCustomer?.Customer;
+        var candidates = new[] { customer?.CreatedAt, customer?.FirstLogin }
+            .Where(d => d.HasValue && d.Value != default)
+            .Select(d => ToUtc(d!.Value))
+            .ToList();
+
+        return candidates.Count > 0 ? candidates.Min() : ToUtc(sales.SalesDateTime);
+    }
+
+    /// <summary>
+    /// Normalises a datetime parsed from the Admin API to UTC. Shopware sends an explicit offset, which
+    /// System.Text.Json turns into a local-kind value, so the offset has to be applied before the date is
+    /// persisted as UTC — otherwise the imported dates drift by the server's time-zone offset.
+    /// </summary>
+    private static DateTime ToUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+    };
 
     /// <summary>
     /// Maps a Shopware product's media gallery to import images. Each entry's public file URL lives on

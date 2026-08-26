@@ -28,6 +28,12 @@ public sealed partial class LoginOverlay : UserControl
     /// <summary>Raised when the user clicks the registration link.</summary>
     public event EventHandler? RegistrationRequested;
 
+    /// <summary>
+    /// Raised when the user clicks "Einrichtung starten" on a server that still awaits
+    /// its initial setup. The Shell shows the setup overlay for the selected server.
+    /// </summary>
+    public event EventHandler? SetupRequested;
+
     /// <summary>Portable/zip and mobile builds can't self-update — send them here instead.</summary>
     private static readonly Uri DownloadPageUri = new("https://github.com/andrich-software/asERP/releases");
 
@@ -77,6 +83,8 @@ public sealed partial class LoginOverlay : UserControl
         LoginServerPanel.Visibility = Visibility.Visible;
         LoginServerStatus.Visibility = Visibility.Collapsed;
         RegisterLink.Visibility = Visibility.Collapsed;
+        LoginCredentialsPanel.Visibility = Visibility.Visible;
+        SetupRequiredPanel.Visibility = Visibility.Collapsed;
 
         // Credential prefill (saved password, dev convenience) happens per selected server in
         // ApplyCredentialPrefill — a blanket prefill here left a stale dev password in the box
@@ -94,7 +102,7 @@ public sealed partial class LoginOverlay : UserControl
         if (asERP.Client.Core.Configuration.RuntimeConfig.IsServerUrlRestricted)
         {
             LoginServerPanel.Visibility = Visibility.Collapsed;
-            _ = RefreshRegistrationLinkAsync(asERP.Client.Core.Configuration.RuntimeConfig.RestrictServerUrl!);
+            _ = RefreshServerInfoAsync(asERP.Client.Core.Configuration.RuntimeConfig.RestrictServerUrl!);
             return;
         }
 
@@ -233,35 +241,59 @@ public sealed partial class LoginOverlay : UserControl
 
         ApplyCredentialPrefill(profile);
 
-        _ = RefreshServerStatusAsync(profile.Url);
-        _ = RefreshRegistrationLinkAsync(profile.Url);
+        _ = RefreshServerInfoAsync(profile.Url);
     }
 
-    private async Task RefreshServerStatusAsync(string serverUrl)
+    /// <summary>
+    /// Single server-info round trip per server selection: updates the status badge,
+    /// the registration link, the minimum-client-version gate and the setup state from
+    /// one response. Also used for the restricted-URL case (WASM), where the server
+    /// selector — and with it the status badge — is hidden.
+    /// </summary>
+    private async Task RefreshServerInfoAsync(string serverUrl)
     {
         try
         {
+            // Skip half-typed URLs like "https://" — Uri.TryCreate would
+            // accept them but the request is guaranteed to fail.
+            if (!Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri) ||
+                string.IsNullOrWhiteSpace(uri.Host))
+            {
+                RegisterLink.Visibility = Visibility.Collapsed;
+                return;
+            }
+
             LoginServerStatus.Visibility = Visibility.Visible;
             LoginServerStatus.Text = Localize("ServerDialog.StatusChecking", "prüfe …");
 
             var app = Application.Current as App;
-            var serverInfo = app?.Host?.Services?.GetService<IServerInfoService>();
-            if (serverInfo == null)
+            var serverInfoService = app?.Host?.Services?.GetService<IServerInfoService>();
+            if (serverInfoService == null)
             {
                 LoginServerStatus.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            var info = await serverInfo.GetServerInfoAsync(serverUrl);
+            var info = await serverInfoService.GetServerInfoAsync(serverUrl);
+
             LoginServerStatus.Text = info != null
                 ? string.Format(Localize("ServerDialog.StatusConnectedFormat", "asERP v{0} · verbunden"), info.Version)
                 : Localize("ServerDialog.StatusOffline", "offline");
+
+            // While the server awaits its initial setup, registration is pointless —
+            // the setup wizard creates the first account.
+            RegisterLink.Visibility = info?.RegistrationEnabled == true && info?.SetupRequired != true
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
             ApplyServerCompatibility(info);
+            ApplySetupState(info);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[LoginOverlay] RefreshServerStatusAsync error: {ex.Message}");
+            Console.WriteLine($"[LoginOverlay] RefreshServerInfoAsync error: {ex.Message}");
             LoginServerStatus.Text = Localize("ServerDialog.StatusOffline", "offline");
+            RegisterLink.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -293,6 +325,45 @@ public sealed partial class LoginOverlay : UserControl
 
         UpdateRequiredBanner.Visibility = _updateRequired ? Visibility.Visible : Visibility.Collapsed;
         LoginButton.IsEnabled = !_updateRequired;
+    }
+
+    /// <summary>
+    /// Swaps the credentials form for the "Einrichtung starten" call-to-action while the
+    /// selected server still awaits its initial setup. Offline servers and older servers
+    /// without the flag (SetupRequired defaults to false) keep the normal login form.
+    /// </summary>
+    private void ApplySetupState(ServerInfoResponseDto? info)
+    {
+        var setupRequired = info?.SetupRequired == true;
+        SetupRequiredPanel.Visibility = setupRequired ? Visibility.Visible : Visibility.Collapsed;
+        LoginCredentialsPanel.Visibility = setupRequired ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void SetupStart_Click(object sender, RoutedEventArgs e)
+    {
+        SetupRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Called by the Shell after the setup overlay finished: prefills the email of the
+    /// just-created Superadmin and re-checks the server status so the setup panel makes
+    /// way for the normal login form.
+    /// </summary>
+    public void RefreshAfterSetup(string? email)
+    {
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            LoginEmail.Text = email;
+        }
+
+        var serverUrl = asERP.Client.Core.Configuration.RuntimeConfig.IsServerUrlRestricted
+            ? asERP.Client.Core.Configuration.RuntimeConfig.RestrictServerUrl
+            : (LoginServerSelector.SelectedItem as ServerProfile)?.Url;
+
+        if (!string.IsNullOrWhiteSpace(serverUrl))
+        {
+            _ = RefreshServerInfoAsync(serverUrl);
+        }
     }
 
     /// <summary>
@@ -362,39 +433,6 @@ public sealed partial class LoginOverlay : UserControl
         }
     }
 
-    private async Task RefreshRegistrationLinkAsync(string serverUrl)
-    {
-        try
-        {
-            // Skip half-typed URLs like "https://" — Uri.TryCreate would
-            // accept them but the request is guaranteed to fail.
-            if (!Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri) ||
-                string.IsNullOrWhiteSpace(uri.Host))
-            {
-                RegisterLink.Visibility = Visibility.Collapsed;
-                return;
-            }
-
-            var app = Application.Current as App;
-            var serverInfoService = app?.Host?.Services?.GetService<IServerInfoService>();
-            if (serverInfoService == null) return;
-
-            var info = await serverInfoService.GetServerInfoAsync(serverUrl);
-            RegisterLink.Visibility = info?.RegistrationEnabled == true
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-            // Also runs for the restricted-URL case (WASM), where the server selector —
-            // and with it RefreshServerStatusAsync — is hidden.
-            ApplyServerCompatibility(info);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[LoginOverlay] RefreshRegistrationLinkAsync error: {ex.Message}");
-            RegisterLink.Visibility = Visibility.Collapsed;
-        }
-    }
-
     private void LoginInput_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
     {
         if (e.Key == Windows.System.VirtualKey.Enter)
@@ -436,9 +474,9 @@ public sealed partial class LoginOverlay : UserControl
         serverUrl = ServerUrlUtil.Normalize(serverUrl);
 
         // If the user typed the URL and clicked Login without leaving the
-        // field first, LostFocus may not have fired — refresh the registration
-        // link visibility now (fire-and-forget; do not block login).
-        _ = RefreshRegistrationLinkAsync(serverUrl);
+        // field first, LostFocus may not have fired — refresh the server info
+        // (registration link, version gate) now (fire-and-forget; do not block login).
+        _ = RefreshServerInfoAsync(serverUrl);
 
         LoginButton.IsEnabled = false;
         LoginProgress.Visibility = Visibility.Visible;

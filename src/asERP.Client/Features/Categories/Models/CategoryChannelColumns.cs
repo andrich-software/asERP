@@ -9,6 +9,12 @@ namespace asERP.Client.Features.Categories.Models;
 /// </summary>
 public static class CategoryChannelColumns
 {
+    /// <summary>
+    /// Pixel width of one checkbox column. Must stay in sync with the per-column Width in
+    /// CategoryListPage.xaml; the header and the rows derive their total width from it.
+    /// </summary>
+    public const double ColumnWidth = 90;
+
     public static bool HasColumn(SalesChannelType type) =>
         type is SalesChannelType.AsShop
             or SalesChannelType.WooCommerce

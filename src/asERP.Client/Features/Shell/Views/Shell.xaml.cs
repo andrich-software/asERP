@@ -51,8 +51,11 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         // visibility and reacts to the events below (see the Auth Overlays region).
         LoginOverlay.LoginSucceeded += OnAuthOverlaySucceededAsync;
         LoginOverlay.RegistrationRequested += OnRegistrationRequested;
+        LoginOverlay.SetupRequested += OnSetupRequested;
         RegistrationOverlay.RegistrationSucceeded += OnAuthOverlaySucceededAsync;
         RegistrationOverlay.BackToLoginRequested += OnBackToLoginRequested;
+        SetupOverlay.SetupCompleted += OnSetupCompletedAsync;
+        SetupOverlay.BackToLoginRequested += OnBackToLoginRequested;
         FirstTenantOverlay.TenantCreated += OnFirstTenantCreatedAsync;
 
         SetUnauthenticatedVisibility();
@@ -339,6 +342,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
     {
         LoginOverlay.Visibility = Visibility.Collapsed;
         RegistrationOverlay.Visibility = Visibility.Collapsed;
+        SetupOverlay.Visibility = Visibility.Collapsed;
         FirstTenantOverlay.Visibility = Visibility.Collapsed;
 
         Sidebar.Visibility = Visibility.Visible;
@@ -374,6 +378,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         LoginOverlay.Reset();
         LoginOverlay.Visibility = Visibility.Visible;
         RegistrationOverlay.Visibility = Visibility.Collapsed;
+        SetupOverlay.Visibility = Visibility.Collapsed;
         FirstTenantOverlay.Visibility = Visibility.Collapsed;
 
         FirstTenantOverlay.Reset();
@@ -403,6 +408,7 @@ public sealed partial class Shell : UserControl, IContentControlProvider
     {
         LoginOverlay.Visibility = Visibility.Collapsed;
         RegistrationOverlay.Visibility = Visibility.Collapsed;
+        SetupOverlay.Visibility = Visibility.Collapsed;
         FirstTenantOverlay.Visibility = Visibility.Visible;
 
         FirstTenantOverlay.Reset();
@@ -1023,7 +1029,33 @@ public sealed partial class Shell : UserControl, IContentControlProvider
     private void OnBackToLoginRequested(object? sender, EventArgs e)
     {
         RegistrationOverlay.Visibility = Visibility.Collapsed;
+        SetupOverlay.Visibility = Visibility.Collapsed;
         LoginOverlay.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// The "Einrichtung starten" button on the login overlay was clicked — show the setup
+    /// overlay for the server currently selected on the login overlay.
+    /// </summary>
+    private void OnSetupRequested(object? sender, EventArgs e)
+    {
+        SetupOverlay.Reset();
+        SetupOverlay.ServerUrl = LoginOverlay.SelectedServerUrl;
+        LoginOverlay.Visibility = Visibility.Collapsed;
+        SetupOverlay.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// The initial server setup finished — return to the login overlay with the freshly
+    /// created Superadmin email prefilled; the re-run server-info check swaps the setup
+    /// panel back for the credentials form.
+    /// </summary>
+    private Task OnSetupCompletedAsync()
+    {
+        SetupOverlay.Visibility = Visibility.Collapsed;
+        LoginOverlay.Visibility = Visibility.Visible;
+        LoginOverlay.RefreshAfterSetup(SetupOverlay.CreatedEmail);
+        return Task.CompletedTask;
     }
 
     /// <summary>

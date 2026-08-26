@@ -98,6 +98,59 @@ public class SalesImportRepositoryTests
     }
 
     [Fact]
+    public async Task Import_UsesShopRegistrationDate_AsEnrollmentDate()
+    {
+        var options = NewOptions();
+        var tenant = new TestTenantContext();
+        await using var ctx = new ApplicationDbContext(options, tenant);
+
+        var channel = NewChannel();
+        ctx.Product.Add(new Product { Id = Guid.NewGuid(), Sku = "SKU-1", Name = "Test Product" });
+        ctx.SalesChannel.Add(channel);
+        await ctx.SaveChangesAsync();
+
+        var registered = new DateTime(2017, 5, 4, 9, 15, 0, DateTimeKind.Utc);
+        var import = NewImport("1001", "C-1", "buyer@example.de", "SKU-1");
+        import.Customer!.DateEnrollment = registered;
+
+        var repo = BuildRepository(ctx, tenant);
+        await repo.ImportOrUpdateFromSalesChannel(channel, import);
+
+        var customer = await ctx.Customer.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(new DateTimeOffset(registered), customer.DateEnrollment);
+    }
+
+    [Fact]
+    public async Task Reimport_WithRegistrationDateBeforeOrder_LowersEnrollmentDate()
+    {
+        var options = NewOptions();
+        var tenant = new TestTenantContext();
+        await using var ctx = new ApplicationDbContext(options, tenant);
+
+        var channel = NewChannel();
+        ctx.Product.Add(new Product { Id = Guid.NewGuid(), Sku = "SKU-1", Name = "Test Product" });
+        ctx.SalesChannel.Add(channel);
+        await ctx.SaveChangesAsync();
+
+        var repo = BuildRepository(ctx, tenant);
+
+        // First pass: the connector had no registration date, so the order date became the enrollment date.
+        var withoutRegistration = NewImport("1001", "C-1", "buyer@example.de", "SKU-1");
+        withoutRegistration.Customer!.DateEnrollment = withoutRegistration.DateSalesed;
+        await repo.ImportOrUpdateFromSalesChannel(channel, withoutRegistration);
+
+        // Second pass over the same order, now carrying the shop's registration date.
+        var registered = new DateTime(2017, 5, 4, 9, 15, 0, DateTimeKind.Utc);
+        var withRegistration = NewImport("1001", "C-1", "buyer@example.de", "SKU-1");
+        withRegistration.DateSalesed = withoutRegistration.DateSalesed;
+        withRegistration.Customer!.DateEnrollment = registered;
+        await repo.ImportOrUpdateFromSalesChannel(channel, withRegistration);
+
+        var customer = await ctx.Customer.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(new DateTimeOffset(registered), customer.DateEnrollment);
+    }
+
+    [Fact]
     public async Task Reimport_IsIdempotent_NoDuplicateSalesOrCustomer()
     {
         var options = NewOptions();
