@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Constants;
+using asERP.Domain.Constants;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.SalesChannels.Repositories;
@@ -223,5 +223,37 @@ public class ImportChangeTrackerExtensionsTests : TenantIsolatedTestBase
         var reloaded = await DbContext.SalesChannelSyncState.SingleAsync(s => s.SalesChannelId == channelId);
         TestAssertions.AssertEqual(7, reloaded.CustomerImportPageCursor);
         TestAssertions.AssertTrue(reloaded.InitialCustomerImportCompleted);
+    }
+
+    [Fact]
+    public async Task TrimCommittedEntries_KeepsOperationStateTracked_SoSchedulingProgressPersists()
+    {
+        TenantContext.SetCurrentTenantId(TenantConstants.TestTenant1Id);
+
+        // The dispatcher tracks one SalesChannelOperationState row per run (cursor/watermark home from
+        // phase 2 on). Trimming it away would repeat the documented sync-state bug: cursor writes land
+        // on an untracked entity and every resumable import silently restarts from the beginning.
+        var operationState = new SalesChannelOperationState
+        {
+            SalesChannelId = Guid.NewGuid(),
+            Operation = ChannelSyncOperation.ImportCustomers,
+            Phase = ChannelSyncPhase.Initial,
+            NextDueAt = DateTime.UtcNow,
+            TenantId = TenantConstants.TestTenant1Id,
+        };
+        DbContext.SalesChannelOperationState.Add(operationState);
+        await DbContext.SaveChangesAsync();
+
+        DbContext.TrimCommittedEntries();
+
+        var tracked = DbContext.ChangeTracker.Entries<SalesChannelOperationState>().SingleOrDefault();
+        TestAssertions.AssertNotNull(tracked);
+
+        operationState.CursorPage = 12;
+        await DbContext.SaveChangesAsync();
+        DbContext.ChangeTracker.Clear();
+
+        var reloaded = await DbContext.SalesChannelOperationState.SingleAsync(o => o.Id == operationState.Id);
+        TestAssertions.AssertEqual(12, reloaded.CursorPage);
     }
 }

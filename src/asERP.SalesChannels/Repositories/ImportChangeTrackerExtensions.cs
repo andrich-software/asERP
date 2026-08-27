@@ -1,4 +1,4 @@
-﻿using asERP.Domain.Entities;
+using asERP.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -88,7 +88,7 @@ internal static class ImportChangeTrackerExtensions
                     continue;
                 }
 
-                if (entry.Entity is ChannelSyncRun or SalesChannel or SalesChannelSyncState)
+                if (entry.Entity is ChannelSyncRun or SalesChannel or SalesChannelSyncState or SalesChannelOperationState)
                 {
                     continue;
                 }

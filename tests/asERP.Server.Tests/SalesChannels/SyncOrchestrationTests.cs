@@ -195,7 +195,8 @@ public class SyncOrchestrationTests
     {
         var registry = new SalesChannelConnectorRegistry(new[] { connector });
         var factory = new SalesChannelContextFactory(new StubHttpClientFactory(), new PassthroughEncryptor());
-        return new SyncDispatcher(context, registry, factory, new TestTenantContext(), NullLogger<SyncDispatcher>.Instance);
+        return new SyncDispatcher(context, registry, factory, new TestTenantContext(),
+            Microsoft.Extensions.Options.Options.Create(new SalesChannelSyncOptions()), NullLogger<SyncDispatcher>.Instance);
     }
 
     private static ServiceProvider BuildProvider(string dbName, ISalesChannelConnector connector)

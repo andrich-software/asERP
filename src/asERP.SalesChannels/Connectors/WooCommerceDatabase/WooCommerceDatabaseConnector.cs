@@ -117,7 +117,18 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
     private static async Task<MySqlConnection> OpenAsync(Db db, CancellationToken cancellationToken)
     {
         var connection = new MySqlConnection(db.ConnectionString);
-        await connection.OpenAsync(cancellationToken);
+        try
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Name the target: MySqlConnector's bare "Connect Timeout expired." gives an operator
+            // nothing to check. Credentials are deliberately not echoed.
+            await connection.DisposeAsync();
+            throw new InvalidOperationException(
+                $"Cannot open MySQL connection to '{db.Config.Host}:{db.Config.Port}' (database '{db.Config.Database}'): {ex.Message}", ex);
+        }
         return connection;
     }
 
@@ -161,6 +172,13 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         var processed = 0;
         var failed = 0;
 
+        // A delta pass (incremental watermark set) runs cursor-less: the changed set is small, and an
+        // aborted delta simply re-runs the same window next time (idempotent upserts). Full walks
+        // (initial import, periodic full sweep) persist a keyset resume cursor and are time-boxed, so
+        // a server restart or the chunk budget never sends the walk back to page 1.
+        var modifiedSince = context.IncrementalSince;
+        var isFullWalk = modifiedSince is null;
+
         try
         {
             await using var connection = await OpenAsync(db, context.CancellationToken);
@@ -168,16 +186,24 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
             var taxRateMap = await LoadTaxRateMapAsync(connection, db, context.CancellationToken);
             var attributeLabels = await LoadAttributeLabelsAsync(connection, db, context.CancellationToken);
             var progress = new ProgressThrottle(context);
+            var runStart = DateTime.UtcNow;
+            var reachedEnd = false;
 
             // Keyset pagination over the post id — stable regardless of concurrent shop writes.
             ulong lastId = 0;
+            if (isFullWalk && ulong.TryParse(context.OperationState!.CursorText, out var resumeId))
+            {
+                lastId = resumeId;
+            }
+
             for (var page = 1; page <= MaxPages; page++)
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
 
-                var batch = await LoadProductPageAsync(connection, db, lastId, context.CancellationToken);
+                var batch = await LoadProductPageAsync(connection, db, lastId, modifiedSince, context.CancellationToken);
                 if (batch.Count == 0)
                 {
+                    reachedEnd = true;
                     break;
                 }
                 lastId = batch[^1].Id;
@@ -257,10 +283,33 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
 
                 _logger.LogInformation("WooCommerce DB product import page {Page}: {Processed} imported, {Failed} failed so far", page, processed, failed);
 
+                if (isFullWalk)
+                {
+                    // Monotone keyset resume position — flushed with the next progress checkpoint, so
+                    // a restart loses at most ~10s of walking instead of the whole catalogue.
+                    context.OperationState!.CursorText = lastId.ToString(CultureInfo.InvariantCulture);
+                }
+
                 if (batch.Count < PageSize)
+                {
+                    reachedEnd = true;
+                    break;
+                }
+
+                // Chunk budget: yield after the time box; the scheduler chains the next chunk within
+                // seconds while the initial walk is incomplete.
+                if (isFullWalk && DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
                 {
                     break;
                 }
+            }
+
+            if (reachedEnd && isFullWalk)
+            {
+                // Structural completion is the connector's call: only walking off the end of the
+                // catalogue finishes the initial import — a time-boxed chunk above merely pauses it.
+                context.SalesChannel.SyncState.InitialProductImportCompleted = true;
+                context.OperationState!.CursorText = null;
             }
         }
         catch (OperationCanceledException)
@@ -269,8 +318,10 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         }
         catch (Exception ex)
         {
+            // The run-level ErrorSummary distinguishes "walk aborted mid-catalogue" from "finished with
+            // some failed items" — an aborted partial keeps the initial flag unset and backs off.
             _logger.LogError(ex, "WooCommerce DB product import aborted");
-            return processed > 0 ? new SyncResult(processed, failed + 1) : SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1, ex.Message) : SyncResult.Failed(ex.Message);
         }
 
         return new SyncResult(processed, failed);
@@ -372,10 +423,23 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
 
     private sealed record ProductRow(ulong Id, string Name, string Description, string? Sku, decimal? MinPrice, string TaxStatus, string TaxClass, bool IsVariable);
 
-    private static async Task<List<ProductRow>> LoadProductPageAsync(MySqlConnection connection, Db db, ulong lastId, CancellationToken cancellationToken)
+    private static async Task<List<ProductRow>> LoadProductPageAsync(
+        MySqlConnection connection, Db db, ulong lastId, DateTime? modifiedSince, CancellationToken cancellationToken)
     {
         // MAX(t.name) collapses the row fan-out of the unfiltered term_relationships join (a product
         // also relates to categories/tags, which the taxonomy-filtered tt join nulls out).
+        // The delta filter also matches parents whose VARIATIONS changed: a programmatic variation
+        // edit does not reliably bump the parent's post_modified_gmt, and the import always processes
+        // whole parent+variations graphs.
+        var modifiedFilter = modifiedSince is null
+            ? string.Empty
+            : $"""
+               AND (p.post_modified_gmt >= @modifiedSince OR EXISTS (
+                  SELECT 1 FROM {db.Prefix}posts v
+                  WHERE v.post_parent = p.ID AND v.post_type = 'product_variation'
+                    AND v.post_modified_gmt >= @modifiedSince))
+              """;
+
         var sql = $"""
             SELECT p.ID, p.post_title, p.post_content, l.sku, l.min_price, l.tax_status, l.tax_class,
                    MAX(t.name) AS product_type
@@ -384,7 +448,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
             LEFT JOIN {db.Prefix}term_relationships tr ON tr.object_id = p.ID
             LEFT JOIN {db.Prefix}term_taxonomy tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'product_type'
             LEFT JOIN {db.Prefix}terms t ON t.term_id = tt.term_id
-            WHERE p.post_type = 'product' AND p.post_status = 'publish' AND p.ID > @lastId
+            WHERE p.post_type = 'product' AND p.post_status = 'publish' AND p.ID > @lastId {modifiedFilter}
             GROUP BY p.ID, p.post_title, p.post_content, l.sku, l.min_price, l.tax_status, l.tax_class
             ORDER BY p.ID
             LIMIT @pageSize
@@ -393,6 +457,10 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         await using var cmd = new MySqlCommand(sql, connection);
         cmd.Parameters.AddWithValue("@lastId", lastId);
         cmd.Parameters.AddWithValue("@pageSize", PageSize);
+        if (modifiedSince is not null)
+        {
+            cmd.Parameters.AddWithValue("@modifiedSince", modifiedSince.Value);
+        }
 
         var rows = new List<ProductRow>();
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
@@ -999,7 +1067,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
 
     /// <summary>
     /// Resumable, oldest-first backfill of the full order history, keyset-paged on the immutable
-    /// (date_created, id) pair. The channel's <c>SalesImportBackfillCursor</c> is advanced per batch
+    /// (date_created, id) pair. The operation state's <c>CursorDateTime</c> is advanced per batch
     /// (frozen the moment an order fails, so failures are retried next run) and the run is
     /// time-boxed like the REST walk. When we walk off the end cleanly, the channel flips to
     /// incremental mode.
@@ -1011,9 +1079,9 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         var failed = 0;
 
         // Resume one second before the persisted cursor — cheap overlap, and upserts are idempotent.
-        var cursorDate = context.SalesChannel.SyncState.SalesImportBackfillCursor?.AddSeconds(-1) ?? DateTime.MinValue;
+        var cursorDate = context.OperationState!.CursorDateTime?.AddSeconds(-1) ?? DateTime.MinValue;
         ulong cursorId = 0;
-        var cursorAdvance = context.SalesChannel.SyncState.SalesImportBackfillCursor;
+        var cursorAdvance = context.OperationState!.CursorDateTime;
         var frozen = false;
         var reachedEnd = false;
         var runStart = DateTime.UtcNow;
@@ -1053,9 +1121,9 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
                 }
             }
 
-            if (cursorAdvance is { } advance && advance != context.SalesChannel.SyncState.SalesImportBackfillCursor)
+            if (cursorAdvance is { } advance && advance != context.OperationState!.CursorDateTime)
             {
-                context.SalesChannel.SyncState.SalesImportBackfillCursor = advance;
+                context.OperationState!.CursorDateTime = advance;
             }
 
             await progress.MaybeReportAsync(processed, failed);
@@ -1570,51 +1638,61 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         var processed = 0;
         var failed = 0;
 
+        // A delta pass (incremental watermark set) pulls only customers whose WooCommerce 'last_update'
+        // usermeta (maintained by WC_Customer_Data_Store on every customer save) is at/after the
+        // watermark, and runs cursor-less. Full walks (initial import, periodic full sweep) resume from
+        // the persisted keyset cursor over the immutable user id and are time-boxed.
+        var modifiedSince = context.IncrementalSince;
+        var isFullWalk = modifiedSince is null;
+
         try
         {
             await using var connection = await OpenAsync(db, context.CancellationToken);
             var progress = new ProgressThrottle(context);
             var runStart = DateTime.UtcNow;
 
-            // Same page-cursor resume semantics as the REST connector (offset paging over the
-            // immutable user id order): a time-boxed run continues where the last one stopped, a
-            // failed customer freezes the cursor so it is retried.
-            var startPage = context.SalesChannel.SyncState.CustomerImportPageCursor + 1;
+            ulong lastId = 0;
+            if (isFullWalk && ulong.TryParse(context.OperationState!.CursorText, out var resumeId))
+            {
+                lastId = resumeId;
+            }
             var reachedEnd = false;
-            var frozen = false;
 
-            for (var page = startPage; page <= MaxPages; page++)
+            for (var page = 1; page <= MaxPages; page++)
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
 
-                var batch = await LoadCustomerPageAsync(connection, db, page, context.CancellationToken);
+                var batch = await LoadCustomerPageAsync(connection, db, lastId, modifiedSince, context.CancellationToken);
                 if (batch.Count == 0)
                 {
                     reachedEnd = true;
                     break;
                 }
+                lastId = batch[^1].UserId;
 
                 foreach (var customer in batch)
                 {
                     try
                     {
-                        await _customerImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, customer);
+                        await _customerImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, customer.Customer);
                         processed++;
                     }
                     catch (Exception ex)
                     {
                         failed++;
-                        frozen = true;
-                        _logger.LogError(ex, "WooCommerce DB customer import failed for {Id}", customer.RemoteCustomerId);
+                        _logger.LogError(ex, "WooCommerce DB customer import failed for {Id}", customer.Customer.RemoteCustomerId);
                     }
                 }
 
                 await progress.MaybeReportAsync(processed, failed);
                 _logger.LogInformation("WooCommerce DB customer import page {Page}: {Processed} imported, {Failed} failed so far", page, processed, failed);
 
-                if (!frozen)
+                if (isFullWalk)
                 {
-                    context.SalesChannel.SyncState.CustomerImportPageCursor = page;
+                    // Monotone keyset cursor: advance past pages with failed customers too. Freezing on
+                    // an item failure pinned the walk and made the completion flag unreachable — an
+                    // endless full-sweep loop. Failures stay counted; the periodic full sweep heals them.
+                    context.OperationState!.CursorText = lastId.ToString(CultureInfo.InvariantCulture);
                 }
 
                 if (batch.Count < PageSize)
@@ -1622,16 +1700,18 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
                     reachedEnd = true;
                     break;
                 }
-                if (DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
+                if (isFullWalk && DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
                 {
                     break;
                 }
             }
 
-            if (reachedEnd && !frozen)
+            // Structural completion: reaching the end declares the base imported, item failures included
+            // (they are counted, not silently dropped — and must not reschedule the sweep forever).
+            if (reachedEnd && isFullWalk)
             {
                 context.SalesChannel.SyncState.InitialCustomerImportCompleted = true;
-                context.SalesChannel.SyncState.CustomerImportPageCursor = 0;
+                context.OperationState!.CursorText = null;
             }
         }
         catch (OperationCanceledException)
@@ -1640,33 +1720,44 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         }
         catch (Exception ex)
         {
-            return processed > 0 ? new SyncResult(processed, failed + 1) : SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1, ex.Message) : SyncResult.Failed(ex.Message);
         }
 
         return new SyncResult(processed, failed);
     }
 
-    private static async Task<List<SalesChannelImportCustomer>> LoadCustomerPageAsync(
-        MySqlConnection connection, Db db, int page, CancellationToken cancellationToken)
+    private static async Task<List<(ulong UserId, SalesChannelImportCustomer Customer)>> LoadCustomerPageAsync(
+        MySqlConnection connection, Db db, ulong lastId, DateTime? modifiedSince, CancellationToken cancellationToken)
     {
         var users = new List<(ulong Id, string Email, DateTime Registered)>();
         await using (var cmd = connection.CreateCommand())
         {
             // The role lives serialized inside the capabilities usermeta; its key carries the same
             // table prefix as the tables ('wp_capabilities'). This matches what the REST /customers
-            // endpoint returns by default: users with the 'customer' role.
+            // endpoint returns by default: users with the 'customer' role. Keyset pagination over the
+            // primary key replaces the old LIMIT/OFFSET walk, whose non-sargable role LIKE re-scanned
+            // everything before the offset on every page (O(n²) across a 66k-customer base).
+            var deltaJoin = modifiedSince is null
+                ? string.Empty
+                : $"JOIN {db.Prefix}usermeta lu ON lu.user_id = u.ID AND lu.meta_key = 'last_update' AND CAST(lu.meta_value AS UNSIGNED) >= @sinceUnix";
+
             cmd.CommandText = $"""
                 SELECT u.ID, u.user_email, u.user_registered
                 FROM {db.Prefix}users u
                 JOIN {db.Prefix}usermeta cap ON cap.user_id = u.ID AND cap.meta_key = @capKey
-                WHERE cap.meta_value LIKE @customerRole
+                {deltaJoin}
+                WHERE cap.meta_value LIKE @customerRole AND u.ID > @lastId
                 ORDER BY u.ID
-                LIMIT @pageSize OFFSET @offset
+                LIMIT @pageSize
                 """;
             cmd.Parameters.AddWithValue("@capKey", db.Prefix + "capabilities");
             cmd.Parameters.AddWithValue("@customerRole", "%\"customer\"%");
+            cmd.Parameters.AddWithValue("@lastId", lastId);
             cmd.Parameters.AddWithValue("@pageSize", PageSize);
-            cmd.Parameters.AddWithValue("@offset", (page - 1) * PageSize);
+            if (modifiedSince is { } since)
+            {
+                cmd.Parameters.AddWithValue("@sinceUnix", new DateTimeOffset(since.ToUniversalTime()).ToUnixTimeSeconds());
+            }
 
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
@@ -1715,7 +1806,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
             var meta = metaByUser.GetValueOrDefault(user.Id) ?? [];
             string? Get(string key) => meta.GetValueOrDefault(key) is { Length: > 0 } value ? value : null;
 
-            return new SalesChannelImportCustomer
+            return (user.Id, new SalesChannelImportCustomer
             {
                 RemoteCustomerId = user.Id.ToString(CultureInfo.InvariantCulture),
                 Firstname = Get("first_name") ?? Get("billing_first_name") ?? string.Empty,
@@ -1746,7 +1837,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
                     Zip = Get("shipping_postcode") ?? string.Empty,
                     Country = Get("shipping_country") ?? string.Empty,
                 },
-            };
+            });
         }).ToList();
     }
 
@@ -1775,6 +1866,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         var processed = 0;
         var failed = 0;
         var skipped = 0;
+        var unchanged = 0;
 
         try
         {
@@ -1810,8 +1902,13 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
                     switch (outcome)
                     {
                         case StockImportOutcome.Applied:
-                        case StockImportOutcome.Unchanged:
+                            // Only actual corrections count as processed: the adaptive scheduler reads
+                            // ItemsProcessed as the activity signal, so a quiet catalogue (all levels
+                            // unchanged) stretches the sweep interval instead of pinning it short.
                             processed++;
+                            break;
+                        case StockImportOutcome.Unchanged:
+                            unchanged++;
                             break;
                         case StockImportOutcome.NoWarehouse:
                             // Without a warehouse nothing in this run can be mirrored.
@@ -1838,7 +1935,9 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
                 await progress.MaybeReportAsync(processed, failed);
             }
 
-            _logger.LogInformation("WooCommerce DB stock mirror: {Processed} mirrored, {Skipped} unlinked, {Failed} failed", processed, skipped, failed);
+            _logger.LogInformation(
+                "WooCommerce DB stock mirror: {Processed} corrected, {Unchanged} unchanged, {Skipped} unlinked, {Failed} failed",
+                processed, unchanged, skipped, failed);
         }
         catch (OperationCanceledException)
         {
@@ -1847,7 +1946,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "WooCommerce DB stock mirror aborted");
-            return processed > 0 ? new SyncResult(processed, failed + 1) : SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1, ex.Message) : SyncResult.Failed(ex.Message);
         }
 
         return new SyncResult(processed, failed);

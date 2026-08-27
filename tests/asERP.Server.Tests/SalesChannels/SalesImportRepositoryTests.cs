@@ -30,7 +30,8 @@ public class SalesImportRepositoryTests
             new ProductRepository(ctx, tenant),
             ctx,
             new ImportIdAllocator(),
-            new asERP.Persistence.Services.StockLedgerService(ctx, new NullMediator(), NullLogger<asERP.Persistence.Services.StockLedgerService>.Instance));
+            new asERP.Persistence.Services.StockLedgerService(ctx, new NullMediator(), NullLogger<asERP.Persistence.Services.StockLedgerService>.Instance),
+            Microsoft.Extensions.Options.Options.Create(new asERP.SalesChannels.Orchestration.SalesChannelSyncOptions()));
 
     private sealed class NullMediator : asERP.Application.Mediator.IMediator
     {

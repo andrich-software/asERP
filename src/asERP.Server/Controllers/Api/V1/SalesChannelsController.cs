@@ -328,10 +328,11 @@ public class SalesChannelsController(
     }
 
     /// <summary>
-    /// Aggregated synchronization status: per-operation latest run + computed next-run, plus the
+    /// Aggregated synchronization status: per-operation latest run + scheduled next-run, plus the
     /// channel's scheduling state and dead-letter count. Feeds the Client's Sync-Status dashboard tab.
-    /// Encodes the orchestrator's <c>PollImportsAsync</c> rules so "next run" is honest (products and
-    /// customers run their full import once, then become manual-only; orders run every interval).
+    /// "Next run" comes from the durable per-operation scheduling state (<c>SalesChannelOperationState</c>,
+    /// adaptive intervals + backoff); the eligibility flags still encode the one-shot rules (products and
+    /// customers run their full import once, then become manual-only; orders run continuously).
     /// </summary>
     [HttpGet("{id:guid}/sync-status")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -345,8 +346,19 @@ public class SalesChannelsController(
         }
 
         var now = DateTime.UtcNow;
+
+        // The durable per-operation scheduling state is the source of truth for "next run". Rows are
+        // created lazily by the orchestrator, so a just-created channel may not have them yet — the
+        // legacy interval estimate stays as the fallback until the first tick self-heals the rows.
+        var operationStates = await dbContext.SalesChannelOperationState
+            .Where(o => o.SalesChannelId == id)
+            .ToDictionaryAsync(o => o.Operation, cancellationToken);
+
         var interval = TimeSpan.FromSeconds(Math.Max(1, channel.SyncIntervalSeconds));
-        DateTime? nextPoll = channel.IsEnabled ? (channel.SyncState.LastSyncStartedAt ?? now) + interval : null;
+        DateTime? fallbackNextPoll = channel.IsEnabled ? (channel.SyncState.LastSyncStartedAt ?? now) + interval : null;
+
+        DateTime? NextDueFor(ChannelSyncOperation operation) =>
+            operationStates.TryGetValue(operation, out var state) ? state.NextDueAt : fallbackNextPoll;
 
         var deadLetterCount = await dbContext.ChannelExportOutbox
             .CountAsync(o => o.SalesChannelId == id && o.Status == ChannelOutboxStatus.DeadLetter, cancellationToken);
@@ -370,22 +382,32 @@ public class SalesChannelsController(
         var products = await BuildOperationStatusAsync(
             id, ChannelSyncOperation.ImportProducts, channel.ImportProducts,
             channel.SyncState.InitialProductImportCompleted, willRunOnSchedule: channel.ImportProducts && !channel.SyncState.InitialProductImportCompleted,
-            nextPoll, cancellationToken);
+            channel.IsEnabled ? NextDueFor(ChannelSyncOperation.ImportProducts) : null, cancellationToken);
 
         var customers = await BuildOperationStatusAsync(
             id, ChannelSyncOperation.ImportCustomers, channel.ImportCustomers,
             channel.SyncState.InitialCustomerImportCompleted, willRunOnSchedule: channel.ImportCustomers && !channel.SyncState.InitialCustomerImportCompleted,
-            nextPoll, cancellationToken);
+            channel.IsEnabled ? NextDueFor(ChannelSyncOperation.ImportCustomers) : null, cancellationToken);
 
         var saless = await BuildOperationStatusAsync(
             id, ChannelSyncOperation.ImportSaless, channel.ImportSaless,
             initialImportCompleted: false, willRunOnSchedule: channel.ImportSaless,
-            nextPoll, cancellationToken);
+            channel.IsEnabled ? NextDueFor(ChannelSyncOperation.ImportSaless) : null, cancellationToken);
 
         var stock = await BuildOperationStatusAsync(
             id, ChannelSyncOperation.ImportStock, channel.ImportStock,
             initialImportCompleted: false, willRunOnSchedule: channel.ImportStock,
-            nextPoll, cancellationToken);
+            channel.IsEnabled ? NextDueFor(ChannelSyncOperation.ImportStock) : null, cancellationToken);
+
+        // Channel-level "next poll" = the earliest upcoming operation; falls back to the interval
+        // estimate while the operation-state rows do not exist yet.
+        var nextPollCandidates = new[] { products, customers, saless, stock }
+            .Where(o => o.WillRunOnSchedule && o.NextRunAt is not null)
+            .Select(o => o.NextRunAt)
+            .ToList();
+        DateTime? nextPoll = !channel.IsEnabled
+            ? null
+            : nextPollCandidates.Count > 0 ? nextPollCandidates.Min() : fallbackNextPoll;
 
         return Ok(new SalesChannelSyncStatusDto
         {
@@ -398,7 +420,11 @@ public class SalesChannelsController(
             OutboxInFlightCount = outboxInFlight,
             OldestPendingOutboxAgeSeconds = oldestPending is { } oldest ? (now - oldest).TotalSeconds : null,
             InitialSalesImportCompleted = channel.SyncState.InitialSalesImportCompleted,
-            SalesImportBackfillCursor = channel.SyncState.SalesImportBackfillCursor,
+            // The live cursor moved onto the operation state; the legacy column only holds the
+            // pre-migration value (seeded from it once) and goes away with the cleanup migration.
+            SalesImportBackfillCursor = operationStates.TryGetValue(ChannelSyncOperation.ImportSaless, out var salesState)
+                ? salesState.CursorDateTime
+                : channel.SyncState.SalesImportBackfillCursor,
             StockMovementsLast24h = stockMovementsLast24h,
             NegativeStockCount = negativeStockCount,
             Products = products,
@@ -408,14 +434,17 @@ public class SalesChannelsController(
         });
     }
 
-    /// <summary>Builds the status block for one import operation from its latest <c>ChannelSyncRun</c>.</summary>
+    /// <summary>
+    /// Builds the status block for one import operation from its latest <c>ChannelSyncRun</c> and the
+    /// operation's scheduled next-due time (from <c>SalesChannelOperationState</c>).
+    /// </summary>
     private async Task<SyncOperationStatusDto> BuildOperationStatusAsync(
         Guid salesChannelId,
         ChannelSyncOperation operation,
         bool isImportEnabled,
         bool initialImportCompleted,
         bool willRunOnSchedule,
-        DateTime? nextPoll,
+        DateTime? nextDueAt,
         CancellationToken cancellationToken)
     {
         var lastRun = await dbContext.ChannelSyncRun
@@ -432,7 +461,7 @@ public class SalesChannelsController(
             IsImportEnabled = isImportEnabled,
             InitialImportCompleted = initialImportCompleted,
             WillRunOnSchedule = willRunOnSchedule,
-            NextRunAt = willRunOnSchedule ? nextPoll : null,
+            NextRunAt = willRunOnSchedule ? nextDueAt : null,
             LastStatus = lastRun?.Status,
             LastStartedAt = lastRun?.StartedAt,
             LastFinishedAt = lastRun?.FinishedAt,

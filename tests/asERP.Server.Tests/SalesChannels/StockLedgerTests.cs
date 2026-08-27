@@ -118,8 +118,10 @@ public class StockLedgerTests
     }
 
     [Fact]
-    public async Task Import_FromStockMasterChannel_BooksNothing()
+    public async Task Import_FromStockMasterChannel_MirrorsDecrement_BetweenSweeps()
     {
+        // The master's own sale is mirrored locally as a near-real-time substitute for the rare
+        // absolute sweep — with no sweep baseline yet, every incremental order books.
         var (ctx, ledger, _) = Build();
         await using var _ctx = ctx;
         var repo = BuildSalesImportRepository(ctx, ledger);
@@ -129,7 +131,54 @@ public class StockLedgerTests
 
         await repo.ImportOrUpdateFromSalesChannel(channel, NewImport("O-1", quantity: 2));
 
-        // The master already decremented itself; the mirror sync carries its numbers.
+        Assert.Equal(1, await ctx.StockMovement.IgnoreQueryFilters().CountAsync());
+        Assert.Equal(8, (await ctx.ProductStock.IgnoreQueryFilters().SingleAsync()).Stock);
+    }
+
+    [Fact]
+    public async Task Import_FromStockMasterChannel_SkipsOrders_AlreadyCoveredByLastSweep()
+    {
+        // An order that predates the last absolute sweep's start is already contained in the mirrored
+        // level — booking it again would double-count the sale.
+        var (ctx, ledger, _) = Build();
+        await using var _ctx = ctx;
+        var repo = BuildSalesImportRepository(ctx, ledger);
+
+        var (channel, productId, warehouseId) = await SeedChannelWithWarehouseAsync(ctx, importStock: true, initialSalesDone: true);
+        await SeedStockAsync(ctx, productId, warehouseId, 10);
+        ctx.SalesChannelOperationState.Add(new SalesChannelOperationState
+        {
+            SalesChannelId = channel.Id,
+            Operation = ChannelSyncOperation.ImportStock,
+            Phase = ChannelSyncPhase.Incremental,
+            NextDueAt = DateTime.UtcNow,
+            Watermark = DateTime.UtcNow,   // sweep started after the order below (DateSalesed = now-1d)
+        });
+        await ctx.SaveChangesAsync();
+        ctx.ChangeTracker.Clear();
+
+        await repo.ImportOrUpdateFromSalesChannel(channel, NewImport("O-1", quantity: 2));
+
+        Assert.Equal(0, await ctx.StockMovement.IgnoreQueryFilters().CountAsync());
+        Assert.Equal(10, (await ctx.ProductStock.IgnoreQueryFilters().SingleAsync()).Stock);
+    }
+
+    [Fact]
+    public async Task Import_FromStockMasterChannel_BooksNothing_WhenMirroringDisabled()
+    {
+        var (ctx, ledger, _) = Build();
+        await using var _ctx = ctx;
+        var repo = BuildSalesImportRepository(ctx, ledger, new asERP.SalesChannels.Orchestration.SalesChannelSyncOptions
+        {
+            Stock = new asERP.SalesChannels.Orchestration.StockSyncOptions { MirrorSaleDecrementsOnStockMaster = false },
+        });
+
+        var (channel, productId, warehouseId) = await SeedChannelWithWarehouseAsync(ctx, importStock: true, initialSalesDone: true);
+        await SeedStockAsync(ctx, productId, warehouseId, 10);
+
+        await repo.ImportOrUpdateFromSalesChannel(channel, NewImport("O-1", quantity: 2));
+
+        // The master already decremented itself; only the absolute sweep carries its numbers.
         Assert.Equal(0, await ctx.StockMovement.IgnoreQueryFilters().CountAsync());
     }
 
@@ -190,7 +239,10 @@ public class StockLedgerTests
         return (ctx, ledger, published);
     }
 
-    private static SalesImportRepository BuildSalesImportRepository(ApplicationDbContext ctx, IStockLedgerService ledger)
+    private static SalesImportRepository BuildSalesImportRepository(
+        ApplicationDbContext ctx,
+        IStockLedgerService ledger,
+        asERP.SalesChannels.Orchestration.SalesChannelSyncOptions? syncOptions = null)
     {
         var tenant = new TestTenantContext();
         return new SalesImportRepository(
@@ -201,7 +253,8 @@ public class StockLedgerTests
             new ProductRepository(ctx, tenant),
             ctx,
             new ImportIdAllocator(),
-            ledger);
+            ledger,
+            Microsoft.Extensions.Options.Options.Create(syncOptions ?? new asERP.SalesChannels.Orchestration.SalesChannelSyncOptions()));
     }
 
     private static async Task<(Guid ProductId, Guid WarehouseId)> SeedProductWithStockAsync(ApplicationDbContext ctx, double initialStock)

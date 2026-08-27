@@ -87,22 +87,44 @@ public sealed class WooCommerceConnector : ConnectorBase
         var processed = 0;
         var failed = 0;
 
+        // A delta pass (incremental watermark set) pulls only products modified since the watermark and
+        // runs cursor-less: the changed set is small, an aborted delta re-runs the same window next
+        // time. Full walks (initial import, periodic full sweep) resume from the persisted page cursor
+        // and are time-boxed, so a server restart never sends the walk back to page 1.
+        var modifiedSince = context.IncrementalSince;
+        var isFullWalk = modifiedSince is null;
+
         try
         {
             var wc = BuildClient(context);
             var taxRateMap = await BuildTaxRateMapAsync(wc, context.CancellationToken);
             var progress = new ProgressThrottle(context);
+            var runStart = DateTime.UtcNow;
+            var reachedEnd = false;
+            var startPage = isFullWalk ? context.OperationState!.CursorPage + 1 : 1;
 
             // Stream the catalogue page by page instead of buffering it whole: memory stays flat, progress
             // checkpoints move from the first page on, and the next page downloads while this one imports.
             var seen = new HashSet<string>();
 
-            Task<List<Product>> FetchPageAsync(int p) =>
-                wc.Product.GetAll(new Dictionary<string, string>
+            Task<List<Product>> FetchPageAsync(int p)
+            {
+                var parameters = new Dictionary<string, string>
                 {
                     ["per_page"] = PageSize.ToString(),
                     ["page"] = p.ToString(),
-                }).WaitAsync(PageFetchTimeout, context.CancellationToken);
+                    // Stable pagination for resume: id order is immutable, unlike the default date order.
+                    ["orderby"] = "id",
+                    ["order"] = "asc",
+                };
+                if (modifiedSince is { } since)
+                {
+                    // WooCommerce compares 'modified_after' against the GMT timestamp when dates_are_gmt=true.
+                    parameters["modified_after"] = since.ToString("yyyy-MM-ddTHH:mm:ss");
+                    parameters["dates_are_gmt"] = "true";
+                }
+                return wc.Product.GetAll(parameters).WaitAsync(PageFetchTimeout, context.CancellationToken);
+            }
 
             // Variation lists download with bounded parallelism (HTTP only); the DB import below stays
             // single-threaded on the shared DbContext.
@@ -120,20 +142,25 @@ public sealed class WooCommerceConnector : ConnectorBase
                 }
             }
 
-            var nextFetch = FetchPageAsync(1);
+            var nextFetch = FetchPageAsync(startPage);
             var variationFetches = new Dictionary<ulong, Task<List<Variation>>>();
             try
             {
-                for (var page = 1; page <= MaxPages; page++)
+                for (var page = startPage; page <= MaxPages; page++)
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
 
                     var batch = await nextFetch;
-                    // Prefetch the next page unless this one already proves the end of the catalogue.
-                    nextFetch = batch is { Count: PageSize } && page < MaxPages ? FetchPageAsync(page + 1) : null;
+                    // Prefetch the next page unless this one already proves the end of the catalogue
+                    // or the chunk budget stops the run right after it anyway.
+                    nextFetch = batch is { Count: PageSize } && page < MaxPages
+                        && !(isFullWalk && DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
+                        ? FetchPageAsync(page + 1)
+                        : null;
 
                     if (batch is null || batch.Count == 0)
                     {
+                        reachedEnd = true;
                         break;
                     }
 
@@ -242,10 +269,33 @@ public sealed class WooCommerceConnector : ConnectorBase
 
                     _logger.LogInformation("WooCommerce product import page {Page}: {Processed} imported, {Failed} failed so far", page, processed, failed);
 
+                    if (isFullWalk)
+                    {
+                        // Resume position — flushed with the next progress checkpoint, so a restart
+                        // loses at most ~10s of walking instead of the whole catalogue.
+                        context.OperationState!.CursorPage = page;
+                    }
+
                     if (newInBatch.Count == 0 || batch.Count < PageSize)
+                    {
+                        reachedEnd = true;
+                        break;
+                    }
+
+                    // Chunk budget: yield after the time box; the scheduler chains the next chunk
+                    // within seconds while the initial walk is incomplete.
+                    if (isFullWalk && DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
                     {
                         break;
                     }
+                }
+
+                if (reachedEnd && isFullWalk)
+                {
+                    // Structural completion is the connector's call: only walking off the end of the
+                    // catalogue finishes the initial import — a time-boxed chunk merely pauses it.
+                    context.SalesChannel.SyncState.InitialProductImportCompleted = true;
+                    context.OperationState!.CursorPage = 0;
                 }
             }
             finally
@@ -259,7 +309,11 @@ public sealed class WooCommerceConnector : ConnectorBase
         }
         catch (Exception ex)
         {
-            return SyncResult.Failed(ex.Message);
+            // Keep the progress already committed visible: SyncResult.Failed would report 0 processed
+            // although earlier pages are persisted. The run-level ErrorSummary marks the walk as aborted,
+            // which also keeps the orchestrator from treating this partial as a completed initial import.
+            _logger.LogError(ex, "WooCommerce product import aborted after {Processed} products", processed);
+            return processed > 0 ? new SyncResult(processed, failed + 1, ex.Message) : SyncResult.Failed(ex.Message);
         }
 
         return new SyncResult(processed, failed);
@@ -340,7 +394,7 @@ public sealed class WooCommerceConnector : ConnectorBase
             ["dates_are_gmt"] = "true",
         };
 
-        var startCursor = context.SalesChannel.SyncState.SalesImportBackfillCursor;
+        var startCursor = context.OperationState!.CursorDateTime;
         if (startCursor is { } c)
         {
             // 'after' is exclusive; step back a second so orders sharing the cursor's timestamp are not skipped.
@@ -429,9 +483,9 @@ public sealed class WooCommerceConnector : ConnectorBase
 
                 // Persist progress after every page (in-memory on the tracked entity; the orchestrator/CloseRun
                 // saves it) so a shutdown-canceled or failed run still resumes from here.
-                if (cursorAdvance is { } adv && adv != context.SalesChannel.SyncState.SalesImportBackfillCursor)
+                if (cursorAdvance is { } adv && adv != context.OperationState!.CursorDateTime)
                 {
-                    context.SalesChannel.SyncState.SalesImportBackfillCursor = adv;
+                    context.OperationState!.CursorDateTime = adv;
                 }
 
                 // Flush running counts + the advanced cursor to the DB mid-walk (throttled) so the dashboard
@@ -537,7 +591,7 @@ public sealed class WooCommerceConnector : ConnectorBase
                     nextFetch = null;
                     _logger.LogError(ex, "WooCommerce order page {Page} fetch failed after {Attempts} attempts", page, PageFetchAttempts);
                     return processed > 0
-                        ? new SyncResult(processed, failed + 1)
+                        ? new SyncResult(processed, failed + 1, ex.Message)
                         : SyncResult.Failed(ex.Message);
                 }
 
@@ -807,6 +861,15 @@ public sealed class WooCommerceConnector : ConnectorBase
             return SyncResult.Failed(ex.Message);
         }
 
+        // The customers endpoint has no modified_after filter (long-standing WooCommerce gap), so the
+        // incremental pass pulls NEW registrations only: newest-first by registration date until the
+        // watermark. Updates to existing customers reach the ERP through the order import (billing/
+        // shipping ride along on every order), and the periodic full sweep heals the rest.
+        if (context.IncrementalSince is { } since)
+        {
+            return await ImportNewCustomersSinceAsync(context, wc, since);
+        }
+
         // Unlike products, the customer base on a large shop can take longer than a single HTTP
         // timeout window to walk end to end (observed: ~14 min then "operation has timed out"). Page
         // and persist incrementally so a late page failure keeps every customer imported so far —
@@ -819,9 +882,8 @@ public sealed class WooCommerceConnector : ConnectorBase
         // Resume from the page after the last one fully imported (id-ordered for stable pagination across
         // resumes, mirroring the order backfill). 0 → start at page 1. This keeps a time-boxed run from
         // re-walking everything from the top on every tick.
-        var startPage = context.SalesChannel.SyncState.CustomerImportPageCursor + 1;
+        var startPage = context.OperationState!.CursorPage + 1;
         var reachedEnd = false;
-        var frozen = false;
 
         Task<List<Customer>> FetchPageAsync(int p) =>
             wc.Customer.GetAll(new Dictionary<string, string>
@@ -854,7 +916,7 @@ public sealed class WooCommerceConnector : ConnectorBase
                     // customers were imported, a hard failure only when the very first page never returned.
                     _logger.LogError(ex, "WooCommerce customer page {Page} fetch failed", page);
                     return processed > 0
-                        ? new SyncResult(processed, failed + 1)
+                        ? new SyncResult(processed, failed + 1, ex.Message)
                         : SyncResult.Failed(ex.Message);
                 }
 
@@ -883,29 +945,12 @@ public sealed class WooCommerceConnector : ConnectorBase
 
                     try
                     {
-                        await _customerImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, new SalesChannelImportCustomer
-                        {
-                            RemoteCustomerId = remoteCustomer.id?.ToString() ?? string.Empty,
-                            Firstname = remoteCustomer.first_name,
-                            Lastname = remoteCustomer.last_name,
-                            CompanyName = remoteCustomer.billing?.company,
-                            Email = remoteCustomer.email,
-                            Phone = remoteCustomer.billing?.phone,
-                            CustomerStatus = CustomerStatus.Active,
-                            // Persisted into a PostgreSQL 'timestamp with time zone', which Npgsql only
-                            // accepts at UTC offset 0. WooCommerce's date_created carries the shop's local
-                            // offset, so use the GMT field and force UTC kind — otherwise the very first
-                            // insert throws and the shared DbContext stays poisoned for the whole run.
-                            DateEnrollment = ToUtc(remoteCustomer.date_created_gmt ?? remoteCustomer.date_created),
-                            BillingAddress = MapAddress(remoteCustomer.billing),
-                            ShippingAddress = MapAddress(remoteCustomer.shipping),
-                        });
+                        await _customerImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, MapImportCustomer(remoteCustomer));
                         processed++;
                     }
                     catch (Exception ex)
                     {
                         failed++;
-                        frozen = true;   // a failed customer freezes the cursor so the next run retries this page
                         _logger.LogError(ex, "WooCommerce customer import failed for {Id}", remoteCustomer.id);
                     }
                 }
@@ -914,12 +959,12 @@ public sealed class WooCommerceConnector : ConnectorBase
 
                 _logger.LogInformation("WooCommerce customer import page {Page}: {Processed} imported, {Failed} failed so far", page, processed, failed);
 
-                // Advance the resume cursor only past a fully clean page (in-memory on the tracked entity; the
-                // orchestrator saves it), so a failed customer is retried next run rather than skipped.
-                if (!frozen)
-                {
-                    context.SalesChannel.SyncState.CustomerImportPageCursor = page;
-                }
+                // Advance the resume cursor monotonically, past pages with failed customers too. Freezing
+                // the cursor on an item failure (the previous behavior) pinned the walk to that page: a
+                // persistently failing customer made every scheduled run re-walk the base from the frozen
+                // page and the completion flag below unreachable — an endless full-sweep loop. Failed items
+                // stay logged and counted; a later full re-import (manual sync / cleared flag) heals them.
+                context.OperationState!.CursorPage = page;
 
                 // No new rows (endpoint repeated a page) or a short page → we have reached the end.
                 if (newInBatch == 0 || batch.Count < PageSize)
@@ -941,16 +986,116 @@ public sealed class WooCommerceConnector : ConnectorBase
             ObserveAbandoned(nextFetch);
         }
 
-        // Only declare the customer base fully imported when we walked off the end with nothing left behind.
-        // Reset the cursor so clearing the flag later forces a clean re-import from page 1.
-        if (reachedEnd && !frozen)
+        // Declare the customer base imported once we walked off the end — item failures included, they
+        // are recorded in ItemsFailed and must not keep the one-shot sweep rescheduling forever. Reset
+        // the cursor so clearing the flag later forces a clean re-import from page 1.
+        if (reachedEnd)
         {
             context.SalesChannel.SyncState.InitialCustomerImportCompleted = true;
-            context.SalesChannel.SyncState.CustomerImportPageCursor = 0;
+            context.OperationState!.CursorPage = 0;
         }
 
         return new SyncResult(processed, failed);
     }
+
+    /// <summary>
+    /// Incremental customer pull for a REST channel: newest registrations first, stopping at the
+    /// watermark. Covers NEW customers only — the endpoint cannot filter by modification date, so
+    /// edits to existing customers arrive via the order import and the periodic full sweep.
+    /// </summary>
+    private async Task<SyncResult> ImportNewCustomersSinceAsync(SalesChannelContext context, WCObject wc, DateTime since)
+    {
+        var processed = 0;
+        var failed = 0;
+        var progress = new ProgressThrottle(context);
+        var seen = new HashSet<string>();
+
+        for (var page = 1; page <= MaxPages; page++)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            List<Customer> batch;
+            try
+            {
+                batch = await wc.Customer.GetAll(new Dictionary<string, string>
+                {
+                    ["per_page"] = PageSize.ToString(),
+                    ["page"] = page.ToString(),
+                    ["orderby"] = "registered_date",
+                    ["order"] = "desc",
+                }).WaitAsync(PageFetchTimeout, context.CancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "WooCommerce incremental customer page {Page} fetch failed", page);
+                return processed > 0
+                    ? new SyncResult(processed, failed + 1, ex.Message)
+                    : SyncResult.Failed(ex.Message);
+            }
+
+            if (batch is null || batch.Count == 0)
+            {
+                break;
+            }
+
+            var newInBatch = 0;
+            var reachedWatermark = false;
+            foreach (var remoteCustomer in batch)
+            {
+                var registered = ToUtc(remoteCustomer.date_created_gmt ?? remoteCustomer.date_created);
+                if (registered < since)
+                {
+                    reachedWatermark = true;
+                    break;
+                }
+
+                var key = remoteCustomer.id?.ToString() ?? $"__noid_{processed}_{failed}";
+                if (!seen.Add(key))
+                {
+                    continue;
+                }
+                newInBatch++;
+
+                try
+                {
+                    await _customerImportRepository.ImportOrUpdateFromSalesChannel(context.SalesChannel, MapImportCustomer(remoteCustomer));
+                    processed++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    _logger.LogError(ex, "WooCommerce incremental customer import failed for {Id}", remoteCustomer.id);
+                }
+            }
+
+            await progress.MaybeReportAsync(processed, failed);
+
+            if (reachedWatermark || newInBatch == 0 || batch.Count < PageSize)
+            {
+                break;
+            }
+        }
+
+        return new SyncResult(processed, failed);
+    }
+
+    private static SalesChannelImportCustomer MapImportCustomer(Customer remoteCustomer) => new()
+    {
+        RemoteCustomerId = remoteCustomer.id?.ToString() ?? string.Empty,
+        Firstname = remoteCustomer.first_name,
+        Lastname = remoteCustomer.last_name,
+        CompanyName = remoteCustomer.billing?.company,
+        Email = remoteCustomer.email,
+        Phone = remoteCustomer.billing?.phone,
+        CustomerStatus = CustomerStatus.Active,
+        // Persisted into a PostgreSQL 'timestamp with time zone', which Npgsql only accepts at UTC
+        // offset 0. WooCommerce's date_created carries the shop's local offset, so use the GMT field
+        // and force UTC kind — otherwise the very first insert throws and the shared DbContext stays
+        // poisoned for the whole run.
+        DateEnrollment = ToUtc(remoteCustomer.date_created_gmt ?? remoteCustomer.date_created),
+        BillingAddress = MapAddress(remoteCustomer.billing),
+        ShippingAddress = MapAddress(remoteCustomer.shipping),
+    };
 
     /// <summary>
     /// Mirrors the shop's stock levels into the channel's linked warehouse (the shop stays the stock
@@ -973,6 +1118,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         var processed = 0;
         var failed = 0;
         var skipped = 0;
+        var unchanged = 0;
 
         WCObject wc;
         try
@@ -984,16 +1130,16 @@ public sealed class WooCommerceConnector : ConnectorBase
             return SyncResult.Failed(ex.Message);
         }
 
+        // Always a full absolute sweep: the modified_after mode this import once had was lossy —
+        // order-driven stock changes do not bump a product's modified timestamp and were skipped.
+        // Scheduling makes the sweep rare (stock operations run on a long adaptive interval), and
+        // the _fields projection strips the payload to the four fields the mirror needs (~95% less
+        // transfer than full product objects).
         var baseParameters = new Dictionary<string, string>
         {
             ["per_page"] = PageSize.ToString(),
+            ["_fields"] = "id,sku,type,stock_quantity",
         };
-
-        if (context.IncrementalSince is { } since)
-        {
-            baseParameters["modified_after"] = since.ToString("yyyy-MM-ddTHH:mm:ss");
-            baseParameters["dates_are_gmt"] = "true";
-        }
 
         Task<List<Product>> FetchPageAsync(int p)
         {
@@ -1025,8 +1171,12 @@ public sealed class WooCommerceConnector : ConnectorBase
                 switch (outcome)
                 {
                     case StockImportOutcome.Applied:
-                    case StockImportOutcome.Unchanged:
+                        // Only actual corrections count as processed — the adaptive scheduler reads
+                        // ItemsProcessed as the activity signal for stretching the sweep interval.
                         processed++;
+                        break;
+                    case StockImportOutcome.Unchanged:
+                        unchanged++;
                         break;
                     case StockImportOutcome.NoWarehouse:
                         // Without a warehouse nothing in this run can be mirrored; count once as failed.
@@ -1117,7 +1267,9 @@ public sealed class WooCommerceConnector : ConnectorBase
                 }
 
                 await progress.MaybeReportAsync(processed, failed);
-                _logger.LogInformation("Stock mirror page {Page}: {Processed} mirrored, {Skipped} unlinked, {Failed} failed so far", page, processed, skipped, failed);
+                _logger.LogInformation(
+                    "Stock mirror page {Page}: {Processed} corrected, {Unchanged} unchanged, {Skipped} unlinked, {Failed} failed so far",
+                    page, processed, unchanged, skipped, failed);
 
                 if (newInBatch.Count == 0 || batch.Count < PageSize)
                 {
@@ -1132,7 +1284,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "WooCommerce stock mirror aborted");
-            return processed > 0 ? new SyncResult(processed, failed + 1) : SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1, ex.Message) : SyncResult.Failed(ex.Message);
         }
         finally
         {

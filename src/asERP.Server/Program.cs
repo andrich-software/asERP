@@ -129,6 +129,8 @@ builder.Services.AddSingleton<ICredentialEncryptor, DataProtectionCredentialEncr
 builder.Services.Configure<DatabaseOptions>(builder.Configuration.GetSection(DatabaseOptions.Section));
 builder.Services.Configure<asERP.Persistence.Services.Backup.BackupOptions>(
     builder.Configuration.GetSection(asERP.Persistence.Services.Backup.BackupOptions.Section));
+builder.Services.Configure<asERP.SalesChannels.Orchestration.SalesChannelSyncOptions>(
+    builder.Configuration.GetSection(asERP.SalesChannels.Orchestration.SalesChannelSyncOptions.Section));
 
 // Bootstrap: load Grafana settings from the database before wiring up logging/telemetry.
 // Falls back to safe defaults when persistence is not available (e.g. test environment).

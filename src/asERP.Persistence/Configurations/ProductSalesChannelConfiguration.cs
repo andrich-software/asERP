@@ -11,6 +11,11 @@ public class ProductSalesChannelConfiguration : IEntityTypeConfiguration<Product
         builder.HasIndex(e => new { e.TenantId, e.ProductId, e.SalesChannelId })
             .IsUnique();
 
+        // Hot lookup of the imports/exports: resolve a shop's remote product id to the local link
+        // (stock mirror, variant matching, export hydration). Non-unique — remote ids can be empty
+        // and, across re-created shop products, transiently duplicated.
+        builder.HasIndex(e => new { e.SalesChannelId, e.RemoteProductId });
+
         builder.Property(e => e.Price)
             .HasPrecision(18, 2);
 

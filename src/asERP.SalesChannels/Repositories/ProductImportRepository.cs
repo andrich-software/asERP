@@ -42,6 +42,27 @@ public class ProductImportRepository : IProductImportRepository
         _productImageImportService = productImageImportService;
     }
 
+    /// <summary>
+    /// A whole sync run imports exactly one channel, so the channel row is fetched once and reused for
+    /// every product instead of one lookup per created/linked product. The tracker keeps it alive across
+    /// products (<see cref="ImportChangeTrackerExtensions.TrimCommittedEntries"/> exempts SalesChannel);
+    /// the Detached check re-fetches defensively so a stale instance is never attached as a new entity.
+    /// </summary>
+    private SalesChannel? _cachedSalesChannel;
+
+    private async Task<SalesChannel> GetSalesChannelAsync(Guid salesChannelId)
+    {
+        if (_cachedSalesChannel is null
+            || _cachedSalesChannel.Id != salesChannelId
+            || _context.Entry(_cachedSalesChannel).State == EntityState.Detached)
+        {
+            _cachedSalesChannel = await _salesChannelRepository.GetByIdAsync(salesChannelId)
+                ?? throw new NotFoundException("SalesChannel {0} not found", salesChannelId);
+        }
+
+        return _cachedSalesChannel;
+    }
+
     public async Task ImportOrUpdateFromSalesChannel(Guid salesChannelId, SalesChannelImportProduct importProduct)
     {
         // All import repositories share one scoped DbContext for the whole sync run. Each product is
@@ -160,7 +181,7 @@ public class ProductImportRepository : IProductImportRepository
                 [
                     new ProductSalesChannel
                     {
-                        SalesChannel = await _salesChannelRepository.GetByIdAsync(salesChannelId) ?? throw new NotFoundException("SalesChannel {0} not found", salesChannelId),
+                        SalesChannel = await GetSalesChannelAsync(salesChannelId),
                         SalesChannelId = salesChannelId,
                         RemoteProductId = importProduct.RemoteProductId,
                         Price = importProduct.Price
@@ -186,7 +207,6 @@ public class ProductImportRepository : IProductImportRepository
                 salesChannelExist = existingProduct.ProductSalesChannels.Any(s => s.SalesChannelId == salesChannelId);
             }
 
-            // TODO update price when salesChannelExist is true
             if (!salesChannelExist)
             {
                 _logger.LogDebug("Creating SalesChannel entry for Product {0}", importProduct.Sku);
@@ -195,7 +215,7 @@ public class ProductImportRepository : IProductImportRepository
                 [
                     new ProductSalesChannel
                     {
-                        SalesChannel = await _salesChannelRepository.GetByIdAsync(salesChannelId) ?? throw new NotFoundException("SalesChannel {0} not found", salesChannelId),
+                        SalesChannel = await GetSalesChannelAsync(salesChannelId),
                         SalesChannelId = salesChannelId,
                         RemoteProductId = importProduct.RemoteProductId,
                         Price = importProduct.Price
@@ -203,6 +223,28 @@ public class ProductImportRepository : IProductImportRepository
                 ];
 
                 somethingChanged = true;
+            }
+            else
+            {
+                // Re-imports heal the channel link. The remote id is identity, not user data — the shop
+                // may have re-created the product under a new id, and stock/price pushes resolve through
+                // it. The channel price only mirrors on import-only channels: a channel that exports
+                // products owns the price locally, and overwriting it here would ping-pong with the shop.
+                var link = existingProduct.ProductSalesChannels!.First(s => s.SalesChannelId == salesChannelId);
+
+                if (!string.IsNullOrEmpty(importProduct.RemoteProductId)
+                    && link.RemoteProductId != importProduct.RemoteProductId)
+                {
+                    link.RemoteProductId = importProduct.RemoteProductId;
+                    somethingChanged = true;
+                }
+
+                if (link.Price != importProduct.Price
+                    && !(await GetSalesChannelAsync(salesChannelId)).ExportProducts)
+                {
+                    link.Price = importProduct.Price;
+                    somethingChanged = true;
+                }
             }
 
             if (existingProduct.Name != importProduct.Name)

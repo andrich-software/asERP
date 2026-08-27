@@ -134,7 +134,9 @@ public class MissingProductReconcileTests
 
         var due = SalesChannelOrchestrator.ComputeDueOperations(channel);
 
-        Assert.DoesNotContain(ChannelSyncOperation.ImportProducts, due);   // initial pull done → no re-import
+        // Products stay eligible after the initial walk — they continue as incremental delta pulls;
+        // the operation-state scheduler (NextDueAt / adaptive interval) owns the cadence, not this gate.
+        Assert.Contains(ChannelSyncOperation.ImportProducts, due);
         Assert.Contains(ChannelSyncOperation.ImportSaless, due);
         Assert.Contains(ChannelSyncOperation.ImportStock, due);
     }
@@ -204,7 +206,8 @@ public class MissingProductReconcileTests
 
     private static SalesChannelOrchestrator NewOrchestrator(ServiceProvider provider) => new(
         provider.GetRequiredService<IServiceScopeFactory>(),
-        NullLogger<SalesChannelOrchestrator>.Instance);
+        NullLogger<SalesChannelOrchestrator>.Instance,
+        TimeSpan.FromSeconds(10));
 
     private static ApplicationDbContext NewContext(ServiceProvider provider) => new(
         provider.GetRequiredService<DbContextOptions<ApplicationDbContext>>(),

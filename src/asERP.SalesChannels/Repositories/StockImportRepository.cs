@@ -19,6 +19,11 @@ public class StockImportRepository : IStockImportRepository
     private Guid? _warehouseId;
     private readonly Dictionary<string, Guid?> _productIdByRemoteId = new();
 
+    // Current stock of the whole target warehouse, loaded once per run. A full-catalogue mirror that
+    // checked each product through the ledger paid one SELECT + a transaction per product even when
+    // nothing changed; with the preload an unchanged product costs a dictionary hit and no DB work.
+    private Dictionary<Guid, double>? _currentStockByProduct;
+
     public StockImportRepository(
         ILogger<StockImportRepository> logger,
         ApplicationDbContext dbContext,
@@ -49,6 +54,12 @@ public class StockImportRepository : IStockImportRepository
             return StockImportOutcome.ProductNotFound;
         }
 
+        var currentStock = await GetCurrentStockAsync(warehouseId, cancellationToken);
+        if (currentStock.TryGetValue(productId.Value, out var existing) && Math.Abs(existing - quantity) < 1e-6)
+        {
+            return StockImportOutcome.Unchanged;
+        }
+
         var changed = await _stockLedger.SetAbsoluteStockAsync(
             productId.Value,
             warehouseId,
@@ -58,7 +69,23 @@ public class StockImportRepository : IStockImportRepository
             cancellationToken,
             note: $"Mirror from {salesChannel.Name}");
 
+        // Keep the preload coherent for repeated rows within this run.
+        currentStock[productId.Value] = quantity;
+
         return changed ? StockImportOutcome.Applied : StockImportOutcome.Unchanged;
+    }
+
+    private async Task<Dictionary<Guid, double>> GetCurrentStockAsync(Guid warehouseId, CancellationToken cancellationToken)
+    {
+        if (_currentStockByProduct is not null)
+        {
+            return _currentStockByProduct;
+        }
+
+        _currentStockByProduct = await _dbContext.ProductStock
+            .Where(ps => ps.WarehouseId == warehouseId)
+            .ToDictionaryAsync(ps => ps.ProductId, ps => ps.Stock, cancellationToken);
+        return _currentStockByProduct;
     }
 
     private async Task<Guid> ResolveWarehouseIdAsync(SalesChannel salesChannel, CancellationToken cancellationToken)

@@ -26,7 +26,8 @@ public sealed class SalesChannelContextFactory
         ChannelSyncRun syncRun,
         CancellationToken cancellationToken,
         DateTime? incrementalSince = null,
-        Func<int, int, CancellationToken, Task>? reportProgress = null)
+        Func<int, int, CancellationToken, Task>? reportProgress = null,
+        SalesChannelOperationState? operationState = null)
     {
         var clientName = HttpClientNameFor(salesChannel.Type);
         var httpClient = _httpClientFactory.CreateClient(clientName);
@@ -43,6 +44,7 @@ public sealed class SalesChannelContextFactory
             RefreshToken = _encryptor.Decrypt(salesChannel.RefreshToken ?? string.Empty),
             HttpClient = httpClient,
             SyncRun = syncRun,
+            OperationState = operationState,
             TenantId = salesChannel.TenantId,
             IncrementalSince = incrementalSince,
             ReportProgressAsync = reportProgress,
