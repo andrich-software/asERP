@@ -21,6 +21,9 @@ public sealed class Shopware6Connector : ConnectorBase
 {
     private const int PageSize = 100;
 
+    // Hard ceiling against an endpoint that ignores paging — mirrors the WooCommerce connectors.
+    private const int MaxPages = 1000;
+
     private readonly Shopware6AuthHelper _auth;
     private readonly IProductImportRepository _productImportRepository;
     private readonly ISalesImportRepository _salesImportRepository;
@@ -87,7 +90,14 @@ public sealed class Shopware6Connector : ConnectorBase
 
         var processed = 0;
         var failed = 0;
-        var page = 1;
+        string? abortError = null;
+
+        // A delta pass (incremental watermark set) pulls only products created or updated since the
+        // watermark and runs cursor-less. Full walks (initial import, periodic full sweep) resume from
+        // the persisted page cursor (stable createdAt-ASC order: new products append at the end) and
+        // are time-boxed so a restart never sends the walk back to page 1.
+        var modifiedSince = context.IncrementalSince;
+        var isFullWalk = modifiedSince is null;
 
         try
         {
@@ -99,17 +109,29 @@ public sealed class Shopware6Connector : ConnectorBase
             // hard-coded 19. Falls back to the default rate only when the shop exposes no tax entities.
             var taxRates = await BuildTaxRateMapAsync(context, baseUrl);
 
-            while (true)
+            var runStart = DateTime.UtcNow;
+            var reachedEnd = false;
+            var startPage = isFullWalk ? context.OperationState!.CursorPage + 1 : 1;
+
+            for (var page = startPage; page <= MaxPages; page++)
             {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
                 // Walk only top-level products (parentId == null); variants are fetched per parent below
+                var filters = new List<object>
+                {
+                    new { type = "equals", field = "parentId", value = (string?)null },
+                };
+                if (modifiedSince is { } since)
+                {
+                    filters.Add(BuildCreatedOrUpdatedSinceFilter(since));
+                }
+
                 var requestBody = new
                 {
                     page,
                     limit = PageSize,
-                    filter = new object[]
-                    {
-                        new { type = "equals", field = "parentId", value = (string?)null },
-                    },
+                    filter = filters.ToArray(),
                     // Load the photo gallery + featured image; the nested 'media' association is what
                     // carries the public file url we download. Without it only the join rows come back.
                     associations = new
@@ -126,12 +148,17 @@ public sealed class Shopware6Connector : ConnectorBase
                     var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
                     _logger.LogError("Shopware6 product search HTTP {Status}: {Body}", (int)response.StatusCode, body);
                     failed++;
+                    abortError = $"Shopware6 product search HTTP {(int)response.StatusCode}";
                     break;
                 }
 
                 var raw = await response.Content.ReadAsStringAsync(context.CancellationToken);
                 var result = JsonSerializer.Deserialize<Sw6SearchResult<Sw6Product>>(raw);
-                if (result?.Data is null || result.Data.Count == 0) break;
+                if (result?.Data is null || result.Data.Count == 0)
+                {
+                    reachedEnd = true;
+                    break;
+                }
 
                 foreach (var p in result.Data)
                 {
@@ -178,20 +205,46 @@ public sealed class Shopware6Connector : ConnectorBase
                     }
                 }
 
-                if (result.Data.Count < PageSize) break;
-                page++;
+                if (context.ReportProgressAsync is not null)
+                {
+                    await context.ReportProgressAsync(processed, failed, context.CancellationToken);
+                }
+
+                if (isFullWalk)
+                {
+                    // Resume position — flushed with the next progress checkpoint, so a restart loses
+                    // at most a page instead of the whole catalogue.
+                    context.OperationState!.CursorPage = page;
+                }
+
+                if (result.Data.Count < PageSize)
+                {
+                    reachedEnd = true;
+                    break;
+                }
+
+                // Chunk budget: yield after the time box; the scheduler chains the next chunk within
+                // seconds while the initial walk is incomplete.
+                if (isFullWalk && DateTime.UtcNow - runStart >= MaxBackfillRunDuration)
+                {
+                    break;
+                }
+            }
+
+            if (reachedEnd && isFullWalk && abortError is null)
+            {
+                // Structural completion is the connector's call: only walking off the end of the
+                // catalogue finishes the initial import — a time-boxed chunk merely pauses it.
+                salesChannel.SyncState.InitialProductImportCompleted = true;
+                context.OperationState!.CursorPage = 0;
             }
         }
         catch (Exception ex)
         {
-            return SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1, ex.Message) : SyncResult.Failed(ex.Message);
         }
 
-        // NOTE: InitialProductImportCompleted is intentionally NOT flipped here. The orchestrator flips it
-        // only after a Success/PartialFailure run (SalesChannelOrchestrator.RunChannelOperationAsync), so a
-        // run that imported zero products because the very first page fetch failed (failed>0, processed==0 →
-        // Failed) does not permanently gate the catalogue import. Mirrors the WooCommerce connector.
-        return new SyncResult(processed, failed);
+        return new SyncResult(processed, failed, abortError);
     }
 
     /// <summary>
@@ -329,7 +382,7 @@ public sealed class Shopware6Connector : ConnectorBase
         var salesChannel = context.SalesChannel;
         var processed = 0;
         var failed = 0;
-        var cursorAdvance = salesChannel.SyncState.SalesImportBackfillCursor;
+        var cursorAdvance = context.OperationState!.CursorDateTime;
         var frozen = false;
         var reachedEnd = false;
         var fetchFailed = false;
@@ -342,8 +395,7 @@ public sealed class Shopware6Connector : ConnectorBase
 
             object requestBody = BuildSalesSearchBody(
                 page: 1,
-                rangeField: "orderDateTime",
-                rangeFrom: cursorAdvance?.AddSeconds(-1),
+                cursorAdvance is { } cursorFrom ? BuildRangeFilter("orderDateTime", cursorFrom.AddSeconds(-1)) : null,
                 sortField: "orderDateTime");
 
             List<Sw6Sales> batch;
@@ -400,9 +452,9 @@ public sealed class Shopware6Connector : ConnectorBase
             }
 
             // Persist progress on the tracked channel entity (the orchestrator saves it after the run).
-            if (cursorAdvance is { } adv && adv != salesChannel.SyncState.SalesImportBackfillCursor)
+            if (cursorAdvance is { } adv && adv != context.OperationState!.CursorDateTime)
             {
-                salesChannel.SyncState.SalesImportBackfillCursor = adv;
+                context.OperationState!.CursorDateTime = adv;
             }
 
             if (context.ReportProgressAsync is not null)
@@ -461,8 +513,7 @@ public sealed class Shopware6Connector : ConnectorBase
 
             object requestBody = BuildSalesSearchBody(
                 page,
-                rangeField: updatedSince is null ? null : "updatedAt",
-                rangeFrom: updatedSince,
+                updatedSince is { } since ? BuildCreatedOrUpdatedSinceFilter(since) : null,
                 sortField: "id");
 
             List<Sw6Sales> batch;
@@ -478,7 +529,7 @@ public sealed class Shopware6Connector : ConnectorBase
             {
                 _logger.LogError(ex, "Shopware6 order page {Page} fetch failed", page);
                 return processed > 0
-                    ? new SyncResult(processed, failed + 1)
+                    ? new SyncResult(processed, failed + 1, ex.Message)
                     : SyncResult.Failed(ex.Message);
             }
 
@@ -522,21 +573,40 @@ public sealed class Shopware6Connector : ConnectorBase
         return new SyncResult(processed, failed);
     }
 
-    private static Dictionary<string, object> BuildSalesSearchBody(int page, string? rangeField, DateTime? rangeFrom, string sortField)
+    /// <summary>Range filter <c>field &gt;= from</c> in Shopware's DAL search syntax.</summary>
+    internal static object BuildRangeFilter(string field, DateTime from) => new
+    {
+        type = "range",
+        field,
+        parameters = new Dictionary<string, string>
+        {
+            // Shopware compares ISO-8601 datetimes; UTC with explicit offset avoids shop-TZ drift.
+            ["gte"] = from.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss+00:00"),
+        },
+    };
+
+    /// <summary>
+    /// "Changed since" filter for delta pulls. Shopware's <c>updatedAt</c> is NULL until an entity's
+    /// first update, so a plain updatedAt range silently drops everything created in the window but
+    /// never modified — the filter must be created-or-updated.
+    /// </summary>
+    internal static object BuildCreatedOrUpdatedSinceFilter(DateTime from) => new
+    {
+        type = "multi",
+        @operator = "or",
+        queries = new object[]
+        {
+            BuildRangeFilter("createdAt", from),
+            BuildRangeFilter("updatedAt", from),
+        },
+    };
+
+    private static Dictionary<string, object> BuildSalesSearchBody(int page, object? sinceFilter, string sortField)
     {
         var filters = new List<object>();
-        if (rangeField is not null && rangeFrom is { } from)
+        if (sinceFilter is not null)
         {
-            filters.Add(new
-            {
-                type = "range",
-                field = rangeField,
-                parameters = new Dictionary<string, string>
-                {
-                    // Shopware compares ISO-8601 datetimes; UTC with explicit offset avoids shop-TZ drift.
-                    ["gte"] = from.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss+00:00"),
-                },
-            });
+            filters.Add(sinceFilter);
         }
 
         return new Dictionary<string, object>

@@ -85,6 +85,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<ProductStock>().ToTable("product_stock");
         modelBuilder.Entity<SalesChannel>().ToTable("saleschannel");
         modelBuilder.Entity<SalesChannelSyncState>().ToTable("saleschannel_sync_state");
+        modelBuilder.Entity<SalesChannelOperationState>().ToTable("saleschannel_operation_state");
         modelBuilder.Entity<ShopDomain>().ToTable("shop_domain");
         modelBuilder.Entity<ReturnShipment>().ToTable("return_shipment");
         modelBuilder.Entity<ReturnShipmentItem>().ToTable("return_shipment_item");
@@ -120,6 +121,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new ManufacturerConfiguration());
         modelBuilder.ApplyConfiguration(new SalesChannelConfiguration());
         modelBuilder.ApplyConfiguration(new SalesChannelSyncStateConfiguration());
+        modelBuilder.ApplyConfiguration(new SalesChannelOperationStateConfiguration());
         modelBuilder.ApplyConfiguration(new ShopDomainConfiguration());
 
         // Wire up at-rest encryption for SalesChannel credentials. Converter goes through
@@ -183,6 +185,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             : Database.IsSqlServer() ? "[SalesItemId] IS NOT NULL"
             : "SalesItemId IS NOT NULL";
         modelBuilder.ApplyConfiguration(new StockMovementConfiguration(salesItemFilter));
+        // Customer indexes (unique customer number per tenant + the import's email-match index).
+        // This configuration existed for a long time but was never applied here — the customer table
+        // shipped without any secondary index, which made the sales import's match-by-email a full
+        // scan per imported order. Prod deploys must dedupe conflicting emails before this migration.
+        // Null on non-relational providers (InMemory tests): filters cannot be represented there and
+        // the unfiltered enforcement would wrongly reject blanked/empty duplicate emails.
+        string? emailFilter = Database.IsNpgsql() ? "\"Email\" IS NOT NULL AND \"Email\" <> ''"
+            : Database.IsSqlServer() ? "[Email] IS NOT NULL AND [Email] <> ''"
+            : Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite" ? "Email IS NOT NULL AND Email <> ''"
+            : null;
+        modelBuilder.ApplyConfiguration(new CustomerConfiguration(emailFilter));
         modelBuilder.ApplyConfiguration(new TenantOAuthAppSettingsConfiguration());
         modelBuilder.ApplyConfiguration(new OAuthStateConfiguration());
         modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
@@ -248,6 +261,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ProductStock> ProductStock { get; set; } = null!;
     public DbSet<SalesChannel> SalesChannel { get; set; } = null!;
     public DbSet<SalesChannelSyncState> SalesChannelSyncState { get; set; } = null!;
+    public DbSet<SalesChannelOperationState> SalesChannelOperationState { get; set; } = null!;
     public DbSet<ShopDomain> ShopDomain { get; set; } = null!;
     public DbSet<Setting> Setting { get; set; } = null!;
     public DbSet<Shipping> Shipping { get; set; } = null!;

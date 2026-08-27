@@ -28,6 +28,15 @@ public sealed class SalesChannelContext
     public required ChannelSyncRun SyncRun { get; init; }
 
     /// <summary>
+    /// Durable scheduling/progress state of this (channel, operation) — the home of the operation's
+    /// resume cursors (<c>CursorDateTime</c>/<c>CursorPage</c>/<c>CursorText</c>) and phase. The row is
+    /// tracked by the dispatcher's context and flushed with every <see cref="ReportProgressAsync"/>
+    /// checkpoint, so cursor mutations persist mid-run. Set for imports; null on export dispatches
+    /// (exports are outbox-driven and carry no scheduling state).
+    /// </summary>
+    public SalesChannelOperationState? OperationState { get; init; }
+
+    /// <summary>
     /// Mid-run progress checkpoint: <c>(processed, failed, ct)</c>. A long import (e.g. a full order
     /// backfill that walks years of history in one run) should call this periodically so the audit row's
     /// item counts — and any cursor the connector advanced on the channel entity — are persisted *during*

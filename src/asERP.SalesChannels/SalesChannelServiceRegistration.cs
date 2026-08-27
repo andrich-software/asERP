@@ -29,6 +29,10 @@ public static class SalesChannelServiceRegistration
     /// </param>
     public static IServiceCollection AddSalesChannelServices(this IServiceCollection services, bool includeBackgroundServices = true)
     {
+        // The sync engine's tunables resolve via IOptions<SalesChannelSyncOptions> with code defaults;
+        // the Server binds the "SalesChannelSync" appsettings section over them in Program.cs.
+        services.AddOptions();
+
         services.AddScoped<IProductImportRepository, ProductImportRepository>();
         services.AddScoped<ISalesImportRepository, SalesImportRepository>();
         services.AddScoped<ICustomerImportRepository, CustomerImportRepository>();

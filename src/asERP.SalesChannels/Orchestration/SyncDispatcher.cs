@@ -7,6 +7,7 @@ using asERP.Persistence.DatabaseContext;
 using asERP.SalesChannels.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace asERP.SalesChannels.Orchestration;
 
@@ -28,6 +29,7 @@ public sealed class SyncDispatcher
     private readonly ISalesChannelConnectorRegistry _registry;
     private readonly SalesChannelContextFactory _contextFactory;
     private readonly ITenantContext _tenantContext;
+    private readonly SalesChannelSyncOptions _options;
     private readonly ILogger<SyncDispatcher> _logger;
 
     public SyncDispatcher(
@@ -35,12 +37,14 @@ public sealed class SyncDispatcher
         ISalesChannelConnectorRegistry registry,
         SalesChannelContextFactory contextFactory,
         ITenantContext tenantContext,
+        IOptions<SalesChannelSyncOptions> options,
         ILogger<SyncDispatcher> logger)
     {
         _context = context;
         _registry = registry;
         _contextFactory = contextFactory;
         _tenantContext = tenantContext;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -127,13 +131,17 @@ public sealed class SyncDispatcher
             AlignTenantContext(salesChannel);
 
             var connector = _registry.Resolve(salesChannel.Type);
+            var operationState = await GetOrCreateOperationStateAsync(salesChannel, operation, cancellationToken);
             var run = existingRun is not null
                 ? await AdoptRunAsync(existingRun, cancellationToken)
                 : await OpenRunAsync(salesChannel, operation, trigger, cancellationToken);
 
+            operationState.LastStartedAt = run.StartedAt;
+
             if (connector is null || !ConnectorSupports(connector, operation))
             {
                 await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, $"No capable connector for {salesChannel.Type}/{operation}", cancellationToken);
+                await ApplyPostRunSchedulingAsync(operationState, salesChannel, operation, run);
                 return run;
             }
 
@@ -143,20 +151,32 @@ public sealed class SyncDispatcher
 
             try
             {
-                var incrementalSince = await ComputeIncrementalSinceAsync(salesChannel, operation, trigger, run, cancellationToken);
+                // Captured before the connector runs: a run that COMPLETES the initial walk must not
+                // advance the watermark to its own start (changes made while earlier chunks walked
+                // already-visited ranges would be skipped) — only runs that STARTED incremental do.
+                var preRunInitialIncomplete = IsInitialWalkIncomplete(salesChannel, operation);
+                var incrementalSince = ComputeIncrementalSince(operationState, operation, trigger, preRunInitialIncomplete);
 
                 // Mid-run checkpoint: persist the audit row's item counts (and any cursor the connector
                 // advanced on the tracked channel entity) while the import is still walking pages. Both
                 // `run` and `salesChannel` are tracked by this scope's _context, so one SaveChanges flushes
-                // counts + cursor together. The connector throttles how often it calls this.
+                // counts + cursor together. The connector throttles how often it calls this. The heartbeat
+                // is stamped unconditionally so the live orphan sweep can tell alive from hung.
                 async Task ReportProgressAsync(int processed, int failed, CancellationToken ct)
                 {
                     run.ItemsProcessed = processed;
                     run.ItemsFailed = failed;
+                    run.HeartbeatAt = DateTime.UtcNow;
                     await _context.SaveChangesAsync(ct);
                 }
 
-                var context = _contextFactory.Create(salesChannel, run, cancellationToken, incrementalSince, ReportProgressAsync);
+                // Hard ceiling per invocation: a connector call that never observes cancellation on its
+                // own (hung socket, SDK ignoring the token) is aborted here, which frees the per-
+                // (channel, operation) lock instead of blocking the operation until a process restart.
+                using var invocationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                invocationCts.CancelAfter(TimeSpan.FromMinutes(_options.RunHardTimeoutMinutes));
+
+                var context = _contextFactory.Create(salesChannel, run, invocationCts.Token, incrementalSince, ReportProgressAsync, operationState);
                 var result = operation switch
                 {
                     ChannelSyncOperation.ImportProducts => await connector.ImportProductsAsync(context),
@@ -176,18 +196,35 @@ public sealed class SyncDispatcher
                 };
 
                 await CloseRunAsync(run, status, result.ItemsProcessed, result.ItemsFailed, result.ErrorSummary, cancellationToken);
+                ApplyLegacyCompletionFlags(salesChannel, operation, run);
+                ApplyWatermarkBookkeeping(operationState, operation, run, incrementalSince, preRunInitialIncomplete);
+                await ApplyPostRunSchedulingAsync(operationState, salesChannel, operation, run);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Expected on server shutdown — the connector observed the token between pages. Close the run
+                // cleanly (not an error) so it does not linger as an orphaned "Running" row. Deliberately no
+                // scheduling update: NextDueAt stays in the past, so the operation resumes promptly after the
+                // restart instead of serving a failure backoff for being shut down.
+                _logger.LogInformation("Sync canceled for channel {Channel} op {Op} (server shutdown)", salesChannel.Id, operation);
+                await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, "Sync canceled (server shutdown).", cancellationToken);
             }
             catch (OperationCanceledException)
             {
-                // Expected on server shutdown — the connector observed the token between pages. Close the run
-                // cleanly (not an error) so it does not linger as an orphaned "Running" row.
-                _logger.LogInformation("Sync canceled for channel {Channel} op {Op} (server shutdown)", salesChannel.Id, operation);
-                await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, "Sync canceled (server shutdown).", cancellationToken);
+                // The linked token fired without an external cancellation: the invocation exceeded the hard
+                // ceiling. Close as failed and apply the failure backoff — a shop that hangs every run must
+                // not be re-dialed every interval.
+                _logger.LogError("Sync for channel {Channel} op {Op} exceeded the hard timeout of {Minutes} min and was aborted",
+                    salesChannel.Id, operation, _options.RunHardTimeoutMinutes);
+                await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0,
+                    $"Aborted: run exceeded the hard timeout of {_options.RunHardTimeoutMinutes} minutes.", cancellationToken);
+                await ApplyPostRunSchedulingAsync(operationState, salesChannel, operation, run);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Sync dispatch failed for channel {Channel} op {Op}", salesChannel.Id, operation);
                 await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, ex.Message, cancellationToken);
+                await ApplyPostRunSchedulingAsync(operationState, salesChannel, operation, run);
             }
 
             return run;
@@ -253,61 +290,264 @@ public sealed class SyncDispatcher
         }
     }
 
-    // Small safety overlap subtracted from the watermark so orders modified during the previous run (or
-    // under minor clock skew between this host and the shop) are not missed. Re-pulling a few already-seen
-    // orders is harmless because the import upsert is idempotent.
-    private static readonly TimeSpan IncrementalOverlap = TimeSpan.FromHours(1);
+    /// <summary>
+    /// Which operations run incrementally off a modified-since watermark: orders (modified_after and
+    /// friends), products (modified_after / post_modified_gmt / updatedAt) and customers (last_update
+    /// on the direct-DB path; registered-since for new customers on REST). Stock deliberately not —
+    /// its modified-filter mode is lossy (order-driven stock changes do not bump the product's
+    /// modified timestamp), so stock always runs as a rare absolute sweep. Categories are a cheap
+    /// single-save full reconcile and need no watermark either.
+    /// </summary>
+    private static bool IsWatermarkOperation(ChannelSyncOperation operation) =>
+        operation is ChannelSyncOperation.ImportSaless
+            or ChannelSyncOperation.ImportProducts
+            or ChannelSyncOperation.ImportCustomers;
 
     /// <summary>
-    /// Computes the incremental watermark for the sales import: the start of the most recent run that
-    /// finished as Success or PartialFailure, minus a safety overlap. Returns null (→ full import) when no
-    /// such run exists yet (first import) or for operations that have no incremental mode. Failed runs are
-    /// excluded so a failure never advances the watermark — the next run safely re-pulls from the last good
-    /// point. The just-opened "Running" row is excluded by the status filter.
+    /// Reads the incremental watermark from the durable operation state, minus a safety overlap
+    /// (clock skew, changes landing mid-run — re-pulling seen items is harmless, imports are
+    /// idempotent). Null → full sweep: for operations without an incremental mode, for the very
+    /// first incremental run (bootstrap: one healing full sweep, then delta), for manual triggers
+    /// (the user's recovery lever backfills anything an earlier run missed), for chunks of a still
+    /// incomplete initial walk (the walk's cursor governs those, not a modified filter), and when
+    /// the periodic full-reconciliation sweep is due.
     /// </summary>
-    private async Task<DateTime?> ComputeIncrementalSinceAsync(
-        SalesChannel salesChannel,
+    /// <remarks>
+    /// For the sales import the watermark is also consulted while the history backfill is still
+    /// running — the connector uses it for the per-run "recent orders" pass that keeps current
+    /// orders live before the oldest-first walk reaches the present (null → the connector falls
+    /// back to a fixed seed window on the first run). It never governs which historical orders the
+    /// backfill fetches (that is the date cursor), so reading it during backfill is safe.
+    /// </remarks>
+    private DateTime? ComputeIncrementalSince(
+        SalesChannelOperationState operationState,
         ChannelSyncOperation operation,
         ChannelSyncTriggerSource trigger,
-        ChannelSyncRun currentRun,
+        bool initialWalkIncomplete)
+    {
+        if (!IsWatermarkOperation(operation) || trigger == ChannelSyncTriggerSource.Manual)
+        {
+            return null;
+        }
+
+        // Sales excepted (recent-pass, see remarks): initial-walk chunks never filter by modified —
+        // the resume cursor drives them.
+        if (operation != ChannelSyncOperation.ImportSaless && initialWalkIncomplete)
+        {
+            return null;
+        }
+
+        if (IsFullSweepDue(operationState))
+        {
+            return null;
+        }
+
+        return operationState.Watermark is null
+            ? null
+            : operationState.Watermark.Value - TimeSpan.FromMinutes(_options.IncrementalOverlapMinutes);
+    }
+
+    /// <summary>
+    /// True when the operation's rare full-reconciliation sweep is due: deletions and drift that a
+    /// modified-since delta can never see are healed by periodically re-walking everything.
+    /// </summary>
+    private bool IsFullSweepDue(SalesChannelOperationState operationState)
+    {
+        var fullSweepDays = _options.For(operationState.Operation).FullSweepDays;
+        if (fullSweepDays is null)
+        {
+            return false;
+        }
+
+        var last = operationState.LastFullSweepAt ?? operationState.LastSuccessAt;
+        return last is null || DateTime.UtcNow - last.Value >= TimeSpan.FromDays(fullSweepDays.Value);
+    }
+
+    /// <summary>
+    /// Post-run watermark bookkeeping. Advancement rules:
+    /// only fully successful runs advance (a failed/partial run keeps the previous baseline so the
+    /// next run re-pulls the same window — idempotent upserts make that safe); for products and
+    /// customers only runs that STARTED in the incremental phase advance (a chunked initial walk
+    /// keeps the watermark stamped at its beginning, so the first delta re-covers everything that
+    /// changed while the walk ran); sales advance on any success (its recent-pass semantics predate
+    /// the phase model and are cursor-protected). A successful sweep that ran without a watermark in
+    /// the incremental phase was a full reconciliation — stamp <c>LastFullSweepAt</c>.
+    /// </summary>
+    private static void ApplyWatermarkBookkeeping(
+        SalesChannelOperationState operationState,
+        ChannelSyncOperation operation,
+        ChannelSyncRun run,
+        DateTime? usedIncrementalSince,
+        bool preRunInitialIncomplete)
+    {
+        if (run.Status != ChannelSyncRunStatus.Success)
+        {
+            return;
+        }
+
+        // Stock is not a watermark operation (its sweeps are always absolute), but the sweep-START
+        // instant is still recorded here: the sales import uses it as the baseline for stock-master
+        // mirroring — orders placed before it are already reflected in the mirrored level and must
+        // not decrement again.
+        if (operation == ChannelSyncOperation.ImportStock)
+        {
+            operationState.Watermark = run.StartedAt;
+            return;
+        }
+
+        if (!IsWatermarkOperation(operation))
+        {
+            return;
+        }
+
+        if (operation == ChannelSyncOperation.ImportSaless || !preRunInitialIncomplete)
+        {
+            operationState.Watermark = run.StartedAt;
+
+            if (usedIncrementalSince is null && !preRunInitialIncomplete)
+            {
+                operationState.LastFullSweepAt = run.StartedAt;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Loads the durable per-(channel, operation) scheduling state, creating and seeding it on first
+    /// use. Seeding pulls everything the legacy bookkeeping knows: the phase from the one-shot
+    /// Initial*Completed flags, the resume cursors from <see cref="SalesChannelSyncState"/>, and the
+    /// incremental watermark from the historical run table (the old per-dispatch MAX() derivation,
+    /// executed exactly once here and then owned by the state row). Callers run inside the
+    /// per-(channel, operation) gate, so create/seed is race-free per row; the row is persisted with
+    /// the caller's next SaveChanges.
+    /// </summary>
+    internal async Task<SalesChannelOperationState> GetOrCreateOperationStateAsync(
+        SalesChannel salesChannel,
+        ChannelSyncOperation operation,
         CancellationToken cancellationToken)
     {
-        // Sales and stock imports both run incrementally off a modified_after watermark; the other
-        // operations have their own cursors/flags.
-        if (operation is not (ChannelSyncOperation.ImportSaless or ChannelSyncOperation.ImportStock))
-        {
-            return null;
-        }
-
-        // A manual sync is the user's recovery lever: do a full sweep (no watermark) so it backfills
-        // anything an earlier run missed. Only the scheduled poll stays incremental for efficiency.
-        if (trigger == ChannelSyncTriggerSource.Manual)
-        {
-            return null;
-        }
-
-        // NOTE: this watermark is also consulted while the history backfill is still running — the connector
-        // uses it for the per-run "recent orders" pass that keeps current orders live before the oldest-first
-        // walk reaches the present (null → the connector falls back to a fixed seed window on the first run).
-        // It never governs which historical orders the backfill fetches (that is the date_created cursor), so
-        // computing it during backfill is safe.
-
-        // Advance the watermark ONLY past fully successful runs. A PartialFailure means the run aborted
-        // mid-walk (e.g. a page fetch failed), so the orders it never reached were not imported. If we
-        // treated its StartedAt as the new baseline, the next incremental run's 'modified_after' would skip
-        // straight past those never-fetched orders and they would be lost forever — exactly the gap that
-        // left this shop at ~17% coverage. By keying off the last *Success* only, a failed/partial run makes
-        // the next scheduled run re-pull the same window (idempotent upserts), so the import self-heals once
-        // connectivity is restored instead of cementing the hole.
-        var lastSuccessfulStart = await _context.ChannelSyncRun
+        var state = await _context.SalesChannelOperationState
             .IgnoreQueryFilters()
-            .Where(r => r.SalesChannelId == salesChannel.Id
-                        && r.Operation == operation
-                        && r.Id != currentRun.Id
-                        && r.Status == ChannelSyncRunStatus.Success)
-            .MaxAsync(r => (DateTime?)r.StartedAt, cancellationToken);
+            .FirstOrDefaultAsync(o => o.SalesChannelId == salesChannel.Id && o.Operation == operation, cancellationToken);
 
-        return lastSuccessfulStart is null ? null : lastSuccessfulStart.Value - IncrementalOverlap;
+        if (state is null)
+        {
+            state = new SalesChannelOperationState
+            {
+                SalesChannelId = salesChannel.Id,
+                // Explicit: background scopes have no ambient tenant until AlignTenantContext ran, and
+                // the save hook must never guess for host-level rows.
+                TenantId = salesChannel.TenantId,
+                Operation = operation,
+                NextDueAt = DateTime.UtcNow,
+            };
+            _context.SalesChannelOperationState.Add(state);
+        }
+
+        if (state.Phase == ChannelSyncPhase.Unknown)
+        {
+            state.Phase = IsInitialWalkIncomplete(salesChannel, operation)
+                ? ChannelSyncPhase.Initial
+                : ChannelSyncPhase.Incremental;
+
+            state.CursorDateTime = operation == ChannelSyncOperation.ImportSaless
+                ? salesChannel.SyncState.SalesImportBackfillCursor
+                : null;
+            state.CursorPage = operation == ChannelSyncOperation.ImportCustomers
+                ? salesChannel.SyncState.CustomerImportPageCursor
+                : 0;
+
+            if (operation == ChannelSyncOperation.ImportSaless && state.Watermark is null)
+            {
+                // Advance-on-Success semantics carried over: only fully successful runs ever advanced
+                // the legacy sales watermark, so seeding from the last Success run is loss-free.
+                state.Watermark = await _context.ChannelSyncRun
+                    .IgnoreQueryFilters()
+                    .Where(r => r.SalesChannelId == salesChannel.Id
+                                && r.Operation == operation
+                                && r.Status == ChannelSyncRunStatus.Success)
+                    .MaxAsync(r => (DateTime?)r.StartedAt, cancellationToken);
+            }
+            else if (state.Phase == ChannelSyncPhase.Initial && IsWatermarkOperation(operation))
+            {
+                // Baseline for the first delta after the (chunked, possibly multi-day) initial walk:
+                // everything modified since the walk BEGAN is re-pulled once, so changes landing in
+                // already-walked ranges are not lost. Products/customers only — legacy never ran them
+                // incrementally, so there is no historical watermark to inherit.
+                state.Watermark = DateTime.UtcNow;
+            }
+            // Products/customers whose one-shot sweep completed under the legacy scheduler start with
+            // a null watermark on purpose: their first incremental run becomes one healing full sweep
+            // (catching everything the one-shot era silently missed), then delta takes over.
+        }
+
+        return state;
+    }
+
+    /// <summary>
+    /// True when a one-shot sweep walked off the end of the remote data set: a clean run, or a run whose
+    /// only failures are per-item (no run-level <see cref="ChannelSyncRun.ErrorSummary"/>). An aborted
+    /// walk carries the abort exception as ErrorSummary and must keep its initial flag unset.
+    /// </summary>
+    internal static bool IsStructurallyComplete(ChannelSyncRun run) =>
+        run.Status == ChannelSyncRunStatus.Success
+        || (run.Status == ChannelSyncRunStatus.PartialFailure && string.IsNullOrEmpty(run.ErrorSummary));
+
+    /// <summary>
+    /// Flips the one-shot completion flag for categories — the only sweep whose connector does not
+    /// maintain its own flag: the category import is a single whole-tree reconcile per run (never
+    /// chunked), so its run outcome IS its structural completion. Products, customers and the sales
+    /// backfill flip their flags inside the connector, which alone knows whether a time-boxed chunk
+    /// walked off the end or merely ran out of time. Runs before the scheduling update so the phase
+    /// mirror sees the fresh flags — isolated item failures still count as completed (a poison item
+    /// must not pin a full sweep to repeat forever), an aborted walk never does.
+    /// </summary>
+    private static void ApplyLegacyCompletionFlags(SalesChannel salesChannel, ChannelSyncOperation operation, ChannelSyncRun run)
+    {
+        if (operation == ChannelSyncOperation.ImportCategories && IsStructurallyComplete(run))
+        {
+            salesChannel.SyncState.InitialCategoryImportCompleted = true;
+        }
+    }
+
+    /// <summary>
+    /// True while the operation's initial full walk has not completed yet. Derived from the legacy
+    /// one-shot flags for now — the connectors still maintain those; once they move onto the
+    /// operation state (phase 2 of the sync redesign), this reads <see cref="ChannelSyncPhase"/>.
+    /// </summary>
+    private static bool IsInitialWalkIncomplete(SalesChannel salesChannel, ChannelSyncOperation operation) => operation switch
+    {
+        ChannelSyncOperation.ImportProducts => salesChannel.ImportProducts && !salesChannel.SyncState.InitialProductImportCompleted,
+        ChannelSyncOperation.ImportCustomers => salesChannel.ImportCustomers && !salesChannel.SyncState.InitialCustomerImportCompleted,
+        ChannelSyncOperation.ImportCategories => salesChannel.ImportCategories && !salesChannel.SyncState.InitialCategoryImportCompleted,
+        ChannelSyncOperation.ImportSaless => salesChannel.ImportSaless && !salesChannel.SyncState.InitialSalesImportCompleted,
+        _ => false,
+    };
+
+    /// <summary>
+    /// Post-run scheduling on the durable operation state: mirror the phase from the legacy flags and
+    /// let the scheduling policy compute the next due time (chunk-chaining while the initial walk is
+    /// incomplete, adaptive interval otherwise, exponential backoff after failures). Persisted
+    /// immediately with a non-cancellable token — like the run close, this must land even during
+    /// shutdown. Watermark bookkeeping happens separately in <see cref="ApplyWatermarkBookkeeping"/>.
+    /// </summary>
+    private async Task ApplyPostRunSchedulingAsync(
+        SalesChannelOperationState operationState,
+        SalesChannel salesChannel,
+        ChannelSyncOperation operation,
+        ChannelSyncRun run)
+    {
+        var initialWalkIncomplete = IsInitialWalkIncomplete(salesChannel, operation);
+        operationState.Phase = initialWalkIncomplete ? ChannelSyncPhase.Initial : ChannelSyncPhase.Incremental;
+
+        operationState.NextDueAt = SyncScheduler.ComputeNextDue(
+            operationState,
+            run,
+            _options,
+            salesChannel.SyncIntervalSeconds,
+            initialWalkIncomplete,
+            DateTime.UtcNow);
+
+        await _context.SaveChangesAsync(CancellationToken.None);
     }
 
     /// <summary>

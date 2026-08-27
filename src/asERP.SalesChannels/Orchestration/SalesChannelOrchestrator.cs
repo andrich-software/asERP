@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace asERP.SalesChannels.Orchestration;
 
@@ -17,10 +18,11 @@ namespace asERP.SalesChannels.Orchestration;
 /// </summary>
 public sealed class SalesChannelOrchestrator : BackgroundService
 {
-    private static readonly TimeSpan DefaultTickInterval = TimeSpan.FromSeconds(10);
-
     // Purge expired sync logs roughly once a minute (every 6th 10s tick) — the flush itself runs each tick.
     private const int PurgeEveryTicks = 6;
+
+    // Live orphan sweep roughly every 2 minutes: marks Running runs without a recent heartbeat as failed.
+    private const int OrphanSweepEveryTicks = 12;
 
     // Re-link sales items whose product was missing at import time roughly every 30 minutes. Covers the
     // "order imported before its product" race without any coupling between the two imports.
@@ -41,6 +43,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SalesChannelOrchestrator> _logger;
+    private readonly SalesChannelSyncOptions _options;
     private int _tick;
 
     // Imports run as detached background tasks so a long run (e.g. a multi-hour order backfill) never
@@ -50,17 +53,25 @@ public sealed class SalesChannelOrchestrator : BackgroundService
     // operation is never launched twice. Entries self-remove on completion.
     private readonly ConcurrentDictionary<(Guid ChannelId, ChannelSyncOperation Operation), Task> _inFlight = new();
 
-    public SalesChannelOrchestrator(IServiceScopeFactory scopeFactory, ILogger<SalesChannelOrchestrator> logger)
-        : this(scopeFactory, logger, DefaultTickInterval)
+    public SalesChannelOrchestrator(
+        IServiceScopeFactory scopeFactory,
+        ILogger<SalesChannelOrchestrator> logger,
+        IOptions<SalesChannelSyncOptions> options)
+        : this(scopeFactory, logger, TimeSpan.FromSeconds(Math.Max(1, options.Value.TickSeconds)), options.Value)
     {
     }
 
     // Test seam: lets the loop tick faster so the decoupling behaviour can be exercised without 10s waits.
-    internal SalesChannelOrchestrator(IServiceScopeFactory scopeFactory, ILogger<SalesChannelOrchestrator> logger, TimeSpan tickInterval)
+    internal SalesChannelOrchestrator(
+        IServiceScopeFactory scopeFactory,
+        ILogger<SalesChannelOrchestrator> logger,
+        TimeSpan tickInterval,
+        SalesChannelSyncOptions? options = null)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
         _tickInterval = tickInterval;
+        _options = options ?? new SalesChannelSyncOptions();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -75,7 +86,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             {
                 await DrainOutboxAsync(stoppingToken);
                 await DispatchQueuedRunsAsync(stoppingToken);
-                await PollImportsAsync(stoppingToken);
+                await DispatchDueOperationsAsync(stoppingToken);
                 await DrainSyncLogsAsync(stoppingToken);
 
                 if (++_tick % PurgeEveryTicks == 0)
@@ -86,6 +97,11 @@ public sealed class SalesChannelOrchestrator : BackgroundService
                 if (_tick % ReconcileEveryTicks == 1)
                 {
                     await ReconcileMissingProductsAsync(stoppingToken);
+                }
+
+                if (_tick % OrphanSweepEveryTicks == 2)
+                {
+                    await SweepStaleRunningRunsAsync(stoppingToken);
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -325,82 +341,247 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         }
     }
 
-    private async Task PollImportsAsync(CancellationToken cancellationToken)
+    /// <summary>Every operation the scheduler manages — one state row per (channel, operation).</summary>
+    internal static readonly ChannelSyncOperation[] ScheduledImportOperations =
+    [
+        ChannelSyncOperation.ImportCategories,
+        ChannelSyncOperation.ImportProducts,
+        ChannelSyncOperation.ImportSaless,
+        ChannelSyncOperation.ImportCustomers,
+        ChannelSyncOperation.ImportStock,
+    ];
+
+    /// <summary>
+    /// Scheduled-import dispatch, driven by the durable per-(channel, operation) state: one indexed
+    /// range scan over <c>NextDueAt &lt;= now</c> instead of materializing every enabled channel each
+    /// tick. Candidates are additionally filtered in memory by the legacy gating rules
+    /// (<see cref="ComputeDueOperations"/>) and the in-flight set; launched operations get a
+    /// provisional next-due stamp so a slow launch is not re-picked by the following tick — the
+    /// dispatcher recomputes the real schedule when the run finishes.
+    /// </summary>
+    internal async Task DispatchDueOperationsAsync(CancellationToken cancellationToken)
     {
         await using var scope = _scopeFactory.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+        await EnsureOperationStateRowsAsync(context, cancellationToken);
+
         var now = DateTime.UtcNow;
-        // Provider-portable filter: pull enabled channels and gate in-memory by elapsed seconds
-        // (EF.Functions.DateDiffSecond is SQL-Server-only and EF Core cannot translate
-        // (now - LastSyncStartedAt).TotalSeconds across providers).
-        var enabledChannels = await context.SalesChannel
+
+        // Flag-gating lives in the query; the cadence itself is entirely NextDueAt-driven. Catalogue
+        // operations (products/customers/categories) are continuously scheduled: after their initial
+        // walk they keep running as incremental delta pulls on an adaptive interval — the one-shot
+        // "import once, then never again" era ended with the operation-state scheduler.
+        var due = await context.SalesChannelOperationState
             .IgnoreQueryFilters()
-            .Include(s => s.SyncState)
-            .Where(s => s.IsEnabled)
+            .Where(o => o.NextDueAt <= now && o.SalesChannel!.IsEnabled)
+            .Where(o =>
+                (o.Operation == ChannelSyncOperation.ImportProducts && o.SalesChannel!.ImportProducts)
+                || (o.Operation == ChannelSyncOperation.ImportSaless && o.SalesChannel!.ImportSaless)
+                || (o.Operation == ChannelSyncOperation.ImportCustomers && o.SalesChannel!.ImportCustomers)
+                || (o.Operation == ChannelSyncOperation.ImportStock && o.SalesChannel!.ImportStock)
+                || (o.Operation == ChannelSyncOperation.ImportCategories && o.SalesChannel!.ImportCategories))
+            .OrderBy(o => o.NextDueAt)
+            .Take(_options.MaxLaunchesPerTick)
             .ToListAsync(cancellationToken);
 
-        var dueChannels = enabledChannels
-            .Where(s => s.SyncState.LastSyncStartedAt is null
-                        || (now - s.SyncState.LastSyncStartedAt.Value).TotalSeconds >= s.SyncIntervalSeconds)
-            .ToList();
-
-        if (dueChannels.Count == 0)
+        if (due.Count == 0)
         {
             return;
         }
 
-        var connectorRegistry = scope.ServiceProvider.GetRequiredService<ISalesChannelConnectorRegistry>();
+        var channelIds = due.Select(d => d.SalesChannelId).Distinct().ToList();
+        var channels = await context.SalesChannel
+            .IgnoreQueryFilters()
+            .Include(s => s.SyncState)
+            .Where(s => channelIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, cancellationToken);
 
-        foreach (var channel in dueChannels)
+        var connectorRegistry = scope.ServiceProvider.GetRequiredService<ISalesChannelConnectorRegistry>();
+        var toLaunch = new List<(Guid ChannelId, ChannelSyncOperation Operation)>();
+        var stateDirty = false;
+
+        foreach (var operationState in due)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var dueOperations = ComputeDueOperations(channel);
-
-            // Never schedule an operation the channel's connector cannot perform: the internal
-            // channel types (PointOfSale, asShop) keep their sync flags always-on although their
-            // connectors declare no capabilities — dispatching would only close a Failed run
-            // ("no capable connector") every interval. A missing connector registration stays
-            // scheduled so the dispatcher surfaces the misconfiguration as a Failed run.
-            var connector = connectorRegistry.Resolve(channel.Type);
-            dueOperations.RemoveAll(op => connector is not null && !connector.Supports(op));
-
-            // Skip operations still running in the background — a long run must not be re-launched every
-            // tick. The dispatcher's per-(channel, op) lock is a second guard, but gating here also avoids
-            // needlessly bumping LastSyncStartedAt.
-            dueOperations.RemoveAll(op => _inFlight.ContainsKey((channel.Id, op)));
-            if (dueOperations.Count == 0)
+            if (!channels.TryGetValue(operationState.SalesChannelId, out var channel))
             {
                 continue;
             }
 
-            // Stamp the real start time now (this also gates re-triggering before the interval elapses) and
-            // persist it before detaching the work.
-            channel.SyncState.LastSyncStartedAt = now;
-            await context.SaveChangesAsync(cancellationToken);
-
-            // Launch each due operation on its own DI scope and do NOT await — the tick loop has to stay
-            // free so DrainSyncLogsAsync / DrainOutboxAsync keep running while the imports walk their pages,
-            // and a 15-minute order backfill must not block the channel's customer import.
-            foreach (var operation in dueOperations)
+            // Never schedule an operation the channel's connector cannot perform: the internal channel
+            // types (PointOfSale, asShop) keep their sync flags always-on although their connectors
+            // declare no capabilities — dispatching would only close a Failed run every interval. Park
+            // the row far out instead of letting it spin in the due-query. A missing connector
+            // registration stays scheduled so the dispatcher surfaces the misconfiguration.
+            var connector = connectorRegistry.Resolve(channel.Type);
+            if (connector is not null && !connector.Supports(operationState.Operation))
             {
-                LaunchDetached((channel.Id, operation), RunChannelOperationAsync(channel.Id, operation, cancellationToken));
+                operationState.NextDueAt = now.AddSeconds(_options.For(operationState.Operation).MaxIntervalSeconds);
+                stateDirty = true;
+                continue;
             }
+
+            // Ordering/readiness gating (categories before products, sales/stock wait for the initial
+            // catalogue). Held rows re-check shortly — gating phases are short-lived.
+            if (!ComputeDueOperations(channel).Contains(operationState.Operation))
+            {
+                operationState.NextDueAt = now.AddSeconds(_options.GatingRecheckSeconds);
+                stateDirty = true;
+                continue;
+            }
+
+            // Skip operations still running in the background — a long run must not be re-launched
+            // every tick; its own completion recomputes the schedule.
+            if (_inFlight.ContainsKey((channel.Id, operationState.Operation)))
+            {
+                continue;
+            }
+
+            operationState.LastStartedAt = now;
+            operationState.NextDueAt = now.AddSeconds(Math.Max(
+                _options.For(operationState.Operation).MinIntervalSeconds,
+                Math.Max(1, channel.SyncIntervalSeconds)));
+            stateDirty = true;
+
+            // Legacy dashboard field — kept in sync until the sync-status endpoint reads operation state.
+            channel.SyncState.LastSyncStartedAt = now;
+
+            toLaunch.Add((channel.Id, operationState.Operation));
+        }
+
+        if (stateDirty)
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        // Launch each due operation on its own DI scope and do NOT await — the tick loop has to stay
+        // free so DrainSyncLogsAsync / DrainOutboxAsync keep running while the imports walk their pages,
+        // and a 15-minute order backfill must not block the channel's customer import.
+        foreach (var (channelId, operation) in toLaunch)
+        {
+            LaunchDetached((channelId, operation), RunChannelOperationAsync(channelId, operation, cancellationToken));
         }
     }
 
     /// <summary>
-    /// Which scheduled operations are due for a channel. Products and customers are full pulls gated to
-    /// run until their initial import completes once (the connectors flip the flags; clearing a flag
-    /// re-enables the scheduled run). Sales and stock match products by SKU, so on a channel that also
-    /// imports products they wait for the initial catalogue during a fresh setup: importing the order
-    /// history against a half-imported catalogue floods the DB with missing-product lines ("Unknown
-    /// Product") and silently skips stock rows — the missing-product reconciler is the safety net for
-    /// the incremental race, not a substitute for the initial product import. A channel whose initial
-    /// sales import already completed keeps importing orders (the reconciler heals the residual lines);
-    /// only the historical backfill is held back. Manual (queued) runs stay ungated as the escape hatch.
-    /// Internal for tests.
+    /// Self-heals missing operation-state rows (new channels, channels predating the scheduler, the
+    /// seeded demo POS channel) so the due-query sees every (enabled channel, operation) pair. The
+    /// detection query returns rows only when something is actually missing, so the steady-state cost
+    /// per tick is one cheap indexed check. Insert races with the dispatcher's own lazy create are
+    /// resolved by the unique (SalesChannelId, Operation) index — the loser clears and retries next tick.
+    /// </summary>
+    internal async Task EnsureOperationStateRowsAsync(ApplicationDbContext context, CancellationToken cancellationToken)
+    {
+        var operationCount = ScheduledImportOperations.Length;
+        var incomplete = await context.SalesChannel
+            .IgnoreQueryFilters()
+            .Where(s => s.IsEnabled)
+            .Where(s => context.SalesChannelOperationState.Count(o => o.SalesChannelId == s.Id) < operationCount)
+            .Select(s => new
+            {
+                s.Id,
+                s.TenantId,
+                Existing = context.SalesChannelOperationState
+                    .Where(o => o.SalesChannelId == s.Id)
+                    .Select(o => o.Operation)
+                    .ToList(),
+            })
+            .ToListAsync(cancellationToken);
+
+        if (incomplete.Count == 0)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        foreach (var channel in incomplete)
+        {
+            foreach (var operation in ScheduledImportOperations)
+            {
+                if (channel.Existing.Contains(operation))
+                {
+                    continue;
+                }
+
+                context.SalesChannelOperationState.Add(new SalesChannelOperationState
+                {
+                    SalesChannelId = channel.Id,
+                    TenantId = channel.TenantId,
+                    Operation = operation,
+                    Phase = ChannelSyncPhase.Unknown,
+                    NextDueAt = now,
+                });
+            }
+        }
+
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Created missing operation-state rows for {Count} channel(s)", incomplete.Count);
+        }
+        catch (DbUpdateException ex)
+        {
+            // Unique-index race with a concurrently created row — drop the batch, next tick re-checks.
+            _logger.LogDebug(ex, "Operation-state self-heal hit a concurrent insert; retrying next tick");
+            context.ChangeTracker.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Live orphan sweep: a Running run whose heartbeat (fallback: start time) is older than the
+    /// configured timeout is marked failed. This is the in-process complement to the startup cleanup —
+    /// it surfaces hung connector invocations (the dispatcher's hard timeout usually aborts them
+    /// first) and keeps the dashboard truthful. A zombie that later completes overwrites the status,
+    /// which is acceptable: it proved itself alive.
+    /// </summary>
+    private async Task SweepStaleRunningRunsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            var cutoff = DateTime.UtcNow - TimeSpan.FromMinutes(Math.Max(1, _options.OrphanRunTimeoutMinutes));
+            var swept = await context.ChannelSyncRun
+                .IgnoreQueryFilters()
+                .Where(r => r.Status == ChannelSyncRunStatus.Running && (r.HeartbeatAt ?? r.StartedAt) < cutoff)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(r => r.Status, ChannelSyncRunStatus.Failed)
+                    .SetProperty(r => r.FinishedAt, DateTime.UtcNow)
+                    .SetProperty(r => r.ErrorSummary, "Orphaned run: no heartbeat within the timeout; marked failed by the live sweep.")
+                    .SetProperty(r => r.DateModified, DateTime.UtcNow),
+                    cancellationToken);
+
+            if (swept > 0)
+            {
+                _logger.LogWarning("Live sweep marked {Count} heartbeat-less running sync run(s) as failed", swept);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            // ExecuteUpdate is unsupported on the InMemory provider (tests) — same tolerated failure
+            // mode as the startup cleanup.
+            _logger.LogError(ex, "Live orphan sweep failed");
+        }
+    }
+
+    /// <summary>
+    /// Ordering/readiness gating for a channel's scheduled operations — the cadence itself lives on
+    /// the operation-state rows (NextDueAt); this only expresses which operations may run AT ALL right
+    /// now. Categories land before products so imported products can link their assignments
+    /// immediately. Sales and stock match products by SKU, so on a channel that also imports products
+    /// they wait for the initial catalogue during a fresh setup: importing the order history against a
+    /// half-imported catalogue floods the DB with missing-product lines ("Unknown Product") and
+    /// silently skips stock rows — the missing-product reconciler is the safety net for the
+    /// incremental race, not a substitute for the initial product import. A channel whose initial
+    /// sales import already completed keeps importing orders (the reconciler heals the residual
+    /// lines); only the historical backfill is held back. Manual (queued) runs stay ungated as the
+    /// escape hatch. Internal for tests.
     /// </summary>
     internal static List<ChannelSyncOperation> ComputeDueOperations(SalesChannel channel)
     {
@@ -408,13 +589,11 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         var initialCategoriesReady = !channel.ImportCategories || channel.SyncState.InitialCategoryImportCompleted;
 
         var dueOperations = new List<ChannelSyncOperation>();
-        // Categories land before products so imported products can link their assignments
-        // immediately; the product import waits for the initial category sweep on such channels.
-        if (channel.ImportCategories && !channel.SyncState.InitialCategoryImportCompleted)
+        if (channel.ImportCategories)
         {
             dueOperations.Add(ChannelSyncOperation.ImportCategories);
         }
-        if (channel.ImportProducts && !channel.SyncState.InitialProductImportCompleted && initialCategoriesReady)
+        if (channel.ImportProducts && initialCategoriesReady)
         {
             dueOperations.Add(ChannelSyncOperation.ImportProducts);
         }
@@ -422,14 +601,13 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         {
             dueOperations.Add(ChannelSyncOperation.ImportSaless);
         }
-        if (channel.ImportCustomers && !channel.SyncState.InitialCustomerImportCompleted)
+        if (channel.ImportCustomers)
         {
             dueOperations.Add(ChannelSyncOperation.ImportCustomers);
         }
-        // The stock-master channel's levels are mirrored every interval (incremental via
-        // modified_after — cheap on a steady shop; the first run is the full seed). The seed must not
-        // run against a partial catalogue: unknown SKUs are skipped silently and the incremental pass
-        // never re-visits them, so the mirror waits for the catalogue unconditionally.
+        // The stock mirror's full seed must not run against a partial catalogue: unknown SKUs are
+        // skipped silently and the rare absolute sweeps would leave them stale for a long time, so
+        // the mirror waits for the catalogue unconditionally.
         if (channel.ImportStock && initialCatalogueReady)
         {
             dueOperations.Add(ChannelSyncOperation.ImportStock);
@@ -556,28 +734,12 @@ public sealed class SalesChannelOrchestrator : BackgroundService
                 return;
             }
 
-            var run = await dispatcher.RunImportAsync(channel, operation, ChannelSyncTriggerSource.Scheduler, cancellationToken);
-
-            // The product import is a full, non-incremental catalogue pull: once it has completed, flip the
-            // gate so the scheduler stops re-importing the whole catalogue every interval. Sales/customer
-            // imports maintain their own flags/cursors on the channel entity inside the connector.
-            if (operation == ChannelSyncOperation.ImportProducts
-                && run.Status is ChannelSyncRunStatus.Success or ChannelSyncRunStatus.PartialFailure)
-            {
-                channel.SyncState.InitialProductImportCompleted = true;
-            }
-
-            // Same one-time gate for the category sweep: after the first completed run the scheduler
-            // stops re-pulling the tree every interval (webhooks/manual syncs cover later changes).
-            if (operation == ChannelSyncOperation.ImportCategories
-                && run.Status is ChannelSyncRunStatus.Success or ChannelSyncRunStatus.PartialFailure)
-            {
-                channel.SyncState.InitialCategoryImportCompleted = true;
-            }
+            await dispatcher.RunImportAsync(channel, operation, ChannelSyncTriggerSource.Scheduler, cancellationToken);
 
             // Persist cursor/flag progress — even after a partial or shutdown-canceled run — so the next
-            // run resumes instead of restarting. CancellationToken.None: this must still save when the
-            // import's own token was canceled by a shutdown.
+            // run resumes instead of restarting. Usually a no-op (the dispatcher's post-run bookkeeping
+            // already flushed), kept as the backstop for paths that skipped it. CancellationToken.None:
+            // this must still save when the import's own token was canceled by a shutdown.
             await context.SaveChangesAsync(CancellationToken.None);
 
             await DrainOutboxAfterImportAsync(scope.ServiceProvider, operation, cancellationToken);
@@ -591,4 +753,5 @@ public sealed class SalesChannelOrchestrator : BackgroundService
             _logger.LogError(ex, "Background {Operation} import failed for channel {ChannelId}", operation, channelId);
         }
     }
+
 }

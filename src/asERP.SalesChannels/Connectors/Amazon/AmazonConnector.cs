@@ -87,13 +87,13 @@ public sealed class AmazonConnector : ConnectorBase
 
         var processed = 0;
         var failed = 0;
+        string? abortError = null;
 
         try
         {
             var (config, accessToken) = await PrepareAsync(context);
             ConfigureBearer(context, accessToken, config);
 
-            var createdAfter = DateTime.UtcNow - ImportWindow;
             string? nextToken = null;
             var baseUrl = config.GetEndpointBaseUrl();
             // Guard against an endpoint that repeats a page (or a boundary re-read on token reuse).
@@ -103,7 +103,7 @@ public sealed class AmazonConnector : ConnectorBase
             {
                 var url = $"{baseUrl}/orders/v0/orders" +
                           $"?MarketplaceIds={HttpUtility.UrlEncode(salesChannel.MarketplaceId)}" +
-                          $"&CreatedAfter={createdAfter:O}";
+                          BuildSalesDateFilter(context.IncrementalSince);
                 if (!string.IsNullOrEmpty(nextToken))
                 {
                     url += $"&NextToken={HttpUtility.UrlEncode(nextToken)}";
@@ -115,6 +115,7 @@ public sealed class AmazonConnector : ConnectorBase
                     var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
                     _logger.LogError("Amazon orders HTTP {Status}: {Body}", (int)response.StatusCode, Truncate(body, 500));
                     failed++;
+                    abortError = $"Amazon orders HTTP {(int)response.StatusCode}";
                     break;
                 }
 
@@ -152,14 +153,41 @@ public sealed class AmazonConnector : ConnectorBase
                 nextToken = payload.NextToken;
             }
             while (!string.IsNullOrEmpty(nextToken));
+
+            // Amazon has no history backfill — one clean walk of the seed window IS the initial import.
+            // Flipping the flag moves the operation into the incremental phase (LastUpdatedAfter deltas)
+            // and, downstream, enables stock booking for imported orders.
+            if (abortError is null)
+            {
+                salesChannel.SyncState.InitialSalesImportCompleted = true;
+            }
         }
         catch (Exception ex)
         {
-            return SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1, ex.Message) : SyncResult.Failed(ex.Message);
         }
 
-        return new SyncResult(processed, failed);
+        return new SyncResult(processed, failed, abortError);
     }
+
+    /// <summary>
+    /// Incremental watermark → <c>LastUpdatedAfter</c> (status changes bump an order's update time, so
+    /// one delta stream covers new and changed orders alike); no watermark → the fixed
+    /// <c>CreatedAfter</c> seed window. The two parameters are mutually exclusive per SP-API, and
+    /// <c>LastUpdatedAfter</c> must lie a few minutes in the past — clamped accordingly.
+    /// </summary>
+    internal static string BuildSalesDateFilter(DateTime? incrementalSince)
+    {
+        if (incrementalSince is { } since)
+        {
+            var clamped = Min(since, DateTime.UtcNow.AddMinutes(-5));
+            return $"&LastUpdatedAfter={clamped:O}";
+        }
+
+        return $"&CreatedAfter={DateTime.UtcNow - ImportWindow:O}";
+    }
+
+    private static DateTime Min(DateTime a, DateTime b) => a < b ? a : b;
 
     public override async Task<SyncResult> ImportCustomersAsync(SalesChannelContext context)
     {
@@ -179,7 +207,6 @@ public sealed class AmazonConnector : ConnectorBase
             var (config, accessToken) = await PrepareAsync(context);
             ConfigureBearer(context, accessToken, config);
 
-            var createdAfter = DateTime.UtcNow - ImportWindow;
             var baseUrl = config.GetEndpointBaseUrl();
             string? nextToken = null;
             // Buyers derived from orders repeat across pages/orders — keep only the first per remote key.
@@ -189,7 +216,7 @@ public sealed class AmazonConnector : ConnectorBase
             {
                 var url = $"{baseUrl}/orders/v0/orders" +
                           $"?MarketplaceIds={HttpUtility.UrlEncode(salesChannel.MarketplaceId)}" +
-                          $"&CreatedAfter={createdAfter:O}";
+                          BuildSalesDateFilter(context.IncrementalSince);
                 if (!string.IsNullOrEmpty(nextToken))
                 {
                     url += $"&NextToken={HttpUtility.UrlEncode(nextToken)}";
@@ -199,7 +226,7 @@ public sealed class AmazonConnector : ConnectorBase
                 if (!response.IsSuccessStatusCode)
                 {
                     return processed > 0
-                        ? new SyncResult(processed, failed + 1)
+                        ? new SyncResult(processed, failed + 1, $"Amazon orders HTTP {(int)response.StatusCode}")
                         : SyncResult.Failed($"Amazon orders HTTP {(int)response.StatusCode}");
                 }
 
@@ -231,10 +258,14 @@ public sealed class AmazonConnector : ConnectorBase
                 nextToken = payload.NextToken;
             }
             while (!string.IsNullOrEmpty(nextToken));
+
+            // One clean walk of the order window IS the initial customer import here (no separate
+            // customer endpoint) — flipping the flag moves the operation to the incremental phase.
+            salesChannel.SyncState.InitialCustomerImportCompleted = true;
         }
         catch (Exception ex)
         {
-            return SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1, ex.Message) : SyncResult.Failed(ex.Message);
         }
 
         return new SyncResult(processed, failed);

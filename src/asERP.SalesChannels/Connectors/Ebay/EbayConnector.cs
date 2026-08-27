@@ -103,6 +103,7 @@ public sealed class EbayConnector : ConnectorBase
         var failed = 0;
         var offset = 0;
         var total = 0;
+        string abortError = null;   // file is #nullable disable
 
         // Variation listings: remember per-SKU data and the group keys seen during the walk,
         // then import each inventory item group as a variant parent afterwards (best effort).
@@ -125,6 +126,7 @@ public sealed class EbayConnector : ConnectorBase
                     var body = await response.Content.ReadAsStringAsync(context.CancellationToken);
                     _logger.LogError("eBay inventory list HTTP {Status}: {Body}", (int)response.StatusCode, body);
                     failed++;
+                    abortError = $"eBay inventory list HTTP {(int)response.StatusCode}";
                     break;
                 }
 
@@ -284,13 +286,17 @@ public sealed class EbayConnector : ConnectorBase
         }
         catch (Exception ex)
         {
-            return SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1, ex.Message) : SyncResult.Failed(ex.Message);
         }
 
-        // NOTE: InitialProductImportCompleted is intentionally NOT flipped here — the orchestrator flips it
-        // only after a Success/PartialFailure run, so a zero-product run whose first page fetch failed
-        // (failed>0, processed==0 → Failed) does not permanently gate re-import. Mirrors WooCommerce.
-        return new SyncResult(processed, failed);
+        if (abortError is null)
+        {
+            // One clean walk of the inventory IS the initial import (no chunking here — eBay
+            // catalogues are small); an aborted walk above keeps the flag unset and backs off.
+            salesChannel.SyncState.InitialProductImportCompleted = true;
+        }
+
+        return new SyncResult(processed, failed, abortError);
     }
 
     /// <summary>
@@ -373,6 +379,12 @@ public sealed class EbayConnector : ConnectorBase
                     _logger.LogError(ex, "eBay sales import failed for order {Id}", order.OrderId);
                 }
             }, () => (processed, failed));
+
+            // eBay has no history backfill (the API retains ~90 days) — one clean walk IS the initial
+            // import. The flag moves the operation to the incremental phase (lastmodifieddate deltas)
+            // and, downstream, enables stock booking for imported orders. An aborted walk throws above
+            // and never reaches this.
+            salesChannel.SyncState.InitialSalesImportCompleted = true;
         }
         catch (OperationCanceledException)
         {
@@ -380,7 +392,7 @@ public sealed class EbayConnector : ConnectorBase
         }
         catch (Exception ex)
         {
-            return processed > 0 ? new SyncResult(processed, failed + 1) : SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1, ex.Message) : SyncResult.Failed(ex.Message);
         }
 
         return new SyncResult(processed, failed);
@@ -426,6 +438,10 @@ public sealed class EbayConnector : ConnectorBase
                     _logger.LogError(ex, "eBay customer import failed for buyer {Buyer}", username);
                 }
             }, () => (processed, failed));
+
+            // Buyers derive from the order walk — one clean walk completes the initial customer
+            // import and moves the operation to the incremental phase.
+            salesChannel.SyncState.InitialCustomerImportCompleted = true;
         }
         catch (OperationCanceledException)
         {
@@ -433,7 +449,7 @@ public sealed class EbayConnector : ConnectorBase
         }
         catch (Exception ex)
         {
-            return processed > 0 ? new SyncResult(processed, failed + 1) : SyncResult.Failed(ex.Message);
+            return processed > 0 ? new SyncResult(processed, failed + 1, ex.Message) : SyncResult.Failed(ex.Message);
         }
 
         return new SyncResult(processed, failed);

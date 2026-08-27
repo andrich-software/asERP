@@ -5,9 +5,11 @@ using asERP.Domain.Enums;
 using asERP.Persistence.DatabaseContext;
 using asERP.SalesChannels.Contracts;
 using asERP.SalesChannels.Models;
+using asERP.SalesChannels.Orchestration;
 using asERP.SalesChannels.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace asERP.SalesChannels.Repositories;
 
@@ -26,10 +28,16 @@ public class SalesImportRepository : ISalesImportRepository
     private readonly ImportIdAllocator _idAllocator;
 
     private readonly IStockLedgerService _stockLedger;
+    private readonly SalesChannelSyncOptions _syncOptions;
 
     // Per-run cache of the channel's booking warehouse (first linked warehouse). Guid.Empty = channel has
     // no warehouse → stock booking is skipped for the whole run.
     private Guid? _bookingWarehouseId;
+
+    // Per-run cache of the stock-master mirroring baseline: the start of the channel's last successful
+    // absolute stock sweep (SalesChannelOperationState.Watermark of ImportStock). Null = no sweep yet.
+    private DateTime? _stockSweepBaseline;
+    private bool _stockSweepBaselineLoaded;
 
     // Per-run lookup caches. The country set is tiny and static, and product SKUs repeat heavily across a
     // page of orders — caching turns the per-order (country ×2) and per-line-item (SKU) queries into a
@@ -48,7 +56,8 @@ public class SalesImportRepository : ISalesImportRepository
         IProductRepository productRepository,
         ApplicationDbContext dbContext,
         ImportIdAllocator idAllocator,
-        IStockLedgerService stockLedger)
+        IStockLedgerService stockLedger,
+        IOptions<SalesChannelSyncOptions> syncOptions)
     {
         _logger = logger;
         _salesRepository = salesRepository;
@@ -58,6 +67,7 @@ public class SalesImportRepository : ISalesImportRepository
         _dbContext = dbContext;
         _idAllocator = idAllocator;
         _stockLedger = stockLedger;
+        _syncOptions = syncOptions.Value;
     }
 
     public async Task ImportOrUpdateFromSalesChannel(SalesChannel salesChannel, SalesChannelImportSales importSales)
@@ -403,14 +413,21 @@ public class SalesImportRepository : ISalesImportRepository
     }
 
     /// <summary>
-    /// Books ledger decrements for a newly imported order. Only in the shop-mirror model's "other
-    /// channel" role: the stock-master channel (<see cref="SalesChannel.ImportStock"/>) already
-    /// decremented itself and the mirror follows it, and the historical backfill must never book
-    /// (those sales are already reflected in the mirrored level). Idempotent per (SalesItemId, Type).
+    /// Books ledger decrements for a newly imported order. The historical backfill never books (those
+    /// sales are already reflected in the mirrored level), cancelled-like orders never book. Orders
+    /// from a stock-master channel (<see cref="SalesChannel.ImportStock"/>) book as a near-real-time
+    /// MIRROR of the shop's own decrement between the rare absolute sweeps — guarded by the last
+    /// sweep's start baseline so a sale the sweep already reflected never double-decrements, and
+    /// re-pinned to the true level by every following absolute sweep. Idempotent per (SalesItemId, Type).
     /// </summary>
     private async Task BookSaleMovementsAsync(SalesChannel salesChannel, Sales newSales)
     {
-        if (salesChannel.ImportStock || !salesChannel.SyncState.InitialSalesImportCompleted || IsCancelledStatus(newSales.Status))
+        if (!salesChannel.SyncState.InitialSalesImportCompleted || IsCancelledStatus(newSales.Status))
+        {
+            return;
+        }
+
+        if (salesChannel.ImportStock && !await ShouldMirrorStockMasterSaleAsync(salesChannel, newSales))
         {
             return;
         }
@@ -482,6 +499,31 @@ public class SalesImportRepository : ISalesImportRepository
                 SalesChannelId: salesChannel.Id,
                 TenantId: salesChannel.TenantId), CancellationToken.None);
         }
+    }
+
+    /// <summary>
+    /// Whether an order imported from the stock-master channel should book its mirror decrement:
+    /// only when the feature is on and the order postdates the start of the last successful absolute
+    /// stock sweep — anything older is already contained in the mirrored level.
+    /// </summary>
+    private async Task<bool> ShouldMirrorStockMasterSaleAsync(SalesChannel salesChannel, Sales newSales)
+    {
+        if (!_syncOptions.Stock.MirrorSaleDecrementsOnStockMaster)
+        {
+            return false;
+        }
+
+        if (!_stockSweepBaselineLoaded)
+        {
+            _stockSweepBaseline = await _dbContext.SalesChannelOperationState
+                .IgnoreQueryFilters()
+                .Where(o => o.SalesChannelId == salesChannel.Id && o.Operation == ChannelSyncOperation.ImportStock)
+                .Select(o => o.Watermark)
+                .FirstOrDefaultAsync();
+            _stockSweepBaselineLoaded = true;
+        }
+
+        return _stockSweepBaseline is null || newSales.DateSalesed > _stockSweepBaseline.Value;
     }
 
     private static bool IsCancelledStatus(SalesStatus status) =>

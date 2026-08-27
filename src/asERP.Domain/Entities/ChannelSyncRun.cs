@@ -19,6 +19,13 @@ public class ChannelSyncRun : BaseEntity, IBaseEntity
     public DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
 
+    /// <summary>
+    /// Last liveness signal from the running import (stamped on every progress checkpoint). Lets the
+    /// orchestrator's live sweep tell a slow-but-alive run from a hung/zombie one — the startup orphan
+    /// cleanup only catches runs that died with the process.
+    /// </summary>
+    public DateTime? HeartbeatAt { get; set; }
+
     public int ItemsProcessed { get; set; }
     public int ItemsFailed { get; set; }
 

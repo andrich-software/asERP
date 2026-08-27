@@ -12,14 +12,19 @@ namespace asERP.Server.Tests.SalesChannels;
 
 /// <summary>
 /// Covers the anonymous webhook ingest endpoint: a correctly signed webhook enqueues a Queued import
-/// run (never importing the payload directly), invalid signatures are rejected, channels without a
-/// configured secret behave like unknown channels, and the tenant is resolved from the channel row.
+/// run (never importing the payload directly) gated by the channel's import flags, invalid signatures
+/// are rejected, channels without a configured secret behave like unknown channels, and the tenant is
+/// resolved from the channel row.
 /// </summary>
 public class SalesChannelWebhookTests : TenantIsolatedTestBase
 {
     private const string Secret = "test-webhook-secret";
 
-    private async Task<SalesChannel> SeedChannelAsync(string? secret = Secret)
+    private async Task<SalesChannel> SeedChannelAsync(
+        string? secret = Secret,
+        bool importSaless = true,
+        bool importProducts = true,
+        bool importStock = true)
     {
         var channel = new SalesChannel
         {
@@ -32,6 +37,9 @@ public class SalesChannelWebhookTests : TenantIsolatedTestBase
             Password = "secret",
             IsEnabled = true,
             WebhookSecret = secret,
+            ImportSaless = importSaless,
+            ImportProducts = importProducts,
+            ImportStock = importStock,
         };
         DbContext.SalesChannel.Add(channel);
         await DbContext.SaveChangesAsync();
@@ -66,7 +74,7 @@ public class SalesChannelWebhookTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task ProductEvent_EnqueuesStockMirrorRun()
+    public async Task ProductEvent_EnqueuesProductRun_AndStockMirrorRunOnStockMaster()
     {
         var channel = await SeedChannelAsync();
         SimulateUnauthenticatedRequest();
@@ -75,9 +83,43 @@ public class SalesChannelWebhookTests : TenantIsolatedTestBase
         var response = await Client.PostAsync($"/api/v1/webhooks/saleschannels/{channel.Id}/product", SignedBody("{}", Secret));
 
         TestAssertions.AssertHttpSuccess(response);
+        var operations = await DbContext.ChannelSyncRun.IgnoreQueryFilters()
+            .Where(r => r.SalesChannelId == channel.Id)
+            .Select(r => r.Operation)
+            .ToListAsync();
+        Assert.Equal(2, operations.Count);
+        Assert.Contains(ChannelSyncOperation.ImportProducts, operations);
+        Assert.Contains(ChannelSyncOperation.ImportStock, operations);
+    }
+
+    [Fact]
+    public async Task ProductEvent_WithoutStockImport_EnqueuesOnlyProductRun()
+    {
+        var channel = await SeedChannelAsync(importStock: false);
+        SimulateUnauthenticatedRequest();
+        RemoveTenantHeader();
+
+        var response = await Client.PostAsync($"/api/v1/webhooks/saleschannels/{channel.Id}/product", SignedBody("{}", Secret));
+
+        TestAssertions.AssertHttpSuccess(response);
         var run = await DbContext.ChannelSyncRun.IgnoreQueryFilters()
             .SingleAsync(r => r.SalesChannelId == channel.Id);
-        Assert.Equal(ChannelSyncOperation.ImportStock, run.Operation);
+        Assert.Equal(ChannelSyncOperation.ImportProducts, run.Operation);
+    }
+
+    [Fact]
+    public async Task OrderEvent_WithSalesImportDisabled_EnqueuesNothing()
+    {
+        // Webhooks accelerate the scheduled sync; they must not run an import the admin disabled.
+        var channel = await SeedChannelAsync(importSaless: false);
+        SimulateUnauthenticatedRequest();
+        RemoveTenantHeader();
+
+        var response = await Client.PostAsync($"/api/v1/webhooks/saleschannels/{channel.Id}/order", SignedBody("{}", Secret));
+
+        TestAssertions.AssertHttpSuccess(response);
+        Assert.Equal(0, await DbContext.ChannelSyncRun.IgnoreQueryFilters()
+            .CountAsync(r => r.SalesChannelId == channel.Id));
     }
 
     [Fact]
