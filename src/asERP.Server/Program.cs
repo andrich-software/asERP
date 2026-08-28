@@ -171,6 +171,10 @@ if (!builder.Environment.IsEnvironment("Testing"))
     }
 }
 
+// The Windows debug build is a GUI-subsystem app (see asERP.Server.csproj), so the console
+// sink has nowhere to write. The Debug sink puts the same output in the IDE's Output window.
+var debugSinkEnabled = builder.Environment.IsDevelopment();
+
 if (grafanaSettings.LogsEnabled && Uri.TryCreate(grafanaSettings.LokiEndpoint, UriKind.Absolute, out _))
 {
     builder.Host.UseSerilog((context, services, configuration) => configuration
@@ -178,6 +182,7 @@ if (grafanaSettings.LogsEnabled && Uri.TryCreate(grafanaSettings.LokiEndpoint, U
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
         .WriteTo.Sink(new SalesChannelSyncLogSink(services.GetRequiredService<ISalesChannelSyncLogBuffer>()))
+        .WriteTo.Conditional(_ => debugSinkEnabled, sink => sink.Debug())
         .WriteTo.GrafanaLoki(
             grafanaSettings.LokiEndpoint,
             credentials: !string.IsNullOrEmpty(grafanaSettings.LokiUser)
@@ -194,6 +199,7 @@ else
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
         .WriteTo.Sink(new SalesChannelSyncLogSink(services.GetRequiredService<ISalesChannelSyncLogBuffer>()))
+        .WriteTo.Conditional(_ => debugSinkEnabled, sink => sink.Debug())
     );
 }
 

@@ -4,7 +4,6 @@ using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Application.Notifications;
 using asERP.Domain.Wrapper;
-using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.SalesChannel.Commands.SalesChannelDelete;
 
@@ -12,18 +11,18 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
 {
     private readonly IAppLogger<SalesChannelDeleteHandler> _logger;
     private readonly ISalesChannelRepository _salesChannelRepository;
-    private readonly IShopDomainRepository _shopDomainRepository;
+    private readonly IWebAnalyticsPurgeService _webAnalyticsPurgeService;
     private readonly IMediator _mediator;
 
     public SalesChannelDeleteHandler(
         IAppLogger<SalesChannelDeleteHandler> logger,
         ISalesChannelRepository salesChannelRepository,
-        IShopDomainRepository shopDomainRepository,
+        IWebAnalyticsPurgeService webAnalyticsPurgeService,
         IMediator mediator)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _salesChannelRepository = salesChannelRepository ?? throw new ArgumentNullException(nameof(salesChannelRepository));
-        _shopDomainRepository = shopDomainRepository ?? throw new ArgumentNullException(nameof(shopDomainRepository));
+        _webAnalyticsPurgeService = webAnalyticsPurgeService ?? throw new ArgumentNullException(nameof(webAnalyticsPurgeService));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
@@ -64,34 +63,34 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
                 return result;
             }
 
-            // Delete children explicitly (repo rule: never rely on EF cascade defaults). Shop host
-            // bindings would otherwise keep routing requests to a dead channel until the DB-level
-            // cascade backstop — which the InMemory test provider doesn't have — cleans them up.
-            var shopDomains = await _shopDomainRepository.Entities
-                .Where(d => d.SalesChannelId == salesChannel.Id)
-                .ToListAsync(cancellationToken);
+            // The repository removes the channel together with everything that is worthless without
+            // it, in one transaction (repo rule: explicit cascade, never EF cascade defaults).
+            var summary = await _salesChannelRepository.DeleteWithDependentsAsync(salesChannel.Id);
 
-            foreach (var shopDomain in shopDomains)
-            {
-                await _shopDomainRepository.DeleteAsync(shopDomain);
-            }
-
-            // Delete the entity - EF Core will handle cascade deletion of relationships
-            await _salesChannelRepository.DeleteAsync(salesChannel);
-
-            if (shopDomains.Count > 0)
+            if (summary.ShopDomains > 0)
             {
                 // Let the storefront host resolver drop its cached host map immediately.
                 await _mediator.Publish(
-                    new ShopDomainChangedNotification(salesChannel.Id, salesChannel.TenantId),
+                    new ShopDomainChangedNotification(salesChannel.Id, summary.TenantId),
                     cancellationToken);
             }
+
+            // Analytics lives outside the ERP database and has no foreign key to it — best effort,
+            // never fails the delete.
+            await _webAnalyticsPurgeService.PurgeSalesChannelAsync(salesChannel.Id, cancellationToken);
 
             result.Succeeded = true;
             result.StatusCode = ResultStatusCode.NoContent;
             result.Data = salesChannel.Id;
 
-            _logger.LogInformation("Successfully deleted sales channel with ID: {Id}", salesChannel.Id);
+            _logger.LogInformation(
+                "Successfully deleted sales channel with ID: {Id} (removed {ShopDomains} shop domains, "
+                + "{CategoryLinks} category links, {CustomerLinks} customer links, {ProductLinks} product links, "
+                + "{OAuthStates} OAuth states, {SyncRows} sync/outbox rows; detached {Images} product images "
+                + "and {Feeds} feeds)",
+                salesChannel.Id, summary.ShopDomains, summary.CategoryLinks, summary.CustomerLinks,
+                summary.ProductLinks, summary.OAuthStates, summary.SyncRows,
+                summary.DetachedProductImages, summary.DetachedFeeds);
         }
         catch (asERP.Application.Exceptions.NotFoundException)
         {

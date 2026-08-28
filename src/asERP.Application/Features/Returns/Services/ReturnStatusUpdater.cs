@@ -84,6 +84,16 @@ public class ReturnStatusUpdater : IReturnStatusUpdater
             Description = string.IsNullOrEmpty(description)
                 ? $"Return status changed {oldStatus} -> {newStatus}"
                 : $"Return status changed {oldStatus} -> {newStatus}: {description}",
+            MessageKey = string.IsNullOrEmpty(description)
+                ? SalesHistoryMessage.ReturnStatusChanged
+                : SalesHistoryMessage.ReturnStatusChangedWithNote,
+            // The statuses travel as enum resource keys so the client localizes them even though
+            // they have no typed column here; the free-text note is passed through as-is.
+            MessageArgs = string.IsNullOrEmpty(description)
+                ? SalesHistoryMessage.EncodeArgs(
+                    SalesHistoryMessage.Enum(oldStatus), SalesHistoryMessage.Enum(newStatus))
+                : SalesHistoryMessage.EncodeArgs(
+                    SalesHistoryMessage.Enum(oldStatus), SalesHistoryMessage.Enum(newStatus), description),
             IsSystemGenerated = false
         });
 

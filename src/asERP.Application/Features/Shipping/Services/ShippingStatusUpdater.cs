@@ -114,7 +114,20 @@ public class ShippingStatusUpdater : IShippingStatusUpdater
             TenantId = shipping.TenantId,
             ShippingStatusOld = oldStatus.ToString(),
             ShippingStatusNew = newStatus.ToString(),
-            Description = rawCarrierStatus ?? string.Empty,
+            // Manual status changes carry no carrier text — the transition itself is the entry,
+            // otherwise the timeline row renders blank.
+            Description = string.IsNullOrWhiteSpace(rawCarrierStatus)
+                ? $"Shipping status changed {oldStatus} -> {newStatus}"
+                : $"Shipping status changed {oldStatus} -> {newStatus}: {rawCarrierStatus}",
+            MessageKey = string.IsNullOrWhiteSpace(rawCarrierStatus)
+                ? SalesHistoryMessage.ShippingStatusChanged
+                : SalesHistoryMessage.ShippingStatusChangedWithCarrierNote,
+            // The carrier's raw text stays untranslated — it is the carrier's own wording.
+            MessageArgs = string.IsNullOrWhiteSpace(rawCarrierStatus)
+                ? SalesHistoryMessage.EncodeArgs(
+                    SalesHistoryMessage.Enum(oldStatus), SalesHistoryMessage.Enum(newStatus))
+                : SalesHistoryMessage.EncodeArgs(
+                    SalesHistoryMessage.Enum(oldStatus), SalesHistoryMessage.Enum(newStatus), rawCarrierStatus),
             IsSystemGenerated = isSystemGenerated
         });
 

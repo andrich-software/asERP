@@ -148,38 +148,38 @@ public class StatisticsService : IStatisticsService
         }
     }
 
-    public async Task<ProductsTodayDto?> GetProductsTodayAsync(CancellationToken ct = default)
+    public async Task<DashboardTodosDto?> GetDashboardTodosAsync(CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();
-        var url = $"{baseUrl}{ApiEndpoints.Statistics.ProductsToday}";
+        var url = $"{baseUrl}{ApiEndpoints.Statistics.DashboardTodos}";
 
-        _logger.LogInformation("Fetching products today statistics from URL: {Url}", url);
+        _logger.LogInformation("Fetching dashboard todos from URL: {Url}", url);
 
         try
         {
             var apiResponse = await _httpClient.GetFromJsonAsync(
-                url, AppJsonSerializerContext.Default.ApiResponseProductsTodayDto, ct);
+                url, AppJsonSerializerContext.Default.ApiResponseDashboardTodosDto, ct);
 
             if (apiResponse?.Succeeded != true)
             {
-                _logger.LogWarning("API returned unsuccessful response for ProductsToday: {Messages}",
+                _logger.LogWarning("API returned unsuccessful response for DashboardTodos: {Messages}",
                     string.Join(", ", apiResponse?.Messages ?? new List<string>()));
                 return null;
             }
 
             if (apiResponse.Data == null)
             {
-                _logger.LogWarning("API returned success but ProductsToday Data is null");
-                return new ProductsTodayDto();
+                _logger.LogWarning("API returned success but DashboardTodos Data is null");
+                return new DashboardTodosDto();
             }
 
-            _logger.LogInformation("Successfully fetched products today statistics - ProductsTotal: {ProductsTotal}",
-                apiResponse.Data.ProductsTotal);
+            _logger.LogInformation("Successfully fetched dashboard todos - SalessReadyToShip: {SalessReadyToShip}",
+                apiResponse.Data.SalessReadyToShip);
             return apiResponse.Data;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching products today statistics from {Url}", url);
+            _logger.LogError(ex, "Error fetching dashboard todos from {Url}", url);
             throw;
         }
     }

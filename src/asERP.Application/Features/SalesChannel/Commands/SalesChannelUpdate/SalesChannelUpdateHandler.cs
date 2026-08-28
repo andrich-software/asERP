@@ -13,17 +13,20 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
     private readonly IAppLogger<SalesChannelUpdateHandler> _logger;
     private readonly ISalesChannelRepository _salesChannelRepository;
     private readonly IWarehouseRepository _warehouseRepository;
+    private readonly IShippingProviderRepository _shippingProviderRepository;
     private readonly IMediator _mediator;
 
     public SalesChannelUpdateHandler(
         IAppLogger<SalesChannelUpdateHandler> logger,
         ISalesChannelRepository salesChannelRepository,
         IWarehouseRepository warehouseRepository,
+        IShippingProviderRepository shippingProviderRepository,
         IMediator mediator)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _salesChannelRepository = salesChannelRepository ?? throw new ArgumentNullException(nameof(salesChannelRepository));
         _warehouseRepository = warehouseRepository ?? throw new ArgumentNullException(nameof(warehouseRepository));
+        _shippingProviderRepository = shippingProviderRepository ?? throw new ArgumentNullException(nameof(shippingProviderRepository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
@@ -106,6 +109,10 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
             existingSalesChannel.ImportStock = syncAlwaysOn || request.ImportStock;
             existingSalesChannel.ImportCategories = syncAlwaysOn || request.ImportCategories;
             existingSalesChannel.ExportCategories = syncAlwaysOn || request.ExportCategories;
+            // Not forced on for asShop: the storefront reads the ERP's shipments directly.
+            existingSalesChannel.ShipmentTrackingMode =
+                syncAlwaysOn ? Domain.Enums.ShipmentTrackingMode.None : request.ShipmentTrackingMode;
+
 
             // Update warehouse relationships
             var warehouses = new List<Domain.Entities.Warehouse>();
@@ -137,8 +144,38 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
             }
             existingSalesChannel.Warehouses = warehouses;
 
+            // Carrier mappings must only ever reference the caller's own shipping providers: the id
+            // travels in the request body and the database FK is tenant-blind, so an unchecked id
+            // would let a channel resolve imported shipments onto another tenant's carrier (and its
+            // credentials). GetByIdAsync applies the tenant query filter, so a foreign id reads as
+            // missing.
+            var unknownProviderIds = new List<Guid>();
+            foreach (var providerId in request.CarrierMappings
+                         .Select(m => m.ShippingProviderId)
+                         .Where(id => id != Guid.Empty)
+                         .Distinct())
+            {
+                if (await _shippingProviderRepository.GetByIdAsync(providerId, asNoTracking: true) is null)
+                {
+                    unknownProviderIds.Add(providerId);
+                }
+            }
+
+            if (unknownProviderIds.Count > 0)
+            {
+                result.Succeeded = false;
+                result.StatusCode = ResultStatusCode.BadRequest;
+                result.Messages.Add($"The following shipping provider IDs do not exist: {string.Join(", ", unknownProviderIds)}");
+                return result;
+            }
+
             // Update in database
             await _salesChannelRepository.UpdateAsync(existingSalesChannel);
+
+            // Separate call on purpose: assigning the navigation on the tracked entity would hit the
+            // same identity-resolution trap the warehouse snapshot above works around.
+            await _salesChannelRepository.ReplaceCarrierMappingsAsync(
+                existingSalesChannel.Id, request.CarrierMappings);
 
             // A changed warehouse set (or freshly enabled ExportStock) shifts the effective stock of
             // every listed product — kick off a stock re-push for all of them via the export outbox.

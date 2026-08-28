@@ -34,7 +34,7 @@ public static class SalessModule
     public static void RegisterViews(IViewRegistry views)
     {
         views.Register(
-            new ViewMap<SalesListPage, SalesListModel>(),
+            new ViewMap<SalesListPage, SalesListModel>(Data: new DataMap<SalesListData>()),
             new ViewMap<SalesDetailPage, SalesDetailModel>(Data: new DataMap<SalesDetailData>()),
             new ViewMap<SalesEditPage, SalesEditModel>(Data: new DataMap<SalesEditData>())
         );
@@ -51,6 +51,11 @@ public static class SalessModule
         yield return new RouteMap(Routes.SalesCreate, View: views.FindByViewModel<SalesEditModel>());
     }
 }
+
+/// <summary>
+/// Navigation data for the sales list page: pre-activates a quick filter.
+/// </summary>
+public record SalesListData(asERP.Domain.Enums.SalesQuickFilter QuickFilter);
 
 /// <summary>
 /// Navigation data for sales detail page.

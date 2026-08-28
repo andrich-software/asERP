@@ -16,11 +16,14 @@ public sealed partial class ProductListPage : Page
     private readonly DispatcherTimer _importPollTimer;
     private bool _isPolling;
 
+    private bool _initialFilterSynced;
+
     public ProductListPage()
     {
         this.InitializeComponent();
         this.Loaded += OnLoaded;
         this.Unloaded += OnUnloaded;
+        this.DataContextChanged += (_, _) => TrySyncInitialFilter();
 
         _importPollTimer = new DispatcherTimer { Interval = ImportPollInterval };
         _importPollTimer.Tick += ImportPollTimer_Tick;
@@ -28,6 +31,7 @@ public sealed partial class ProductListPage : Page
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        TrySyncInitialFilter();
         _isInitializing = false;
 
         // Auto-refresh the list when an import elsewhere reports that products changed.
@@ -144,6 +148,38 @@ public sealed partial class ProductListPage : Page
         if (sender is ToggleSwitch toggle && DataContext is ProductListModel model)
         {
             await model.SetIncludeVariants(toggle.IsOn);
+        }
+    }
+
+    private async void LowStockOnlyToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        if (sender is ToggleSwitch toggle && DataContext is ProductListModel model)
+        {
+            await model.SetLowStockOnly(toggle.IsOn);
+        }
+    }
+
+    /// <summary>
+    /// Syncs the toggle with a filter pre-activated via navigation data. Runs from both Loaded
+    /// and DataContextChanged (the DataContext may not be assigned yet at Loaded), one-shot;
+    /// the programmatic Toggled event is swallowed by the _isInitializing guard.
+    /// </summary>
+    private void TrySyncInitialFilter()
+    {
+        if (_initialFilterSynced || DataContext is not ProductListModel model)
+        {
+            return;
+        }
+
+        _initialFilterSynced = true;
+        if (model.InitialLowStockOnly)
+        {
+            var wasInitializing = _isInitializing;
+            _isInitializing = true;
+            LowStockOnlyToggle.IsOn = true;
+            _isInitializing = wasInitializing;
         }
     }
 

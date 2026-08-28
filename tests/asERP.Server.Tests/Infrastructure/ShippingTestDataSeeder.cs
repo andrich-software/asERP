@@ -147,6 +147,8 @@ public static class ShippingTestDataSeeder
             CustomerId = customerNumber,
             SalesChannelId = Guid.NewGuid(),
             Status = SalesStatus.Processing,
+            // Paid by default so the order counts as ready to ship; override for payment scenarios.
+            PaymentStatus = PaymentStatus.CompletelyPaid,
             DeliveryAddressFirstName = "Ship",
             DeliveryAddressLastName = $"Tester{customerNumber}",
             DeliveryAddressStreet = "Teststrasse 1",

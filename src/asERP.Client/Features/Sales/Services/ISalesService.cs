@@ -1,5 +1,6 @@
 using asERP.Client.Core.Models;
 using asERP.Domain.Dtos.Sales;
+using asERP.Domain.Enums;
 
 namespace asERP.Client.Features.Saless.Services;
 
@@ -13,6 +14,7 @@ public interface ISalesService
     /// </summary>
     Task<PaginatedResponse<SalesListDto>> GetSalessAsync(
         QueryParameters parameters,
+        SalesQuickFilter filter = SalesQuickFilter.All,
         CancellationToken ct = default);
 
     /// <summary>

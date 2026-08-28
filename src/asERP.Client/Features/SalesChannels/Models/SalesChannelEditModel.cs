@@ -7,9 +7,11 @@ using asERP.Client.Core.Exceptions;
 using asERP.Client.Core.Notifications;
 using asERP.Client.Features.SalesChannels.Services;
 using asERP.Client.Features.Shell.Models;
+using asERP.Client.Features.Shippings.Services;
 using asERP.Client.Features.Warehouses.Services;
 using asERP.Client.Presentation;
 using asERP.Domain.Dtos.SalesChannel;
+using asERP.Domain.Dtos.ShippingProvider;
 using asERP.Domain.Dtos.ShopDomain;
 using asERP.Domain.Dtos.Warehouse;
 using asERP.Domain.Enums;
@@ -31,6 +33,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private readonly ISalesChannelService _salesChannelService;
     private readonly IShopDomainService _shopDomainService;
     private readonly IWarehouseService _warehouseService;
+    private readonly IShippingProviderService _shippingProviderService;
     private readonly INavigator _navigator;
     private readonly IStringLocalizer _localizer;
     private readonly INotificationService _notifications;
@@ -71,6 +74,13 @@ public class SalesChannelEditModel : AsyncInitializableModel
     private bool _importStock;
     private bool _exportCategories;
 
+    // Shipment tracking — a single three-way choice (see ShipmentTrackingMode) plus the carrier
+    // translations the import direction needs to resolve a local shipping provider.
+    private ShipmentTrackingMode _shipmentTrackingMode = ShipmentTrackingMode.None;
+    private ObservableCollection<CarrierMappingRow> _carrierMappings = new();
+    private ObservableCollection<ShippingProviderListDto> _shippingProviders = new();
+    private bool _isShippingProvidersLoading;
+
     // Warehouses
     private ObservableCollection<SelectableWarehouse> _warehouses = new();
     // Selected warehouse ids captured from the channel (edit mode) — applied once the (background-
@@ -105,6 +115,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
         ISalesChannelService salesChannelService,
         IShopDomainService shopDomainService,
         IWarehouseService warehouseService,
+        IShippingProviderService shippingProviderService,
         INavigator navigator,
         IStringLocalizer localizer,
         INotificationService notifications,
@@ -115,6 +126,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
         _salesChannelService = salesChannelService;
         _shopDomainService = shopDomainService;
         _warehouseService = warehouseService;
+        _shippingProviderService = shippingProviderService;
         _navigator = navigator;
         _localizer = localizer;
         _notifications = notifications;
@@ -143,6 +155,42 @@ public class SalesChannelEditModel : AsyncInitializableModel
         }
 
         _ = LoadWarehousesAsync(ct);
+        _ = LoadShippingProvidersAsync(ct);
+    }
+
+    private async Task LoadShippingProvidersAsync(CancellationToken ct)
+    {
+        RunOnUi(() => IsShippingProvidersLoading = true);
+        try
+        {
+            var parameters = new Core.Models.QueryParameters { PageSize = 1000 };
+            var response = await _shippingProviderService.GetProvidersAsync(parameters, ct);
+
+            // Same UI-thread marshalling as the warehouse loader — see the note there.
+            RunOnUi(() =>
+            {
+                ShippingProviders.Clear();
+                foreach (var provider in response.Data)
+                {
+                    ShippingProviders.Add(provider);
+                }
+
+                OnPropertyChanged(nameof(ShowNoShippingProviders));
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // Page navigated away while loading — nothing to do.
+        }
+        catch (Exception ex)
+        {
+            // The mapping editor degrades to an empty dropdown; the rest of the form stays usable.
+            _logger.LogError(ex, "Failed to load shipping providers for the sales channel edit page");
+        }
+        finally
+        {
+            RunOnUi(() => IsShippingProvidersLoading = false);
+        }
     }
 
     private async Task LoadWarehousesAsync(CancellationToken ct)
@@ -1015,6 +1063,105 @@ public class SalesChannelEditModel : AsyncInitializableModel
 
     #endregion
 
+    #region Shipment Tracking
+
+    /// <summary>
+    /// Import the shop's tracking numbers, push local ones to the shop, or neither. Mutually
+    /// exclusive — with both directions active a number would be pushed back to the shop it came
+    /// from and re-imported on the next run.
+    /// </summary>
+    public ShipmentTrackingMode ShipmentTrackingMode
+    {
+        get => _shipmentTrackingMode;
+        set
+        {
+            if (SetProperty(ref _shipmentTrackingMode, value))
+            {
+                OnPropertyChanged(nameof(TrackingModeNone));
+                OnPropertyChanged(nameof(TrackingModeImport));
+                OnPropertyChanged(nameof(TrackingModePush));
+                OnPropertyChanged(nameof(ShowCarrierMappings));
+            }
+        }
+    }
+
+    // Three radio buttons instead of a combo box: the options are few, mutually exclusive and each
+    // needs a sentence of explanation next to it. Setting one to false does nothing — the group is
+    // driven entirely by whichever option gets checked.
+    public bool TrackingModeNone
+    {
+        get => ShipmentTrackingMode == ShipmentTrackingMode.None;
+        set { if (value) { ShipmentTrackingMode = ShipmentTrackingMode.None; } }
+    }
+
+    public bool TrackingModeImport
+    {
+        get => ShipmentTrackingMode == ShipmentTrackingMode.Import;
+        set { if (value) { ShipmentTrackingMode = ShipmentTrackingMode.Import; } }
+    }
+
+    public bool TrackingModePush
+    {
+        get => ShipmentTrackingMode == ShipmentTrackingMode.Push;
+        set { if (value) { ShipmentTrackingMode = ShipmentTrackingMode.Push; } }
+    }
+
+    /// <summary>
+    /// Only shown for channel types whose connector can actually exchange tracking numbers — both
+    /// WooCommerce variants today. Everything else would offer a switch that does nothing.
+    /// </summary>
+    public bool ShowShipmentTrackingCard => IsWooCommerce || IsWooCommerceDb;
+
+    /// <summary>The carrier translations only matter once a direction is chosen.</summary>
+    public bool ShowCarrierMappings => ShipmentTrackingMode != ShipmentTrackingMode.None;
+
+    public ObservableCollection<CarrierMappingRow> CarrierMappings
+    {
+        get => _carrierMappings;
+        set => SetProperty(ref _carrierMappings, value);
+    }
+
+    /// <summary>Providers offered in each row's dropdown; loaded in the background like the warehouses.</summary>
+    public ObservableCollection<ShippingProviderListDto> ShippingProviders
+    {
+        get => _shippingProviders;
+        set => SetProperty(ref _shippingProviders, value);
+    }
+
+    public bool IsShippingProvidersLoading
+    {
+        get => _isShippingProvidersLoading;
+        set
+        {
+            if (SetProperty(ref _isShippingProvidersLoading, value))
+            {
+                OnPropertyChanged(nameof(ShowNoShippingProviders));
+            }
+        }
+    }
+
+    /// <summary>
+    /// No configured carrier means the import direction cannot create a shipment at all — surfaced
+    /// as a hint instead of letting the user build mappings that cannot resolve.
+    /// </summary>
+    public bool ShowNoShippingProviders => !IsShippingProvidersLoading && ShippingProviders.Count == 0;
+
+    public bool HasNoCarrierMappings => CarrierMappings.Count == 0;
+
+    public void AddCarrierMapping()
+    {
+        CarrierMappings.Add(new CarrierMappingRow());
+        OnPropertyChanged(nameof(HasNoCarrierMappings));
+    }
+
+    public void RemoveCarrierMapping(CarrierMappingRow row)
+    {
+        CarrierMappings.Remove(row);
+        OnPropertyChanged(nameof(HasNoCarrierMappings));
+    }
+
+    #endregion
+
     #region Warehouses
 
     public ObservableCollection<SelectableWarehouse> Warehouses
@@ -1208,6 +1355,21 @@ public class SalesChannelEditModel : AsyncInitializableModel
             ImportStock = salesChannel.ImportStock;
             ExportCategories = salesChannel.ExportCategories;
 
+            // Shipment tracking: mode plus the stored carrier translations. The provider dropdown
+            // is filled by the background loader; the rows already carry their provider id, so a
+            // slow provider query only delays the display name, never the selection.
+            ShipmentTrackingMode = salesChannel.ShipmentTrackingMode;
+            CarrierMappings.Clear();
+            foreach (var mapping in salesChannel.CarrierMappings ?? new List<SalesChannelCarrierMappingDto>())
+            {
+                CarrierMappings.Add(new CarrierMappingRow
+                {
+                    RemoteCarrierCode = mapping.RemoteCarrierCode,
+                    ShippingProviderId = mapping.ShippingProviderId,
+                });
+            }
+            OnPropertyChanged(nameof(HasNoCarrierMappings));
+
             // OAuth status (only meaningful for eBay / Amazon channels).
             _hasRefreshToken = salesChannel.HasRefreshToken;
             _tokenExpiresAt = salesChannel.TokenExpiresAt;
@@ -1368,6 +1530,21 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 ImportStock = syncAlwaysOn || ImportStock,
                 ImportCategories = syncAlwaysOn || ImportCategories,
                 ExportCategories = syncAlwaysOn || ExportCategories,
+                // Only offered for channel types whose connector supports it; anything else always
+                // submits None so a type change cannot leave a stale direction behind.
+                ShipmentTrackingMode = ShowShipmentTrackingCard ? ShipmentTrackingMode : ShipmentTrackingMode.None,
+                // Half-filled rows (a code without a provider, or vice versa) are dropped rather
+                // than blocking the save — the editor lets a row exist while it is being typed.
+                CarrierMappings = ShowShipmentTrackingCard
+                    ? CarrierMappings
+                        .Where(m => m.IsComplete)
+                        .Select(m => new SalesChannelCarrierMappingInputDto
+                        {
+                            RemoteCarrierCode = m.RemoteCarrierCode.Trim(),
+                            ShippingProviderId = m.ShippingProviderId,
+                        })
+                        .ToList()
+                    : new List<SalesChannelCarrierMappingInputDto>(),
                 WarehouseIds = Warehouses.Where(w => w.IsSelected).Select(w => w.Id).ToList()
             };
 
@@ -1620,6 +1797,60 @@ public class SelectableWarehouse : INotifyPropertyChanged
         get => _isSelected;
         set => SetProperty(ref _isSelected, value);
     }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value)) return false;
+        field = value;
+        OnPropertyChanged(propertyName);
+        return true;
+    }
+}
+
+/// <summary>
+/// One editable carrier-translation row: the shop's carrier code on the left, the local shipping
+/// provider it resolves to on the right. <see cref="ShippingProviderId"/> is bound through the
+/// provider list rather than a free-text id so the form can never produce a dangling reference.
+/// </summary>
+public class CarrierMappingRow : INotifyPropertyChanged
+{
+    private string _remoteCarrierCode = string.Empty;
+    private Guid _shippingProviderId;
+
+    /// <summary>Carrier identifier the shop reports (WooCommerce: the order's shipping method id).</summary>
+    public string RemoteCarrierCode
+    {
+        get => _remoteCarrierCode;
+        set
+        {
+            if (SetProperty(ref _remoteCarrierCode, value))
+            {
+                OnPropertyChanged(nameof(IsComplete));
+            }
+        }
+    }
+
+    public Guid ShippingProviderId
+    {
+        get => _shippingProviderId;
+        set
+        {
+            if (SetProperty(ref _shippingProviderId, value))
+            {
+                OnPropertyChanged(nameof(IsComplete));
+            }
+        }
+    }
+
+    /// <summary>Half-filled rows are dropped on save instead of failing the whole form.</summary>
+    public bool IsComplete => !string.IsNullOrWhiteSpace(RemoteCarrierCode) && ShippingProviderId != Guid.Empty;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

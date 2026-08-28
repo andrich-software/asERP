@@ -1,10 +1,10 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Features.Sales.Shared;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Sales;
 using asERP.Domain.Entities;
-using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,14 +12,6 @@ namespace asERP.Application.Features.Sales.Queries.SalesReadyToShipList;
 
 public class SalesReadyToShipListHandler : IRequestHandler<SalesReadyToShipListQuery, PaginatedResult<SalesReadyToShipListDto>>
 {
-    private static readonly SalesStatus[] ReadyToShipStatuses =
-    {
-        SalesStatus.Pending,
-        SalesStatus.Processing,
-        SalesStatus.ReadyForDelivery,
-        SalesStatus.PartiallyDelivered
-    };
-
     // Restrict client-supplied ordering to the columns surfaced in the list DTO.
     private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -50,8 +42,7 @@ public class SalesReadyToShipListHandler : IRequestHandler<SalesReadyToShipListQ
         _logger.LogInformation("Handle SalesReadyToShipListQuery: {0}", request);
 
         var query = _salesRepository.Entities
-            .Where(o => ReadyToShipStatuses.Contains(o.Status)
-                        && o.SalesItems.Any(i => i.ShippingId == null));
+            .Where(SalesQuickFilterPredicates.ReadyToShip());
 
         query = query.ApplySafeOrdering(request.SalesBy, AllowedSortFields);
 

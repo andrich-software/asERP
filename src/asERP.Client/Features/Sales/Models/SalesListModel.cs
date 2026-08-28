@@ -2,12 +2,13 @@ using asERP.Client.Core.Constants;
 using asERP.Client.Core.Models;
 using asERP.Client.Features.Saless.Services;
 using asERP.Domain.Dtos.Sales;
+using asERP.Domain.Enums;
 
 namespace asERP.Client.Features.Saless.Models;
 
 /// <summary>
 /// Model for sales list page using MVUX pattern.
-/// Supports searching, sorting, and pagination.
+/// Supports searching, quick filters, sorting, and pagination.
 /// </summary>
 public partial record SalesListModel
 {
@@ -18,17 +19,26 @@ public partial record SalesListModel
     public SalesListModel(
         ISalesService salesService,
         INavigator navigator,
-        IStringLocalizer localizer)
+        IStringLocalizer localizer,
+        SalesListData? data = null)
     {
         _salesService = salesService;
         _navigator = navigator;
         _localizer = localizer;
+        InitialQuickFilter = data?.QuickFilter ?? SalesQuickFilter.All;
     }
 
     /// <summary>
-    /// The search query entered by the user.
+    /// Quick filter pre-activated via navigation data (e.g. from the dashboard to-do card);
+    /// the page code-behind reads it to highlight the matching filter chip.
     /// </summary>
-    public IState<string> SearchQuery => State<string>.Value(this, () => string.Empty);
+    public SalesQuickFilter InitialQuickFilter { get; }
+
+    /// <summary>
+    /// Search text + quick filter as a single state, so the list feed stays a
+    /// four-way Feed.Combine (nested combine tuples fight the MVUX generator).
+    /// </summary>
+    public IState<SalesListFilter> Filter => State<SalesListFilter>.Value(this, () => new SalesListFilter(QuickFilter: InitialQuickFilter));
 
     /// <summary>
     /// Current page number (0-based).
@@ -62,23 +72,24 @@ public partial record SalesListModel
 
     /// <summary>
     /// Feed of saless from the API.
-    /// Automatically refreshes when SearchQuery, CurrentPage, or SortSales changes.
+    /// Automatically refreshes when the filter, page, page size, or sort changes.
     /// </summary>
     public IListFeed<SalesListDto> Saless => Feed
-        .Combine(SearchQuery, CurrentPage, PageSize, SortSales)
+        .Combine(Filter, CurrentPage, PageSize, SortSales)
         .SelectAsync(async (combined, ct) =>
         {
-            var (query, page, size, salesBy) = combined;
+            var (filter, page, size, salesBy) = combined;
+            filter ??= new SalesListFilter();
 
             var parameters = new QueryParameters
             {
                 PageNumber = page,
                 PageSize = size,
-                SearchString = string.IsNullOrWhiteSpace(query) ? null : query,
+                SearchString = string.IsNullOrWhiteSpace(filter.SearchQuery) ? null : filter.SearchQuery,
                 SalesBy = salesBy
             };
 
-            var response = await _salesService.GetSalessAsync(parameters, ct);
+            var response = await _salesService.GetSalessAsync(parameters, filter.QuickFilter, ct);
 
             // Update pagination info
             await Pagination.UpdateAsync(_ => new SalesPaginationInfo(
@@ -93,6 +104,42 @@ public partial record SalesListModel
             return response.Data.ToImmutableList();
         })
         .AsListFeed();
+
+    /// <summary>
+    /// Update the search query; resets to the first page.
+    /// </summary>
+    public async ValueTask SetSearch(string query, CancellationToken ct = default)
+    {
+        await ResetPageAsync(ct);
+        await Filter.UpdateAsync(f => (f ?? new SalesListFilter()) with { SearchQuery = query }, ct);
+    }
+
+    /// <summary>
+    /// Switch the quick filter (filter buttons above the table); resets to the first page.
+    /// <paramref name="searchQuery"/> folds a search still waiting out its debounce into the same
+    /// state change, so clicking a chip never drops what the user has already typed.
+    /// </summary>
+    public async ValueTask SetQuickFilter(SalesQuickFilter quickFilter, string? searchQuery = null, CancellationToken ct = default)
+    {
+        await ResetPageAsync(ct);
+        await Filter.UpdateAsync(f =>
+        {
+            var current = f ?? new SalesListFilter();
+            return current with { QuickFilter = quickFilter, SearchQuery = searchQuery ?? current.SearchQuery };
+        }, ct);
+    }
+
+    /// <summary>
+    /// Jumps back to the first page, but only when we are not already there: every published state
+    /// change re-runs the list feed and cancels the request still in flight for the previous one.
+    /// </summary>
+    private async ValueTask ResetPageAsync(CancellationToken ct)
+    {
+        if (await CurrentPage.Value(ct) != 0)
+        {
+            await CurrentPage.UpdateAsync(_ => 0, ct);
+        }
+    }
 
     /// <summary>
     /// Navigate to sales detail page.
@@ -182,6 +229,11 @@ public partial record SalesListModel
         await CurrentPage.UpdateAsync(_ => 0, ct); // Reset to first page when page size changes
     }
 }
+
+/// <summary>
+/// Combined list filter: search text plus the selected quick filter button.
+/// </summary>
+public record SalesListFilter(string SearchQuery = "", SalesQuickFilter QuickFilter = SalesQuickFilter.All);
 
 /// <summary>
 /// Holds pagination state information for saless.

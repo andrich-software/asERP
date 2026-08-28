@@ -101,7 +101,11 @@ internal class DebugHttpHandler : DelegatingHandler
 
             return response;
         }
-        catch (Exception ex)
+        // A cancellation the caller asked for (page navigated away, request superseded)
+        // is expected. It is deliberately left uncaught so it neither shows up as an
+        // error in the log nor gets re-thrown from user code — a re-throw is what the
+        // debugger reports as "user-unhandled" even though the caller handles it.
+        catch (Exception ex) when (!IsCallerCancellation(ex, cancellationToken))
         {
             stopwatch.Stop();
             _logger.LogError(
@@ -114,4 +118,11 @@ internal class DebugHttpHandler : DelegatingHandler
             throw;
         }
     }
+
+    /// <summary>
+    /// True when the caller cancelled, as opposed to the HttpClient timeout, which also
+    /// surfaces as a <see cref="TaskCanceledException"/> but leaves the token unsignalled.
+    /// </summary>
+    private static bool IsCallerCancellation(Exception ex, CancellationToken cancellationToken)
+        => ex is OperationCanceledException && cancellationToken.IsCancellationRequested;
 }

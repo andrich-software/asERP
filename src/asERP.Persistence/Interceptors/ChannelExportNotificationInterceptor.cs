@@ -12,7 +12,7 @@ namespace asERP.Persistence.Interceptors;
 
 /// <summary>
 /// EF Core save-changes interceptor that fans domain mutations out as notifications. Picks up
-/// every Add/Update/Delete on Product, ProductSalesChannel, ProductStock, Sales and Customer
+/// every Add/Update/Delete on Product, ProductSalesChannel, ProductStock, Sales, Shipping and Customer
 /// regardless of whether the caller went through a CQRS command-handler or wrote to the DbContext
 /// directly. Notifications are published after SaveChanges succeeds, so a failed save never
 /// produces phantom outbox rows. SavedChangesAsync runs inside the SaveChanges call stack but
@@ -156,6 +156,18 @@ public sealed class ChannelExportNotificationInterceptor : SaveChangesIntercepto
                         sales.Id, sales.TenantId, MapSalesKind(entry, sales)));
                     break;
 
+                case Shipping shipping:
+                    // Every path that produces a tracking number ends here: manual create, the label
+                    // outbox drainer and the carrier tracking poller all write the Shipping row. The
+                    // poller writes on EVERY attempt (LastTrackedAt), so gate on the fields the push
+                    // actually transports — otherwise each poll tick would enqueue an export.
+                    if (IsTrackingRelevantChange(entry))
+                    {
+                        notifications.Add(new ShipmentTrackingChangedNotification(
+                            shipping.SalesId, shipping.TenantId));
+                    }
+                    break;
+
                 case Customer customer:
                     notifications.Add(new CustomerChangedNotification(
                         customer.Id, customer.TenantId, MapCustomerKind(entry.State)));
@@ -211,6 +223,9 @@ public sealed class ChannelExportNotificationInterceptor : SaveChangesIntercepto
             case SalesChangedNotification n:
                 await mediator.Publish(n, cancellationToken);
                 break;
+            case ShipmentTrackingChangedNotification n:
+                await mediator.Publish(n, cancellationToken);
+                break;
             case CustomerChangedNotification n:
                 await mediator.Publish(n, cancellationToken);
                 break;
@@ -224,6 +239,22 @@ public sealed class ChannelExportNotificationInterceptor : SaveChangesIntercepto
                 await mediator.Publish(n, cancellationToken);
                 break;
         }
+    }
+
+    /// <summary>
+    /// True when a <see cref="Shipping"/> change can alter what the tracking push would write:
+    /// any insert or delete, and an update that touched the tracking number or the status.
+    /// </summary>
+    private static bool IsTrackingRelevantChange(EntityEntry entry)
+    {
+        if (entry.State != EntityState.Modified)
+        {
+            return true;
+        }
+
+        return entry.Property(nameof(Shipping.TrackingNumber)).IsModified
+               || entry.Property(nameof(Shipping.TrackingUrl)).IsModified
+               || entry.Property(nameof(Shipping.Status)).IsModified;
     }
 
     private static ProductChangeKind MapProductKind(EntityState state) => state switch

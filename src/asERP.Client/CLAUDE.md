@@ -138,7 +138,7 @@ New app-level tokens go into `AppTheme.xaml` (both `Light` **and** `Default` The
 
 **Typography:** Inter is applied globally via the font override — never set `FontFamily` manually. Use the existing ramp: `PageTitleTextStyle` (34px SemiBold, only via `PageHeader`/page headers), `TitleMedium` for card headers, `HeadlineLarge` for big KPI values, `BodyMedium` for body text, `LabelMedium`/`LabelSmall` for meta text, 11px SemiBold + `CharacterSpacing=60` for sidebar section headers.
 
-**Buttons:** one `FilledButtonStyle` (blue) primary action per page, placed top-right in the `PageHeader.Actions` slot ("«Entität» erstellen" / "Create «entity»"). Everything else is `OutlinedButtonStyle` (white, 1px border; icon-only allowed) or `TextButtonStyle` inline. No `AppBarButton`s for page actions anymore.
+**Buttons:** every action button top-right of the content area — `PageHeader.Actions`, `DetailPageHeader.Actions`, `NavigationBar.PrimaryCommands` — uses exactly one of two styles: `HeaderActionSaveButtonStyle` (blue fill) for a **save** action, `HeaderActionButtonStyle` (white, 1px border, blue label; icon-only allowed) for everything else, including "«Entität» erstellen" / "Create «entity»". Both live in `SharedComponents.xaml` and alias `FilledButtonStyle` / `OutlinedButtonStyle` — use the `HeaderAction*` names at that position so the rule stays greppable. `TextButtonStyle` is for inline links only. No `AppBarButton`s for page actions — a `NavigationBar` that needs actions hosts them in an `AppBarElementContainer` (see `WarehouseEditPage`).
 
 **Page skeletons:** list/overview pages start with `controls:PageHeader` (Title + Description resw keys in **both** `de`/`en`, no `utu:NavigationBar`); detail/edit pages keep `utu:NavigationBar` (back only) + `DetailPageHeader`. Copy `CustomerListPage` / `SalesDetailPage` as references.
 
@@ -154,7 +154,7 @@ Custom controls live in `Controls/` (namespace `asERP.Client.Controls`, xmlns `c
 | Control | Purpose | Localization |
 |---|---|---|
 | `DetailPageHeader` | Detail page header: icon chip, `Title`/`Subtitle` (string or UI), `Badges`, `Actions` slots; `Content` = extra slot (e.g. related-entity link). Renders as a plain (transparent, chrome-less) page header | actions/labels via child x:Uid |
-| `PageHeader` | List/overview page header: big 34px `Title`, gray `Description`, optional `Glyph`, `Actions` slot top-right (primary button = `FilledButtonStyle`). Replaces the `NavigationBar` on list pages | x:Uid with `.Title`/`.Description` suffix keys |
+| `PageHeader` | List/overview page header: big 34px `Title`, gray `Description`, optional `Glyph`, `Actions` slot top-right (see the header-action button rule under "Design rules"). Replaces the `NavigationBar` on list pages | x:Uid with `.Title`/`.Description` suffix keys |
 | `SectionCard` | Elevated card with icon + title header row and 16px content padding | x:Uid with `.Header` suffix key |
 | `StatusBadge` | Pill badge for any status enum or bool sync flag: `Status="{Binding ...}"` — text + colors resolved centrally in `Core/Status/StatusVisuals.cs` | automatic (`{EnumType}.{Value}` resw keys) |
 | `LabeledField` | Icon + label + value with built-in "N/A" fallback; `LabeledFieldKeyValueStyle` for label-left/value-right rows | x:Uid with `.Text` suffix key |

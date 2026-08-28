@@ -16,19 +16,17 @@
     <utu:NavigationBar Grid.Row="0"
                        Content="{Binding Title}">
       <utu:NavigationBar.PrimaryCommands>
-        <AppBarButton x:Uid="ManufacturerEditPage.AppBarButton.Cancel"
-                      Click="CancelButton_Click">
-          <AppBarButton.Icon>
-            <FontIcon Glyph="&#xE711;" />
-          </AppBarButton.Icon>
-        </AppBarButton>
-        <AppBarButton x:Uid="ManufacturerEditPage.AppBarButton.Save"
-                      Click="SaveButton_Click"
-                      IsEnabled="{Binding CanSave}">
-          <AppBarButton.Icon>
-            <FontIcon Glyph="&#xE74E;" />
-          </AppBarButton.Icon>
-        </AppBarButton>
+        <AppBarElementContainer VerticalContentAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,8,0">
+            <Button x:Uid="ManufacturerEditPage.HeaderAction.Cancel"
+                    Style="{StaticResource HeaderActionButtonStyle}"
+                    Click="CancelButton_Click" />
+            <Button x:Uid="ManufacturerEditPage.HeaderAction.Save"
+                    Style="{StaticResource HeaderActionSaveButtonStyle}"
+                    Click="SaveButton_Click"
+                    IsEnabled="{Binding CanSave}" />
+          </StackPanel>
+        </AppBarElementContainer>
       </utu:NavigationBar.PrimaryCommands>
     </utu:NavigationBar>
 

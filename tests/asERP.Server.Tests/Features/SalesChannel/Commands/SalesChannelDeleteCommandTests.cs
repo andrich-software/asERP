@@ -7,6 +7,7 @@ using asERP.Domain.Wrapper;
 using asERP.Server.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Entities = asERP.Domain.Entities;
 
 namespace asERP.Server.Tests.Features.SalesChannel.Commands;
 
@@ -414,5 +415,192 @@ public class SalesChannelDeleteCommandTests : TenantIsolatedTestBase
         // Both operations should complete without throwing exceptions
         // In a real implementation, this would verify audit logs were created
         TestAssertions.AssertTrue(true); // Placeholder for audit verification
+    }
+
+    [Fact]
+    public async Task DeleteSalesChannel_WithDependentData_ShouldRemoveOrphansAndDetachSurvivors()
+    {
+        await SeedTestDataAsync();
+        var salesChannelId = await CreateTestSalesChannelAsync(TenantConstants.TestTenant1Id, "Channel With Dependents");
+        var (productImageId, feedId) = await SeedChannelDependentsAsync(TenantConstants.TestTenant1Id, salesChannelId);
+
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var response = await Client.DeleteAsync($"/api/v1/SalesChannels/{salesChannelId}");
+
+        TestAssertions.AssertEqual(HttpStatusCode.NoContent, response.StatusCode);
+
+        TenantContext.SetCurrentTenantId(null);
+        DbContext.ChangeTracker.Clear();
+
+        // Everything that is worthless without its channel is gone — including the rows whose foreign
+        // key is RESTRICT (category links) or missing entirely (customer links, OAuth states).
+        TestAssertions.AssertEqual(0, await DbContext.ShopDomain.IgnoreQueryFilters()
+            .CountAsync(d => d.SalesChannelId == salesChannelId));
+        TestAssertions.AssertEqual(0, await DbContext.CategorySalesChannel.IgnoreQueryFilters()
+            .CountAsync(l => l.SalesChannelId == salesChannelId));
+        TestAssertions.AssertEqual(0, await DbContext.CustomerSalesChannel.IgnoreQueryFilters()
+            .CountAsync(l => l.SalesChannelId == salesChannelId));
+        TestAssertions.AssertEqual(0, await DbContext.ProductSalesChannel.IgnoreQueryFilters()
+            .CountAsync(l => l.SalesChannelId == salesChannelId));
+        TestAssertions.AssertEqual(0, await DbContext.OAuthState
+            .CountAsync(s => s.SalesChannelId == salesChannelId));
+        TestAssertions.AssertEqual(0, await DbContext.ChannelExportOutbox.IgnoreQueryFilters()
+            .CountAsync(o => o.SalesChannelId == salesChannelId));
+        TestAssertions.AssertEqual(0, await DbContext.ChannelSyncRun.IgnoreQueryFilters()
+            .CountAsync(r => r.SalesChannelId == salesChannelId));
+        TestAssertions.AssertEqual(0, await DbContext.ChannelSyncLog.IgnoreQueryFilters()
+            .CountAsync(l => l.SalesChannelId == salesChannelId));
+        TestAssertions.AssertEqual(0, await DbContext.SalesChannelSyncState.IgnoreQueryFilters()
+            .CountAsync(s => s.SalesChannelId == salesChannelId));
+        TestAssertions.AssertEqual(0, await DbContext.SalesChannelOperationState.IgnoreQueryFilters()
+            .CountAsync(s => s.SalesChannelId == salesChannelId));
+
+        // Product images and feeds outlive the channel — kept, but detached from it.
+        var productImage = await DbContext.ProductImage.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(i => i.Id == productImageId);
+        TestAssertions.AssertNotNull(productImage);
+        TestAssertions.AssertNull(productImage!.SalesChannelId, "Product image must not reference the deleted channel");
+        TestAssertions.AssertNull(productImage.RemoteImageId, "Remote image id is meaningless without its channel");
+
+        var feed = await DbContext.Feed.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(f => f.Id == feedId);
+        TestAssertions.AssertNotNull(feed);
+        TestAssertions.AssertNull(feed!.SalesChannelId, "Feed must not reference the deleted channel");
+    }
+
+    /// <summary>
+    /// Seeds one row in every table that hangs off a sales channel: the ones that must be removed with
+    /// it, plus the two that survive it detached. Returns the ids of the survivors.
+    /// </summary>
+    private async Task<(Guid ProductImageId, Guid FeedId)> SeedChannelDependentsAsync(Guid tenantId, Guid salesChannelId)
+    {
+        TenantContext.SetCurrentTenantId(tenantId);
+
+        var now = DateTime.UtcNow;
+        var productId = Guid.NewGuid();
+
+        DbContext.ShopDomain.Add(new Entities.ShopDomain
+        {
+            TenantId = tenantId,
+            SalesChannelId = salesChannelId,
+            Host = $"shop-{salesChannelId:N}.example.com",
+            Port = 0,
+            IsPrimary = true
+        });
+
+        DbContext.CategorySalesChannel.Add(new Entities.CategorySalesChannel
+        {
+            TenantId = tenantId,
+            SalesChannelId = salesChannelId,
+            CategoryId = Guid.NewGuid(),
+            IsActive = true,
+            RemoteCategoryId = "42"
+        });
+
+        DbContext.CustomerSalesChannel.Add(new Entities.CustomerSalesChannel
+        {
+            TenantId = tenantId,
+            SalesChannelId = salesChannelId,
+            CustomerId = Guid.NewGuid(),
+            RemoteCustomerId = "1001"
+        });
+
+        DbContext.ProductSalesChannel.Add(new Entities.ProductSalesChannel
+        {
+            TenantId = tenantId,
+            SalesChannelId = salesChannelId,
+            ProductId = productId,
+            RemoteProductId = "SKU-1",
+            IsListed = true
+        });
+
+        DbContext.OAuthState.Add(new Entities.OAuthState
+        {
+            TenantId = tenantId,
+            SalesChannelId = salesChannelId,
+            Provider = SalesChannelType.WooCommerce,
+            StateToken = $"state-{Guid.NewGuid():N}",
+            Nonce = $"nonce-{Guid.NewGuid():N}",
+            ExpiresAt = now.AddMinutes(10)
+        });
+
+        DbContext.ChannelExportOutbox.Add(new Entities.ChannelExportOutbox
+        {
+            TenantId = tenantId,
+            SalesChannelId = salesChannelId,
+            Operation = ChannelSyncOperation.ExportProduct,
+            AggregateType = ChannelOutboxAggregateType.Product,
+            AggregateId = productId,
+            IdempotencyKey = $"key-{Guid.NewGuid():N}",
+            Status = ChannelOutboxStatus.Pending,
+            NextAttemptAt = now
+        });
+
+        DbContext.ChannelSyncRun.Add(new Entities.ChannelSyncRun
+        {
+            TenantId = tenantId,
+            SalesChannelId = salesChannelId,
+            Operation = ChannelSyncOperation.ImportProducts,
+            TriggerSource = ChannelSyncTriggerSource.Manual,
+            Status = ChannelSyncRunStatus.Success,
+            StartedAt = now,
+            CorrelationId = Guid.NewGuid()
+        });
+
+        DbContext.ChannelSyncLog.Add(new Entities.ChannelSyncLog
+        {
+            TenantId = tenantId,
+            SalesChannelId = salesChannelId,
+            Operation = ChannelSyncOperation.ImportProducts,
+            Level = ChannelSyncLogLevel.Information,
+            Message = "imported",
+            Timestamp = now,
+            CorrelationId = Guid.NewGuid()
+        });
+
+        DbContext.SalesChannelSyncState.Add(new Entities.SalesChannelSyncState
+        {
+            TenantId = tenantId,
+            SalesChannelId = salesChannelId
+        });
+
+        DbContext.SalesChannelOperationState.Add(new Entities.SalesChannelOperationState
+        {
+            TenantId = tenantId,
+            SalesChannelId = salesChannelId,
+            Operation = ChannelSyncOperation.ImportProducts,
+            Phase = ChannelSyncPhase.Incremental,
+            NextDueAt = now
+        });
+
+        var productImage = new Entities.ProductImage
+        {
+            TenantId = tenantId,
+            ProductId = productId,
+            FileName = "image.webp",
+            RelativePath = "products/ab/image.webp",
+            ThumbnailPath = "products/ab/image_thumb.webp",
+            SalesChannelId = salesChannelId,
+            RemoteImageId = "remote-image-1"
+        };
+        DbContext.ProductImage.Add(productImage);
+
+        var feed = new Entities.Feed
+        {
+            TenantId = tenantId,
+            Name = "Google feed",
+            Template = FeedTemplate.GoogleProducts,
+            Currency = "EUR",
+            SalesChannelId = salesChannelId
+        };
+        DbContext.Feed.Add(feed);
+
+        await DbContext.SaveChangesAsync();
+
+        DbContext.ChangeTracker.Clear();
+        TenantContext.SetCurrentTenantId(null);
+
+        return (productImage.Id, feed.Id);
     }
 }

@@ -341,7 +341,7 @@ public partial record SalesChannelDashboardModel
                 SalesBy = "DateSalesed Descending"
             };
 
-            var response = await _salesService.GetSalessAsync(parameters, ct);
+            var response = await _salesService.GetSalessAsync(parameters, ct: ct);
 
             await Pagination.UpdateAsync(_ => new SalesPaginationInfo(
                 response.CurrentPage,

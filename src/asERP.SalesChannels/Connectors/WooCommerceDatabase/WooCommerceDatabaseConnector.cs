@@ -4,6 +4,7 @@ using asERP.SalesChannels.Abstractions;
 using asERP.SalesChannels.Connectors.Common;
 using asERP.SalesChannels.Contracts;
 using asERP.SalesChannels.Models;
+using asERP.SalesChannels.Models.WooCommerce;
 using asERP.SalesChannels.Models.WooCommerceDatabase;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
@@ -33,6 +34,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
     private readonly ICustomerImportRepository _customerImportRepository;
     private readonly IStockImportRepository _stockImportRepository;
     private readonly ICategoryImportRepository _categoryImportRepository;
+    private readonly IShipmentImportRepository _shipmentImportRepository;
     private readonly ILogger<WooCommerceDatabaseConnector> _logger;
 
     public WooCommerceDatabaseConnector(
@@ -41,6 +43,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         ICustomerImportRepository customerImportRepository,
         IStockImportRepository stockImportRepository,
         ICategoryImportRepository categoryImportRepository,
+        IShipmentImportRepository shipmentImportRepository,
         ILogger<WooCommerceDatabaseConnector> logger)
     {
         _productImportRepository = productImportRepository;
@@ -48,6 +51,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         _customerImportRepository = customerImportRepository;
         _stockImportRepository = stockImportRepository;
         _categoryImportRepository = categoryImportRepository;
+        _shipmentImportRepository = shipmentImportRepository;
         _logger = logger;
     }
 
@@ -62,6 +66,8 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         SalesChannelCapabilities.ImportCustomers |
         SalesChannelCapabilities.ImportStock |
         SalesChannelCapabilities.ImportCategories |
+        SalesChannelCapabilities.ImportShipments |
+        SalesChannelCapabilities.PushShipments |
         SalesChannelCapabilities.UpdateStock |
         SalesChannelCapabilities.UpdatePrice;
 
@@ -1002,6 +1008,259 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         catch (Exception ex)
         {
             return SyncResult.Failed(ex.Message);
+        }
+    }
+
+    public override async Task<SyncResult> ImportShipmentsAsync(SalesChannelContext context)
+    {
+        Db db;
+        try
+        {
+            db = Prepare(context);
+        }
+        catch (Exception ex)
+        {
+            return SyncResult.Failed(ex.Message);
+        }
+
+        var metaKey = WooShipmentTracking.ResolveMetaKey(context.SalesChannel.AdditionalConfigJson);
+
+        try
+        {
+            await using var connection = await OpenAsync(db, context.CancellationToken);
+            var hpos = await UsesHposAsync(connection, db, context.CancellationToken);
+            var progress = new ProgressThrottle(context);
+
+            var processed = 0;
+            var failed = 0;
+            var unmapped = new HashSet<string>(StringComparer.Ordinal);
+            ulong lastId = 0;
+
+            for (var page = 1; page <= MaxPages; page++)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                var rows = await LoadShipmentBatchAsync(
+                    connection, db, hpos, metaKey, lastId, context.IncrementalSince, context.CancellationToken);
+
+                if (rows.Count == 0)
+                {
+                    break;
+                }
+
+                lastId = rows[^1].OrderId;
+
+                var carrierCodes = await LoadShippingMethodIdsAsync(
+                    connection, db, rows.Select(r => r.OrderId).ToList(), context.CancellationToken);
+
+                var shipments = new List<SalesChannelImportShipment>();
+                foreach (var row in rows)
+                {
+                    var numbers = WooShipmentTracking.ParseNumbers(row.MetaValue);
+                    if (numbers.Count == 0)
+                    {
+                        // A plugin storing PHP-serialized tracking data lands here; the value is
+                        // deliberately not guessed apart. Count it so the run is not silently "clean".
+                        failed++;
+                        continue;
+                    }
+
+                    foreach (var number in numbers)
+                    {
+                        shipments.Add(new SalesChannelImportShipment
+                        {
+                            RemoteSalesId = row.OrderId.ToString(CultureInfo.InvariantCulture),
+                            TrackingNumber = number,
+                            RemoteCarrierCode = carrierCodes.GetValueOrDefault(row.OrderId, string.Empty),
+                        });
+                    }
+                }
+
+                if (shipments.Count > 0)
+                {
+                    var outcome = await _shipmentImportRepository.ImportShipmentsAsync(
+                        context.SalesChannel, shipments, context.CancellationToken);
+                    processed += outcome.Created;
+                    foreach (var code in outcome.UnmappedCarrierCodes)
+                    {
+                        unmapped.Add(code);
+                    }
+                }
+
+                await progress.MaybeReportAsync(processed, failed);
+            }
+
+            var summary = unmapped.Count > 0
+                ? $"No carrier mapping for: {string.Join(", ", unmapped.Order(StringComparer.Ordinal))}"
+                : null;
+
+            return new SyncResult(processed, failed, summary);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return SyncResult.Failed(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// One keyset page of orders carrying a tracking-number meta value. Reads the meta table that
+    /// matches the shop's order storage and — on an incremental run — restricts to orders touched
+    /// since the watermark, which is what writing a tracking number through the WooCommerce order
+    /// CRUD bumps.
+    /// </summary>
+    private async Task<List<(ulong OrderId, string MetaValue)>> LoadShipmentBatchAsync(
+        MySqlConnection connection, Db db, bool hpos, string metaKey, ulong afterId,
+        DateTime? modifiedSince, CancellationToken cancellationToken)
+    {
+        var rows = new List<(ulong OrderId, string MetaValue)>();
+
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = hpos
+            ? $"""
+               SELECT m.order_id, m.meta_value
+               FROM {db.Prefix}wc_orders_meta m
+               JOIN {db.Prefix}wc_orders o ON o.id = m.order_id
+               WHERE m.meta_key = @metaKey AND m.meta_value <> ''
+                 AND o.type = 'shop_order'
+                 AND m.order_id > @afterId
+                 {(modifiedSince is not null ? "AND o.date_updated_gmt >= @modifiedSince" : string.Empty)}
+               ORDER BY m.order_id
+               LIMIT @batchSize
+               """
+            : $"""
+               SELECT pm.post_id, pm.meta_value
+               FROM {db.Prefix}postmeta pm
+               JOIN {db.Prefix}posts p ON p.ID = pm.post_id
+               WHERE pm.meta_key = @metaKey AND pm.meta_value <> ''
+                 AND p.post_type = 'shop_order'
+                 AND pm.post_id > @afterId
+                 {(modifiedSince is not null ? "AND p.post_modified_gmt >= @modifiedSince" : string.Empty)}
+               ORDER BY pm.post_id
+               LIMIT @batchSize
+               """;
+
+        cmd.Parameters.AddWithValue("@metaKey", metaKey);
+        cmd.Parameters.AddWithValue("@afterId", afterId);
+        cmd.Parameters.AddWithValue("@batchSize", OrderBatchSize);
+        if (modifiedSince is not null)
+        {
+            cmd.Parameters.AddWithValue("@modifiedSince", modifiedSince.Value);
+        }
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            rows.Add((ToUInt64(reader.GetValue(0)), AsString(reader.GetValue(1))));
+        }
+
+        return rows;
+    }
+
+    /// <summary>
+    /// Shipping-method id of each order's shipping line (e.g. <c>dhl_home_delivery</c>) — the only
+    /// carrier signal a WooCommerce order carries. Orders without a shipping line simply have no
+    /// entry and end up unmapped.
+    /// </summary>
+    private async Task<Dictionary<ulong, string>> LoadShippingMethodIdsAsync(
+        MySqlConnection connection, Db db, IReadOnlyList<ulong> orderIds, CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<ulong, string>();
+        if (orderIds.Count == 0)
+        {
+            return result;
+        }
+
+        await using var cmd = connection.CreateCommand();
+        var inList = ParamList(cmd, "oid", orderIds);
+        cmd.CommandText = $"""
+            SELECT oi.order_id, oim.meta_value
+            FROM {db.Prefix}woocommerce_order_items oi
+            JOIN {db.Prefix}woocommerce_order_itemmeta oim
+              ON oim.order_item_id = oi.order_item_id AND oim.meta_key = 'method_id'
+            WHERE oi.order_item_type = 'shipping' AND oi.order_id IN ({inList})
+            """;
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var orderId = ToUInt64(reader.GetValue(0));
+            // First shipping line wins on a multi-package order — the mapping is per carrier, and a
+            // Woo order practically never mixes carriers across its shipping lines.
+            result.TryAdd(orderId, AsString(reader.GetValue(1)));
+        }
+
+        return result;
+    }
+
+    public override async Task<ExportResult> PushShipmentAsync(SalesChannelContext context, ShipmentPushPayload payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload.RemoteSalesId)
+            || !ulong.TryParse(payload.RemoteSalesId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var orderId))
+        {
+            return ExportResult.Fail("Order has no numeric WooCommerce id");
+        }
+
+        Db db;
+        try
+        {
+            db = Prepare(context);
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
+
+        var metaKey = WooShipmentTracking.ResolveMetaKey(context.SalesChannel.AdditionalConfigJson);
+        var value = WooShipmentTracking.FormatNumbers(payload.TrackingNumbers);
+
+        try
+        {
+            await using var connection = await OpenAsync(db, context.CancellationToken);
+            var hpos = await UsesHposAsync(connection, db, context.CancellationToken);
+
+            await using var cmd = connection.CreateCommand();
+            // Upsert without a unique constraint to lean on: WordPress meta tables allow duplicate
+            // (order, key) rows, so an explicit UPDATE-then-INSERT keeps a single row per order the
+            // way WooCommerce's own update_meta_data does.
+            cmd.CommandText = hpos
+                ? $"""
+                   UPDATE {db.Prefix}wc_orders_meta SET meta_value = @value
+                   WHERE order_id = @orderId AND meta_key = @metaKey
+                   """
+                : $"""
+                   UPDATE {db.Prefix}postmeta SET meta_value = @value
+                   WHERE post_id = @orderId AND meta_key = @metaKey
+                   """;
+            cmd.Parameters.AddWithValue("@value", value);
+            cmd.Parameters.AddWithValue("@orderId", orderId);
+            cmd.Parameters.AddWithValue("@metaKey", metaKey);
+
+            var updated = await cmd.ExecuteNonQueryAsync(context.CancellationToken);
+            if (updated == 0)
+            {
+                await using var insert = connection.CreateCommand();
+                insert.CommandText = hpos
+                    ? $"INSERT INTO {db.Prefix}wc_orders_meta (order_id, meta_key, meta_value) VALUES (@orderId, @metaKey, @value)"
+                    : $"INSERT INTO {db.Prefix}postmeta (post_id, meta_key, meta_value) VALUES (@orderId, @metaKey, @value)";
+                insert.Parameters.AddWithValue("@value", value);
+                insert.Parameters.AddWithValue("@orderId", orderId);
+                insert.Parameters.AddWithValue("@metaKey", metaKey);
+                await insert.ExecuteNonQueryAsync(context.CancellationToken);
+            }
+
+            return ExportResult.Ok();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
         }
     }
 

@@ -58,7 +58,11 @@ public class RevenueStatisticsService : IRevenueStatisticsService
 
             return apiResponse.Data ?? new RevenueChartDto();
         }
-        catch (Exception ex)
+        // Caller-driven cancellation (page navigated away, request superseded) is not an
+        // error and is deliberately left uncaught, so it stays out of the log and is not
+        // re-thrown from user code. An HttpClient timeout also surfaces as
+        // TaskCanceledException but leaves the token unsignalled, so it still logs.
+        catch (Exception ex) when (!(ex is OperationCanceledException && ct.IsCancellationRequested))
         {
             _logger.LogError(ex, "Error fetching revenue chart from {Url}", url);
             throw;

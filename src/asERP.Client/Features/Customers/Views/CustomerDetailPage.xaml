@@ -129,10 +129,10 @@
                             Spacing="8">
                   <Button x:Uid="CustomerDetailPage.HeaderAction.Edit"
                           Click="EditButton_Click"
-                          Style="{StaticResource OutlinedButtonStyle}" />
+                          Style="{StaticResource HeaderActionButtonStyle}" />
                   <Button x:Uid="CustomerDetailPage.HeaderAction.Delete"
                           Click="DeleteButton_Click"
-                          Style="{StaticResource TextButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Foreground="{ThemeResource ErrorBrush}" />
                 </StackPanel>
               </controls:DetailPageHeader.Actions>

@@ -19,4 +19,10 @@ public class SalesItemDto
 
     /// <summary>The parcel this line was packed into; null while unassigned.</summary>
     public Guid? ShippingId { get; set; }
+
+    /// <summary>
+    /// Primary image of the ordered product (lowest SortOrder), so the client can show a
+    /// thumbnail per line; null when the product has no images or is not in the catalog.
+    /// </summary>
+    public Guid? PrimaryImageId { get; set; }
 }

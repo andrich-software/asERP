@@ -322,6 +322,7 @@ public class QueuedSyncTests
         public virtual Task<SyncResult> ImportCustomersAsync(SalesChannelContext context) => Task.FromResult(SyncResult.Empty);
         public virtual Task<SyncResult> ImportStockAsync(SalesChannelContext context) => Task.FromResult(SyncResult.Empty);
         public virtual Task<SyncResult> ImportCategoriesAsync(SalesChannelContext context) => Task.FromResult(SyncResult.Empty);
+        public virtual Task<SyncResult> ImportShipmentsAsync(SalesChannelContext context) => Task.FromResult(SyncResult.Empty);
         public Task<ExportResult> ExportProductAsync(SalesChannelContext context, ProductExportPayload payload) => Task.FromResult(ExportResult.Ok());
         public Task<ExportResult> UpdateStockAsync(SalesChannelContext context, StockUpdatePayload payload) => Task.FromResult(ExportResult.Ok());
         public Task<ExportResult> UpdatePriceAsync(SalesChannelContext context, PriceUpdatePayload payload) => Task.FromResult(ExportResult.Ok());
@@ -331,6 +332,7 @@ public class QueuedSyncTests
         public Task<ExportResult> ExportCategoryAsync(SalesChannelContext context, CategoryExportPayload payload) => Task.FromResult(ExportResult.Ok());
         public Task<ExportResult> DeleteCategoryAsync(SalesChannelContext context, CategoryDeletePayload payload) => Task.FromResult(ExportResult.Ok());
         public Task<ExportResult> UpdateProductCategoriesAsync(SalesChannelContext context, ProductCategoriesUpdatePayload payload) => Task.FromResult(ExportResult.Ok());
+        public Task<ExportResult> PushShipmentAsync(SalesChannelContext context, ShipmentPushPayload payload) => Task.FromResult(ExportResult.Ok());
     }
 
     private sealed class CountingConnector : TestConnectorBase

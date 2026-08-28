@@ -27,6 +27,8 @@ public static class ChannelOperationSupport
         ChannelSyncOperation.ExportCategory => connector.Capabilities.HasFlag(SalesChannelCapabilities.ExportCategories),
         ChannelSyncOperation.DeleteCategory => connector.Capabilities.HasFlag(SalesChannelCapabilities.ExportCategories),
         ChannelSyncOperation.UpdateProductCategories => connector.Capabilities.HasFlag(SalesChannelCapabilities.UpdateProductCategories),
+        ChannelSyncOperation.ImportShipments => connector.Capabilities.HasFlag(SalesChannelCapabilities.ImportShipments),
+        ChannelSyncOperation.PushShipment => connector.Capabilities.HasFlag(SalesChannelCapabilities.PushShipments),
         _ => false,
     };
 }

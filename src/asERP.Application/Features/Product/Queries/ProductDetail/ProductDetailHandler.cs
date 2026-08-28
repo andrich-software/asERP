@@ -5,6 +5,7 @@ using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Manufacturer;
 using asERP.Domain.Dtos.Product;
 using asERP.Domain.Wrapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Product.Queries.ProductDetail;
 
@@ -26,16 +27,24 @@ public class ProductDetailHandler : IRequestHandler<ProductDetailQuery, Result<P
     private readonly IProductRepository _productRepository;
 
     /// <summary>
+    /// Repository for warehouse data operations
+    /// </summary>
+    private readonly IWarehouseRepository _warehouseRepository;
+
+    /// <summary>
     /// Constructor that initializes the handler with required dependencies
     /// </summary>
     /// <param name="logger">Logger for recording operations</param>
     /// <param name="productRepository">Repository for product data access</param>
+    /// <param name="warehouseRepository">Repository for warehouse data access</param>
     public ProductDetailHandler(
         IAppLogger<ProductDetailHandler> logger,
-        IProductRepository productRepository)
+        IProductRepository productRepository,
+        IWarehouseRepository warehouseRepository)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _productRepository = productRepository ?? throw new ArgumentNullException(nameof(productRepository));
+        _warehouseRepository = warehouseRepository ?? throw new ArgumentNullException(nameof(warehouseRepository));
     }
 
     /// <summary>
@@ -139,6 +148,8 @@ public class ProductDetailHandler : IRequestHandler<ProductDetailQuery, Result<P
                 .Select(l => l.CategoryId)
                 .ToList();
 
+            data.Stocks = await BuildStocksAsync(product, cancellationToken);
+
             _logger.LogInformation("Product with ID {Id} retrieved successfully", request.Id);
 
             return Result<ProductDetailDto>.Success(data);
@@ -151,6 +162,41 @@ public class ProductDetailHandler : IRequestHandler<ProductDetailQuery, Result<P
             return Result<ProductDetailDto>.Fail(ResultStatusCode.InternalServerError,
                 "An error occurred while retrieving the product.");
         }
+    }
+
+    /// <summary>
+    /// Lists every warehouse of the current tenant with the product's stock in it.
+    /// Warehouses the product has no stock row for are reported with zero stock.
+    /// </summary>
+    private async Task<List<ProductStockDto>> BuildStocksAsync(
+        Domain.Entities.Product product,
+        CancellationToken cancellationToken)
+    {
+        var warehouses = await _warehouseRepository.Entities
+            .AsNoTracking()
+            .OrderBy(w => w.Name)
+            .Select(w => new { w.Id, w.Name })
+            .ToListAsync(cancellationToken);
+
+        var stocksByWarehouse = product.ProductStocks
+            .GroupBy(ps => ps.WarehouseId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        return warehouses
+            .Select(w =>
+            {
+                stocksByWarehouse.TryGetValue(w.Id, out var stock);
+
+                return new ProductStockDto
+                {
+                    WarehouseId = w.Id,
+                    WarehouseName = w.Name,
+                    Stock = stock?.Stock ?? 0,
+                    StockMin = stock?.StockMin ?? 0,
+                    StockMax = stock?.StockMax ?? 0
+                };
+            })
+            .ToList();
     }
 
     private static List<ProductVariantOptionDto> MapOptions(IEnumerable<Domain.Entities.ProductVariantOption> options)

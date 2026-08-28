@@ -71,6 +71,14 @@ public class SalesChannel : BaseEntity, IBaseEntity, IConcurrencyStamped
     /// </summary>
     public bool ImportStock { get; set; }
 
+    /// <summary>
+    /// Direction of the shipment-tracking exchange with this channel: pull the shop's tracking
+    /// numbers into local shipments, push locally created ones to the shop, or neither (default).
+    /// Mutually exclusive by design — see <see cref="Domain.Enums.ShipmentTrackingMode"/>. Requires
+    /// carrier mappings (<see cref="CarrierMappings"/>) for the import direction.
+    /// </summary>
+    public ShipmentTrackingMode ShipmentTrackingMode { get; set; } = ShipmentTrackingMode.None;
+
     /// <summary>Polling interval used by the orchestrator. Defaults to 60s.</summary>
     public int SyncIntervalSeconds { get; set; } = 60;
 
@@ -112,6 +120,12 @@ public class SalesChannel : BaseEntity, IBaseEntity, IConcurrencyStamped
     /// types). Managed via the ShopDomain CRUD endpoints; deleted explicitly on channel delete.
     /// </summary>
     public ICollection<ShopDomain> ShopDomains { get; set; } = [];
+
+    /// <summary>
+    /// Operator-configured translation between the shop's carrier identifiers and local shipping
+    /// providers. Edited as part of the channel form; deleted explicitly on channel delete.
+    /// </summary>
+    public ICollection<SalesChannelCarrierMapping> CarrierMappings { get; set; } = [];
 
     /// <summary>
     /// 1:1 synchronization bookkeeping (import cursors, initial-import flags, last poll time). Held on a

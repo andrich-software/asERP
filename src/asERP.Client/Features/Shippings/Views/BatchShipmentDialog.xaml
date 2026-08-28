@@ -83,7 +83,8 @@
               </Grid.ColumnDefinitions>
               <CheckBox x:Name="SelectAllCheck"
                         x:Uid="BatchShipmentDialog.SelectAll"
-                        IsChecked="True"
+                        IsChecked="False"
+                        IsEnabled="False"
                         Click="SelectAll_Click" />
               <TextBlock x:Name="SelectionSummaryText"
                          Grid.Column="2"

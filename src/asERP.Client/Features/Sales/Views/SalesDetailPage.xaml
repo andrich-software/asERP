@@ -26,7 +26,8 @@
     <returns:ReturnedToSenderToVisibilityConverter x:Key="ReturnedToSenderToVisibilityConverter" />
   </Page.Resources>
 
-  <Grid utu:SafeArea.Insets="VisibleBounds">
+  <Grid x:Name="RootGrid"
+        utu:SafeArea.Insets="VisibleBounds">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
@@ -166,19 +167,19 @@
                   <Button x:Uid="SalesDetailPage.HeaderAction.Ship"
                           Click="ShipButton_Click"
                           CommandParameter="{Binding Data.Id}"
-                          Style="{StaticResource FilledButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Visibility="{Binding Data.Status, Converter={StaticResource SalesStatusToShipVisibilityConverter}}" />
                   <Button x:Uid="SalesDetailPage.HeaderAction.Return"
                           Click="ReturnButton_Click"
                           CommandParameter="{Binding Data.Id}"
-                          Style="{StaticResource OutlinedButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Visibility="{Binding Data, Converter={StaticResource CanCreateReturnToVisibilityConverter}}" />
                   <Button x:Uid="SalesDetailPage.HeaderAction.Edit"
                           Click="EditButton_Click"
-                          Style="{StaticResource OutlinedButtonStyle}" />
+                          Style="{StaticResource HeaderActionButtonStyle}" />
                   <Button x:Uid="SalesDetailPage.HeaderAction.CancelSales"
                           Click="CancelSalesButton_Click"
-                          Style="{StaticResource OutlinedButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Foreground="{ThemeResource ErrorBrush}"
                           Visibility="{Binding Data.Status, Converter={StaticResource SalesStatusToCancelVisibilityConverter}}" />
                 </StackPanel>
@@ -356,85 +357,125 @@
                             Background="{ThemeResource SurfaceBrush}"
                             CornerRadius="8,8,0,0">
                         <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="60" />
                           <ColumnDefinition Width="*" MinWidth="150" />
                           <ColumnDefinition Width="80" />
                           <ColumnDefinition Width="100" />
                           <ColumnDefinition Width="100" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0"
+                        <TextBlock Grid.Column="1"
                                    x:Uid="SalesDetailPage.Header.Product"
                                    Style="{StaticResource LabelMedium}"
                                    Foreground="{ThemeResource OnSurfaceVariantBrush}" />
-                        <TextBlock Grid.Column="1"
+                        <TextBlock Grid.Column="2"
                                    x:Uid="SalesDetailPage.Header.Quantity"
                                    Style="{StaticResource LabelMedium}"
                                    Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                    HorizontalAlignment="Right" />
-                        <TextBlock Grid.Column="2"
+                        <TextBlock Grid.Column="3"
                                    x:Uid="SalesDetailPage.Header.UnitPrice"
                                    Style="{StaticResource LabelMedium}"
                                    Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                    HorizontalAlignment="Right" />
-                        <TextBlock Grid.Column="3"
+                        <TextBlock Grid.Column="4"
                                    x:Uid="SalesDetailPage.Header.ItemTotal"
                                    Style="{StaticResource LabelMedium}"
                                    Foreground="{ThemeResource OnSurfaceVariantBrush}"
                                    HorizontalAlignment="Right" />
                       </Grid>
 
-                      <ItemsRepeater ItemsSource="{Binding Data.SalesItems}">
-                        <ItemsRepeater.Layout>
-                          <StackLayout Orientation="Vertical" />
-                        </ItemsRepeater.Layout>
-                        <ItemsRepeater.ItemTemplate>
+                      <!-- Lines with product thumbnails, loaded lazily when the tab opens -->
+                      <mvux:FeedView Source="{Binding DataContext.Items, ElementName=RootGrid}">
+                        <mvux:FeedView.ValueTemplate>
                           <DataTemplate>
-                            <Grid Padding="16,12"
-                                  BorderBrush="{ThemeResource OutlineVariantBrush}"
-                                  BorderThickness="0,1,0,0">
-                              <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" MinWidth="150" />
-                                <ColumnDefinition Width="80" />
-                                <ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="100" />
-                              </Grid.ColumnDefinitions>
-                              <StackPanel Grid.Column="0"
-                                          Spacing="2">
-                                <TextBlock Text="{Binding Name}"
-                                           Style="{StaticResource BodyMedium}"
-                                           Foreground="{ThemeResource OnSurfaceBrush}"
-                                           TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding Sku}"
-                                           Style="{StaticResource LabelSmall}"
-                                           Foreground="{ThemeResource OnSurfaceVariantBrush}"
-                                           Visibility="{Binding Sku, Converter={StaticResource StringToVisibilityConverter}}" />
-                              </StackPanel>
-                              <TextBlock Grid.Column="1"
-                                         Text="{Binding Quantity}"
-                                         Style="{StaticResource BodyMedium}"
-                                         Foreground="{ThemeResource OnSurfaceBrush}"
-                                         HorizontalAlignment="Right"
-                                         VerticalAlignment="Center" />
-                              <TextBlock Grid.Column="2"
-                                         Text="{Binding Price, Converter={StaticResource CurrencyConverter}}"
-                                         Style="{StaticResource BodyMedium}"
-                                         Foreground="{ThemeResource OnSurfaceBrush}"
-                                         HorizontalAlignment="Right"
-                                         VerticalAlignment="Center" />
-                              <TextBlock Grid.Column="3"
-                                         Text="{Binding Total, Converter={StaticResource CurrencyConverter}}"
-                                         Style="{StaticResource BodyMedium}"
-                                         Foreground="{ThemeResource OnSurfaceBrush}"
-                                         HorizontalAlignment="Right"
-                                         VerticalAlignment="Center" />
-                            </Grid>
+                            <ItemsRepeater ItemsSource="{Binding Data}">
+                              <ItemsRepeater.Layout>
+                                <StackLayout Orientation="Vertical" />
+                              </ItemsRepeater.Layout>
+                              <ItemsRepeater.ItemTemplate>
+                                <DataTemplate>
+                                  <Grid Padding="16,12"
+                                        BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                        BorderThickness="0,1,0,0">
+                                    <Grid.ColumnDefinitions>
+                                      <ColumnDefinition Width="60" />
+                                      <ColumnDefinition Width="*" MinWidth="150" />
+                                      <ColumnDefinition Width="80" />
+                                      <ColumnDefinition Width="100" />
+                                      <ColumnDefinition Width="100" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Width="44"
+                                            Height="44"
+                                            Margin="0,0,16,0"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            CornerRadius="6"
+                                            Background="{ThemeResource SurfaceVariantBrush}">
+                                      <Grid>
+                                        <FontIcon Glyph="&#xE7BF;"
+                                                  FontSize="16"
+                                                  Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                                        <Image Source="{Binding ThumbnailBytes, Converter={StaticResource BytesToImageSourceConverter}}"
+                                               Stretch="UniformToFill" />
+                                      </Grid>
+                                    </Border>
+                                    <StackPanel Grid.Column="1"
+                                                Spacing="2"
+                                                VerticalAlignment="Center">
+                                      <TextBlock Text="{Binding Name}"
+                                                 Style="{StaticResource BodyMedium}"
+                                                 Foreground="{ThemeResource OnSurfaceBrush}"
+                                                 TextWrapping="Wrap" />
+                                      <TextBlock Text="{Binding Sku}"
+                                                 Style="{StaticResource LabelSmall}"
+                                                 Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                                 Visibility="{Binding Sku, Converter={StaticResource StringToVisibilityConverter}}" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2"
+                                               Text="{Binding Quantity}"
+                                               Style="{StaticResource BodyMedium}"
+                                               Foreground="{ThemeResource OnSurfaceBrush}"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="3"
+                                               Text="{Binding Price, Converter={StaticResource CurrencyConverter}}"
+                                               Style="{StaticResource BodyMedium}"
+                                               Foreground="{ThemeResource OnSurfaceBrush}"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="4"
+                                               Text="{Binding Total, Converter={StaticResource CurrencyConverter}}"
+                                               Style="{StaticResource BodyMedium}"
+                                               Foreground="{ThemeResource OnSurfaceBrush}"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center" />
+                                  </Grid>
+                                </DataTemplate>
+                              </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
                           </DataTemplate>
-                        </ItemsRepeater.ItemTemplate>
-                      </ItemsRepeater>
+                        </mvux:FeedView.ValueTemplate>
 
-                      <controls:EmptyState x:Uid="SalesDetailPage.NoItems"
-                                           Glyph="&#xE8EF;"
-                                           Background="Transparent"
-                                           Visibility="{Binding Data.SalesItems.Count, Converter={StaticResource ZeroToVisibilityConverter}}" />
+                        <mvux:FeedView.ProgressTemplate>
+                          <DataTemplate>
+                            <ProgressRing IsActive="True"
+                                          Width="32"
+                                          Height="32"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Margin="32" />
+                          </DataTemplate>
+                        </mvux:FeedView.ProgressTemplate>
+
+                        <mvux:FeedView.NoneTemplate>
+                          <DataTemplate>
+                            <controls:EmptyState x:Uid="SalesDetailPage.NoItems"
+                                                 Glyph="&#xE8EF;"
+                                                 Background="Transparent" />
+                          </DataTemplate>
+                        </mvux:FeedView.NoneTemplate>
+                      </mvux:FeedView>
                     </StackPanel>
                   </Border>
                 </StackPanel>
@@ -857,11 +898,11 @@
                             <StackPanel Grid.Column="1"
                                         Margin="8,0,0,0"
                                         Spacing="4">
-                              <TextBlock Text="{Binding Message}"
+                              <TextBlock Text="{Binding Converter={StaticResource SalesHistoryToTextConverter}}"
                                          Style="{StaticResource BodyMedium}"
                                          Foreground="{ThemeResource OnSurfaceBrush}"
                                          TextWrapping="Wrap" />
-                              <TextBlock Text="{Binding CreatedAt, Converter={StaticResource DateTimeOffsetToStringConverter}}"
+                              <TextBlock Text="{Binding DateCreated, Converter={StaticResource DateTimeOffsetToStringConverter}, ConverterParameter=g}"
                                          Style="{StaticResource LabelSmall}"
                                          Foreground="{ThemeResource OnSurfaceVariantBrush}" />
                             </StackPanel>

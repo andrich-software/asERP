@@ -29,19 +29,27 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
     private readonly IWarehouseRepository _warehouseRepository;
 
     /// <summary>
+    /// Repository for shipping provider data operations
+    /// </summary>
+    private readonly IShippingProviderRepository _shippingProviderRepository;
+
+    /// <summary>
     /// Constructor that initializes the handler with required dependencies
     /// </summary>
     /// <param name="logger">Logger for recording operations</param>
     /// <param name="salesChannelRepository">Repository for sales channel data access</param>
     /// <param name="warehouseRepository">Repository for warehouse data access</param>
+    /// <param name="shippingProviderRepository">Repository for shipping provider data access</param>
     public SalesChannelCreateHandler(
         IAppLogger<SalesChannelCreateHandler> logger,
         ISalesChannelRepository salesChannelRepository,
-        IWarehouseRepository warehouseRepository)
+        IWarehouseRepository warehouseRepository,
+        IShippingProviderRepository shippingProviderRepository)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _salesChannelRepository = salesChannelRepository ?? throw new ArgumentNullException(nameof(salesChannelRepository));
         _warehouseRepository = warehouseRepository ?? throw new ArgumentNullException(nameof(warehouseRepository));
+        _shippingProviderRepository = shippingProviderRepository ?? throw new ArgumentNullException(nameof(shippingProviderRepository));
     }
 
     /// <summary>
@@ -76,6 +84,31 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
 
         try
         {
+            // Carrier mappings must only ever reference the caller's own shipping providers: the id
+            // travels in the request body and the database FK is tenant-blind, so an unchecked id
+            // would let a channel resolve imported shipments onto another tenant's carrier (and its
+            // credentials). GetByIdAsync applies the tenant query filter, so a foreign id reads as
+            // missing.
+            var unknownProviderIds = new List<Guid>();
+            foreach (var providerId in request.CarrierMappings
+                         .Select(m => m.ShippingProviderId)
+                         .Where(id => id != Guid.Empty)
+                         .Distinct())
+            {
+                if (await _shippingProviderRepository.GetByIdAsync(providerId, asNoTracking: true) is null)
+                {
+                    unknownProviderIds.Add(providerId);
+                }
+            }
+
+            if (unknownProviderIds.Count > 0)
+            {
+                result.Succeeded = false;
+                result.StatusCode = ResultStatusCode.BadRequest;
+                result.Messages.Add($"The following shipping provider IDs do not exist: {string.Join(", ", unknownProviderIds)}");
+                return result;
+            }
+
             // Map request to domain entity
             var salesChannelToCreate = MapToEntity(request);
 
@@ -149,6 +182,19 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
             ImportStock = syncAlwaysOn || command.ImportStock,
             ImportCategories = syncAlwaysOn || command.ImportCategories,
             ExportCategories = syncAlwaysOn || command.ExportCategories,
+            // Not forced on for asShop: the storefront reads the ERP's shipments directly, so there
+            // is nothing to exchange in either direction.
+            ShipmentTrackingMode = syncAlwaysOn ? Domain.Enums.ShipmentTrackingMode.None : command.ShipmentTrackingMode,
+            CarrierMappings = command.CarrierMappings
+                .Where(m => !string.IsNullOrWhiteSpace(m.RemoteCarrierCode) && m.ShippingProviderId != Guid.Empty)
+                .GroupBy(m => m.RemoteCarrierCode.Trim().ToLowerInvariant())
+                .Select(g => new Domain.Entities.SalesChannelCarrierMapping
+                {
+                    Id = Guid.NewGuid(),
+                    RemoteCarrierCode = g.Key,
+                    ShippingProviderId = g.Last().ShippingProviderId,
+                })
+                .ToList(),
             // asShop tracking is built-in (no plugin/token needed, cookieless by design), so new shop
             // channels start with analytics on; DELETE /tracking turns it off. Plugin-served channel
             // types stay off until a token is rotated.

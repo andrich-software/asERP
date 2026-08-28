@@ -52,11 +52,14 @@ public class SessionManager : ISessionManager, IDisposable
         _suspendedAt = null;
         _isActive = true;
 
-        _timerCts = new CancellationTokenSource();
-        _timer = new PeriodicTimer(TimeSpan.FromSeconds(_settings.TokenRefreshCheckIntervalSeconds));
+        var cts = new CancellationTokenSource();
+        var timer = new PeriodicTimer(TimeSpan.FromSeconds(_settings.TokenRefreshCheckIntervalSeconds));
+        _timerCts = cts;
+        _timer = timer;
 
-        // Fire-and-forget the timer loop
-        _ = RunTimerLoopAsync(_timerCts.Token);
+        // Fire-and-forget the timer loop. The instances are passed in so the loop never
+        // touches the fields, which StopAsync/Dispose may null out while a tick is running.
+        _ = RunTimerLoopAsync(timer, cts.Token);
 
         return Task.CompletedTask;
     }
@@ -127,12 +130,17 @@ public class SessionManager : ISessionManager, IDisposable
         RecordUserActivity();
     }
 
-    private async Task RunTimerLoopAsync(CancellationToken cancellationToken)
+    private async Task RunTimerLoopAsync(PeriodicTimer timer, CancellationToken cancellationToken)
     {
         try
         {
-            while (await _timer!.WaitForNextTickAsync(cancellationToken))
+            while (await timer.WaitForNextTickAsync(cancellationToken))
             {
+                if (!_isActive)
+                {
+                    break;
+                }
+
                 await CheckTokenExpiryAsync();
                 await CheckInactivityAsync();
             }

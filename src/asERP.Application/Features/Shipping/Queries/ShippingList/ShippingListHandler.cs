@@ -2,6 +2,7 @@ using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Features.Shipping.Shared;
 using asERP.Application.Mediator;
 using asERP.Application.Specifications;
 using asERP.Domain.Dtos.Shipping;
@@ -35,9 +36,6 @@ public class ShippingListHandler : IRequestHandler<ShippingListQuery, PaginatedR
         nameof(ShipmentListItemDto.DateCreated)
     };
 
-    /// <summary>A shipped, undelivered parcel older than this is flagged as a problem.</summary>
-    private static readonly TimeSpan OverdueAfter = TimeSpan.FromDays(4);
-
     private readonly IAppLogger<ShippingListHandler> _logger;
     private readonly IShippingRepository _shippingRepository;
 
@@ -69,7 +67,7 @@ public class ShippingListHandler : IRequestHandler<ShippingListQuery, PaginatedR
         }
 
         // Computed as a C# parameter so the comparison stays SQL-translatable on every provider.
-        var overdueCutoff = DateTime.UtcNow.Subtract(OverdueAfter);
+        var overdueCutoff = DateTime.UtcNow.Subtract(ShippingProblemFilter.OverdueAfter);
         var labelOutbox = _shippingRepository.GetContext<ShippingLabelOutbox>();
 
         var projected = query.Select(s => new ShipmentListItemDto
@@ -88,6 +86,8 @@ public class ShippingListHandler : IRequestHandler<ShippingListQuery, PaginatedR
             ShippedAt = s.ShippedAt,
             DeliveredAt = s.DeliveredAt,
             HasLabel = s.LabelData != null && s.LabelData.Length > 0,
+            // Keep in sync with ShippingProblemFilter.IsProblem — the shared expression cannot
+            // be inlined into this projection without an expression-composition library.
             IsProblem = s.Status == ShippingStatus.Lost
                 || s.Status == ShippingStatus.ReturnedToSender
                 || s.Status == ShippingStatus.DeliveryFailed

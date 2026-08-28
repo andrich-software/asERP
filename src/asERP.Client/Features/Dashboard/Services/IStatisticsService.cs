@@ -26,9 +26,10 @@ public interface IStatisticsService
     Task<CustomersTodayDto?> GetCustomersTodayAsync(int? hours = null, CancellationToken ct = default);
 
     /// <summary>
-    /// Gets the product/inventory statistics.
+    /// Gets the actionable dashboard to-do counts (ready to ship, payment overdue,
+    /// shipping problems, products to reorder).
     /// </summary>
-    Task<ProductsTodayDto?> GetProductsTodayAsync(CancellationToken ct = default);
+    Task<DashboardTodosDto?> GetDashboardTodosAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Gets the latest saless.

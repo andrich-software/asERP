@@ -8,8 +8,8 @@ namespace asERP.Client.Features.Products.Views;
 
 public sealed partial class ProductDetailPage : Page
 {
-    private static readonly string[] TabPanelNames = ["OverviewTab", "DescriptionTab", "VariantsTab", "ImagesTab"];
-    private const int ImagesTabIndex = 3;
+    private static readonly string[] TabPanelNames = ["OverviewTab", "DescriptionTab", "VariantsTab", "StockTab", "ImagesTab"];
+    private const int ImagesTabIndex = 4;
 
     // Survives FeedView template re-realization (e.g. refresh after returning from Edit).
     private int _selectedTabIndex;

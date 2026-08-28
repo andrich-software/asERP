@@ -108,6 +108,7 @@ public class SalesCancelHandler : IRequestHandler<SalesCancelCommand, Result<Gui
                 SalesStatusOld = oldStatus,
                 SalesStatusNew = SalesStatus.Cancelled,
                 Description = "Order cancelled",
+                MessageKey = SalesHistoryMessage.OrderCancelled,
                 IsSystemGenerated = false
             });
 

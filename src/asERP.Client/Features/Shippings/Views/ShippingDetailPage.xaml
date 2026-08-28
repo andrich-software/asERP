@@ -74,40 +74,40 @@
                 <StackPanel Orientation="Horizontal"
                             Spacing="8">
                   <Button x:Uid="ShippingDetailPage.ActionOpenTracking"
-                          Style="{StaticResource OutlinedButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Click="OpenTracking_Click"
                           CommandParameter="{Binding Data.TrackingUrl}"
                           Visibility="{Binding Data.TrackingUrl, Converter={StaticResource StringToVisibilityConverter}}" />
                   <Button x:Uid="LabelAction.Save"
-                          Style="{StaticResource OutlinedButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Click="SaveLabel_Click"
                           CommandParameter="{Binding Data.Id}"
                           Visibility="{Binding Data.HasLabel, Converter={StaticResource LabelCapabilityToVisibilityConverter}, ConverterParameter=Save}" />
                   <Button x:Uid="LabelAction.Download"
-                          Style="{StaticResource OutlinedButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Click="DownloadLabel_Click"
                           CommandParameter="{Binding Data.Id}"
                           Visibility="{Binding Data.HasLabel, Converter={StaticResource LabelCapabilityToVisibilityConverter}, ConverterParameter=Download}" />
                   <Button x:Uid="LabelAction.Print"
-                          Style="{StaticResource OutlinedButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Click="PrintLabel_Click"
                           CommandParameter="{Binding Data.Id}"
                           Visibility="{Binding Data.HasLabel, Converter={StaticResource LabelCapabilityToVisibilityConverter}, ConverterParameter=Print}" />
                   <Button x:Uid="LabelAction.Open"
-                          Style="{StaticResource OutlinedButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Click="OpenLabel_Click"
                           CommandParameter="{Binding Data.Id}"
                           Visibility="{Binding Data.HasLabel, Converter={StaticResource LabelCapabilityToVisibilityConverter}, ConverterParameter=Open}" />
                   <Button x:Uid="ShippingDetailPage.ActionPackingSlip"
-                          Style="{StaticResource OutlinedButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Click="PackingSlip_Click"
                           CommandParameter="{Binding Data.Id}" />
                   <Button x:Uid="ShippingDetailPage.ActionRetryLabel"
-                          Style="{StaticResource OutlinedButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Click="RetryLabel_Click"
                           Visibility="{Binding Data.LabelQueueStatus, Converter={StaticResource DeadLetterToVisibilityConverter}}" />
                   <Button x:Uid="ShippingDetailPage.ActionCancel"
-                          Style="{StaticResource OutlinedButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Foreground="{ThemeResource ErrorBrush}"
                           Click="CancelShipment_Click"
                           Visibility="{Binding Data.Status, Converter={StaticResource CanCancelShipmentToVisibilityConverter}}" />
@@ -251,11 +251,11 @@
                               <controls:StatusBadge Status="{x:Bind models:ShippingTimelineVisuals.BadgeStatus(ShippingStatusNew)}" />
                             </StackPanel>
 
-                            <TextBlock Text="{x:Bind Description}"
+                            <TextBlock Text="{x:Bind models:ShippingTimelineVisuals.EntryText(MessageKey, MessageArgs, Description)}"
                                        Style="{StaticResource BodyMedium}"
                                        Foreground="{ThemeResource OnSurfaceBrush}"
                                        TextWrapping="Wrap"
-                                       Visibility="{x:Bind models:ShippingRowVisuals.HasText(Description)}" />
+                                       Visibility="{x:Bind models:ShippingTimelineVisuals.HasEntryText(MessageKey, MessageArgs, Description)}" />
                             <TextBlock Text="{x:Bind models:ShippingTimelineVisuals.FormatTimestamp(DateCreated)}"
                                        Style="{StaticResource LabelSmall}"
                                        Foreground="{ThemeResource OnSurfaceVariantBrush}" />
