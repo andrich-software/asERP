@@ -510,6 +510,18 @@
               </StackPanel>
             </Button>
 
+            <Button x:Name="NavItemShippingProviders"
+                    Style="{StaticResource SidebarNavItemStyle}"
+                    Tag="ShippingProviders"
+                    Click="OnNavItemClick">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <FontIcon Glyph="&#xE7B8;" FontSize="16" />
+                <TextBlock x:Uid="Shell.NavItem.ShippingProviders"
+                           Style="{StaticResource BodyMedium}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
             <Button x:Name="NavItemAiModels"
                     Style="{StaticResource SidebarNavItemStyle}"
                     Tag="AiModels"

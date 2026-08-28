@@ -85,6 +85,49 @@ public class ShippingOptionsForSalesTests : TenantIsolatedTestBase
     }
 
     [Fact]
+    public async Task Options_ExcludeInactiveRates()
+    {
+        await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
+        var provider = ShippingTestDataSeeder.AddProvider(DbContext, TenantConstants.TestTenant1Id);
+        var activeRate = ShippingTestDataSeeder.AddRate(DbContext, provider, name: "Active");
+        var inactiveRate = ShippingTestDataSeeder.AddRate(DbContext, provider, name: "Inactive",
+            isActive: false);
+        var sales = ShippingTestDataSeeder.AddSales(DbContext, TenantConstants.TestTenant1Id, 904);
+        await DbContext.SaveChangesAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var result = await GetOptionsAsync(sales.Id);
+
+        TestAssertions.AssertEqual(1, result.Data!.Count);
+        TestAssertions.AssertEqual(activeRate.Id, result.Data[0].RateId);
+        TestAssertions.AssertDoesNotContain(inactiveRate.Id, result.Data.Select(r => r.RateId));
+    }
+
+    [Fact]
+    public async Task Options_AreSortedBySortOrderBeforePrice()
+    {
+        await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
+        var provider = ShippingTestDataSeeder.AddProvider(DbContext, TenantConstants.TestTenant1Id);
+        // Cheapest rate has the highest sort order — sort order must win over price.
+        var cheapButLast = ShippingTestDataSeeder.AddRate(DbContext, provider, name: "Economy",
+            price: 3.49m, sortOrder: 2);
+        var expensiveButFirst = ShippingTestDataSeeder.AddRate(DbContext, provider, name: "Express",
+            price: 12.99m, sortOrder: 0);
+        var middle = ShippingTestDataSeeder.AddRate(DbContext, provider, name: "Standard",
+            price: 5.99m, sortOrder: 1);
+        var sales = ShippingTestDataSeeder.AddSales(DbContext, TenantConstants.TestTenant1Id, 905);
+        await DbContext.SaveChangesAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var result = await GetOptionsAsync(sales.Id);
+
+        TestAssertions.AssertEqual(3, result.Data!.Count);
+        TestAssertions.AssertEqual(expensiveButFirst.Id, result.Data[0].RateId);
+        TestAssertions.AssertEqual(middle.Id, result.Data[1].RateId);
+        TestAssertions.AssertEqual(cheapButLast.Id, result.Data[2].RateId);
+    }
+
+    [Fact]
     public async Task Options_UnresolvableCountry_ReturnsOkWithEmptyListAndMessage()
     {
         await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);

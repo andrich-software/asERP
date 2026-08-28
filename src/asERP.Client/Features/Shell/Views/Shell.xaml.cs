@@ -630,6 +630,9 @@ public sealed partial class Shell : UserControl, IContentControlProvider
                 case "TaxClasses":
                     await navigator.NavigateViewModelAsync<TaxClassListModel>(this);
                     break;
+                case "ShippingProviders":
+                    await navigator.NavigateViewModelAsync<asERP.Client.Features.ShippingProviders.Models.ShippingProviderListModel>(this);
+                    break;
                 case "ProductAttributes":
                     await navigator.NavigateViewModelAsync<ProductAttributeListModel>(this);
                     break;

@@ -51,13 +51,16 @@ public class ShippingProviderDetailHandler : IRequestHandler<ShippingProviderDet
                 Id = r.Id,
                 ShippingProviderId = r.ShippingProviderId,
                 Name = r.Name,
+                IsActive = r.IsActive,
+                SortOrder = r.SortOrder,
+                CarrierProduct = r.CarrierProduct,
                 MaxLength = r.MaxLength,
                 MaxWidth = r.MaxWidth,
                 MaxHeight = r.MaxHeight,
                 MaxWeight = r.MaxWeight,
                 Price = r.Price,
                 AllowedCountryCount = r.AllowedCountries.Count
-            }).OrderBy(r => r.Name).ToList() ?? new List<ShippingProviderRateListDto>()
+            }).OrderBy(r => r.SortOrder).ThenBy(r => r.Name).ToList() ?? new List<ShippingProviderRateListDto>()
         };
 
         return Result<ShippingProviderDetailDto>.Success(data);

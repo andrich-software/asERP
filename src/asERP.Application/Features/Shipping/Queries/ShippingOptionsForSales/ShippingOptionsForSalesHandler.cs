@@ -59,8 +59,10 @@ public class ShippingOptionsForSalesHandler : IRequestHandler<ShippingOptionsFor
 
         var rates = await _shippingProviderRateRepository.Entities
             .Where(r => r.ShippingProvider.IsEnabled)
+            .Where(r => r.IsActive)
             .Where(r => r.AllowedCountries.Any(c => c.CountryId == countryId))
-            .OrderBy(r => r.Price)
+            .OrderBy(r => r.SortOrder)
+            .ThenBy(r => r.Price)
             .Select(r => new ApplicableShippingRateDto
             {
                 RateId = r.Id,

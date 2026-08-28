@@ -80,6 +80,11 @@ public static class ShippingTestDataSeeder
         decimal maxHeight = 60m,
         decimal maxWeight = 31.5m,
         decimal price = 5.99m,
+        bool isActive = true,
+        int sortOrder = 0,
+        string? carrierProduct = null,
+        string? carrierProcedure = null,
+        string? carrierParticipation = null,
         params Guid[] allowedCountryIds)
     {
         EnsureCountries(context);
@@ -94,6 +99,11 @@ public static class ShippingTestDataSeeder
             MaxHeight = maxHeight,
             MaxWeight = maxWeight,
             Price = price,
+            IsActive = isActive,
+            SortOrder = sortOrder,
+            CarrierProduct = carrierProduct,
+            CarrierProcedure = carrierProcedure,
+            CarrierParticipation = carrierParticipation,
             TenantId = provider.TenantId
         };
 

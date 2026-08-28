@@ -71,6 +71,12 @@ public class ShippingProviderRateUpdateHandler : IRequestHandler<ShippingProvide
             }
 
             rateToUpdate.Name = request.Name;
+            rateToUpdate.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+            rateToUpdate.IsActive = request.IsActive;
+            rateToUpdate.SortOrder = request.SortOrder;
+            rateToUpdate.CarrierProduct = ShippingProviderRateCreate.ShippingProviderRateCreateHandler.NormalizeCode(request.CarrierProduct);
+            rateToUpdate.CarrierProcedure = ShippingProviderRateCreate.ShippingProviderRateCreateHandler.NormalizeCode(request.CarrierProcedure);
+            rateToUpdate.CarrierParticipation = ShippingProviderRateCreate.ShippingProviderRateCreateHandler.NormalizeCode(request.CarrierParticipation);
             rateToUpdate.MaxLength = request.MaxLength;
             rateToUpdate.MaxWidth = request.MaxWidth;
             rateToUpdate.MaxHeight = request.MaxHeight;

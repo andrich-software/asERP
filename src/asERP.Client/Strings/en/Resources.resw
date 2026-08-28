@@ -6448,4 +6448,355 @@
   <data name="SalesHistory.ReturnStatusChangedWithNote" xml:space="preserve">
     <value>Return status changed: {0} → {1} ({2})</value>
   </data>
+  <data name="Shell.NavItem.ShippingProviders.Text" xml:space="preserve">
+    <value>Shipping methods</value>
+  </data>
+  <data name="ShippingProviderListPage.PageHeader.Title" xml:space="preserve">
+    <value>Shipping methods</value>
+  </data>
+  <data name="ShippingProviderListPage.PageHeader.Description" xml:space="preserve">
+    <value>Manage carrier accounts and their shipping methods</value>
+  </data>
+  <data name="ShippingProviderListPage.HeaderButton.New.Content" xml:space="preserve">
+    <value>Add carrier</value>
+  </data>
+  <data name="ShippingProviderListPage.ColumnName.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ShippingProviderListPage.ColumnType.Text" xml:space="preserve">
+    <value>Carrier</value>
+  </data>
+  <data name="ShippingProviderListPage.ColumnStatus.Text" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="ShippingProviderListPage.ColumnSandbox.Text" xml:space="preserve">
+    <value>Mode</value>
+  </data>
+  <data name="ShippingProviderListPage.ColumnRates.Text" xml:space="preserve">
+    <value>Shipping methods</value>
+  </data>
+  <data name="ShippingProviderListPage.SandboxBadge.Text" xml:space="preserve">
+    <value>Sandbox</value>
+  </data>
+  <data name="ShippingProviderListPage.NoProviders.Title" xml:space="preserve">
+    <value>No carriers configured</value>
+  </data>
+  <data name="ShippingProviderListPage.NoProviders.Message" xml:space="preserve">
+    <value>Add a carrier (DHL, DPD, GLS or UPS) to configure shipping methods and create shipping labels.</value>
+  </data>
+  <data name="ShippingProviderEditPage.TitleNew" xml:space="preserve">
+    <value>Add carrier</value>
+  </data>
+  <data name="ShippingProviderEditPage.TitleEdit" xml:space="preserve">
+    <value>Edit carrier</value>
+  </data>
+  <data name="ShippingProviderEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ShippingProviderEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ShippingProviderEditPage.BasicCard.Header" xml:space="preserve">
+    <value>Basic data</value>
+  </data>
+  <data name="ShippingProviderEditPage.NameBox.Header" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ShippingProviderEditPage.NameBox.PlaceholderText" xml:space="preserve">
+    <value>e.g. DHL business account</value>
+  </data>
+  <data name="ShippingProviderEditPage.TypeBox.Header" xml:space="preserve">
+    <value>Carrier</value>
+  </data>
+  <data name="ShippingProviderEditPage.TypeLockedHint.Text" xml:space="preserve">
+    <value>The carrier of an existing account cannot be changed because shipments were booked through it.</value>
+  </data>
+  <data name="ShippingProviderEditPage.IsEnabledBox.Content" xml:space="preserve">
+    <value>Active – account can be used for new shipments</value>
+  </data>
+  <data name="ShippingProviderEditPage.UseSandboxBox.Content" xml:space="preserve">
+    <value>Use the carrier's sandbox/test environment</value>
+  </data>
+  <data name="ShippingProviderEditPage.CredentialsCard.Header" xml:space="preserve">
+    <value>Credentials</value>
+  </data>
+  <data name="ShippingProviderEditPage.CredentialsHintDhl" xml:space="preserve">
+    <value>DHL Parcel DE: username/password = business portal login, API key = dhl-api-key, account number = EKP (10 digits).</value>
+  </data>
+  <data name="ShippingProviderEditPage.CredentialsHintDpd" xml:space="preserve">
+    <value>DPD Cloud webservice: username = cloud user id, API key = cloud token.</value>
+  </data>
+  <data name="ShippingProviderEditPage.CredentialsHintGls" xml:space="preserve">
+    <value>GLS Web API: username/password = Web API user. The contact id is set under carrier settings.</value>
+  </data>
+  <data name="ShippingProviderEditPage.CredentialsHintUps" xml:space="preserve">
+    <value>UPS: API key/API secret = OAuth client id and client secret, account number = UPS shipper number.</value>
+  </data>
+  <data name="ShippingProviderEditPage.UsernameBox.Header" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="ShippingProviderEditPage.PasswordBox.Header" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="ShippingProviderEditPage.ApiKeyBox.Header" xml:space="preserve">
+    <value>API key</value>
+  </data>
+  <data name="ShippingProviderEditPage.ApiSecretBox.Header" xml:space="preserve">
+    <value>API secret</value>
+  </data>
+  <data name="ShippingProviderEditPage.AccountNumberBox.Header" xml:space="preserve">
+    <value>Account number (DHL EKP / UPS shipper no.)</value>
+  </data>
+  <data name="ShippingProviderEditPage.SecretStored" xml:space="preserve">
+    <value>Stored – leave blank to keep the current value</value>
+  </data>
+  <data name="ShippingProviderEditPage.SecretEmpty" xml:space="preserve">
+    <value>Not set yet</value>
+  </data>
+  <data name="ShippingProviderEditPage.SenderCard.Header" xml:space="preserve">
+    <value>Sender address</value>
+  </data>
+  <data name="ShippingProviderEditPage.SenderNameBox.Header" xml:space="preserve">
+    <value>Name / company</value>
+  </data>
+  <data name="ShippingProviderEditPage.SenderStreetBox.Header" xml:space="preserve">
+    <value>Street and number</value>
+  </data>
+  <data name="ShippingProviderEditPage.SenderZipBox.Header" xml:space="preserve">
+    <value>ZIP</value>
+  </data>
+  <data name="ShippingProviderEditPage.SenderCityBox.Header" xml:space="preserve">
+    <value>City</value>
+  </data>
+  <data name="ShippingProviderEditPage.SenderCountryBox.Header" xml:space="preserve">
+    <value>Country code (ISO-2)</value>
+  </data>
+  <data name="ShippingProviderEditPage.SenderCountryBox.PlaceholderText" xml:space="preserve">
+    <value>DE</value>
+  </data>
+  <data name="ShippingProviderEditPage.SenderEmailBox.Header" xml:space="preserve">
+    <value>Email (optional)</value>
+  </data>
+  <data name="ShippingProviderEditPage.SenderPhoneBox.Header" xml:space="preserve">
+    <value>Phone (optional)</value>
+  </data>
+  <data name="ShippingProviderEditPage.CarrierConfigCard.Header" xml:space="preserve">
+    <value>Carrier settings</value>
+  </data>
+  <data name="ShippingProviderEditPage.DhlProductBox.Header" xml:space="preserve">
+    <value>Default product code (optional)</value>
+  </data>
+  <data name="ShippingProviderEditPage.DhlProductBox.PlaceholderText" xml:space="preserve">
+    <value>V01PAK (domestic) / V53WPAK (international)</value>
+  </data>
+  <data name="ShippingProviderEditPage.DhlProcedureBox.Header" xml:space="preserve">
+    <value>Billing procedure</value>
+  </data>
+  <data name="ShippingProviderEditPage.DhlProcedureBox.PlaceholderText" xml:space="preserve">
+    <value>01</value>
+  </data>
+  <data name="ShippingProviderEditPage.DhlParticipationBox.Header" xml:space="preserve">
+    <value>Participation</value>
+  </data>
+  <data name="ShippingProviderEditPage.DhlParticipationBox.PlaceholderText" xml:space="preserve">
+    <value>01</value>
+  </data>
+  <data name="ShippingProviderEditPage.DhlReturnProcedureBox.Header" xml:space="preserve">
+    <value>Return procedure</value>
+  </data>
+  <data name="ShippingProviderEditPage.DhlReturnProcedureBox.PlaceholderText" xml:space="preserve">
+    <value>07</value>
+  </data>
+  <data name="ShippingProviderEditPage.DhlReturnReceiverIdBox.Header" xml:space="preserve">
+    <value>Return receiver id (for return labels)</value>
+  </data>
+  <data name="ShippingProviderEditPage.DhlTrackingApiKeyBox.Header" xml:space="preserve">
+    <value>Tracking API key (optional, falls back to API key)</value>
+  </data>
+  <data name="ShippingProviderEditPage.DpdProductBox.Header" xml:space="preserve">
+    <value>Default product</value>
+  </data>
+  <data name="ShippingProviderEditPage.DpdProductBox.PlaceholderText" xml:space="preserve">
+    <value>Classic</value>
+  </data>
+  <data name="ShippingProviderEditPage.DpdReturnProductBox.Header" xml:space="preserve">
+    <value>Return product</value>
+  </data>
+  <data name="ShippingProviderEditPage.DpdReturnProductBox.PlaceholderText" xml:space="preserve">
+    <value>Returns</value>
+  </data>
+  <data name="ShippingProviderEditPage.DpdLabelSizeBox.Header" xml:space="preserve">
+    <value>Label size</value>
+  </data>
+  <data name="ShippingProviderEditPage.DpdLabelSizeBox.PlaceholderText" xml:space="preserve">
+    <value>PDF_A6</value>
+  </data>
+  <data name="ShippingProviderEditPage.GlsContactIdBox.Header" xml:space="preserve">
+    <value>Contact id (ShipperId)</value>
+  </data>
+  <data name="ShippingProviderEditPage.GlsProductBox.Header" xml:space="preserve">
+    <value>Default product</value>
+  </data>
+  <data name="ShippingProviderEditPage.GlsProductBox.PlaceholderText" xml:space="preserve">
+    <value>PARCEL</value>
+  </data>
+  <data name="ShippingProviderEditPage.UpsServiceCodeBox.Header" xml:space="preserve">
+    <value>Default service code</value>
+  </data>
+  <data name="ShippingProviderEditPage.UpsServiceCodeBox.PlaceholderText" xml:space="preserve">
+    <value>11 (UPS Standard)</value>
+  </data>
+  <data name="ShippingProviderEditPage.CarrierConfigHint.Text" xml:space="preserve">
+    <value>These values are the account defaults. Individual shipping methods can set their own product/service code under "Carrier product".</value>
+  </data>
+  <data name="ShippingProviderEditPage.TrackingCard.Header" xml:space="preserve">
+    <value>Tracking</value>
+  </data>
+  <data name="ShippingProviderEditPage.TrackingIntervalBox.Header" xml:space="preserve">
+    <value>Poll interval per shipment (seconds)</value>
+  </data>
+  <data name="ShippingProviderEditPage.RatesCard.Header" xml:space="preserve">
+    <value>Shipping methods</value>
+  </data>
+  <data name="ShippingProviderEditPage.RateInactiveBadge.Text" xml:space="preserve">
+    <value>Inactive</value>
+  </data>
+  <data name="ShippingProviderEditPage.NoRatesHint.Text" xml:space="preserve">
+    <value>No shipping methods yet. Add e.g. "DHL Paket" or "DHL Warenpost" – only with a shipping method can this carrier be selected when shipping.</value>
+  </data>
+  <data name="ShippingProviderEditPage.AddRateButton.Content" xml:space="preserve">
+    <value>Add shipping method</value>
+  </data>
+  <data name="ShippingProviderEditPage.DeleteButton.Content" xml:space="preserve">
+    <value>Delete carrier</value>
+  </data>
+  <data name="ShippingProviderEditPage.ToastCreated" xml:space="preserve">
+    <value>Carrier "{0}" was created.</value>
+  </data>
+  <data name="ShippingProviderEditPage.ToastUpdated" xml:space="preserve">
+    <value>Carrier "{0}" was saved.</value>
+  </data>
+  <data name="ShippingProviderEditPage.ToastDeleted" xml:space="preserve">
+    <value>Carrier "{0}" was deleted.</value>
+  </data>
+  <data name="ShippingProviderEditPage.SaveFailed" xml:space="preserve">
+    <value>Saving failed: {0}</value>
+  </data>
+  <data name="ShippingProviderEditPage.DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete carrier?</value>
+  </data>
+  <data name="ShippingProviderEditPage.DeleteConfirmMessage" xml:space="preserve">
+    <value>The carrier and its configuration will be removed. Its shipping methods must be deleted first.</value>
+  </data>
+  <data name="ShippingRateEditPage.TitleNew" xml:space="preserve">
+    <value>Add shipping method</value>
+  </data>
+  <data name="ShippingRateEditPage.TitleEdit" xml:space="preserve">
+    <value>Edit shipping method</value>
+  </data>
+  <data name="ShippingRateEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ShippingRateEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ShippingRateEditPage.BasicCard.Header" xml:space="preserve">
+    <value>Shipping method</value>
+  </data>
+  <data name="ShippingRateEditPage.NameBox.Header" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ShippingRateEditPage.NameBox.PlaceholderText" xml:space="preserve">
+    <value>e.g. DHL Paket</value>
+  </data>
+  <data name="ShippingRateEditPage.DescriptionBox.Header" xml:space="preserve">
+    <value>Description (internal, optional)</value>
+  </data>
+  <data name="ShippingRateEditPage.IsActiveBox.Content" xml:space="preserve">
+    <value>Active – offered when creating shipments</value>
+  </data>
+  <data name="ShippingRateEditPage.PriceBox.Header" xml:space="preserve">
+    <value>Shipping cost (€)</value>
+  </data>
+  <data name="ShippingRateEditPage.SortOrderBox.Header" xml:space="preserve">
+    <value>Sort order</value>
+  </data>
+  <data name="ShippingRateEditPage.LimitsCard.Header" xml:space="preserve">
+    <value>Parcel limits</value>
+  </data>
+  <data name="ShippingRateEditPage.MaxWeightBox.Header" xml:space="preserve">
+    <value>Max. weight (kg)</value>
+  </data>
+  <data name="ShippingRateEditPage.MaxLengthBox.Header" xml:space="preserve">
+    <value>Max. length (cm)</value>
+  </data>
+  <data name="ShippingRateEditPage.MaxWidthBox.Header" xml:space="preserve">
+    <value>Max. width (cm)</value>
+  </data>
+  <data name="ShippingRateEditPage.MaxHeightBox.Header" xml:space="preserve">
+    <value>Max. height (cm)</value>
+  </data>
+  <data name="ShippingRateEditPage.CarrierProductCard.Header" xml:space="preserve">
+    <value>Carrier product</value>
+  </data>
+  <data name="ShippingRateEditPage.CarrierProductBox.Header" xml:space="preserve">
+    <value>Product/service code (optional)</value>
+  </data>
+  <data name="ShippingRateEditPage.CarrierProcedureBox.Header" xml:space="preserve">
+    <value>Billing procedure (DHL)</value>
+  </data>
+  <data name="ShippingRateEditPage.CarrierProcedureBox.PlaceholderText" xml:space="preserve">
+    <value>e.g. 62 for Warenpost</value>
+  </data>
+  <data name="ShippingRateEditPage.CarrierParticipationBox.Header" xml:space="preserve">
+    <value>Participation (DHL)</value>
+  </data>
+  <data name="ShippingRateEditPage.ProductHintDhl" xml:space="preserve">
+    <value>Without a value the carrier default applies (V01PAK domestic / V53WPAK international). For DHL Warenpost enter e.g. product V62WP with procedure 62 – product and procedure belong together.</value>
+  </data>
+  <data name="ShippingRateEditPage.ProductHintDpd" xml:space="preserve">
+    <value>Without a value the carrier's default product is used (e.g. Classic).</value>
+  </data>
+  <data name="ShippingRateEditPage.ProductHintGls" xml:space="preserve">
+    <value>Without a value the carrier's default product is used (e.g. PARCEL).</value>
+  </data>
+  <data name="ShippingRateEditPage.ProductHintUps" xml:space="preserve">
+    <value>Without a value the carrier's default service code is used (e.g. 11 = UPS Standard).</value>
+  </data>
+  <data name="ShippingRateEditPage.CountriesCard.Header" xml:space="preserve">
+    <value>Destination countries</value>
+  </data>
+  <data name="ShippingRateEditPage.CountriesSelected" xml:space="preserve">
+    <value>{0} countries selected</value>
+  </data>
+  <data name="ShippingRateEditPage.CountrySearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search country …</value>
+  </data>
+  <data name="ShippingRateEditPage.SelectVisibleButton.Content" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="ShippingRateEditPage.DeselectVisibleButton.Content" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="ShippingRateEditPage.DeleteButton.Content" xml:space="preserve">
+    <value>Delete shipping method</value>
+  </data>
+  <data name="ShippingRateEditPage.ToastCreated" xml:space="preserve">
+    <value>Shipping method "{0}" was created.</value>
+  </data>
+  <data name="ShippingRateEditPage.ToastUpdated" xml:space="preserve">
+    <value>Shipping method "{0}" was saved.</value>
+  </data>
+  <data name="ShippingRateEditPage.ToastDeleted" xml:space="preserve">
+    <value>Shipping method "{0}" was deleted.</value>
+  </data>
+  <data name="ShippingRateEditPage.SaveFailed" xml:space="preserve">
+    <value>Saving failed: {0}</value>
+  </data>
+  <data name="ShippingRateEditPage.DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete shipping method?</value>
+  </data>
+  <data name="ShippingRateEditPage.DeleteConfirmMessage" xml:space="preserve">
+    <value>The shipping method will be removed. Existing shipments keep their data.</value>
+  </data>
 </root>

@@ -1,0 +1,325 @@
+<Page x:Class="asERP.Client.Features.ShippingProviders.Views.ShippingProviderEditPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:models="using:asERP.Client.Features.ShippingProviders.Models"
+      xmlns:utu="using:Uno.Toolkit.UI"
+      xmlns:controls="using:asERP.Client.Controls"
+      Background="{ThemeResource BackgroundBrush}">
+
+  <Grid utu:SafeArea.Insets="VisibleBounds">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <utu:NavigationBar Grid.Row="0" Content="{Binding Title}">
+      <utu:NavigationBar.PrimaryCommands>
+        <AppBarElementContainer VerticalContentAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,8,0">
+            <Button x:Uid="ShippingProviderEditPage.HeaderAction.Cancel"
+                    Style="{StaticResource HeaderActionButtonStyle}"
+                    Click="CancelButton_Click" />
+            <Button x:Uid="ShippingProviderEditPage.HeaderAction.Save"
+                    Style="{StaticResource HeaderActionSaveButtonStyle}"
+                    Click="SaveButton_Click"
+                    IsEnabled="{Binding CanSave}" />
+          </StackPanel>
+        </AppBarElementContainer>
+      </utu:NavigationBar.PrimaryCommands>
+    </utu:NavigationBar>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Padding="24" Spacing="16" MaxWidth="700" HorizontalAlignment="Stretch">
+
+        <!-- Error Message Banner -->
+        <Border Background="{ThemeResource ErrorContainerBrush}"
+                CornerRadius="8"
+                Padding="16"
+                Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}, FallbackValue=Collapsed}">
+          <TextBlock Text="{Binding ErrorMessage}"
+                     Style="{StaticResource BodyMedium}"
+                     Foreground="{ThemeResource OnErrorContainerBrush}"
+                     TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Basic data -->
+        <controls:SectionCard x:Uid="ShippingProviderEditPage.BasicCard" HeaderGlyph="&#xE7B8;">
+          <StackPanel Spacing="12">
+            <TextBox x:Uid="ShippingProviderEditPage.NameBox"
+                     Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     IsEnabled="{Binding IsNotLoading}" />
+
+            <ComboBox x:Uid="ShippingProviderEditPage.TypeBox"
+                      ItemsSource="{Binding TypeOptions}"
+                      SelectedItem="{Binding SelectedType, Mode=TwoWay}"
+                      IsEnabled="{Binding CanSelectType}"
+                      HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="models:ShippingProviderTypeOption">
+                  <TextBlock Text="{x:Bind Display}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <TextBlock x:Uid="ShippingProviderEditPage.TypeLockedHint"
+                       Style="{StaticResource BodySmall}"
+                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+            <CheckBox x:Uid="ShippingProviderEditPage.IsEnabledBox"
+                      IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                      IsEnabled="{Binding IsNotLoading}" />
+
+            <CheckBox x:Uid="ShippingProviderEditPage.UseSandboxBox"
+                      IsChecked="{Binding UseSandbox, Mode=TwoWay}"
+                      IsEnabled="{Binding IsNotLoading}" />
+          </StackPanel>
+        </controls:SectionCard>
+
+        <!-- Credentials -->
+        <controls:SectionCard x:Uid="ShippingProviderEditPage.CredentialsCard" HeaderGlyph="&#xE72E;">
+          <StackPanel Spacing="12">
+            <TextBlock Text="{Binding CredentialsHint}"
+                       Style="{StaticResource BodySmall}"
+                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                       TextWrapping="Wrap" />
+
+            <TextBox x:Uid="ShippingProviderEditPage.UsernameBox"
+                     Text="{Binding Username, Mode=TwoWay}"
+                     IsEnabled="{Binding IsNotLoading}" />
+
+            <PasswordBox x:Uid="ShippingProviderEditPage.PasswordBox"
+                         Password="{Binding Password, Mode=TwoWay}"
+                         PlaceholderText="{Binding PasswordPlaceholder}"
+                         IsEnabled="{Binding IsNotLoading}" />
+
+            <PasswordBox x:Uid="ShippingProviderEditPage.ApiKeyBox"
+                         Password="{Binding ApiKey, Mode=TwoWay}"
+                         PlaceholderText="{Binding ApiKeyPlaceholder}"
+                         IsEnabled="{Binding IsNotLoading}" />
+
+            <PasswordBox x:Uid="ShippingProviderEditPage.ApiSecretBox"
+                         Password="{Binding ApiSecret, Mode=TwoWay}"
+                         PlaceholderText="{Binding ApiSecretPlaceholder}"
+                         IsEnabled="{Binding IsNotLoading}" />
+
+            <TextBox x:Uid="ShippingProviderEditPage.AccountNumberBox"
+                     Text="{Binding AccountNumber, Mode=TwoWay}"
+                     IsEnabled="{Binding IsNotLoading}" />
+          </StackPanel>
+        </controls:SectionCard>
+
+        <!-- Sender address -->
+        <controls:SectionCard x:Uid="ShippingProviderEditPage.SenderCard" HeaderGlyph="&#xE80F;">
+          <StackPanel Spacing="12">
+            <TextBox x:Uid="ShippingProviderEditPage.SenderNameBox"
+                     Text="{Binding SenderName, Mode=TwoWay}"
+                     IsEnabled="{Binding IsNotLoading}" />
+
+            <TextBox x:Uid="ShippingProviderEditPage.SenderStreetBox"
+                     Text="{Binding SenderStreet, Mode=TwoWay}"
+                     IsEnabled="{Binding IsNotLoading}" />
+
+            <Grid ColumnSpacing="12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="2*" />
+              </Grid.ColumnDefinitions>
+              <TextBox Grid.Column="0" x:Uid="ShippingProviderEditPage.SenderZipBox"
+                       Text="{Binding SenderZip, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+              <TextBox Grid.Column="1" x:Uid="ShippingProviderEditPage.SenderCityBox"
+                       Text="{Binding SenderCity, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+            </Grid>
+
+            <TextBox x:Uid="ShippingProviderEditPage.SenderCountryBox"
+                     Text="{Binding SenderCountryCode, Mode=TwoWay}"
+                     MaxLength="2"
+                     IsEnabled="{Binding IsNotLoading}" />
+
+            <Grid ColumnSpacing="12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBox Grid.Column="0" x:Uid="ShippingProviderEditPage.SenderEmailBox"
+                       Text="{Binding SenderEmail, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+              <TextBox Grid.Column="1" x:Uid="ShippingProviderEditPage.SenderPhoneBox"
+                       Text="{Binding SenderPhone, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+            </Grid>
+          </StackPanel>
+        </controls:SectionCard>
+
+        <!-- Carrier-specific settings -->
+        <controls:SectionCard x:Uid="ShippingProviderEditPage.CarrierConfigCard" HeaderGlyph="&#xE713;">
+          <StackPanel Spacing="12">
+
+            <!-- DHL -->
+            <StackPanel Spacing="12"
+                        Visibility="{Binding IsDhl, Converter={StaticResource BoolToVisibilityConverter}}">
+              <TextBox x:Uid="ShippingProviderEditPage.DhlProductBox"
+                       Text="{Binding ConfigProduct, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+              <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" x:Uid="ShippingProviderEditPage.DhlProcedureBox"
+                         Text="{Binding ConfigProcedure, Mode=TwoWay}"
+                         IsEnabled="{Binding IsNotLoading}" />
+                <TextBox Grid.Column="1" x:Uid="ShippingProviderEditPage.DhlParticipationBox"
+                         Text="{Binding ConfigParticipation, Mode=TwoWay}"
+                         IsEnabled="{Binding IsNotLoading}" />
+              </Grid>
+              <TextBox x:Uid="ShippingProviderEditPage.DhlReturnProcedureBox"
+                       Text="{Binding ConfigReturnProcedure, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+              <TextBox x:Uid="ShippingProviderEditPage.DhlReturnReceiverIdBox"
+                       Text="{Binding ConfigReturnReceiverId, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+              <TextBox x:Uid="ShippingProviderEditPage.DhlTrackingApiKeyBox"
+                       Text="{Binding ConfigTrackingApiKey, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+            </StackPanel>
+
+            <!-- DPD -->
+            <StackPanel Spacing="12"
+                        Visibility="{Binding IsDpd, Converter={StaticResource BoolToVisibilityConverter}}">
+              <TextBox x:Uid="ShippingProviderEditPage.DpdProductBox"
+                       Text="{Binding ConfigProduct, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+              <TextBox x:Uid="ShippingProviderEditPage.DpdReturnProductBox"
+                       Text="{Binding ConfigReturnProduct, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+              <TextBox x:Uid="ShippingProviderEditPage.DpdLabelSizeBox"
+                       Text="{Binding ConfigLabelSize, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+            </StackPanel>
+
+            <!-- GLS -->
+            <StackPanel Spacing="12"
+                        Visibility="{Binding IsGls, Converter={StaticResource BoolToVisibilityConverter}}">
+              <TextBox x:Uid="ShippingProviderEditPage.GlsContactIdBox"
+                       Text="{Binding ConfigContactId, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+              <TextBox x:Uid="ShippingProviderEditPage.GlsProductBox"
+                       Text="{Binding ConfigProduct, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+            </StackPanel>
+
+            <!-- UPS -->
+            <StackPanel Spacing="12"
+                        Visibility="{Binding IsUps, Converter={StaticResource BoolToVisibilityConverter}}">
+              <TextBox x:Uid="ShippingProviderEditPage.UpsServiceCodeBox"
+                       Text="{Binding ConfigServiceCode, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+            </StackPanel>
+
+            <TextBlock x:Uid="ShippingProviderEditPage.CarrierConfigHint"
+                       Style="{StaticResource BodySmall}"
+                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </controls:SectionCard>
+
+        <!-- Tracking -->
+        <controls:SectionCard x:Uid="ShippingProviderEditPage.TrackingCard" HeaderGlyph="&#xE81C;">
+          <NumberBox x:Uid="ShippingProviderEditPage.TrackingIntervalBox"
+                     Value="{Binding TrackingPollIntervalSeconds, Mode=TwoWay}"
+                     SpinButtonPlacementMode="Inline"
+                     SmallChange="60"
+                     Minimum="60"
+                     IsEnabled="{Binding IsNotLoading}" />
+        </controls:SectionCard>
+
+        <!-- Shipping options ("Versandarten") — only after the carrier exists -->
+        <controls:SectionCard x:Uid="ShippingProviderEditPage.RatesCard" HeaderGlyph="&#xE8CB;"
+                              Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}">
+          <StackPanel Spacing="12">
+            <ItemsControl ItemsSource="{Binding Rates}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:ShippingRateRow">
+                  <Button HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Stretch"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          Padding="0"
+                          Click="RateRow_Click">
+                    <Grid Padding="12,10" ColumnSpacing="12"
+                          BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="0,0,0,1">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{x:Bind Name}" Style="{StaticResource BodyMedium}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Uid="ShippingProviderEditPage.RateInactiveBadge"
+                                   Style="{StaticResource BodySmall}"
+                                   Foreground="{ThemeResource ErrorBrush}"
+                                   VerticalAlignment="Center"
+                                   Visibility="{x:Bind IsActive, Converter={StaticResource BoolToInverseVisibilityConverter}}" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="1" Text="{x:Bind CarrierProduct}"
+                                 Style="{StaticResource BodySmall}"
+                                 Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                 VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="{x:Bind PriceDisplay}"
+                                 Style="{StaticResource BodyMedium}" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="3" Text="{x:Bind MaxWeightDisplay}"
+                                 Style="{StaticResource BodySmall}"
+                                 Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                 VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4"
+                                  VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE909;" FontSize="12"
+                                  Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Text="{x:Bind AllowedCountryCount}"
+                                   Style="{StaticResource BodySmall}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock x:Uid="ShippingProviderEditPage.NoRatesHint"
+                       Style="{StaticResource BodyMedium}"
+                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding ShowRatesEmptyState, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+            <Button x:Uid="ShippingProviderEditPage.AddRateButton"
+                    Style="{StaticResource OutlinedButtonStyle}"
+                    HorizontalAlignment="Left"
+                    IsEnabled="{Binding IsNotLoading}"
+                    Click="AddRate_Click" />
+          </StackPanel>
+        </controls:SectionCard>
+
+        <!-- Delete (edit mode only) -->
+        <Button x:Uid="ShippingProviderEditPage.DeleteButton"
+                Style="{StaticResource OutlinedButtonStyle}"
+                Foreground="{ThemeResource ErrorBrush}"
+                HorizontalAlignment="Left"
+                Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}"
+                IsEnabled="{Binding IsNotLoading}"
+                Click="DeleteButton_Click" />
+
+        <ProgressRing IsActive="{Binding IsLoading}"
+                      Width="32" Height="32"
+                      HorizontalAlignment="Center"
+                      Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</Page>

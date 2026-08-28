@@ -1,0 +1,213 @@
+<Page x:Class="asERP.Client.Features.ShippingProviders.Views.ShippingRateEditPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:models="using:asERP.Client.Features.ShippingProviders.Models"
+      xmlns:utu="using:Uno.Toolkit.UI"
+      xmlns:controls="using:asERP.Client.Controls"
+      Background="{ThemeResource BackgroundBrush}">
+
+  <Grid utu:SafeArea.Insets="VisibleBounds">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <utu:NavigationBar Grid.Row="0" Content="{Binding Title}">
+      <utu:NavigationBar.PrimaryCommands>
+        <AppBarElementContainer VerticalContentAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,8,0">
+            <Button x:Uid="ShippingRateEditPage.HeaderAction.Cancel"
+                    Style="{StaticResource HeaderActionButtonStyle}"
+                    Click="CancelButton_Click" />
+            <Button x:Uid="ShippingRateEditPage.HeaderAction.Save"
+                    Style="{StaticResource HeaderActionSaveButtonStyle}"
+                    Click="SaveButton_Click"
+                    IsEnabled="{Binding CanSave}" />
+          </StackPanel>
+        </AppBarElementContainer>
+      </utu:NavigationBar.PrimaryCommands>
+    </utu:NavigationBar>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Padding="24" Spacing="16" MaxWidth="700" HorizontalAlignment="Stretch">
+
+        <!-- Error Message Banner -->
+        <Border Background="{ThemeResource ErrorContainerBrush}"
+                CornerRadius="8"
+                Padding="16"
+                Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}, FallbackValue=Collapsed}">
+          <TextBlock Text="{Binding ErrorMessage}"
+                     Style="{StaticResource BodyMedium}"
+                     Foreground="{ThemeResource OnErrorContainerBrush}"
+                     TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Basic data -->
+        <controls:SectionCard x:Uid="ShippingRateEditPage.BasicCard" HeaderGlyph="&#xE8CB;">
+          <StackPanel Spacing="12">
+            <TextBox x:Uid="ShippingRateEditPage.NameBox"
+                     Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     IsEnabled="{Binding IsNotLoading}" />
+
+            <TextBox x:Uid="ShippingRateEditPage.DescriptionBox"
+                     Text="{Binding Description, Mode=TwoWay}"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     Height="80"
+                     IsEnabled="{Binding IsNotLoading}" />
+
+            <CheckBox x:Uid="ShippingRateEditPage.IsActiveBox"
+                      IsChecked="{Binding IsActive, Mode=TwoWay}"
+                      IsEnabled="{Binding IsNotLoading}" />
+
+            <Grid ColumnSpacing="12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <NumberBox Grid.Column="0" x:Uid="ShippingRateEditPage.PriceBox"
+                         Value="{Binding Price, Mode=TwoWay}"
+                         SpinButtonPlacementMode="Inline"
+                         SmallChange="0.5"
+                         Minimum="0"
+                         IsEnabled="{Binding IsNotLoading}" />
+              <NumberBox Grid.Column="1" x:Uid="ShippingRateEditPage.SortOrderBox"
+                         Value="{Binding SortOrder, Mode=TwoWay}"
+                         SpinButtonPlacementMode="Inline"
+                         SmallChange="1"
+                         Minimum="0"
+                         IsEnabled="{Binding IsNotLoading}" />
+            </Grid>
+          </StackPanel>
+        </controls:SectionCard>
+
+        <!-- Parcel limits -->
+        <controls:SectionCard x:Uid="ShippingRateEditPage.LimitsCard" HeaderGlyph="&#xE9A6;">
+          <StackPanel Spacing="12">
+            <NumberBox x:Uid="ShippingRateEditPage.MaxWeightBox"
+                       Value="{Binding MaxWeight, Mode=TwoWay}"
+                       SpinButtonPlacementMode="Inline"
+                       SmallChange="0.5"
+                       Minimum="0"
+                       IsEnabled="{Binding IsNotLoading}" />
+
+            <Grid ColumnSpacing="12">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <NumberBox Grid.Column="0" x:Uid="ShippingRateEditPage.MaxLengthBox"
+                         Value="{Binding MaxLength, Mode=TwoWay}"
+                         SpinButtonPlacementMode="Compact"
+                         SmallChange="1"
+                         Minimum="0"
+                         IsEnabled="{Binding IsNotLoading}" />
+              <NumberBox Grid.Column="1" x:Uid="ShippingRateEditPage.MaxWidthBox"
+                         Value="{Binding MaxWidth, Mode=TwoWay}"
+                         SpinButtonPlacementMode="Compact"
+                         SmallChange="1"
+                         Minimum="0"
+                         IsEnabled="{Binding IsNotLoading}" />
+              <NumberBox Grid.Column="2" x:Uid="ShippingRateEditPage.MaxHeightBox"
+                         Value="{Binding MaxHeight, Mode=TwoWay}"
+                         SpinButtonPlacementMode="Compact"
+                         SmallChange="1"
+                         Minimum="0"
+                         IsEnabled="{Binding IsNotLoading}" />
+            </Grid>
+          </StackPanel>
+        </controls:SectionCard>
+
+        <!-- Carrier product -->
+        <controls:SectionCard x:Uid="ShippingRateEditPage.CarrierProductCard" HeaderGlyph="&#xE713;">
+          <StackPanel Spacing="12">
+            <TextBlock Text="{Binding CarrierProductHint}"
+                       Style="{StaticResource BodySmall}"
+                       Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                       TextWrapping="Wrap" />
+
+            <TextBox x:Uid="ShippingRateEditPage.CarrierProductBox"
+                     Text="{Binding CarrierProduct, Mode=TwoWay}"
+                     IsEnabled="{Binding IsNotLoading}" />
+
+            <Grid ColumnSpacing="12"
+                  Visibility="{Binding IsDhl, Converter={StaticResource BoolToVisibilityConverter}}">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBox Grid.Column="0" x:Uid="ShippingRateEditPage.CarrierProcedureBox"
+                       Text="{Binding CarrierProcedure, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+              <TextBox Grid.Column="1" x:Uid="ShippingRateEditPage.CarrierParticipationBox"
+                       Text="{Binding CarrierParticipation, Mode=TwoWay}"
+                       IsEnabled="{Binding IsNotLoading}" />
+            </Grid>
+          </StackPanel>
+        </controls:SectionCard>
+
+        <!-- Destination countries -->
+        <controls:SectionCard x:Uid="ShippingRateEditPage.CountriesCard" HeaderGlyph="&#xE909;">
+          <StackPanel Spacing="12">
+            <TextBlock Text="{Binding SelectedCountrySummary}"
+                       Style="{StaticResource BodyMedium}" />
+
+            <Grid ColumnSpacing="8">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBox Grid.Column="0" x:Uid="ShippingRateEditPage.CountrySearchBox"
+                       Text="{Binding CountrySearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                       IsEnabled="{Binding IsNotLoading}" />
+              <Button Grid.Column="1" x:Uid="ShippingRateEditPage.SelectVisibleButton"
+                      Style="{StaticResource OutlinedButtonStyle}"
+                      IsEnabled="{Binding IsNotLoading}"
+                      Click="SelectVisible_Click" />
+              <Button Grid.Column="2" x:Uid="ShippingRateEditPage.DeselectVisibleButton"
+                      Style="{StaticResource OutlinedButtonStyle}"
+                      IsEnabled="{Binding IsNotLoading}"
+                      Click="DeselectVisible_Click" />
+            </Grid>
+
+            <ScrollViewer Height="260" VerticalScrollBarVisibility="Auto"
+                          BorderBrush="{ThemeResource OutlineVariantBrush}" BorderThickness="1"
+                          CornerRadius="8" Padding="8">
+              <ItemsControl ItemsSource="{Binding FilteredCountries}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:CountrySelectionRow">
+                    <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{x:Bind Name}" Style="{StaticResource BodyMedium}" />
+                        <TextBlock Text="{x:Bind CountryCode}"
+                                   Style="{StaticResource BodySmall}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                   VerticalAlignment="Center" />
+                      </StackPanel>
+                    </CheckBox>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </StackPanel>
+        </controls:SectionCard>
+
+        <!-- Delete (edit mode only) -->
+        <Button x:Uid="ShippingRateEditPage.DeleteButton"
+                Style="{StaticResource OutlinedButtonStyle}"
+                Foreground="{ThemeResource ErrorBrush}"
+                HorizontalAlignment="Left"
+                Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}"
+                IsEnabled="{Binding IsNotLoading}"
+                Click="DeleteButton_Click" />
+
+        <ProgressRing IsActive="{Binding IsLoading}"
+                      Width="32" Height="32"
+                      HorizontalAlignment="Center"
+                      Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</Page>

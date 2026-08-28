@@ -21,6 +21,7 @@ using asERP.Domain.Dtos.ServerInfo;
 using asERP.Domain.Dtos.Setup;
 using asERP.Domain.Dtos.Shipping;
 using asERP.Domain.Dtos.ShippingProvider;
+using asERP.Domain.Dtos.ShippingProviderRate;
 using asERP.Domain.Dtos.ShopDomain;
 using asERP.Domain.Dtos.Statistic;
 using asERP.Domain.Dtos.Superadmin;
@@ -41,6 +42,13 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(PaginatedResponse<ProductListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<WarehouseListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<ShippingProviderListDto>))]
+[JsonSerializable(typeof(ApiResponse<ShippingProviderDetailDto>))]
+[JsonSerializable(typeof(ApiResponse<List<ShippingProviderRateListDto>>))]
+[JsonSerializable(typeof(ApiResponse<ShippingProviderRateDetailDto>))]
+[JsonSerializable(typeof(ShippingProviderCreateDto))]
+[JsonSerializable(typeof(ShippingProviderUpdateDto))]
+[JsonSerializable(typeof(ShippingProviderRateCreateDto))]
+[JsonSerializable(typeof(ShippingProviderRateUpdateDto))]
 [JsonSerializable(typeof(PaginatedResponse<CustomerListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<CustomerListWithAddressDto>))]
 [JsonSerializable(typeof(PaginatedResponse<TaxClassListDto>))]

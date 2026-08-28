@@ -26,4 +26,16 @@ public sealed record ShipmentLabelRequest
     public decimal? LengthCm { get; init; }
     public decimal? WidthCm { get; init; }
     public decimal? HeightCm { get; init; }
+
+    /// <summary>
+    /// Carrier product/service code from the booked shipping option (DHL "V01PAK", DPD "Classic",
+    /// GLS "PARCEL", UPS "11"). Null → the connector falls back to its provider-config default.
+    /// </summary>
+    public string? CarrierProduct { get; init; }
+
+    /// <summary>DHL only: billing procedure matching <see cref="CarrierProduct"/>.</summary>
+    public string? CarrierProcedure { get; init; }
+
+    /// <summary>DHL only: participation number matching <see cref="CarrierProduct"/>.</summary>
+    public string? CarrierParticipation { get; init; }
 }
