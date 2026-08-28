@@ -61,10 +61,10 @@
                             Spacing="8">
                   <Button x:Uid="FeedDetailPage.HeaderAction.Edit"
                           Click="EditButton_Click"
-                          Style="{StaticResource OutlinedButtonStyle}" />
+                          Style="{StaticResource HeaderActionButtonStyle}" />
                   <Button x:Uid="FeedDetailPage.HeaderAction.Delete"
                           Click="DeleteButton_Click"
-                          Style="{StaticResource OutlinedButtonStyle}"
+                          Style="{StaticResource HeaderActionButtonStyle}"
                           Foreground="{ThemeResource ErrorBrush}" />
                 </StackPanel>
               </controls:DetailPageHeader.Actions>

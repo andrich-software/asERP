@@ -24,7 +24,7 @@ public class WooCommerceDatabaseConnectorTests
     public void Connector_IsResolvableByType_AndMirrorsRestCapabilities()
     {
         var connector = new WooCommerceDatabaseConnector(
-            null!, null!, null!, null!, null!, NullLogger<WooCommerceDatabaseConnector>.Instance);
+            null!, null!, null!, null!, null!, null!, NullLogger<WooCommerceDatabaseConnector>.Instance);
         var registry = new SalesChannelConnectorRegistry(new ISalesChannelConnector[] { connector });
 
         Assert.Same(connector, registry.Get(SalesChannelType.WooCommerceDatabase));
@@ -37,6 +37,8 @@ public class WooCommerceDatabaseConnectorTests
             SalesChannelCapabilities.ImportCustomers |
             SalesChannelCapabilities.ImportStock |
             SalesChannelCapabilities.ImportCategories |
+            SalesChannelCapabilities.ImportShipments |
+            SalesChannelCapabilities.PushShipments |
             SalesChannelCapabilities.UpdateStock |
             SalesChannelCapabilities.UpdatePrice;
         Assert.Equal(expected, connector.Capabilities);

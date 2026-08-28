@@ -66,6 +66,13 @@ public static class ApiEndpoints
         public const string ReadyToShip = $"{Base}/ready-to-ship";
     }
 
+    // Shipping providers (carriers)
+    public static class ShippingProviders
+    {
+        public const string Base = $"{ApiBase}/shippingproviders";
+        public static string ById(Guid id) => $"{Base}/{id}";
+    }
+
     // Shippings
     public static class Shippings
     {
@@ -220,7 +227,7 @@ public static class ApiEndpoints
         public const string SalesToday = $"{Base}/SalesToday";
         public const string SalessToday = $"{Base}/SalessToday";
         public const string CustomersToday = $"{Base}/CustomersToday";
-        public const string ProductsToday = $"{Base}/ProductsToday";
+        public const string DashboardTodos = $"{Base}/DashboardTodos";
         public const string SalessLatest = $"{Base}/SalessLatest";
         public const string ProductsBestSelling = $"{Base}/ProductsBestSelling";
         public const string RevenueChart = $"{Base}/RevenueChart";

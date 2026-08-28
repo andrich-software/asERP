@@ -31,6 +31,41 @@
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
+  <!-- Header actions: the buttons top-right of the content area (PageHeader.Actions,
+       DetailPageHeader.Actions, NavigationBar.PrimaryCommands). Exactly two variants
+       project-wide - a save action is filled blue, everything else is outlined
+       (white background, blue label). Never put a raw AppBarButton there. -->
+  <Style x:Key="HeaderActionButtonStyle"
+         TargetType="Button"
+         BasedOn="{StaticResource OutlinedButtonStyle}" />
+
+  <Style x:Key="HeaderActionSaveButtonStyle"
+         TargetType="Button"
+         BasedOn="{StaticResource FilledButtonStyle}" />
+
+  <!-- Quick filter chips above list tables (see SalesListPage). Two variants: the active one is
+       applied from code-behind - a style switch, because the Resources[] indexer does not resolve
+       ThemeDictionaries theme-aware while the ThemeResource inside the style does. -->
+  <Style x:Key="FilterChipButtonStyle" TargetType="Button">
+    <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource OutlineVariantBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{ThemeResource OnSurfaceVariantBrush}" />
+    <Setter Property="Padding" Value="14,6" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+
+  <Style x:Key="FilterChipButtonActiveStyle"
+         TargetType="Button"
+         BasedOn="{StaticResource FilterChipButtonStyle}">
+    <Setter Property="Background" Value="{ThemeResource SurfaceVariantBrush}" />
+    <Setter Property="BorderBrush" Value="{ThemeResource PrimaryBrush}" />
+    <Setter Property="Foreground" Value="{ThemeResource PrimaryBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
   <!-- Table container: outlined card (no shadow - ThemeShadow is a per-element cost on Skia) -->
   <Style x:Key="TableCardStyle" TargetType="Border">
     <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />

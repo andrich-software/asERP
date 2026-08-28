@@ -199,8 +199,10 @@ public sealed partial class BatchShipmentDialog : UserControl
         SaveAllButton.Visibility = Visibility.Collapsed;
         DownloadAllButton.Visibility = Visibility.Collapsed;
 
-        SelectAllCheck.IsChecked = true;
-        SelectAllCheck.IsEnabled = true;
+        // Nothing is selected before the rates are known; UpdateSelectAllState() takes over
+        // as soon as the first row becomes selectable.
+        SelectAllCheck.IsChecked = false;
+        SelectAllCheck.IsEnabled = false;
         RequestLabelToggle.IsOn = true;
         RequestLabelToggle.IsEnabled = true;
 
@@ -227,16 +229,39 @@ public sealed partial class BatchShipmentDialog : UserControl
         if (!_running && !_finished)
         {
             StartButton.IsEnabled = _optionsLoaded && selected > 0;
+            UpdateSelectAllState();
         }
+    }
+
+    /// <summary>Mirrors the row selection back into the header checkbox (unchecked / indeterminate /
+    /// checked). It stays disabled while no row can be selected at all - rates are still loading or
+    /// none applies - so a click on it can never look like it was ignored.</summary>
+    private void UpdateSelectAllState()
+    {
+        var checkable = _rows.Count(r => r.IsCheckable);
+        var selected = _rows.Count(r => r.IsCheckable && r.IsSelected);
+
+        SelectAllCheck.IsEnabled = checkable > 0;
+        SelectAllCheck.IsChecked = selected == 0
+            ? false
+            : selected == checkable ? true : (bool?)null;
     }
 
     private void SelectAll_Click(object sender, RoutedEventArgs e)
     {
-        var check = SelectAllCheck.IsChecked == true;
-        foreach (var row in _rows.Where(r => r.IsCheckable))
+        var checkable = _rows.Where(r => r.IsCheckable).ToList();
+
+        // A click on the indeterminate box lands on "unchecked" (ToggleButton cycles null -> false),
+        // which would clear a partial selection instead of completing it - select all in that case.
+        var check = SelectAllCheck.IsChecked == true || checkable.Any(r => !r.IsSelected);
+
+        foreach (var row in checkable)
         {
             row.IsSelected = check;
         }
+
+        // Rows that did not change raise no PropertyChanged, so re-sync the header explicitly.
+        UpdateSelectAllState();
     }
 
     private void ShowError(string message)

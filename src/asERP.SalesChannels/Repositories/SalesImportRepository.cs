@@ -331,7 +331,12 @@ public class SalesImportRepository : ISalesImportRepository
                     PaymentStatusNew = newSales.PaymentStatus,
                     // TODO: implement ShippingStatus on import
                     // ShippingStatusNew = newSales.ShippingStatus,
-                    Description = $"Imported from {salesChannel.Name}",
+                    Description = $"Imported from {salesChannel.Name} (order status {newSales.Status}, payment {newSales.PaymentStatus})",
+                    MessageKey = SalesHistoryMessage.OrderImported,
+                    MessageArgs = SalesHistoryMessage.EncodeArgs(
+                        salesChannel.Name,
+                        SalesHistoryMessage.Enum(newSales.Status),
+                        SalesHistoryMessage.Enum(newSales.PaymentStatus)),
                     DateCreated = DateTime.UtcNow,
                     DateModified = DateTime.UtcNow
                 }
@@ -361,6 +366,13 @@ public class SalesImportRepository : ISalesImportRepository
                 customerFloored = FloorCustomerEnrollment(existingCustomer, EnrollmentFloorFor(importSales));
             }
 
+            // Transitions accepted from the channel, collected for the order timeline. Both pairs go
+            // into ONE history entry: two rows written in the same SaveChanges would share a
+            // DateCreated to the tick and order arbitrarily in the timeline.
+            SalesStatus? statusOld = null, statusNew = null;
+            PaymentStatus? paymentOld = null, paymentNew = null;
+            var historyParts = new List<string>();
+
             if (existingSales.Status != importSales.Status)
             {
                 // Local terminal states win: a locally cancelled/returned/refunded order must not be
@@ -375,6 +387,9 @@ public class SalesImportRepository : ISalesImportRepository
                 {
                     _logger.LogInformation("Sales {0}: Status updated, new status is {1}", importSales.RemoteSalesId, importSales.Status);
                     var becameCancelled = !IsCancelledStatus(existingSales.Status) && IsCancelledStatus(importSales.Status);
+                    statusOld = existingSales.Status;
+                    statusNew = importSales.Status;
+                    historyParts.Add($"Order status changed {statusOld} -> {statusNew}");
                     existingSales.Status = importSales.Status;
                     somethingChanged = true;
 
@@ -388,11 +403,56 @@ public class SalesImportRepository : ISalesImportRepository
             if (existingSales.PaymentStatus != importSales.PaymentStatus)
             {
                 _logger.LogInformation("Sales {0}: PaymentStatus updated, new status is {1}", importSales.RemoteSalesId, importSales.PaymentStatus);
+                paymentOld = existingSales.PaymentStatus;
+                paymentNew = importSales.PaymentStatus;
+                historyParts.Add($"Payment status changed {paymentOld} -> {paymentNew}");
                 existingSales.PaymentStatus = importSales.PaymentStatus;
                 somethingChanged = true;
             }
 
             // TODO: implement check for changed shipping status
+
+            if (historyParts.Count > 0)
+            {
+                // One key per combination rather than a composed sentence: the translation has to
+                // control word order, which string concatenation on the server cannot.
+                var (messageKey, messageArgs) = (statusNew, paymentNew) switch
+                {
+                    (not null, not null) => (SalesHistoryMessage.ChannelOrderAndPaymentStatusChanged,
+                        SalesHistoryMessage.EncodeArgs(
+                            salesChannel.Name,
+                            SalesHistoryMessage.Enum(statusOld!.Value), SalesHistoryMessage.Enum(statusNew.Value),
+                            SalesHistoryMessage.Enum(paymentOld!.Value), SalesHistoryMessage.Enum(paymentNew.Value))),
+
+                    (not null, null) => (SalesHistoryMessage.ChannelOrderStatusChanged,
+                        SalesHistoryMessage.EncodeArgs(
+                            salesChannel.Name,
+                            SalesHistoryMessage.Enum(statusOld!.Value), SalesHistoryMessage.Enum(statusNew.Value))),
+
+                    _ => (SalesHistoryMessage.ChannelPaymentStatusChanged,
+                        SalesHistoryMessage.EncodeArgs(
+                            salesChannel.Name,
+                            SalesHistoryMessage.Enum(paymentOld!.Value), SalesHistoryMessage.Enum(paymentNew!.Value))),
+                };
+
+                // Added to the tracked context, not via AddSalesHistoryAsync: the UpdateAsync below
+                // commits the order and its timeline entry in the same SaveChanges. TenantId is set
+                // explicitly — the sync runs without an ambient tenant context.
+                _dbContext.SalesHistory.Add(new SalesHistory
+                {
+                    SalesId = existingSales.Id,
+                    UserId = Guid.Empty,
+                    TenantId = existingSales.TenantId,
+                    SalesStatusOld = statusOld,
+                    SalesStatusNew = statusNew,
+                    PaymentStatusOld = paymentOld,
+                    PaymentStatusNew = paymentNew,
+                    Description = $"{string.Join("; ", historyParts)} (imported from {salesChannel.Name})",
+                    MessageKey = messageKey,
+                    MessageArgs = messageArgs,
+                    IsSystemGenerated = true
+                });
+            }
 
             if (somethingChanged)
             {

@@ -18,6 +18,16 @@ public class SalesHistory : BaseEntity, IBaseEntity
     public PaymentStatus? PaymentStatusNew { get; set; }
     public string? ShippingStatusOld { get; set; }
     public string? ShippingStatusNew { get; set; }
+    /// <summary>English audit text. Also the client's fallback when <see cref="MessageKey"/> is
+    /// null (entries written before localization) or its resource is missing.</summary>
     public string Description { get; set; } = string.Empty;
+
+    /// <summary>Resource key the client renders instead of <see cref="Description"/>.
+    /// See <see cref="SalesHistoryMessage"/>.</summary>
+    public string? MessageKey { get; set; }
+
+    /// <summary>JSON-encoded arguments for <see cref="MessageKey"/>.</summary>
+    public string? MessageArgs { get; set; }
+
     public bool IsSystemGenerated { get; set; }
 }

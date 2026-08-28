@@ -23,7 +23,7 @@
                          Glyph="&#xE7B8;"
                          Margin="16,0">
       <controls:PageHeader.Actions>
-        <Button Style="{StaticResource OutlinedButtonStyle}"
+        <Button Style="{StaticResource HeaderActionButtonStyle}"
                 Command="{Binding Refresh, ElementName=ShippingsFeedView}">
           <FontIcon Glyph="&#xE72C;" FontSize="16" />
         </Button>

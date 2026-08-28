@@ -79,6 +79,12 @@ public partial class App : Application
 #endif
                 .UseLogging(configure: (context, logBuilder) =>
                 {
+#if DEBUG
+                    // The desktop head is built as WinExe, so there is no console to write
+                    // to - route the log output to the debugger (VS Output window) instead.
+                    logBuilder.AddDebug();
+#endif
+
                     // Configure log levels for different categories of logging
                     logBuilder
                         .SetMinimumLevel(
@@ -232,7 +238,7 @@ public partial class App : Application
         UiDispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
 
 #if DEBUG
-        // MainWindow.UseStudio();
+        MainWindow.UseStudio();
 #endif
         MainWindow.SetWindowIcon();
 

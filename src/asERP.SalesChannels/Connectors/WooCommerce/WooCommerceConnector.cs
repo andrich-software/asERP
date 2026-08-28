@@ -26,6 +26,7 @@ public sealed class WooCommerceConnector : ConnectorBase
     private readonly ICustomerImportRepository _customerImportRepository;
     private readonly IStockImportRepository _stockImportRepository;
     private readonly ICategoryImportRepository _categoryImportRepository;
+    private readonly IShipmentImportRepository _shipmentImportRepository;
     private readonly ILogger<WooCommerceConnector> _logger;
 
     public WooCommerceConnector(
@@ -34,6 +35,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         ICustomerImportRepository customerImportRepository,
         IStockImportRepository stockImportRepository,
         ICategoryImportRepository categoryImportRepository,
+        IShipmentImportRepository shipmentImportRepository,
         ILogger<WooCommerceConnector> logger)
     {
         _productImportRepository = productImportRepository;
@@ -41,6 +43,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         _customerImportRepository = customerImportRepository;
         _stockImportRepository = stockImportRepository;
         _categoryImportRepository = categoryImportRepository;
+        _shipmentImportRepository = shipmentImportRepository;
         _logger = logger;
     }
 
@@ -56,7 +59,9 @@ public sealed class WooCommerceConnector : ConnectorBase
         SalesChannelCapabilities.UpdateProductCategories |
         SalesChannelCapabilities.UpdateStock |
         SalesChannelCapabilities.UpdatePrice |
-        SalesChannelCapabilities.CancelSales;
+        SalesChannelCapabilities.CancelSales |
+        SalesChannelCapabilities.ImportShipments |
+        SalesChannelCapabilities.PushShipments;
 
     public override async Task<ConnectionTestResult> TestConnectionAsync(SalesChannelContext context)
     {
@@ -1381,6 +1386,180 @@ public sealed class WooCommerceConnector : ConnectorBase
             {
                 status = "cancelled",
             });
+
+            return ExportResult.Ok(payload.RemoteSalesId);
+        }
+        catch (Exception ex)
+        {
+            return ExportResult.Fail(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Pulls the tracking numbers a shipping plugin stored in the orders' meta. WooCommerce core has
+    /// no shipment resource, so this walks the orders endpoint (which returns protected meta keys)
+    /// and reads the configured key — incrementally via <c>modified_after</c>, because writing a
+    /// tracking number through the WooCommerce order CRUD bumps the order's modified timestamp.
+    /// </summary>
+    public override async Task<SyncResult> ImportShipmentsAsync(SalesChannelContext context)
+    {
+        try
+        {
+            SalesChannelUrlValidator.Validate(context.SalesChannel.Url);
+        }
+        catch (ArgumentException ex)
+        {
+            return SyncResult.Failed($"Invalid sales channel URL: {ex.Message}");
+        }
+
+        var metaKey = WooShipmentTracking.ResolveMetaKey(context.SalesChannel.AdditionalConfigJson);
+
+        try
+        {
+            var rest = BuildRestApi(context);
+            var progress = new ProgressThrottle(context);
+
+            var baseParameters = new Dictionary<string, string>
+            {
+                ["per_page"] = PageSize.ToString(),
+                ["orderby"] = "id",
+                ["order"] = "asc",
+                ["dates_are_gmt"] = "true",
+            };
+
+            if (context.IncrementalSince is { } since)
+            {
+                baseParameters["modified_after"] = since.ToString("yyyy-MM-ddTHH:mm:ss");
+            }
+
+            var processed = 0;
+            var failed = 0;
+            var unmapped = new HashSet<string>(StringComparer.Ordinal);
+            var seen = new HashSet<string>();
+
+            for (var page = 1; page <= MaxPages; page++)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                var parameters = new Dictionary<string, string>(baseParameters) { ["page"] = page.ToString() };
+                var batch = await GetOrderPageWithRetryAsync(rest, parameters, page, context.CancellationToken);
+
+                if (batch is null || batch.Count == 0)
+                {
+                    break;
+                }
+
+                var shipments = new List<SalesChannelImportShipment>();
+                var newInBatch = 0;
+
+                foreach (var remoteSales in batch)
+                {
+                    // Same guard as the order import: an endpoint ignoring 'page' would loop forever.
+                    var key = remoteSales.id?.ToString() ?? $"__noid_{processed}_{failed}";
+                    if (!seen.Add(key))
+                    {
+                        continue;
+                    }
+                    newInBatch++;
+
+                    var rawValue = remoteSales.meta_data?
+                        .FirstOrDefault(m => string.Equals(m.key, metaKey, StringComparison.Ordinal))?
+                        .AsText();
+
+                    if (string.IsNullOrWhiteSpace(rawValue))
+                    {
+                        continue;
+                    }
+
+                    var numbers = WooShipmentTracking.ParseNumbers(rawValue);
+                    if (numbers.Count == 0)
+                    {
+                        // PHP-serialized plugin payload — deliberately not guessed apart.
+                        failed++;
+                        continue;
+                    }
+
+                    var carrierCode = remoteSales.shipping_lines?
+                        .FirstOrDefault(l => !string.IsNullOrWhiteSpace(l.method_id))?.method_id
+                        ?? string.Empty;
+
+                    foreach (var number in numbers)
+                    {
+                        shipments.Add(new SalesChannelImportShipment
+                        {
+                            RemoteSalesId = remoteSales.id?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                            TrackingNumber = number,
+                            RemoteCarrierCode = carrierCode,
+                            // No ship date: WooCommerce stores none, and date_paid would be a
+                            // plausible-looking lie. The row keeps ShippedAt null instead.
+                        });
+                    }
+                }
+
+                if (shipments.Count > 0)
+                {
+                    var outcome = await _shipmentImportRepository.ImportShipmentsAsync(
+                        context.SalesChannel, shipments, context.CancellationToken);
+                    processed += outcome.Created;
+                    foreach (var code in outcome.UnmappedCarrierCodes)
+                    {
+                        unmapped.Add(code);
+                    }
+                }
+
+                await progress.MaybeReportAsync(processed, failed);
+
+                if (newInBatch == 0 || batch.Count < PageSize)
+                {
+                    break;
+                }
+            }
+
+            var summary = unmapped.Count > 0
+                ? $"No carrier mapping for: {string.Join(", ", unmapped.Order(StringComparer.Ordinal))}"
+                : null;
+
+            return new SyncResult(processed, failed, summary);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return SyncResult.Failed(ex.Message);
+        }
+    }
+
+    public override async Task<ExportResult> PushShipmentAsync(SalesChannelContext context, ShipmentPushPayload payload)
+    {
+        if (string.IsNullOrEmpty(payload.RemoteSalesId) || !uint.TryParse(payload.RemoteSalesId, out var orderId))
+        {
+            return ExportResult.Fail("WooCommerce order id (numeric RemoteSalesId) is required for tracking pushes");
+        }
+
+        var metaKey = WooShipmentTracking.ResolveMetaKey(context.SalesChannel.AdditionalConfigJson);
+
+        try
+        {
+            var rest = BuildRestApi(context);
+
+            // A partial order update sent as raw JSON — same reason the order import bypasses the
+            // SDK's typed layer. WooCommerce merges meta_data by key, so only the tracking key is
+            // touched and every other field of the order stays as it is.
+            var body = new Dictionary<string, object>
+            {
+                ["meta_data"] = new[]
+                {
+                    new Dictionary<string, object>
+                    {
+                        ["key"] = metaKey,
+                        ["value"] = WooShipmentTracking.FormatNumbers(payload.TrackingNumbers),
+                    },
+                },
+            };
+
+            await rest.PostRestful($"orders/{orderId}", body);
 
             return ExportResult.Ok(payload.RemoteSalesId);
         }

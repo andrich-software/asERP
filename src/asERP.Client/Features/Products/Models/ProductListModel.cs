@@ -23,13 +23,21 @@ public partial record ProductListModel
         IProductService productService,
         ISalesChannelService salesChannelService,
         INavigator navigator,
-        IStringLocalizer localizer)
+        IStringLocalizer localizer,
+        ProductListData? data = null)
     {
         _productService = productService;
         _salesChannelService = salesChannelService;
         _navigator = navigator;
         _localizer = localizer;
+        InitialLowStockOnly = data?.LowStockOnly ?? false;
     }
+
+    /// <summary>
+    /// Low-stock filter pre-activated via navigation data (e.g. from the dashboard to-do
+    /// card); the page code-behind reads it to sync the toggle.
+    /// </summary>
+    public bool InitialLowStockOnly { get; }
 
     // Polling baseline: the newest completed product-import run we have already accounted for.
     // Lets PollForCompletedImportAsync detect server-side background imports the client never triggered.
@@ -73,10 +81,10 @@ public partial record ProductListModel
     public IState<ProductEmptyStateInfo?> EmptyState => State<ProductEmptyStateInfo?>.Value(this, () => null);
 
     /// <summary>
-    /// When true, variant child products are included in the list.
-    /// Bound to the "Varianten anzeigen" toggle.
+    /// Variants + low-stock toggles as a single state, so the list feed stays a
+    /// five-way Feed.Combine (nested combine tuples fight the MVUX generator).
     /// </summary>
-    public IState<bool> IncludeVariants => State<bool>.Value(this, () => false);
+    public IState<ProductListFilter> Toggles => State<ProductListFilter>.Value(this, () => new ProductListFilter(LowStockOnly: InitialLowStockOnly));
 
     /// <summary>
     /// Pagination information from the last API response.
@@ -88,10 +96,11 @@ public partial record ProductListModel
     /// Automatically refreshes when SearchQuery, CurrentPage, or SortSales changes.
     /// </summary>
     public IListFeed<ProductListItemModel> Products => Feed
-        .Combine(SearchQuery, CurrentPage, PageSize, SortSales, IncludeVariants)
+        .Combine(SearchQuery, CurrentPage, PageSize, SortSales, Toggles)
         .SelectAsync(async (combined, ct) =>
         {
-            var (query, page, size, salesBy, includeVariants) = combined;
+            var (query, page, size, salesBy, toggles) = combined;
+            toggles ??= new ProductListFilter();
 
             var parameters = new QueryParameters
             {
@@ -99,7 +108,8 @@ public partial record ProductListModel
                 PageSize = size,
                 SearchString = string.IsNullOrWhiteSpace(query) ? null : query,
                 SalesBy = salesBy,
-                IncludeVariants = includeVariants
+                IncludeVariants = toggles.IncludeVariants,
+                LowStockOnly = toggles.LowStockOnly
             };
 
             var response = await _productService.GetProductsAsync(parameters, ct);
@@ -343,8 +353,17 @@ public partial record ProductListModel
     /// </summary>
     public async ValueTask SetIncludeVariants(bool includeVariants, CancellationToken ct = default)
     {
-        await IncludeVariants.UpdateAsync(_ => includeVariants, ct);
         await CurrentPage.UpdateAsync(_ => 0, ct);
+        await Toggles.UpdateAsync(f => (f ?? new ProductListFilter()) with { IncludeVariants = includeVariants }, ct);
+    }
+
+    /// <summary>
+    /// Toggle whether only products below their minimum stock are shown.
+    /// </summary>
+    public async ValueTask SetLowStockOnly(bool lowStockOnly, CancellationToken ct = default)
+    {
+        await CurrentPage.UpdateAsync(_ => 0, ct);
+        await Toggles.UpdateAsync(f => (f ?? new ProductListFilter()) with { LowStockOnly = lowStockOnly }, ct);
     }
 
     /// <summary>
@@ -356,6 +375,11 @@ public partial record ProductListModel
         await CurrentPage.UpdateAsync(_ => 0, ct); // Reset to first page when page size changes
     }
 }
+
+/// <summary>
+/// Combined list toggles: include variant children, and only low-stock products.
+/// </summary>
+public record ProductListFilter(bool IncludeVariants = false, bool LowStockOnly = false);
 
 /// <summary>
 /// Holds pagination state information for products.

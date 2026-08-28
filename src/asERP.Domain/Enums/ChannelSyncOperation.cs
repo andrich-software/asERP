@@ -15,6 +15,9 @@ public enum ChannelSyncOperation
 
     /// <summary>Pull the channel's category tree (full sweep — category counts are small).</summary>
     ImportCategories = 5,
+
+    /// <summary>Pull the shop's shipment tracking numbers into local shipments (import direction).</summary>
+    ImportShipments = 6,
     ExportProduct = 10,
     UpdateStock = 11,
     UpdatePrice = 12,
@@ -32,4 +35,7 @@ public enum ChannelSyncOperation
 
     /// <summary>Push a product's category assignments to the channel (partial product update).</summary>
     UpdateProductCategories = 18,
+
+    /// <summary>Push the tracking numbers of a local order's shipments to the shop (push direction).</summary>
+    PushShipment = 19,
 }

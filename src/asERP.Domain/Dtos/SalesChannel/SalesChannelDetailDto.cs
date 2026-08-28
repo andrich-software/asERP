@@ -40,6 +40,15 @@ public class SalesChannelDetailDto
     /// <summary>Push local category changes and product category assignments to the channel.</summary>
     public bool ExportCategories { get; set; }
 
+    /// <summary>
+    /// Direction of the shipment-tracking exchange: import the shop's tracking numbers, push local
+    /// ones, or neither.
+    /// </summary>
+    public ShipmentTrackingMode ShipmentTrackingMode { get; set; } = ShipmentTrackingMode.None;
+
+    /// <summary>Carrier translations configured for this channel.</summary>
+    public List<SalesChannelCarrierMappingDto> CarrierMappings { get; set; } = new();
+
     /// <summary>True when an inbound webhook secret is configured (the secret itself is never exposed).</summary>
     public bool HasWebhookSecret { get; set; }
 

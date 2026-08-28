@@ -37,7 +37,7 @@ public static class ProductsModule
     public static void RegisterViews(IViewRegistry views)
     {
         views.Register(
-            new ViewMap<ProductListPage, ProductListModel>(),
+            new ViewMap<ProductListPage, ProductListModel>(Data: new DataMap<ProductListData>()),
             new ViewMap<ProductDetailPage, ProductDetailModel>(Data: new DataMap<ProductDetailData>()),
             new ViewMap<ProductEditPage, ProductEditModel>(Data: new DataMap<ProductEditData>())
         );
@@ -54,3 +54,8 @@ public static class ProductsModule
         yield return new RouteMap(Routes.ProductCreate, View: views.FindByViewModel<ProductEditModel>());
     }
 }
+
+/// <summary>
+/// Navigation data for the product list page: pre-activates the low-stock filter.
+/// </summary>
+public record ProductListData(bool LowStockOnly);

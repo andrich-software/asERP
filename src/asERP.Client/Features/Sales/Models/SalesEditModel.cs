@@ -79,6 +79,7 @@ public class SalesEditModel : AsyncInitializableModel
 
     // Sales Channels
     private ObservableCollection<SalesChannelListDto> _salesChannels = new();
+    private SalesChannelListDto? _selectedSalesChannel;
 
     // UI State
     private bool _isSaving;
@@ -116,16 +117,37 @@ public class SalesEditModel : AsyncInitializableModel
 
     private async Task LoadSalesChannelsAsync(CancellationToken ct)
     {
-        var parameters = new QueryParameters { PageSize = 1000 };
-        var response = await _salesChannelService.GetSalesChannelsAsync(parameters, ct);
-        SalesChannels.Clear();
-        if (response?.Data != null)
+        try
         {
-            foreach (var salesChannel in response.Data)
+            var parameters = new QueryParameters { PageSize = 1000 };
+            var response = await _salesChannelService.GetSalesChannelsAsync(parameters, ct);
+            SalesChannels.Clear();
+            if (response?.Data != null)
             {
-                SalesChannels.Add(salesChannel);
+                foreach (var salesChannel in response.Data)
+                {
+                    SalesChannels.Add(salesChannel);
+                }
             }
+
+            SyncSelectedSalesChannel();
         }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // An unreachable channel list must not abort initialization - the rest of the sale stays
+            // editable, and an empty ComboBox gets an explanation instead of looking like an empty tenant.
+            ErrorMessage = string.Format(_localizer["SalesEditPage.SalesChannelsLoadFailed"], ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Resolves <see cref="SelectedSalesChannel"/> from the current <see cref="SalesChannelId"/>.
+    /// Writes the backing field directly so the assignment does not bounce back into the id setter.
+    /// </summary>
+    private void SyncSelectedSalesChannel()
+    {
+        var match = SalesChannels.FirstOrDefault(c => c.Id == _salesChannelId);
+        SetProperty(ref _selectedSalesChannel, match, nameof(SelectedSalesChannel));
     }
 
     public bool IsEditMode => _salesId.HasValue;
@@ -190,7 +212,13 @@ public class SalesEditModel : AsyncInitializableModel
     public Guid SalesChannelId
     {
         get => _salesChannelId;
-        set => SetProperty(ref _salesChannelId, value);
+        set
+        {
+            if (SetProperty(ref _salesChannelId, value))
+            {
+                SyncSelectedSalesChannel();
+            }
+        }
     }
 
     public int CustomerId
@@ -454,6 +482,22 @@ public class SalesEditModel : AsyncInitializableModel
     {
         get => _salesChannels;
         set => SetProperty(ref _salesChannels, value);
+    }
+
+    /// <summary>
+    /// Channel the sale is booked on, bound as the ComboBox's SelectedItem. SelectedValue is not usable
+    /// here: it is matched against the ItemsSource once, while the channel list is still loading.
+    /// </summary>
+    public SalesChannelListDto? SelectedSalesChannel
+    {
+        get => _selectedSalesChannel;
+        set
+        {
+            if (SetProperty(ref _selectedSalesChannel, value))
+            {
+                SalesChannelId = value?.Id ?? Guid.Empty;
+            }
+        }
     }
 
     #endregion

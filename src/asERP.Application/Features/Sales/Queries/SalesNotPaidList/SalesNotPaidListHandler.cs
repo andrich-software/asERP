@@ -2,9 +2,9 @@ using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Features.Sales.Shared;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Sales;
-using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Sales.Queries.SalesNotPaidList;
@@ -13,31 +13,6 @@ public class SalesNotPaidListHandler : IRequestHandler<SalesNotPaidListQuery, Pa
 {
     private readonly IAppLogger<SalesNotPaidListHandler> _logger;
     private readonly ISalesRepository _salesRepository;
-
-    // Statische Listen für Entity Framework Expression Trees
-    private static readonly List<PaymentStatus> NotPaidStatuses = new()
-    {
-        PaymentStatus.Unknown,
-        PaymentStatus.Invoiced,
-        PaymentStatus.PartiallyPaid,
-        PaymentStatus.FirstReminder,
-        PaymentStatus.SecondReminder,
-        PaymentStatus.ThirdReminder,
-        PaymentStatus.Encashment,
-        PaymentStatus.Reserved,
-        PaymentStatus.Delayed,
-        PaymentStatus.ReviewNecessary,
-        PaymentStatus.NoCreditApproved,
-        PaymentStatus.CreditPreliminarilyAccepted
-    };
-
-    private static readonly List<SalesStatus> ShippableStatuses = new()
-    {
-        SalesStatus.Pending,
-        SalesStatus.Processing,
-        SalesStatus.ReadyForDelivery,
-        SalesStatus.OnHold
-    };
 
     // Only columns surfaced in SalesListDto are sortable; client sort terms outside this set are ignored.
     private static readonly HashSet<string> AllowedSortFields = new(StringComparer.OrdinalIgnoreCase)
@@ -66,7 +41,7 @@ public class SalesNotPaidListHandler : IRequestHandler<SalesNotPaidListQuery, Pa
         _logger.LogInformation("Handle SalesNotPaidListQuery: {0}", request);
 
         return await _salesRepository.Entities
-            .Where(o => NotPaidStatuses.Contains(o.PaymentStatus) && ShippableStatuses.Contains(o.Status))
+            .Where(SalesQuickFilterPredicates.NotPaid())
             .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
             .Select(o => new SalesListDto
             {

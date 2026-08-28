@@ -7,7 +7,7 @@ using Xunit;
 
 namespace asERP.Server.Tests.Features.Sales.Queries;
 
-// Customer number range for this class: 920–929.
+// Customer number range for this class: 920–929 plus 914-915.
 public class SalesReadyToShipListTests : TenantIsolatedTestBase
 {
     private async Task<PaginatedResult<SalesReadyToShipListDto>> GetListAsync(string queryString = "")
@@ -64,6 +64,22 @@ public class SalesReadyToShipListTests : TenantIsolatedTestBase
 
         TestAssertions.AssertEqual(1, result.Data.Count);
         TestAssertions.AssertEqual(included.Id, result.Data[0].Id);
+    }
+
+    [Fact]
+    public async Task ReadyToShip_ExcludesUnpaidSales()
+    {
+        await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
+        var paid = ShippingTestDataSeeder.AddSales(DbContext, TenantConstants.TestTenant1Id, 914);
+        var unpaid = ShippingTestDataSeeder.AddSales(DbContext, TenantConstants.TestTenant1Id, 915);
+        unpaid.PaymentStatus = PaymentStatus.Invoiced;
+        await DbContext.SaveChangesAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var result = await GetListAsync();
+
+        TestAssertions.AssertEqual(1, result.Data.Count);
+        TestAssertions.AssertEqual(paid.Id, result.Data[0].Id);
     }
 
     [Fact]

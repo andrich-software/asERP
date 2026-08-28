@@ -198,7 +198,7 @@
               <controls:DetailPageHeader.Actions>
                 <Button x:Uid="ProductDetailPage.HeaderAction.Edit"
                         Click="EditButton_Click"
-                        Style="{StaticResource OutlinedButtonStyle}" />
+                        Style="{StaticResource HeaderActionButtonStyle}" />
               </controls:DetailPageHeader.Actions>
             </controls:DetailPageHeader>
 
@@ -217,6 +217,8 @@
                 <utu:TabBarItem x:Uid="ProductDetailPage.TabDescription"
                                 Style="{StaticResource MaterialTopTabBarItemStyle}" />
                 <utu:TabBarItem x:Uid="ProductDetailPage.TabVariants"
+                                Style="{StaticResource MaterialTopTabBarItemStyle}" />
+                <utu:TabBarItem x:Uid="ProductDetailPage.TabStock"
                                 Style="{StaticResource MaterialTopTabBarItemStyle}" />
                 <utu:TabBarItem x:Uid="ProductDetailPage.TabImages"
                                 Style="{StaticResource MaterialTopTabBarItemStyle}" />
@@ -571,6 +573,92 @@
                 </StackPanel>
               </ScrollViewer>
 
+              <!-- Tab: Stock per warehouse -->
+              <ScrollViewer x:Name="StockTab"
+                            VerticalScrollBarVisibility="Auto"
+                            Visibility="Collapsed">
+                <StackPanel Spacing="24"
+                            Padding="0,20,0,24">
+                  <Border Style="{StaticResource TableCardStyle}"
+                          Visibility="{Binding Data.Stocks.Count, Converter={StaticResource NotZeroToVisibilityConverter}}">
+                    <StackPanel>
+                      <!-- Header -->
+                      <Grid Background="{ThemeResource SurfaceBrush}"
+                            CornerRadius="8,8,0,0"
+                            Padding="16,10">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="2*" />
+                          <ColumnDefinition Width="1*" />
+                          <ColumnDefinition Width="1*" />
+                          <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" x:Uid="ProductDetailPage.StockColWarehouse"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}" />
+                        <TextBlock Grid.Column="1" x:Uid="ProductDetailPage.StockColStock"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                   HorizontalAlignment="Right" />
+                        <TextBlock Grid.Column="2" x:Uid="ProductDetailPage.StockColMin"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                   HorizontalAlignment="Right" />
+                        <TextBlock Grid.Column="3" x:Uid="ProductDetailPage.StockColMax"
+                                   Style="{StaticResource LabelMedium}"
+                                   Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                   HorizontalAlignment="Right" />
+                      </Grid>
+
+                      <ItemsControl ItemsSource="{Binding Data.Stocks}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Grid Padding="16,10"
+                                  BorderBrush="{ThemeResource OutlineVariantBrush}"
+                                  BorderThickness="0,0,0,1">
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="1*" />
+                                <ColumnDefinition Width="1*" />
+                                <ColumnDefinition Width="1*" />
+                              </Grid.ColumnDefinitions>
+                              <TextBlock Grid.Column="0"
+                                         Text="{Binding WarehouseName}"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceBrush}"
+                                         VerticalAlignment="Center"
+                                         TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding Stock}"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceBrush}"
+                                         VerticalAlignment="Center"
+                                         HorizontalAlignment="Right" />
+                              <TextBlock Grid.Column="2"
+                                         Text="{Binding StockMin}"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                         VerticalAlignment="Center"
+                                         HorizontalAlignment="Right" />
+                              <TextBlock Grid.Column="3"
+                                         Text="{Binding StockMax}"
+                                         Style="{StaticResource BodyMedium}"
+                                         Foreground="{ThemeResource OnSurfaceVariantBrush}"
+                                         VerticalAlignment="Center"
+                                         HorizontalAlignment="Right" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+
+                  <!-- No warehouses configured yet -->
+                  <controls:EmptyState x:Uid="ProductDetailPage.NoStock"
+                                       Glyph="&#xE7B8;"
+                                       Visibility="{Binding Data.Stocks.Count, Converter={StaticResource ZeroToVisibilityConverter}}" />
+                </StackPanel>
+              </ScrollViewer>
+
               <!-- Tab: Images (read-only gallery, loaded lazily) -->
               <ScrollViewer x:Name="ImagesTab"
                             VerticalScrollBarVisibility="Auto"
@@ -584,7 +672,7 @@
                           <ScrollViewer HorizontalScrollBarVisibility="Auto"
                                         VerticalScrollBarVisibility="Disabled"
                                         HorizontalScrollMode="Enabled">
-                            <ItemsControl ItemsSource="{Binding}">
+                            <ItemsControl ItemsSource="{Binding Data}">
                               <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                   <StackPanel Orientation="Horizontal" />

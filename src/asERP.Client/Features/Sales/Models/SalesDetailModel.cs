@@ -1,6 +1,9 @@
+using System.Collections.Immutable;
+using System.Linq;
 using asERP.Client.Core.Exceptions;
 using asERP.Client.Core.Notifications;
 using asERP.Client.Features.Customers;
+using asERP.Client.Features.Products.Services;
 using asERP.Client.Features.Returns.Services;
 using asERP.Client.Features.Saless.Services;
 using asERP.Client.Features.Shippings;
@@ -18,6 +21,7 @@ public partial record SalesDetailModel
     private readonly ISalesService _salesService;
     private readonly IShippingService _shippingService;
     private readonly IReturnService _returnService;
+    private readonly IProductService _productService;
     private readonly INavigator _navigator;
     private readonly INotificationService _notifications;
     private readonly IStringLocalizer _localizer;
@@ -27,6 +31,7 @@ public partial record SalesDetailModel
         ISalesService salesService,
         IShippingService shippingService,
         IReturnService returnService,
+        IProductService productService,
         INavigator navigator,
         INotificationService notifications,
         IStringLocalizer localizer,
@@ -35,6 +40,7 @@ public partial record SalesDetailModel
         _salesService = salesService;
         _shippingService = shippingService;
         _returnService = returnService;
+        _productService = productService;
         _navigator = navigator;
         _notifications = notifications;
         _localizer = localizer;
@@ -49,6 +55,60 @@ public partial record SalesDetailModel
         var sales = await _salesService.GetSalesAsync(_salesId, ct);
         return sales ?? throw new InvalidOperationException($"Sales {_salesId} not found");
     });
+
+    /// <summary>
+    /// Gate for the lazy items feed; flipped once when the items tab is first selected.
+    /// </summary>
+    public IState<bool> ItemsTabRequested => State<bool>.Value(this, () => false);
+
+    /// <summary>
+    /// Order lines with their product thumbnails. Depends on the sales feed for the lines and
+    /// stays dormant until <see cref="RequestItemsTab"/> flips the gate (lazy per-tab feed),
+    /// so opening an order does not pull images the user may never look at.
+    /// </summary>
+    public IListFeed<SalesItemRow> Items => Feed.Combine(Sales, ItemsTabRequested)
+        .Where(t => t.Item2)
+        .SelectAsync(async (t, ct) =>
+        {
+            var rows = t.Item1.SalesItems
+                .Select(item => new SalesItemRow
+                {
+                    Id = item.Id,
+                    ProductId = item.ProductId,
+                    Name = item.Name,
+                    Sku = item.MissingProductSku,
+                    Quantity = item.Quantity,
+                    Price = item.Price,
+                    PrimaryImageId = item.PrimaryImageId
+                })
+                .ToList();
+
+            await Task.WhenAll(rows
+                .Where(row => row.PrimaryImageId.HasValue)
+                .Select(row => LoadThumbnailAsync(row, ct)));
+
+            return (IImmutableList<SalesItemRow>)rows.ToImmutableList();
+        })
+        .AsListFeed();
+
+    /// <summary>
+    /// Start loading the items feed; called from the page when the items tab is first selected.
+    /// </summary>
+    public async ValueTask RequestItemsTab(CancellationToken ct = default)
+        => await ItemsTabRequested.UpdateAsync(_ => true, ct);
+
+    private async Task LoadThumbnailAsync(SalesItemRow row, CancellationToken ct)
+    {
+        try
+        {
+            row.ThumbnailBytes = await _productService.GetProductImageBytesAsync(
+                row.ProductId, row.PrimaryImageId!.Value, thumbnail: true, ct);
+        }
+        catch
+        {
+            // Thumbnail is non-essential; a missing preview must not break the items table.
+        }
+    }
 
     /// <summary>
     /// Navigate back to sales list.

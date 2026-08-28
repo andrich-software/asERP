@@ -20,6 +20,7 @@ using asERP.Domain.Dtos.Search;
 using asERP.Domain.Dtos.ServerInfo;
 using asERP.Domain.Dtos.Setup;
 using asERP.Domain.Dtos.Shipping;
+using asERP.Domain.Dtos.ShippingProvider;
 using asERP.Domain.Dtos.ShopDomain;
 using asERP.Domain.Dtos.Statistic;
 using asERP.Domain.Dtos.Superadmin;
@@ -39,6 +40,7 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(PaginatedResponse<TenantListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<ProductListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<WarehouseListDto>))]
+[JsonSerializable(typeof(PaginatedResponse<ShippingProviderListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<CustomerListDto>))]
 [JsonSerializable(typeof(PaginatedResponse<CustomerListWithAddressDto>))]
 [JsonSerializable(typeof(PaginatedResponse<TaxClassListDto>))]
@@ -74,7 +76,7 @@ namespace asERP.Client.Core.Json;
 [JsonSerializable(typeof(ApiResponse<RevenueChartDto>))]
 [JsonSerializable(typeof(ApiResponse<SalessTodayDto>))]
 [JsonSerializable(typeof(ApiResponse<CustomersTodayDto>))]
-[JsonSerializable(typeof(ApiResponse<ProductsTodayDto>))]
+[JsonSerializable(typeof(ApiResponse<DashboardTodosDto>))]
 [JsonSerializable(typeof(ApiResponse<SalessLatestDto>))]
 [JsonSerializable(typeof(ApiResponse<ProductsBestSellingDto>))]
 [JsonSerializable(typeof(ApiResponse<WebSessionsSummaryDto>))]

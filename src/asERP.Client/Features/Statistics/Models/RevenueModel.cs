@@ -33,6 +33,12 @@ public partial record RevenueModel
             var data = await _revenueService.GetRevenueChartAsync(startDate, endDate, ct);
             return data ?? new RevenueChartDto();
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Superseded by a newer request, or the page went away. The caller checks the
+            // token and discards the result, so an empty chart is all it needs.
+            return new RevenueChartDto();
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading revenue chart data");

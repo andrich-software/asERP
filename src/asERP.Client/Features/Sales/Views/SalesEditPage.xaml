@@ -94,11 +94,11 @@
                       Spacing="8">
             <Button x:Uid="SalesEditPage.HeaderAction.Cancel"
                     Click="CancelButton_Click"
-                    Style="{StaticResource OutlinedButtonStyle}" />
+                    Style="{StaticResource HeaderActionButtonStyle}" />
             <Button x:Uid="SalesEditPage.HeaderAction.Save"
                     Click="SaveButton_Click"
                     IsEnabled="{Binding CanSave}"
-                    Style="{StaticResource FilledButtonStyle}" />
+                    Style="{StaticResource HeaderActionSaveButtonStyle}" />
           </StackPanel>
         </controls:DetailPageHeader.Actions>
       </controls:DetailPageHeader>
@@ -187,10 +187,10 @@
                              Style="{StaticResource LabelMedium}"
                              Foreground="{ThemeResource OnSurfaceVariantBrush}" />
                   <ComboBox x:Name="SalesChannelComboBox"
+                            x:Uid="SalesEditPage.Field.SalesChannelSelect"
                             HorizontalAlignment="Stretch"
                             ItemsSource="{Binding SalesChannels}"
-                            SelectedValue="{Binding SalesChannelId, Mode=TwoWay}"
-                            SelectedValuePath="Id"
+                            SelectedItem="{Binding SelectedSalesChannel, Mode=TwoWay}"
                             DisplayMemberPath="Name"
                             IsEnabled="{Binding IsNotLoading}" />
                 </StackPanel>

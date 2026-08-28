@@ -10,12 +10,42 @@ namespace asERP.Client.Features.Shippings.Views;
 public sealed partial class ShippingListPage : Page
 {
     private bool _isInitializing = true;
+    private bool _initialFilterSynced;
 
     public ShippingListPage()
     {
         this.InitializeComponent();
         BuildStatusFilterItems();
-        this.Loaded += (_, _) => _isInitializing = false;
+        this.Loaded += OnLoaded;
+        this.DataContextChanged += (_, _) => TrySyncInitialFilter();
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        TrySyncInitialFilter();
+        _isInitializing = false;
+    }
+
+    /// <summary>
+    /// Syncs the problems-only toggle with a filter pre-activated via navigation data. Runs from
+    /// both Loaded and DataContextChanged (the DataContext may not be assigned yet at Loaded),
+    /// one-shot; the programmatic Toggled event is swallowed by the _isInitializing guard.
+    /// </summary>
+    private void TrySyncInitialFilter()
+    {
+        if (_initialFilterSynced || DataContext is not ShippingListModel model)
+        {
+            return;
+        }
+
+        _initialFilterSynced = true;
+        if (model.InitialProblemsOnly)
+        {
+            var wasInitializing = _isInitializing;
+            _isInitializing = true;
+            ProblemsOnlyToggle.IsOn = true;
+            _isInitializing = wasInitializing;
+        }
     }
 
     /// <summary>

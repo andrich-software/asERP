@@ -241,6 +241,7 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
             SalesStatusOld = oldStatus,
             SalesStatusNew = SalesStatus.Returned,
             Description = "Order fully returned",
+            MessageKey = SalesHistoryMessage.OrderFullyReturned,
             IsSystemGenerated = true
         });
 

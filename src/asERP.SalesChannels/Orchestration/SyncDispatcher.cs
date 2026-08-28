@@ -184,6 +184,7 @@ public sealed class SyncDispatcher
                     ChannelSyncOperation.ImportCustomers => await connector.ImportCustomersAsync(context),
                     ChannelSyncOperation.ImportStock => await connector.ImportStockAsync(context),
                     ChannelSyncOperation.ImportCategories => await connector.ImportCategoriesAsync(context),
+                    ChannelSyncOperation.ImportShipments => await connector.ImportShipmentsAsync(context),
                     _ => SyncResult.Failed($"Operation {operation} is not an import"),
                 };
 
@@ -301,7 +302,11 @@ public sealed class SyncDispatcher
     private static bool IsWatermarkOperation(ChannelSyncOperation operation) =>
         operation is ChannelSyncOperation.ImportSaless
             or ChannelSyncOperation.ImportProducts
-            or ChannelSyncOperation.ImportCustomers;
+            or ChannelSyncOperation.ImportCustomers
+            // Shipments: writing a tracking number goes through the shop's order CRUD, which bumps
+            // the order's modified timestamp — so the delta filter sees it. The periodic full sweep
+            // heals the rare plugin that writes the meta row behind the CRUD's back.
+            or ChannelSyncOperation.ImportShipments;
 
     /// <summary>
     /// Reads the incremental watermark from the durable operation state, minus a safety overlap
@@ -629,6 +634,7 @@ public sealed class SyncDispatcher
             ChannelSyncOperation.ExportCategory => await ExportCategoryAsync(connector, context, outbox, cancellationToken),
             ChannelSyncOperation.DeleteCategory => await DeleteCategoryAsync(connector, context, outbox, cancellationToken),
             ChannelSyncOperation.UpdateProductCategories => await UpdateProductCategoriesAsync(connector, context, outbox, cancellationToken),
+            ChannelSyncOperation.PushShipment => await PushShipmentAsync(connector, context, outbox, cancellationToken),
             _ => ExportResult.Fail($"Unsupported export operation {outbox.Operation}"),
         };
     }
@@ -738,6 +744,57 @@ public sealed class SyncDispatcher
 
         return await connector.UpdateSalesAsync(context, new SalesUpdatePayload(
             sales.Id, sales.RemoteSalesId, sales.Status.ToString(), null, null));
+    }
+
+    /// <summary>
+    /// Hydrates the order's complete tracking set at dispatch time rather than snapshotting it at
+    /// enqueue time: several shipments of one order coalesce into a single outbox row, so the row
+    /// must reflect the state when it is drained, not when the first parcel appeared.
+    /// </summary>
+    private async Task<ExportResult> PushShipmentAsync(ISalesChannelConnector connector, SalesChannelContext context, ChannelExportOutbox outbox, CancellationToken cancellationToken)
+    {
+        var sales = await _context.Sales
+            .IgnoreQueryFilters()
+            .Where(o => o.Id == outbox.AggregateId)
+            .Select(o => new { o.Id, o.RemoteSalesId })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (sales is null)
+        {
+            return ExportResult.Fail("Sales not found at dispatch time");
+        }
+
+        var shipments = await _context.Shipping
+            .IgnoreQueryFilters()
+            .Where(s => s.SalesId == sales.Id
+                        && s.TrackingNumber != string.Empty
+                        && s.Status != ShippingStatus.Cancelled)
+            .OrderBy(s => s.DateCreated)
+            .Select(s => new { s.TrackingNumber, s.ShippingProviderId })
+            .ToListAsync(cancellationToken);
+
+        var trackingNumbers = shipments
+            .Select(s => s.TrackingNumber)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        // Reverse direction of the import mapping: the local provider is translated back into the
+        // code the shop understands. Ambiguity (several codes for one provider) resolves to the
+        // lowest code so the pushed value is stable across runs.
+        string? carrierCode = null;
+        var providerId = shipments.Select(s => s.ShippingProviderId).FirstOrDefault();
+        if (providerId != Guid.Empty)
+        {
+            carrierCode = await _context.SalesChannelCarrierMapping
+                .IgnoreQueryFilters()
+                .Where(m => m.SalesChannelId == context.SalesChannel.Id && m.ShippingProviderId == providerId)
+                .OrderBy(m => m.RemoteCarrierCode)
+                .Select(m => m.RemoteCarrierCode)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return await connector.PushShipmentAsync(context, new ShipmentPushPayload(
+            sales.Id, sales.RemoteSalesId, trackingNumbers, carrierCode));
     }
 
     private async Task<ExportResult> CancelSalesAsync(ISalesChannelConnector connector, SalesChannelContext context, ChannelExportOutbox outbox, CancellationToken cancellationToken)

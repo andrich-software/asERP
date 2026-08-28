@@ -44,6 +44,18 @@ public class SalesChannelInputDto : ISalesChannelInputModel
     /// <summary>Push local category changes and product category assignments to the channel.</summary>
     public bool ExportCategories { get; set; }
 
+    /// <summary>
+    /// Direction of the shipment-tracking exchange: import the shop's tracking numbers, push local
+    /// ones, or neither. Mutually exclusive by design.
+    /// </summary>
+    public ShipmentTrackingMode ShipmentTrackingMode { get; set; } = ShipmentTrackingMode.None;
+
+    /// <summary>
+    /// Complete carrier translation set for this channel — replaces the stored rows on save.
+    /// Required for <see cref="ShipmentTrackingMode.Import"/>; an unmapped carrier is skipped.
+    /// </summary>
+    public List<SalesChannelCarrierMappingInputDto> CarrierMappings { get; set; } = new();
+
     public List<Guid> WarehouseIds { get; set; } = new();
 }
 

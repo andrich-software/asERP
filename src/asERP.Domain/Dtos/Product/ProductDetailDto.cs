@@ -72,6 +72,9 @@ public class ProductDetailDto
 
     public List<Guid> ProductStocks { get; set; } = new();
 
+    /// <summary>Stock per warehouse, ordered by warehouse name; warehouses without a stock row are included with zero stock.</summary>
+    public List<ProductStockDto> Stocks { get; set; } = new();
+
     /// <summary>Images attached to the product, ordered by SortOrder (first = primary).</summary>
     public List<ProductImageDto> Images { get; set; } = new();
 }

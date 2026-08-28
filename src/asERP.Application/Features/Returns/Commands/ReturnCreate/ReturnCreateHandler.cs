@@ -1,3 +1,4 @@
+using System.Globalization;
 using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
@@ -155,6 +156,9 @@ public class ReturnCreateHandler : IRequestHandler<ReturnCreateCommand, Result<G
                 UserId = Guid.Empty,
                 TenantId = sales.TenantId,
                 Description = $"Return requested ({returnToCreate.Items.Count} items)",
+                MessageKey = SalesHistoryMessage.ReturnRequested,
+                MessageArgs = SalesHistoryMessage.EncodeArgs(
+                    returnToCreate.Items.Count.ToString(CultureInfo.InvariantCulture)),
                 IsSystemGenerated = false
             });
 

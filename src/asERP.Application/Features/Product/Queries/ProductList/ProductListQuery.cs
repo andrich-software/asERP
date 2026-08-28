@@ -14,12 +14,16 @@ public class ProductListQuery : IRequest<PaginatedResult<ProductListDto>>
     /// <summary>When false (default), variant child products are excluded from the top-level list.</summary>
     public bool IncludeVariants { get; set; }
 
-    public ProductListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string salesBy = "", bool includeVariants = false)
+    /// <summary>When true, only products below their minimum stock in at least one warehouse are returned.</summary>
+    public bool LowStockOnly { get; set; }
+
+    public ProductListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string salesBy = "", bool includeVariants = false, bool lowStockOnly = false)
     {
         PageNumber = pageNumber;
         PageSize = pageSize;
         SearchString = searchString;
         IncludeVariants = includeVariants;
+        LowStockOnly = lowStockOnly;
 
         if (!string.IsNullOrWhiteSpace(salesBy))
         {

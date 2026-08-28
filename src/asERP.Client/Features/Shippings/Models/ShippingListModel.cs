@@ -21,19 +21,27 @@ public partial record ShippingListModel
         IShippingService shippingService,
         INavigator navigator,
         IStringLocalizer localizer,
-        INotificationService notifications)
+        INotificationService notifications,
+        ShippingListData? data = null)
     {
         _shippingService = shippingService;
         _navigator = navigator;
         _localizer = localizer;
         _notifications = notifications;
+        InitialProblemsOnly = data?.ProblemsOnly ?? false;
     }
+
+    /// <summary>
+    /// Problems-only filter pre-activated via navigation data (e.g. from the dashboard to-do
+    /// card); the page code-behind reads it to sync the toggle.
+    /// </summary>
+    public bool InitialProblemsOnly { get; }
 
     /// <summary>
     /// Search + status + problems filter as a single state, so the list feed stays a
     /// four-way Feed.Combine (nested combine tuples fight the MVUX generator).
     /// </summary>
-    public IState<ShippingListFilter> Filter => State<ShippingListFilter>.Value(this, () => new ShippingListFilter());
+    public IState<ShippingListFilter> Filter => State<ShippingListFilter>.Value(this, () => new ShippingListFilter(ProblemsOnly: InitialProblemsOnly));
 
     /// <summary>
     /// Current page number (0-based).

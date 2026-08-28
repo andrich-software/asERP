@@ -80,6 +80,19 @@ public sealed record CategoryDeletePayload(
     Guid SalesChannelId,
     string? RemoteCategoryId);
 
+/// <summary>
+/// Push of an order's complete tracking-number set. A shop order carries one tracking field, not one
+/// per parcel, so the payload transports every number of the order at once and the connector decides
+/// how to render them (WooCommerce: comma-separated in the shipment-number order meta).
+/// <paramref name="CarrierCode"/> is the channel-side code resolved through the channel's carrier
+/// mappings; empty when the providers involved have no mapping.
+/// </summary>
+public sealed record ShipmentPushPayload(
+    Guid SalesId,
+    string? RemoteSalesId,
+    IReadOnlyList<string> TrackingNumbers,
+    string? CarrierCode);
+
 /// <summary>Push of a product's full category assignment set as a partial product update.</summary>
 public sealed record ProductCategoriesUpdatePayload(
     Guid ProductId,

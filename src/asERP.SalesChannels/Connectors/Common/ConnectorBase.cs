@@ -31,6 +31,9 @@ public abstract class ConnectorBase : ISalesChannelConnector
     public virtual Task<SyncResult> ImportCategoriesAsync(SalesChannelContext context)
         => Task.FromResult(SyncResult.Empty);
 
+    public virtual Task<SyncResult> ImportShipmentsAsync(SalesChannelContext context)
+        => Task.FromResult(SyncResult.Empty);
+
     public virtual Task<ExportResult> ExportProductAsync(SalesChannelContext context, ProductExportPayload payload)
         => Task.FromResult(ExportResult.Fail($"{Type} does not support ExportProduct"));
 
@@ -57,4 +60,7 @@ public abstract class ConnectorBase : ISalesChannelConnector
 
     public virtual Task<ExportResult> UpdateProductCategoriesAsync(SalesChannelContext context, ProductCategoriesUpdatePayload payload)
         => Task.FromResult(ExportResult.Fail($"{Type} does not support UpdateProductCategories"));
+
+    public virtual Task<ExportResult> PushShipmentAsync(SalesChannelContext context, ShipmentPushPayload payload)
+        => Task.FromResult(ExportResult.Fail($"{Type} does not support PushShipment"));
 }

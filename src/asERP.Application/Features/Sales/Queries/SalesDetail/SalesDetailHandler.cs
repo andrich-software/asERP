@@ -7,6 +7,7 @@ using asERP.Domain.Dtos.Sales;
 using asERP.Domain.Dtos.Shipping;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace asERP.Application.Features.Sales.Queries.SalesDetail;
 
@@ -38,21 +39,30 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
     private readonly IReturnShipmentRepository _returnShipmentRepository;
 
     /// <summary>
+    /// Repository for the images of the ordered products
+    /// </summary>
+    private readonly IProductImageRepository _productImageRepository;
+
+    /// <summary>
     /// Constructor that initializes the handler with required dependencies
     /// </summary>
     /// <param name="logger">Logger for recording operations</param>
     /// <param name="salesRepository">Repository for sales data access</param>
     /// <param name="shippingRepository">Repository for shipment data access</param>
+    /// <param name="returnShipmentRepository">Repository for return shipment data access</param>
+    /// <param name="productImageRepository">Repository for product image data access</param>
     public SalesDetailHandler(
         IAppLogger<SalesDetailHandler> logger,
         ISalesRepository salesRepository,
         IShippingRepository shippingRepository,
-        IReturnShipmentRepository returnShipmentRepository)
+        IReturnShipmentRepository returnShipmentRepository,
+        IProductImageRepository productImageRepository)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _salesRepository = salesRepository ?? throw new ArgumentNullException(nameof(salesRepository));
         _shippingRepository = shippingRepository ?? throw new ArgumentNullException(nameof(shippingRepository));
         _returnShipmentRepository = returnShipmentRepository ?? throw new ArgumentNullException(nameof(returnShipmentRepository));
+        _productImageRepository = productImageRepository ?? throw new ArgumentNullException(nameof(productImageRepository));
     }
 
     /// <summary>
@@ -92,6 +102,8 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
 
             var returns = await _returnShipmentRepository.GetBySalesIdAsync(sales.Id);
 
+            var primaryImageByProduct = await GetPrimaryImagesAsync(sales.SalesItems, cancellationToken);
+
             // Manual mapping from entity to DTO
             var data = new SalesDetailDto
             {
@@ -113,7 +125,8 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
                     TaxRate = i.TaxRate,
                     MissingProductSku = i.MissingProductSku,
                     MissingProductEan = i.MissingProductEan,
-                    ShippingId = i.ShippingId
+                    ShippingId = i.ShippingId,
+                    PrimaryImageId = primaryImageByProduct.TryGetValue(i.ProductId, out var imageId) ? imageId : null
                 }).ToList(),
                 SalesHistory = MapSalesHistoryToDto(salesHistory),
                 PaymentMethod = sales.PaymentMethod,
@@ -197,6 +210,38 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
     }
 
     /// <summary>
+    /// Resolves the primary image (lowest SortOrder) of every ordered product in one query,
+    /// so the client can render a thumbnail per order line.
+    /// </summary>
+    private async Task<Dictionary<Guid, Guid>> GetPrimaryImagesAsync(
+        IEnumerable<Domain.Entities.SalesItem> salesItems,
+        CancellationToken cancellationToken)
+    {
+        var productIds = salesItems
+            .Select(i => i.ProductId)
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (productIds.Count == 0)
+        {
+            return new Dictionary<Guid, Guid>();
+        }
+
+        var images = await _productImageRepository.Entities
+            .AsNoTracking()
+            .Where(img => productIds.Contains(img.ProductId))
+            .Select(img => new { img.Id, img.ProductId, img.SortOrder })
+            .ToListAsync(cancellationToken);
+
+        return images
+            .GroupBy(img => img.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(img => img.SortOrder).ThenBy(img => img.Id).First().Id);
+    }
+
+    /// <summary>
     /// Maps SalesHistory entities to SalesHistoryDto objects.
     /// </summary>
     /// <param name="salesHistories">List of SalesHistory entities.</param>
@@ -216,7 +261,11 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
             ShippingStatusOld = history.ShippingStatusOld,
             ShippingStatusNew = history.ShippingStatusNew,
             Description = history.Description,
-            IsSystemGenerated = history.IsSystemGenerated
+            MessageKey = history.MessageKey,
+            MessageArgs = Domain.Entities.SalesHistoryMessage.DecodeArgs(history.MessageArgs),
+            IsSystemGenerated = history.IsSystemGenerated,
+            DateCreated = history.DateCreated,
+            DateUpdated = history.DateModified
         }).ToList();
     }
 }

@@ -21,4 +21,13 @@ public static class ShippingTimelineVisuals
     /// <summary>Local date + time of a timeline entry.</summary>
     public static string FormatTimestamp(DateTime value) =>
         value.ToLocalTime().ToString("g");
+
+    /// <summary>Localized entry text, falling back to the English audit description.</summary>
+    public static string EntryText(string? messageKey, IReadOnlyList<string>? messageArgs, string description) =>
+        HistoryMessageFormatter.Format(messageKey, messageArgs, description);
+
+    public static Visibility HasEntryText(string? messageKey, IReadOnlyList<string>? messageArgs, string description) =>
+        string.IsNullOrWhiteSpace(EntryText(messageKey, messageArgs, description))
+            ? Visibility.Collapsed
+            : Visibility.Visible;
 }

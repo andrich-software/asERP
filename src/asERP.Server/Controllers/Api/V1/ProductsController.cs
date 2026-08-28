@@ -28,20 +28,21 @@ public class ProductsController(IMediator mediator) : ControllerBase
     /// <param name="searchString">Search term to filter products by name or SKU</param>
     /// <param name="salesBy">Sort sales (e.g., "Name Ascending", "DateCreated Descending")</param>
     /// <param name="includeVariants">Include variant child products in the list (default false)</param>
+    /// <param name="lowStockOnly">Only products below their minimum stock in at least one warehouse (default false)</param>
     /// <returns>Paginated list of products</returns>
     /// <response code="200">Returns the paginated list of products</response>
     /// <response code="400">Invalid pagination parameters or search criteria</response>
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedResult<ProductListDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Microsoft.AspNetCore.Mvc.ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
-    public async Task<ActionResult<PaginatedResult<ProductListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "", bool includeVariants = false)
+    public async Task<ActionResult<PaginatedResult<ProductListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "", bool includeVariants = false, bool lowStockOnly = false)
     {
         if (string.IsNullOrEmpty(salesBy))
         {
             salesBy = "DateCreated Descending";
         }
 
-        var response = await mediator.Send(new ProductListQuery(pageNumber, pageSize, searchString, salesBy, includeVariants));
+        var response = await mediator.Send(new ProductListQuery(pageNumber, pageSize, searchString, salesBy, includeVariants, lowStockOnly));
         return response.ToActionResult();
     }
 

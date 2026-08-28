@@ -15,6 +15,7 @@ using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Returns;
 using asERP.Domain.Dtos.Sales;
 using asERP.Domain.Dtos.Shipping;
+using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -30,14 +31,14 @@ public class SalessController(IMediator mediator) : ControllerBase
 {
     // GET: api/v1/<SalessController>
     [HttpGet]
-    public async Task<ActionResult<PaginatedResult<SalesListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "", [FromQuery] Guid? salesChannelId = null)
+    public async Task<ActionResult<PaginatedResult<SalesListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "", [FromQuery] Guid? salesChannelId = null, [FromQuery] SalesQuickFilter filter = SalesQuickFilter.All)
     {
         if (string.IsNullOrEmpty(salesBy))
         {
             salesBy = "DateSalesed Descending";
         }
 
-        var saless = await mediator.Send(new SalesListQuery(pageNumber, pageSize, searchString, salesBy, salesChannelId));
+        var saless = await mediator.Send(new SalesListQuery(pageNumber, pageSize, searchString, salesBy, salesChannelId, filter));
         return Ok(saless);
     }
 

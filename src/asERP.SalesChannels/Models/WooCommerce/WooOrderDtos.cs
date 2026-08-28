@@ -29,6 +29,39 @@ public sealed class WooOrder
     public WooAddress? billing { get; set; }
     public WooAddress? shipping { get; set; }
     public List<WooLineItem>? line_items { get; set; }
+
+    /// <summary>
+    /// Order meta. WooCommerce's order endpoints return protected (underscore-prefixed) keys here,
+    /// which is where shipping plugins keep their tracking numbers.
+    /// </summary>
+    public List<WooMetaData>? meta_data { get; set; }
+
+    /// <summary>Shipping lines of the order — their <c>method_id</c> is the only carrier signal an order carries.</summary>
+    public List<WooShippingLine>? shipping_lines { get; set; }
+}
+
+public sealed class WooMetaData
+{
+    public string? key { get; set; }
+
+    /// <summary>
+    /// Kept as a raw element: meta values are string, number, object or array depending on the
+    /// plugin, and a typed property would throw on the shapes we do not care about.
+    /// </summary>
+    public JsonElement value { get; set; }
+
+    /// <summary>Scalar meta value as text; null for object/array values.</summary>
+    public string? AsText() => value.ValueKind switch
+    {
+        JsonValueKind.String => value.GetString(),
+        JsonValueKind.Number => value.ToString(),
+        _ => null,
+    };
+}
+
+public sealed class WooShippingLine
+{
+    public string? method_id { get; set; }
 }
 
 public sealed class WooAddress

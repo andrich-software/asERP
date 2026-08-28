@@ -27,6 +27,15 @@
 		<!-- NU5104: OpenTelemetry.Exporter.Prometheus.AspNetCore only ships prerelease versions. -->
 		<WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;NU1608;NU5104</WarningsNotAsErrors>
 	</PropertyGroup>
+	<!-- Visual Studio spawns an external console window for console-subsystem apps, so F5
+	     pops a window next to the IDE. Building the Windows debug apphost against the GUI
+	     subsystem keeps the session inside VS; Serilog's Debug sink (see
+	     appsettings.Development.json) carries the log output to the Output window. Release
+	     and non-Windows builds stay console apps so the CLI commands and the container
+	     entry point keep their stdout. -->
+	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' AND '$(OS)' == 'Windows_NT' ">
+		<OutputType>WinExe</OutputType>
+	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 		<Optimize>true</Optimize>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -59,6 +68,7 @@
 		<PackageReference Include="Serilog.AspNetCore" />
 		<PackageReference Include="Serilog.Sinks.Async" />
 		<PackageReference Include="Serilog.Sinks.Console" />
+		<PackageReference Include="Serilog.Sinks.Debug" />
 		<PackageReference Include="Serilog.Sinks.File" />
 		<PackageReference Include="Serilog.Sinks.Grafana.Loki" />
 		<PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />

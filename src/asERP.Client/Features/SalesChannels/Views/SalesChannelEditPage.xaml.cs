@@ -28,6 +28,23 @@ public sealed partial class SalesChannelEditPage : Page
         }
     }
 
+    private void AddCarrierMappingButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SalesChannelEditModel model)
+        {
+            model.AddCarrierMapping();
+        }
+    }
+
+    private void RemoveCarrierMappingButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SalesChannelEditModel model
+            && sender is FrameworkElement { DataContext: CarrierMappingRow row })
+        {
+            model.RemoveCarrierMapping(row);
+        }
+    }
+
     private async void CancelButton_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is SalesChannelEditModel model)

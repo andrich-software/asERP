@@ -148,6 +148,16 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
             ImportStock = entity.ImportStock,
             ImportCategories = entity.ImportCategories,
             ExportCategories = entity.ExportCategories,
+            ShipmentTrackingMode = entity.ShipmentTrackingMode,
+            CarrierMappings = entity.CarrierMappings?
+                .OrderBy(m => m.RemoteCarrierCode, StringComparer.Ordinal)
+                .Select(m => new SalesChannelCarrierMappingDto
+                {
+                    Id = m.Id,
+                    RemoteCarrierCode = m.RemoteCarrierCode,
+                    ShippingProviderId = m.ShippingProviderId,
+                    ShippingProviderName = m.ShippingProvider?.Name ?? string.Empty,
+                }).ToList() ?? new List<SalesChannelCarrierMappingDto>(),
             HasWebhookSecret = !string.IsNullOrEmpty(entity.WebhookSecret),
             Warehouses = entity.Warehouses?.Select(w => new WarehouseDetailDto
             {

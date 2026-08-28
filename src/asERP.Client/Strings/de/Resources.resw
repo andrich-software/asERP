@@ -256,8 +256,20 @@
   <data name="DashboardPage.KPI.Customers.Text" xml:space="preserve">
     <value>Neukunden</value>
   </data>
-  <data name="DashboardPage.KPI.Inventory.Text" xml:space="preserve">
-    <value>Produkte auf Lager</value>
+  <data name="DashboardPage.KPI.Todo.Text" xml:space="preserve">
+    <value>ToDo</value>
+  </data>
+  <data name="DashboardPage.Todo.ReadyToShip.Text" xml:space="preserve">
+    <value>Bestellungen zum Versand</value>
+  </data>
+  <data name="DashboardPage.Todo.PaymentOverdue.Text" xml:space="preserve">
+    <value>Bestellungen benötigen Aufmerksamkeit</value>
+  </data>
+  <data name="DashboardPage.Todo.ShippingProblems.Text" xml:space="preserve">
+    <value>Versandprobleme</value>
+  </data>
+  <data name="DashboardPage.Todo.Reorder.Text" xml:space="preserve">
+    <value>Produkte nachbestellen</value>
   </data>
   <data name="DashboardPage.KPI.VsLastWeek.Text" xml:space="preserve">
     <value>gg. Vorwoche</value>
@@ -274,9 +286,6 @@
   <data name="DashboardPage.KPI.CustomersTotalPrefix.Text" xml:space="preserve">
     <value>Kunden gesamt: </value>
   </data>
-  <data name="DashboardPage.KPI.LowStockItems.Text" xml:space="preserve">
-    <value> Artikel mit niedrigem Bestand</value>
-  </data>
 
   <!-- Dashboard Section Headers -->
   <data name="DashboardPage.Section.Activity.Text" xml:space="preserve">
@@ -290,24 +299,15 @@
   <data name="DashboardPage.Card.TopProducts.Text" xml:space="preserve">
     <value>Meistverkaufte Produkte</value>
   </data>
-  <data name="DashboardPage.Card.LowStockAlerts.Text" xml:space="preserve">
-    <value>Bestandswarnungen</value>
-  </data>
 
   <!-- Dashboard Buttons -->
   <data name="DashboardPage.Button.ViewAll.Content" xml:space="preserve">
     <value>Alle anzeigen</value>
   </data>
-  <data name="DashboardPage.Button.ManageInventory.Content" xml:space="preserve">
-    <value>Lager verwalten</value>
-  </data>
 
   <!-- Dashboard Labels -->
   <data name="DashboardPage.Label.Sold.Text" xml:space="preserve">
     <value> verkauft</value>
-  </data>
-  <data name="DashboardPage.NoLowStockAlerts.Text" xml:space="preserve">
-    <value>Alle Produkte sind ausreichend auf Lager!</value>
   </data>
 
   <!-- Shell Navigation -->
@@ -686,6 +686,9 @@
   </data>
   <data name="ProductListPage.IncludeVariants.Header" xml:space="preserve">
     <value>Varianten anzeigen</value>
+  </data>
+  <data name="ProductListPage.LowStockOnly.Header" xml:space="preserve">
+    <value>Niedriger Bestand</value>
   </data>
   <data name="ProductListPage.Header.Sku.Text" xml:space="preserve">
     <value>SKU</value>
@@ -2178,6 +2181,42 @@
   <data name="SalesChannelEditPage.Section.BasicInfo.Text" xml:space="preserve">
     <value>Grundinformationen</value>
   </data>
+  <data name="SalesChannelEditPage.Section.ShipmentTracking.Text" xml:space="preserve">
+    <value>Sendungsnummern</value>
+  </data>
+  <data name="SalesChannelEditPage.TrackingIntro.Text" xml:space="preserve">
+    <value>Legt fest, in welche Richtung Sendungsnummern zwischen Shop und asERP ausgetauscht werden. Beides gleichzeitig ist nicht möglich, sonst würde eine importierte Nummer wieder in den Shop zurückgeschrieben.</value>
+  </data>
+  <data name="SalesChannelEditPage.TrackingModeNone.Content" xml:space="preserve">
+    <value>Kein Austausch</value>
+  </data>
+  <data name="SalesChannelEditPage.TrackingModeImport.Content" xml:space="preserve">
+    <value>Sendungsnummern aus dem Shop importieren</value>
+  </data>
+  <data name="SalesChannelEditPage.TrackingModePush.Content" xml:space="preserve">
+    <value>Sendungsnummern in den Shop schreiben</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierMappingIntro.Text" xml:space="preserve">
+    <value>Ordnet die Versandart des Shops einem Versanddienstleister in asERP zu. Beim Import wird eine Sendung ohne passende Zuordnung übersprungen — die fehlenden Codes stehen im Sync-Protokoll.</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierMappingNoProviders.Text" xml:space="preserve">
+    <value>Es ist noch kein Versanddienstleister angelegt. Ohne Dienstleister kann keine Zuordnung gespeichert werden.</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierMappingEmpty.Text" xml:space="preserve">
+    <value>Noch keine Zuordnung angelegt.</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierCodeInput.Header" xml:space="preserve">
+    <value>Versandart im Shop</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierCodeInput.PlaceholderText" xml:space="preserve">
+    <value>z. B. dhl_home_delivery</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierProviderSelect.Header" xml:space="preserve">
+    <value>Versanddienstleister</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierMappingAdd.Content" xml:space="preserve">
+    <value>Zuordnung hinzufügen</value>
+  </data>
   <data name="SalesChannelEditPage.Section.ShopDomains.Text" xml:space="preserve">
     <value>Shop-Domains</value>
   </data>
@@ -2729,6 +2768,18 @@
   </data>
   <data name="ProductDetailPage.VariantColName.Text" xml:space="preserve">
     <value>Name</value>
+  </data>
+  <data name="ProductDetailPage.StockColWarehouse.Text" xml:space="preserve">
+    <value>Lager</value>
+  </data>
+  <data name="ProductDetailPage.StockColStock.Text" xml:space="preserve">
+    <value>Bestand</value>
+  </data>
+  <data name="ProductDetailPage.StockColMin.Text" xml:space="preserve">
+    <value>Mindestbestand</value>
+  </data>
+  <data name="ProductDetailPage.StockColMax.Text" xml:space="preserve">
+    <value>Maximalbestand</value>
   </data>
   <data name="ProductDetailPage.VariantColPrice.Text" xml:space="preserve">
     <value>Preis</value>
@@ -3410,6 +3461,9 @@
   <data name="SalesEditPage.Field.SalesChannel.Label.Text" xml:space="preserve">
     <value>Verkaufskanal</value>
   </data>
+  <data name="SalesEditPage.Field.SalesChannelSelect.PlaceholderText" xml:space="preserve">
+    <value>Verkaufskanal wählen</value>
+  </data>
   <data name="SalesEditPage.Field.CustomerId.Header" xml:space="preserve">
     <value>Kundennummer</value>
   </data>
@@ -3620,6 +3674,10 @@
   </data>
   <data name="SalesEditPage.Error.SaveFailed" xml:space="preserve">
     <value>Verkauf konnte nicht gespeichert werden: {0}</value>
+  </data>
+  <!-- Single-dot key: resolved at runtime through IStringLocalizer, which only supports 2 segments. -->
+  <data name="SalesEditPage.SalesChannelsLoadFailed" xml:space="preserve">
+    <value>Verkaufskanäle konnten nicht geladen werden: {0}</value>
   </data>
 
   <!-- Shell User Menu - Tenants -->
@@ -5131,6 +5189,12 @@
   <data name="ProductDetailPage.TabOverview.Content" xml:space="preserve">
     <value>Übersicht</value>
   </data>
+  <data name="ProductDetailPage.NoStock.Message" xml:space="preserve">
+    <value>Keine Lager vorhanden</value>
+  </data>
+  <data name="ProductDetailPage.TabStock.Content" xml:space="preserve">
+    <value>Bestände</value>
+  </data>
   <data name="ProductDetailPage.TabVariants.Content" xml:space="preserve">
     <value>Varianten</value>
   </data>
@@ -6222,5 +6286,165 @@
   </data>
   <data name="SalesChannelEditPage.Field.ExportCategories.Text" xml:space="preserve">
     <value>Kategorien &amp; Produktzuordnungen exportieren</value>
+  </data>
+  <!-- Header actions migrated off NavigationBar AppBarButtons -->
+  <data name="AiModelDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="AiPromptDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="ManufacturerDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="ProductAttributeDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="SalesChannelDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="TaxClassDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="TenantDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="WarehouseDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="AiModelEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="AiModelEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="AiPromptEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="AiPromptEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="CategoryEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="CategoryEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="FeedEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="FeedEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="ManufacturerEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="ManufacturerEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="ProductAttributeEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="ProductAttributeEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="SalesChannelEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="SalesChannelEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="SuperadminCountryEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="SuperadminCountryEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="SuperadminTenantEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="SuperadminTenantEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="TaxClassEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="TaxClassEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="TenantEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="TenantEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="WarehouseEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="WarehouseEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="SalesListPage.Filter.All.Content" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="SalesListPage.Filter.ReadyToShip.Content" xml:space="preserve">
+    <value>Bereit für Versand</value>
+  </data>
+  <data name="SalesListPage.Filter.Open.Content" xml:space="preserve">
+    <value>Offen</value>
+  </data>
+  <data name="SalesListPage.Filter.NotPaid.Content" xml:space="preserve">
+    <value>Nicht bezahlt</value>
+  </data>
+  <data name="SalesListPage.Filter.PaymentOverdue.Content" xml:space="preserve">
+    <value>Zahlung überfällig</value>
+  </data>
+  <data name="SalesListPage.Filter.Problems.Content" xml:space="preserve">
+    <value>Problemfälle</value>
+  </data>
+  <data name="SalesListPage.Filter.Completed.Content" xml:space="preserve">
+    <value>Abgeschlossen</value>
+  </data>
+  <data name="SalesListPage.Filter.Cancelled.Content" xml:space="preserve">
+    <value>Storniert/Retoure</value>
+  </data>
+  <data name="SalesHistory.OrderImported" xml:space="preserve">
+    <value>Importiert von {0} (Bestellstatus: {1}, Zahlung: {2})</value>
+  </data>
+  <data name="SalesHistory.ChannelOrderStatusChanged" xml:space="preserve">
+    <value>Bestellstatus geändert: {1} → {2} (Import von {0})</value>
+  </data>
+  <data name="SalesHistory.ChannelPaymentStatusChanged" xml:space="preserve">
+    <value>Zahlungsstatus geändert: {1} → {2} (Import von {0})</value>
+  </data>
+  <data name="SalesHistory.ChannelOrderAndPaymentStatusChanged" xml:space="preserve">
+    <value>Bestellstatus geändert: {1} → {2}, Zahlungsstatus geändert: {3} → {4} (Import von {0})</value>
+  </data>
+  <data name="SalesHistory.OrderCancelled" xml:space="preserve">
+    <value>Bestellung storniert</value>
+  </data>
+  <data name="SalesHistory.OrderStatusAutoFromShipment" xml:space="preserve">
+    <value>Bestellstatus automatisch aus der Sendungszuordnung aktualisiert: {0} → {1}</value>
+  </data>
+  <data name="SalesHistory.OrderFullyReturned" xml:space="preserve">
+    <value>Bestellung vollständig retourniert</value>
+  </data>
+  <data name="SalesHistory.ShipmentCreated" xml:space="preserve">
+    <value>Sendung erstellt ({0} / {1})</value>
+  </data>
+  <data name="SalesHistory.ShippingStatusChanged" xml:space="preserve">
+    <value>Versandstatus geändert: {0} → {1}</value>
+  </data>
+  <data name="SalesHistory.ShippingStatusChangedWithCarrierNote" xml:space="preserve">
+    <value>Versandstatus geändert: {0} → {1} ({2})</value>
+  </data>
+  <data name="SalesHistory.ReturnRequested" xml:space="preserve">
+    <value>Retoure angefordert ({0} Positionen)</value>
+  </data>
+  <data name="SalesHistory.ReturnStatusChanged" xml:space="preserve">
+    <value>Retourenstatus geändert: {0} → {1}</value>
+  </data>
+  <data name="SalesHistory.ReturnStatusChangedWithNote" xml:space="preserve">
+    <value>Retourenstatus geändert: {0} → {1} ({2})</value>
   </data>
 </root>

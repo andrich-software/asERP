@@ -5,6 +5,7 @@ using asERP.Client.Core.Json;
 using asERP.Client.Core.Models;
 using asERP.Client.Features.Auth.Services;
 using asERP.Domain.Dtos.Sales;
+using asERP.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace asERP.Client.Features.Saless.Services;
@@ -40,10 +41,18 @@ public class SalesService : ISalesService
 
     public async Task<PaginatedResponse<SalesListDto>> GetSalessAsync(
         QueryParameters parameters,
+        SalesQuickFilter filter = SalesQuickFilter.All,
         CancellationToken ct = default)
     {
         var baseUrl = await GetBaseUrlAsync();
-        var url = $"{baseUrl}{ApiEndpoints.Saless.Base}?{parameters.ToQueryString()}";
+        var query = parameters.ToQueryString();
+
+        if (filter != SalesQuickFilter.All)
+        {
+            query += $"&filter={filter}";
+        }
+
+        var url = $"{baseUrl}{ApiEndpoints.Saless.Base}?{query}";
 
         _logger.LogInformation("Fetching saless from URL: {Url}", url);
 
@@ -68,7 +77,9 @@ public class SalesService : ISalesService
 
             return response;
         }
-        catch (Exception ex)
+        // Cancellation is routine here: the list feed supersedes its own request on every filter,
+        // sort or page change, so it is not an error worth logging.
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Error fetching saless from {Url}", url);
             throw;

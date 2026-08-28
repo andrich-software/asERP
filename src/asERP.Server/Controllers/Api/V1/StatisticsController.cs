@@ -1,6 +1,6 @@
 using asERP.Application.Features.Statistic.Queries.CustomersToday;
+using asERP.Application.Features.Statistic.Queries.DashboardTodos;
 using asERP.Application.Features.Statistic.Queries.ProductsBestSelling;
-using asERP.Application.Features.Statistic.Queries.ProductsToday;
 using asERP.Application.Features.Statistic.Queries.RevenueChart;
 using asERP.Application.Features.Statistic.Queries.SalessLatest;
 using asERP.Application.Features.Statistic.Queries.SalessToday;
@@ -61,11 +61,11 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
-    // GET: api/v1/<StatisticsController>/ProductsToday
-    [HttpGet("ProductsToday")]
-    public async Task<ActionResult<Result<ProductsTodayDto>>> ProductsToday()
+    // GET: api/v1/<StatisticsController>/DashboardTodos
+    [HttpGet("DashboardTodos")]
+    public async Task<ActionResult<Result<DashboardTodosDto>>> DashboardTodos()
     {
-        var result = await mediator.Send(new ProductsTodayQuery());
+        var result = await mediator.Send(new DashboardTodosQuery());
 
         if (!result.Succeeded)
             return StatusCode((int)result.StatusCode, result);

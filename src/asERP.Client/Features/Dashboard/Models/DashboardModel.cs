@@ -1,8 +1,11 @@
 using asERP.Client.Core.Formatting;
 using asERP.Client.Features.Dashboard.Services;
+using asERP.Client.Features.Products;
 using asERP.Client.Features.Products.Models;
 using asERP.Client.Features.Saless;
 using asERP.Client.Features.Saless.Models;
+using asERP.Client.Features.Shippings;
+using asERP.Client.Features.Shippings.Models;
 using asERP.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -41,6 +44,27 @@ public partial record DashboardModel
         await _navigator.NavigateViewModelAsync<ProductListModel>(this);
     }
 
+    // To-do card links: open the matching list page with its filter pre-activated.
+    public async ValueTask NavigateToReadyToShip()
+    {
+        await _navigator.NavigateViewModelAsync<SalesListModel>(this, data: new SalesListData(SalesQuickFilter.ReadyToShip));
+    }
+
+    public async ValueTask NavigateToPaymentOverdue()
+    {
+        await _navigator.NavigateViewModelAsync<SalesListModel>(this, data: new SalesListData(SalesQuickFilter.PaymentOverdue));
+    }
+
+    public async ValueTask NavigateToShippingProblems()
+    {
+        await _navigator.NavigateViewModelAsync<ShippingListModel>(this, data: new ShippingListData(true));
+    }
+
+    public async ValueTask NavigateToLowStockProducts()
+    {
+        await _navigator.NavigateViewModelAsync<ProductListModel>(this, data: new ProductListData(true));
+    }
+
     public async ValueTask ViewSales(RecentSalesItem sales)
     {
         await _navigator.NavigateDataAsync(this, new SalesDetailData(sales.Id));
@@ -58,19 +82,16 @@ public partial record DashboardModel
     }
 
     // KPI Data Feeds - four separate feeds for parallel loading
+    public IFeed<TodoKpiData> TodoData => Feed.Async(LoadTodoDataAsync);
     public IFeed<RevenueKpiData> RevenueData => PeriodHours.SelectAsync(LoadRevenueDataAsync);
     public IFeed<SalessKpiData> SalessData => PeriodHours.SelectAsync(LoadSalessDataAsync);
     public IFeed<CustomersKpiData> CustomersData => PeriodHours.SelectAsync(LoadCustomersDataAsync);
-    public IFeed<ProductsKpiData> ProductsData => Feed.Async(LoadProductsDataAsync);
 
     // Recent Saless Feed
     public IListFeed<RecentSalesItem> RecentSaless => ListFeed.Async(LoadRecentSalessAsync);
 
     // Top Selling Products Feed
     public IListFeed<TopProductItem> TopProducts => PeriodHours.SelectAsync(LoadTopProductsAsync).AsListFeed();
-
-    // Low Stock Alerts Feed
-    public IListFeed<LowStockItem> LowStockAlerts => ListFeed.Async(LoadLowStockAlertsAsync);
 
     private async ValueTask<RevenueKpiData> LoadRevenueDataAsync(int hours, CancellationToken ct)
     {
@@ -162,32 +183,32 @@ public partial record DashboardModel
         }
     }
 
-    private async ValueTask<ProductsKpiData> LoadProductsDataAsync(CancellationToken ct)
+    private async ValueTask<TodoKpiData> LoadTodoDataAsync(CancellationToken ct)
     {
         try
         {
-            _logger.LogInformation("Loading products KPI data");
-            var data = await _statisticsService.GetProductsTodayAsync(ct);
+            _logger.LogInformation("Loading todo KPI data");
+            var data = await _statisticsService.GetDashboardTodosAsync(ct);
 
             if (data == null)
             {
-                _logger.LogWarning("ProductsToday service returned null");
-                return new ProductsKpiData();
+                _logger.LogWarning("DashboardTodos service returned null");
+                return new TodoKpiData();
             }
 
-            _logger.LogInformation("Products KPI loaded - ProductsTotal: {ProductsTotal}", data.ProductsTotal);
+            _logger.LogInformation("Todo KPI loaded - SalessReadyToShip: {SalessReadyToShip}", data.SalessReadyToShip);
 
-            return new ProductsKpiData
+            return new TodoKpiData
             {
-                ProductsInStock = data.ProductsInStock,
-                ProductsTotal = data.ProductsTotal,
-                ProductsLowStock = data.ProductsLowStock,
-                ProductsChange = data.ProductsChangePercent
+                SalessReadyToShip = data.SalessReadyToShip,
+                SalessPaymentOverdue = data.SalessPaymentOverdue,
+                ShippingProblems = data.ShippingProblems,
+                ProductsToReorder = data.ProductsToReorder
             };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error loading products KPI data");
+            _logger.LogError(ex, "Error loading todo KPI data");
             throw;
         }
     }
@@ -257,22 +278,6 @@ public partial record DashboardModel
         }
     }
 
-    private async ValueTask<IImmutableList<LowStockItem>> LoadLowStockAlertsAsync(CancellationToken ct)
-    {
-        // Simulate API call delay
-        await Task.Delay(350, ct);
-
-        // Return dummy data
-        var alerts = new List<LowStockItem>
-        {
-            new() { ProductName = "Wireless Mouse Pro", Sku = "WMP-012", CurrentStock = 3, MinimumStock = 20, Severity = AlertSeverity.Critical },
-            new() { ProductName = "HDMI Cable 3m", Sku = "HDM-023", CurrentStock = 8, MinimumStock = 25, Severity = AlertSeverity.Warning },
-            new() { ProductName = "USB Hub 4-Port", Sku = "USH-034", CurrentStock = 12, MinimumStock = 30, Severity = AlertSeverity.Warning },
-            new() { ProductName = "Webcam HD 1080p", Sku = "WCH-045", CurrentStock = 5, MinimumStock = 15, Severity = AlertSeverity.Critical }
-        };
-
-        return alerts.ToImmutableList();
-    }
 }
 
 /// <summary>
@@ -325,19 +330,20 @@ public record CustomersKpiData
 }
 
 /// <summary>
-/// Products/Inventory KPI data for the fourth dashboard card.
+/// To-do KPI data for the leftmost dashboard card: actionable counts linking into
+/// the pre-filtered list pages.
 /// </summary>
-public record ProductsKpiData
+public record TodoKpiData
 {
-    public int ProductsInStock { get; init; }
-    public int ProductsTotal { get; init; }
-    public int ProductsLowStock { get; init; }
-    public decimal ProductsChange { get; init; }
+    public int SalessReadyToShip { get; init; }
+    public int SalessPaymentOverdue { get; init; }
+    public int ShippingProblems { get; init; }
+    public int ProductsToReorder { get; init; }
 
-    public string ProductsChangeFormatted => $"{(ProductsChange >= 0 ? "+" : "")}{ProductsChange:F1}%";
-    public bool ProductsChangePositive => ProductsChange >= 0;
-    public string ProductsLowStockFormatted => ProductsLowStock.ToString("N0");
-    public string StockRatio => $"{ProductsInStock:N0} / {ProductsTotal:N0}";
+    public string SalessReadyToShipFormatted => SalessReadyToShip.ToString("N0");
+    public string SalessPaymentOverdueFormatted => SalessPaymentOverdue.ToString("N0");
+    public string ShippingProblemsFormatted => ShippingProblems.ToString("N0");
+    public string ProductsToReorderFormatted => ProductsToReorder.ToString("N0");
 }
 
 /// <summary>
@@ -386,29 +392,3 @@ public record TopProductItem
     public string RankFormatted => $"#{Rank}";
 }
 
-/// <summary>
-/// Low stock alert item.
-/// </summary>
-public record LowStockItem
-{
-    public string ProductName { get; init; } = string.Empty;
-    public string Sku { get; init; } = string.Empty;
-    public int CurrentStock { get; init; }
-    public int MinimumStock { get; init; }
-    public AlertSeverity Severity { get; init; }
-
-    public string StockDisplay => $"{CurrentStock} / {MinimumStock}";
-    public string SeverityIcon => Severity switch
-    {
-        AlertSeverity.Critical => "\uE7BA",   // Warning filled
-        AlertSeverity.Warning => "\uE7BA",    // Warning
-        _ => "\uE946"                         // Info
-    };
-}
-
-public enum AlertSeverity
-{
-    Info,
-    Warning,
-    Critical
-}

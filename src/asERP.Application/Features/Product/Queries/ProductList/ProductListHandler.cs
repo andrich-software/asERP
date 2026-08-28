@@ -2,6 +2,7 @@ using System.Linq.Dynamic.Core;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Extensions;
+using asERP.Application.Features.Product.Shared;
 using asERP.Application.Mediator;
 using asERP.Application.Specifications;
 using asERP.Domain.Dtos.Manufacturer;
@@ -45,11 +46,23 @@ public class ProductListHandler : IRequestHandler<ProductListQuery, PaginatedRes
 
         _logger.LogInformation("Handle ProductListQuery: {0}", request);
 
-        return await _productRepository.Entities
+        var query = _productRepository.Entities
             .Include(p => p.Manufacturer)
             .Include(p => p.TaxClass)
             .Include(p => p.Variants)
-            .Specify(salesFilterSpec)
+            // MapToProductListDto is a method call, so EF evaluates the projection on the client
+            // against the materialized entity: every navigation it reads has to be included here or
+            // it silently maps to null/empty — which is why PrimaryImageId was always null.
+            // Only the primary image is needed, so the filtered include pulls a single row.
+            .Include(p => p.Images.OrderBy(i => i.SortOrder).Take(1))
+            .Specify(salesFilterSpec);
+
+        if (request.LowStockOnly)
+        {
+            query = query.Where(ProductStockFilters.LowStock);
+        }
+
+        return await query
             .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
             .AsSingleQuery() // Projection reads two collections (Variants, Images); keep one query and silence the multi-collection warning
             .Select(p => MapToProductListDto(p))

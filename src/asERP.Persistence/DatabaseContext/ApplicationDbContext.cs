@@ -86,6 +86,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<SalesChannel>().ToTable("saleschannel");
         modelBuilder.Entity<SalesChannelSyncState>().ToTable("saleschannel_sync_state");
         modelBuilder.Entity<SalesChannelOperationState>().ToTable("saleschannel_operation_state");
+        modelBuilder.Entity<SalesChannelCarrierMapping>().ToTable("saleschannel_carrier_mapping");
         modelBuilder.Entity<ShopDomain>().ToTable("shop_domain");
         modelBuilder.Entity<ReturnShipment>().ToTable("return_shipment");
         modelBuilder.Entity<ReturnShipmentItem>().ToTable("return_shipment_item");
@@ -122,6 +123,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.ApplyConfiguration(new SalesChannelConfiguration());
         modelBuilder.ApplyConfiguration(new SalesChannelSyncStateConfiguration());
         modelBuilder.ApplyConfiguration(new SalesChannelOperationStateConfiguration());
+        modelBuilder.ApplyConfiguration(new SalesChannelCarrierMappingConfiguration());
         modelBuilder.ApplyConfiguration(new ShopDomainConfiguration());
 
         // Wire up at-rest encryption for SalesChannel credentials. Converter goes through
@@ -262,6 +264,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SalesChannel> SalesChannel { get; set; } = null!;
     public DbSet<SalesChannelSyncState> SalesChannelSyncState { get; set; } = null!;
     public DbSet<SalesChannelOperationState> SalesChannelOperationState { get; set; } = null!;
+    public DbSet<SalesChannelCarrierMapping> SalesChannelCarrierMapping { get; set; } = null!;
     public DbSet<ShopDomain> ShopDomain { get; set; } = null!;
     public DbSet<Setting> Setting { get; set; } = null!;
     public DbSet<Shipping> Shipping { get; set; } = null!;

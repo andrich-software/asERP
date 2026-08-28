@@ -83,6 +83,9 @@ public class SalesShippingStatusService : ISalesShippingStatusService
             SalesStatusOld = oldStatus,
             SalesStatusNew = target.Value,
             Description = "Order status updated automatically from shipment assignment",
+            MessageKey = SalesHistoryMessage.OrderStatusAutoFromShipment,
+            MessageArgs = SalesHistoryMessage.EncodeArgs(
+                SalesHistoryMessage.Enum(oldStatus), SalesHistoryMessage.Enum(target.Value)),
             IsSystemGenerated = true
         });
 

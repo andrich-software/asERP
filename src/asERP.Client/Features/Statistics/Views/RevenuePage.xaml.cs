@@ -18,6 +18,11 @@ public sealed partial class RevenuePage : Page
 
     private CancellationTokenSource? _loadCts;
 
+    // Range of the load currently in flight, if any. Navigating to the page raises both
+    // DataContextChanged and Loaded, and both trigger a reload — the guard in ReloadAsync
+    // keeps the second one from cancelling the first one's identical request.
+    private (DateTime Start, DateTime End)? _inFlightRange;
+
     // Screen coordinates of each plotted point, for pointer hit-testing.
     private readonly List<(double X, double Y, RevenueChartPointDto Point)> _plotPoints = new();
 
@@ -102,10 +107,18 @@ public sealed partial class RevenuePage : Page
             (start, end) = (end, start);
         }
 
+        // Exactly this range is already on the wire — nothing to gain from cancelling it
+        // and asking again.
+        if (_inFlightRange == (start, end))
+        {
+            return;
+        }
+
         _loadCts?.Cancel();
         _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
         var token = _loadCts.Token;
+        _inFlightRange = (start, end);
 
         ChartProgress.IsActive = true;
         NoDataText.Visibility = Visibility.Collapsed;
@@ -128,6 +141,12 @@ public sealed partial class RevenuePage : Page
         }
         finally
         {
+            // Only release the claim if a newer load has not already taken it over.
+            if (_inFlightRange == (start, end))
+            {
+                _inFlightRange = null;
+            }
+
             if (!token.IsCancellationRequested)
             {
                 ChartProgress.IsActive = false;

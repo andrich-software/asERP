@@ -349,6 +349,7 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         ChannelSyncOperation.ImportSaless,
         ChannelSyncOperation.ImportCustomers,
         ChannelSyncOperation.ImportStock,
+        ChannelSyncOperation.ImportShipments,
     ];
 
     /// <summary>
@@ -380,7 +381,9 @@ public sealed class SalesChannelOrchestrator : BackgroundService
                 || (o.Operation == ChannelSyncOperation.ImportSaless && o.SalesChannel!.ImportSaless)
                 || (o.Operation == ChannelSyncOperation.ImportCustomers && o.SalesChannel!.ImportCustomers)
                 || (o.Operation == ChannelSyncOperation.ImportStock && o.SalesChannel!.ImportStock)
-                || (o.Operation == ChannelSyncOperation.ImportCategories && o.SalesChannel!.ImportCategories))
+                || (o.Operation == ChannelSyncOperation.ImportCategories && o.SalesChannel!.ImportCategories)
+                || (o.Operation == ChannelSyncOperation.ImportShipments
+                    && o.SalesChannel!.ShipmentTrackingMode == ShipmentTrackingMode.Import))
             .OrderBy(o => o.NextDueAt)
             .Take(_options.MaxLaunchesPerTick)
             .ToListAsync(cancellationToken);
@@ -611,6 +614,13 @@ public sealed class SalesChannelOrchestrator : BackgroundService
         if (channel.ImportStock && initialCatalogueReady)
         {
             dueOperations.Add(ChannelSyncOperation.ImportStock);
+        }
+        // Shipments attach to already imported orders, so the shipment pull waits for the initial
+        // order backfill — running it earlier would resolve almost nothing and burn API calls.
+        if (channel.ShipmentTrackingMode == ShipmentTrackingMode.Import
+            && channel.SyncState.InitialSalesImportCompleted)
+        {
+            dueOperations.Add(ChannelSyncOperation.ImportShipments);
         }
 
         return dueOperations;

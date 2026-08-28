@@ -34,4 +34,10 @@ public enum SalesChannelCapabilities
 
     /// <summary>Can push a product's category assignments as a partial product update.</summary>
     UpdateProductCategories = 1 << 14,
+
+    /// <summary>Can read shipment tracking numbers the shop recorded for an order.</summary>
+    ImportShipments = 1 << 15,
+
+    /// <summary>Can write a local shipment's tracking numbers back to the shop's order.</summary>
+    PushShipments = 1 << 16,
 }

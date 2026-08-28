@@ -22,6 +22,9 @@ public interface ISalesChannelConnector
     Task<SyncResult> ImportStockAsync(SalesChannelContext context);
     Task<SyncResult> ImportCategoriesAsync(SalesChannelContext context);
 
+    /// <summary>Pulls the tracking numbers the shop recorded for already imported orders.</summary>
+    Task<SyncResult> ImportShipmentsAsync(SalesChannelContext context);
+
     Task<ExportResult> ExportProductAsync(SalesChannelContext context, ProductExportPayload payload);
     Task<ExportResult> UpdateStockAsync(SalesChannelContext context, StockUpdatePayload payload);
     Task<ExportResult> UpdatePriceAsync(SalesChannelContext context, PriceUpdatePayload payload);
@@ -31,4 +34,7 @@ public interface ISalesChannelConnector
     Task<ExportResult> ExportCategoryAsync(SalesChannelContext context, CategoryExportPayload payload);
     Task<ExportResult> DeleteCategoryAsync(SalesChannelContext context, CategoryDeletePayload payload);
     Task<ExportResult> UpdateProductCategoriesAsync(SalesChannelContext context, ProductCategoriesUpdatePayload payload);
+
+    /// <summary>Writes a local order's tracking numbers to the shop's order.</summary>
+    Task<ExportResult> PushShipmentAsync(SalesChannelContext context, ShipmentPushPayload payload);
 }

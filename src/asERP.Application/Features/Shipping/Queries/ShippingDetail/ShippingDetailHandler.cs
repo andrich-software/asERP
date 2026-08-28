@@ -3,6 +3,7 @@ using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Shipping;
+using asERP.Domain.Entities;
 using asERP.Domain.Wrapper;
 
 namespace asERP.Application.Features.Shipping.Queries.ShippingDetail;
@@ -73,6 +74,8 @@ public class ShippingDetailHandler : IRequestHandler<ShippingDetailQuery, Result
                 ShippingStatusOld = h.ShippingStatusOld,
                 ShippingStatusNew = h.ShippingStatusNew,
                 Description = h.Description,
+                MessageKey = h.MessageKey,
+                MessageArgs = SalesHistoryMessage.DecodeArgs(h.MessageArgs),
                 IsSystemGenerated = h.IsSystemGenerated,
                 UserId = h.UserId,
                 DateCreated = h.DateCreated

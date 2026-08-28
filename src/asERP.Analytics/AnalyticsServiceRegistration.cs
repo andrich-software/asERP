@@ -2,6 +2,7 @@ using asERP.Analytics.ClickHouse;
 using asERP.Analytics.Enrichment;
 using asERP.Analytics.Identity;
 using asERP.Analytics.Ingest;
+using asERP.Analytics.Maintenance;
 using asERP.Analytics.Query;
 using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Contracts.Persistence;
@@ -34,6 +35,10 @@ public static class AnalyticsServiceRegistration
 
         // Read path: scoped so it observes the request's tenant context (tenant isolation is enforced here).
         services.AddScoped<IWebAnalyticsQueryService, ClickHouseWebAnalyticsQueryService>();
+
+        // Erasure path: called when a sales channel is deleted — ClickHouse has no FK to the ERP
+        // database, so its rows have to be removed explicitly.
+        services.AddScoped<IWebAnalyticsPurgeService, ClickHouseWebAnalyticsPurgeService>();
 
         if (includeBackgroundServices)
         {

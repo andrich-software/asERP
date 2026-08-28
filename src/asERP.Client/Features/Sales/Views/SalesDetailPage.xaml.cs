@@ -12,9 +12,11 @@ namespace asERP.Client.Features.Saless.Views;
 public sealed partial class SalesDetailPage : Page
 {
     private static readonly string[] TabPanelNames = ["OverviewTab", "ItemsTab", "ShipmentsTab", "AddressesTab", "HistoryTab"];
+    private const int ItemsTabIndex = 1;
 
     // Survives FeedView template re-realization (e.g. refresh after returning from Edit).
     private int _selectedTabIndex;
+    private bool _itemsFeedRequested;
 
     public SalesDetailPage()
     {
@@ -230,5 +232,22 @@ public sealed partial class SalesDetailPage : Page
     private void ApplySelectedTab(TabBar tabBar)
     {
         TabPanelSwitcher.Apply(tabBar, TabPanelNames, _selectedTabIndex);
+
+        if (_selectedTabIndex == ItemsTabIndex)
+        {
+            EnsureItemsFeedRequested();
+        }
+    }
+
+    // Kick off the lazy items feed (lines plus their thumbnails) the first time the tab is opened.
+    private async void EnsureItemsFeedRequested()
+    {
+        if (_itemsFeedRequested || DataContext is not SalesDetailModel model)
+        {
+            return;
+        }
+
+        _itemsFeedRequested = true;
+        await model.RequestItemsTab();
     }
 }

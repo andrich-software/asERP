@@ -165,6 +165,8 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
                 ShippingStatusOld = null,
                 ShippingStatusNew = ShippingStatus.Open.ToString(),
                 Description = $"Shipment created ({rate.ShippingProvider.Name} / {rate.Name})",
+                MessageKey = SalesHistoryMessage.ShipmentCreated,
+                MessageArgs = SalesHistoryMessage.EncodeArgs(rate.ShippingProvider.Name, rate.Name),
                 IsSystemGenerated = false
             });
 

@@ -45,4 +45,36 @@ public sealed partial class DashboardPage : Page
             await model.NavigateToProductList();
         }
     }
+
+    private async void TodoReadyToShip_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is DashboardModel model)
+        {
+            await model.NavigateToReadyToShip();
+        }
+    }
+
+    private async void TodoPaymentOverdue_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is DashboardModel model)
+        {
+            await model.NavigateToPaymentOverdue();
+        }
+    }
+
+    private async void TodoShippingProblems_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is DashboardModel model)
+        {
+            await model.NavigateToShippingProblems();
+        }
+    }
+
+    private async void TodoLowStock_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is DashboardModel model)
+        {
+            await model.NavigateToLowStockProducts();
+        }
+    }
 }

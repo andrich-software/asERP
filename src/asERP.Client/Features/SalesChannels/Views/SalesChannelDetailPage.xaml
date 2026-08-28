@@ -24,9 +24,12 @@
                       Click="BackButton_Click" />
       </utu:NavigationBar.MainCommand>
       <utu:NavigationBar.PrimaryCommands>
-        <AppBarButton Icon="Edit"
-                      x:Uid="SalesChannelDetailPage.AppBarButton.Edit"
-                      Click="EditButton_Click" />
+        <AppBarElementContainer VerticalContentAlignment="Center">
+          <Button x:Uid="SalesChannelDetailPage.HeaderAction.Edit"
+                  Style="{StaticResource HeaderActionButtonStyle}"
+                  Click="EditButton_Click"
+                  Margin="0,0,8,0" />
+        </AppBarElementContainer>
       </utu:NavigationBar.PrimaryCommands>
     </utu:NavigationBar>
 

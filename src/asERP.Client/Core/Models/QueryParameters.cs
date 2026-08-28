@@ -39,6 +39,12 @@ public record QueryParameters
     public bool IncludeVariants { get; init; }
 
     /// <summary>
+    /// When true, only products below their minimum stock in at least one warehouse are returned.
+    /// Only honored by the products endpoint; ignored elsewhere.
+    /// </summary>
+    public bool LowStockOnly { get; init; }
+
+    /// <summary>
     /// Builds the query string for API requests.
     /// </summary>
     public string ToQueryString()
@@ -67,6 +73,11 @@ public record QueryParameters
         if (IncludeVariants)
         {
             parameters.Add("includeVariants=true");
+        }
+
+        if (LowStockOnly)
+        {
+            parameters.Add("lowStockOnly=true");
         }
 
         return string.Join("&", parameters);

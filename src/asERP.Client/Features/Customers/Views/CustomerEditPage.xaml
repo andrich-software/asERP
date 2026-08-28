@@ -80,11 +80,11 @@
                       Spacing="8">
             <Button x:Uid="CustomerEditPage.HeaderAction.Cancel"
                     Click="CancelButton_Click"
-                    Style="{StaticResource OutlinedButtonStyle}" />
+                    Style="{StaticResource HeaderActionButtonStyle}" />
             <Button x:Uid="CustomerEditPage.HeaderAction.Save"
                     Click="SaveButton_Click"
                     IsEnabled="{Binding CanSave}"
-                    Style="{StaticResource FilledButtonStyle}" />
+                    Style="{StaticResource HeaderActionSaveButtonStyle}" />
           </StackPanel>
         </controls:DetailPageHeader.Actions>
       </controls:DetailPageHeader>

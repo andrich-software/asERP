@@ -50,6 +50,7 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
         return await query
             .Include(ps => ps.ProductSalesChannels)
             .Include(ps => ps.ProductStocks)
+                .ThenInclude(ps => ps.Warehouse)
             .Include(ps => ps.Manufacturer)
             .Include(p => p.VariantAxes.OrderBy(a => a.SortOrder))
                 .ThenInclude(a => a.ProductAttribute)

@@ -256,8 +256,20 @@
   <data name="DashboardPage.KPI.Customers.Text" xml:space="preserve">
     <value>New Customers</value>
   </data>
-  <data name="DashboardPage.KPI.Inventory.Text" xml:space="preserve">
-    <value>Products in Stock</value>
+  <data name="DashboardPage.KPI.Todo.Text" xml:space="preserve">
+    <value>To-do</value>
+  </data>
+  <data name="DashboardPage.Todo.ReadyToShip.Text" xml:space="preserve">
+    <value>orders ready to ship</value>
+  </data>
+  <data name="DashboardPage.Todo.PaymentOverdue.Text" xml:space="preserve">
+    <value>orders need attention</value>
+  </data>
+  <data name="DashboardPage.Todo.ShippingProblems.Text" xml:space="preserve">
+    <value>shipping problems</value>
+  </data>
+  <data name="DashboardPage.Todo.Reorder.Text" xml:space="preserve">
+    <value>products to reorder</value>
   </data>
   <data name="DashboardPage.KPI.VsLastWeek.Text" xml:space="preserve">
     <value>vs last week</value>
@@ -274,9 +286,6 @@
   <data name="DashboardPage.KPI.CustomersTotalPrefix.Text" xml:space="preserve">
     <value>Total customers: </value>
   </data>
-  <data name="DashboardPage.KPI.LowStockItems.Text" xml:space="preserve">
-    <value> low stock items</value>
-  </data>
 
   <!-- Dashboard Section Headers -->
   <data name="DashboardPage.Section.Activity.Text" xml:space="preserve">
@@ -290,24 +299,15 @@
   <data name="DashboardPage.Card.TopProducts.Text" xml:space="preserve">
     <value>Top Selling Products</value>
   </data>
-  <data name="DashboardPage.Card.LowStockAlerts.Text" xml:space="preserve">
-    <value>Low Stock Alerts</value>
-  </data>
 
   <!-- Dashboard Buttons -->
   <data name="DashboardPage.Button.ViewAll.Content" xml:space="preserve">
     <value>View All</value>
   </data>
-  <data name="DashboardPage.Button.ManageInventory.Content" xml:space="preserve">
-    <value>Manage Inventory</value>
-  </data>
 
   <!-- Dashboard Labels -->
   <data name="DashboardPage.Label.Sold.Text" xml:space="preserve">
     <value> sold</value>
-  </data>
-  <data name="DashboardPage.NoLowStockAlerts.Text" xml:space="preserve">
-    <value>All products are well stocked!</value>
   </data>
 
   <!-- Shell Navigation -->
@@ -686,6 +686,9 @@
   </data>
   <data name="ProductListPage.IncludeVariants.Header" xml:space="preserve">
     <value>Show variants</value>
+  </data>
+  <data name="ProductListPage.LowStockOnly.Header" xml:space="preserve">
+    <value>Low stock</value>
   </data>
   <data name="ProductListPage.Header.Sku.Text" xml:space="preserve">
     <value>SKU</value>
@@ -2178,6 +2181,42 @@
   <data name="SalesChannelEditPage.Section.BasicInfo.Text" xml:space="preserve">
     <value>Basic Information</value>
   </data>
+  <data name="SalesChannelEditPage.Section.ShipmentTracking.Text" xml:space="preserve">
+    <value>Tracking numbers</value>
+  </data>
+  <data name="SalesChannelEditPage.TrackingIntro.Text" xml:space="preserve">
+    <value>Controls which way tracking numbers move between the shop and asERP. Both directions at once is not possible — an imported number would be written straight back to the shop it came from.</value>
+  </data>
+  <data name="SalesChannelEditPage.TrackingModeNone.Content" xml:space="preserve">
+    <value>No exchange</value>
+  </data>
+  <data name="SalesChannelEditPage.TrackingModeImport.Content" xml:space="preserve">
+    <value>Import tracking numbers from the shop</value>
+  </data>
+  <data name="SalesChannelEditPage.TrackingModePush.Content" xml:space="preserve">
+    <value>Write tracking numbers to the shop</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierMappingIntro.Text" xml:space="preserve">
+    <value>Maps the shop's shipping method onto a shipping provider in asERP. On import a shipment without a matching mapping is skipped — the missing codes are listed in the sync log.</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierMappingNoProviders.Text" xml:space="preserve">
+    <value>No shipping provider has been set up yet. Without one, no mapping can be saved.</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierMappingEmpty.Text" xml:space="preserve">
+    <value>No mapping configured yet.</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierCodeInput.Header" xml:space="preserve">
+    <value>Shipping method in the shop</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierCodeInput.PlaceholderText" xml:space="preserve">
+    <value>e.g. dhl_home_delivery</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierProviderSelect.Header" xml:space="preserve">
+    <value>Shipping provider</value>
+  </data>
+  <data name="SalesChannelEditPage.CarrierMappingAdd.Content" xml:space="preserve">
+    <value>Add mapping</value>
+  </data>
   <data name="SalesChannelEditPage.Section.ShopDomains.Text" xml:space="preserve">
     <value>Shop Domains</value>
   </data>
@@ -2729,6 +2768,18 @@
   </data>
   <data name="ProductDetailPage.VariantColName.Text" xml:space="preserve">
     <value>Name</value>
+  </data>
+  <data name="ProductDetailPage.StockColWarehouse.Text" xml:space="preserve">
+    <value>Warehouse</value>
+  </data>
+  <data name="ProductDetailPage.StockColStock.Text" xml:space="preserve">
+    <value>Stock</value>
+  </data>
+  <data name="ProductDetailPage.StockColMin.Text" xml:space="preserve">
+    <value>Minimum</value>
+  </data>
+  <data name="ProductDetailPage.StockColMax.Text" xml:space="preserve">
+    <value>Maximum</value>
   </data>
   <data name="ProductDetailPage.VariantColPrice.Text" xml:space="preserve">
     <value>Price</value>
@@ -3410,6 +3461,9 @@
   <data name="SalesEditPage.Field.SalesChannel.Label.Text" xml:space="preserve">
     <value>Sales Channel</value>
   </data>
+  <data name="SalesEditPage.Field.SalesChannelSelect.PlaceholderText" xml:space="preserve">
+    <value>Select sales channel</value>
+  </data>
   <data name="SalesEditPage.Field.CustomerId.Header" xml:space="preserve">
     <value>Customer ID</value>
   </data>
@@ -3620,6 +3674,10 @@
   </data>
   <data name="SalesEditPage.Error.SaveFailed" xml:space="preserve">
     <value>Failed to save sales: {0}</value>
+  </data>
+  <!-- Single-dot key: resolved at runtime through IStringLocalizer, which only supports 2 segments. -->
+  <data name="SalesEditPage.SalesChannelsLoadFailed" xml:space="preserve">
+    <value>Failed to load sales channels: {0}</value>
   </data>
 
   <!-- Shell User Menu - Tenants -->
@@ -5132,6 +5190,12 @@
   <data name="ProductDetailPage.TabOverview.Content" xml:space="preserve">
     <value>Overview</value>
   </data>
+  <data name="ProductDetailPage.NoStock.Message" xml:space="preserve">
+    <value>No warehouses available</value>
+  </data>
+  <data name="ProductDetailPage.TabStock.Content" xml:space="preserve">
+    <value>Stock</value>
+  </data>
   <data name="ProductDetailPage.TabVariants.Content" xml:space="preserve">
     <value>Variants</value>
   </data>
@@ -6223,5 +6287,165 @@
   </data>
   <data name="SalesChannelEditPage.Field.ExportCategories.Text" xml:space="preserve">
     <value>Export categories &amp; product assignments</value>
+  </data>
+  <!-- Header actions migrated off NavigationBar AppBarButtons -->
+  <data name="AiModelDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="AiPromptDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="ManufacturerDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="ProductAttributeDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="SalesChannelDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="TaxClassDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="TenantDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="WarehouseDetailPage.HeaderAction.Edit.Content" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="AiModelEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AiModelEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="AiPromptEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AiPromptEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="CategoryEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="CategoryEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="FeedEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="FeedEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ManufacturerEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ManufacturerEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ProductAttributeEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ProductAttributeEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="SalesChannelEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SalesChannelEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="SuperadminCountryEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SuperadminCountryEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="SuperadminTenantEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SuperadminTenantEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="TaxClassEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="TaxClassEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="TenantEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="TenantEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="WarehouseEditPage.HeaderAction.Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="WarehouseEditPage.HeaderAction.Save.Content" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="SalesListPage.Filter.All.Content" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="SalesListPage.Filter.ReadyToShip.Content" xml:space="preserve">
+    <value>Ready to ship</value>
+  </data>
+  <data name="SalesListPage.Filter.Open.Content" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="SalesListPage.Filter.NotPaid.Content" xml:space="preserve">
+    <value>Not paid</value>
+  </data>
+  <data name="SalesListPage.Filter.PaymentOverdue.Content" xml:space="preserve">
+    <value>Payment overdue</value>
+  </data>
+  <data name="SalesListPage.Filter.Problems.Content" xml:space="preserve">
+    <value>Problems</value>
+  </data>
+  <data name="SalesListPage.Filter.Completed.Content" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="SalesListPage.Filter.Cancelled.Content" xml:space="preserve">
+    <value>Cancelled/returned</value>
+  </data>
+  <data name="SalesHistory.OrderImported" xml:space="preserve">
+    <value>Imported from {0} (order status: {1}, payment: {2})</value>
+  </data>
+  <data name="SalesHistory.ChannelOrderStatusChanged" xml:space="preserve">
+    <value>Order status changed: {1} → {2} (imported from {0})</value>
+  </data>
+  <data name="SalesHistory.ChannelPaymentStatusChanged" xml:space="preserve">
+    <value>Payment status changed: {1} → {2} (imported from {0})</value>
+  </data>
+  <data name="SalesHistory.ChannelOrderAndPaymentStatusChanged" xml:space="preserve">
+    <value>Order status changed: {1} → {2}, payment status changed: {3} → {4} (imported from {0})</value>
+  </data>
+  <data name="SalesHistory.OrderCancelled" xml:space="preserve">
+    <value>Order cancelled</value>
+  </data>
+  <data name="SalesHistory.OrderStatusAutoFromShipment" xml:space="preserve">
+    <value>Order status updated automatically from shipment assignment: {0} → {1}</value>
+  </data>
+  <data name="SalesHistory.OrderFullyReturned" xml:space="preserve">
+    <value>Order fully returned</value>
+  </data>
+  <data name="SalesHistory.ShipmentCreated" xml:space="preserve">
+    <value>Shipment created ({0} / {1})</value>
+  </data>
+  <data name="SalesHistory.ShippingStatusChanged" xml:space="preserve">
+    <value>Shipping status changed: {0} → {1}</value>
+  </data>
+  <data name="SalesHistory.ShippingStatusChangedWithCarrierNote" xml:space="preserve">
+    <value>Shipping status changed: {0} → {1} ({2})</value>
+  </data>
+  <data name="SalesHistory.ReturnRequested" xml:space="preserve">
+    <value>Return requested ({0} items)</value>
+  </data>
+  <data name="SalesHistory.ReturnStatusChanged" xml:space="preserve">
+    <value>Return status changed: {0} → {1}</value>
+  </data>
+  <data name="SalesHistory.ReturnStatusChangedWithNote" xml:space="preserve">
+    <value>Return status changed: {0} → {1} ({2})</value>
   </data>
 </root>

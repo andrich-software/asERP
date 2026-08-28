@@ -38,6 +38,7 @@ public static class SalesChannelServiceRegistration
         services.AddScoped<ICustomerImportRepository, CustomerImportRepository>();
         services.AddScoped<IStockImportRepository, StockImportRepository>();
         services.AddScoped<ICategoryImportRepository, CategoryImportRepository>();
+        services.AddScoped<IShipmentImportRepository, ShipmentImportRepository>();
         services.AddScoped<IProductImageImportService, ProductImageImportService>();
         // Singleton: one CustomerId/SalesId sequence per (tenant, kind) across all concurrent import runs.
         services.AddSingleton<ImportIdAllocator>();

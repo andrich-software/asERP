@@ -97,7 +97,7 @@
         </controls:DetailPageHeader.Subtitle>
         <controls:DetailPageHeader.Actions>
           <Button x:Uid="GlobalSettingsPage.Button.Save"
-                  Style="{StaticResource FilledButtonStyle}"
+                  Style="{StaticResource HeaderActionSaveButtonStyle}"
                   Click="SaveButton_Click"
                   IsEnabled="{Binding IsSaving, Converter={StaticResource InverseBooleanConverter}}" />
         </controls:DetailPageHeader.Actions>

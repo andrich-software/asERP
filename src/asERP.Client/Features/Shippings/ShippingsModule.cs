@@ -19,6 +19,7 @@ public static class ShippingsModule
         // Feature-specific services
         // ShippingService: Transient - stateless, creates new instance per request
         services.AddTransient<IShippingService, ShippingService>();
+        services.AddTransient<IShippingProviderService, ShippingProviderService>();
 
         // Local, tenant-scoped preferences (LocalSettings-backed, stateless)
         services.AddSingleton<IShippingPreferences, ShippingPreferences>();
@@ -39,7 +40,7 @@ public static class ShippingsModule
     public static void RegisterViews(IViewRegistry views)
     {
         views.Register(
-            new ViewMap<ShippingListPage, ShippingListModel>(),
+            new ViewMap<ShippingListPage, ShippingListModel>(Data: new DataMap<ShippingListData>()),
             new ViewMap<ShippingDetailPage, ShippingDetailModel>(Data: new DataMap<ShippingDetailData>())
         );
     }
@@ -53,6 +54,11 @@ public static class ShippingsModule
         yield return new RouteMap(Routes.ShippingDetail, View: views.FindByViewModel<ShippingDetailModel>());
     }
 }
+
+/// <summary>
+/// Navigation data for the shipment list page: pre-activates the problems-only filter.
+/// </summary>
+public record ShippingListData(bool ProblemsOnly);
 
 /// <summary>
 /// Navigation data for the shipment detail page.
