@@ -72,6 +72,12 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
                     $"The shipping provider '{rate.ShippingProvider.Name}' is disabled.");
             }
 
+            if (!rate.IsActive)
+            {
+                return Result<Guid>.Fail(ResultStatusCode.BadRequest,
+                    $"The shipping option '{rate.Name}' is deactivated.");
+            }
+
             var sales = await _salesRepository.GetWithDetailsAsync(request.SalesId);
             if (sales == null)
             {

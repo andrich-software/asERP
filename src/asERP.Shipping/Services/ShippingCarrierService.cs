@@ -88,6 +88,7 @@ public sealed class ShippingCarrierService : IShippingCarrierService
         var shipping = await _context.Shipping
             .IgnoreQueryFilters()
             .Include(s => s.Sales)
+            .Include(s => s.ShippingProviderRate)
             .FirstOrDefaultAsync(s => s.Id == shippingId, cancellationToken);
 
         if (shipping is null)
@@ -298,7 +299,10 @@ public sealed class ShippingCarrierService : IShippingCarrierService
             WeightKg = shipping.WeightKg ?? 1m,
             LengthCm = shipping.LengthCm,
             WidthCm = shipping.WidthCm,
-            HeightCm = shipping.HeightCm
+            HeightCm = shipping.HeightCm,
+            CarrierProduct = shipping.ShippingProviderRate?.CarrierProduct,
+            CarrierProcedure = shipping.ShippingProviderRate?.CarrierProcedure,
+            CarrierParticipation = shipping.ShippingProviderRate?.CarrierParticipation
         };
     }
 }

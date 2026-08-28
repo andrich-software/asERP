@@ -33,6 +33,21 @@ public class ShippingProviderRateCreateValidator : AbstractValidator<ShippingPro
     internal static void ApplySharedRules<T>(AbstractValidator<T> validator, ICountryRepository countryRepository)
         where T : IShippingProviderRateInputModel
     {
+        validator.RuleFor(r => r.Description)
+            .MaximumLength(500).WithMessage("Description must not exceed 500 characters.");
+
+        validator.RuleFor(r => r.SortOrder)
+            .GreaterThanOrEqualTo(0).WithMessage("SortOrder must not be negative.");
+
+        validator.RuleFor(r => r.CarrierProduct)
+            .MaximumLength(50).WithMessage("CarrierProduct must not exceed 50 characters.");
+
+        validator.RuleFor(r => r.CarrierProcedure)
+            .MaximumLength(10).WithMessage("CarrierProcedure must not exceed 10 characters.");
+
+        validator.RuleFor(r => r.CarrierParticipation)
+            .MaximumLength(10).WithMessage("CarrierParticipation must not exceed 10 characters.");
+
         validator.RuleFor(r => r.MaxLength).GreaterThan(0).WithMessage("MaxLength must be greater than 0.");
         validator.RuleFor(r => r.MaxWidth).GreaterThan(0).WithMessage("MaxWidth must be greater than 0.");
         validator.RuleFor(r => r.MaxHeight).GreaterThan(0).WithMessage("MaxHeight must be greater than 0.");

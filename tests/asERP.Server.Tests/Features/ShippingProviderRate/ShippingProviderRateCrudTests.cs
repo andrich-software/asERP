@@ -59,6 +59,98 @@ public class ShippingProviderRateCrudTests : TenantIsolatedTestBase
     }
 
     [Fact]
+    public async Task CreateRate_WithCarrierProductAndFlags_ShouldPersistNewFields()
+    {
+        var provider = await SeedProviderAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var dto = CreateValidRateDto();
+        dto.Name = "DHL Warenpost";
+        dto.Description = "  Kleinformate bis 1 kg  ";
+        dto.IsActive = false;
+        dto.SortOrder = 5;
+        dto.CarrierProduct = " V62WP ";
+        dto.CarrierProcedure = "62";
+        dto.CarrierParticipation = "01";
+        var response = await PostAsJsonAsync($"/api/v1/ShippingProviders/{provider.Id}/rates", dto);
+
+        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        var result = await ReadResponseAsync<Result<Guid>>(response);
+
+        DbContext.ChangeTracker.Clear();
+        var created = await DbContext.ShippingProviderRate.FirstAsync(r => r.Id == result.Data);
+        TestAssertions.AssertEqual("Kleinformate bis 1 kg", created.Description);
+        TestAssertions.AssertFalse(created.IsActive);
+        TestAssertions.AssertEqual(5, created.SortOrder);
+        TestAssertions.AssertEqual("V62WP", created.CarrierProduct);
+        TestAssertions.AssertEqual("62", created.CarrierProcedure);
+        TestAssertions.AssertEqual("01", created.CarrierParticipation);
+    }
+
+    [Fact]
+    public async Task UpdateRate_ShouldPersistNewFields()
+    {
+        var provider = await SeedProviderAsync();
+        var rate = ShippingTestDataSeeder.AddRate(DbContext, provider,
+            carrierProduct: "V01PAK", carrierProcedure: "01");
+        await DbContext.SaveChangesAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var dto = new ShippingProviderRateUpdateDto
+        {
+            Name = rate.Name,
+            Description = "Standardpaket",
+            IsActive = false,
+            SortOrder = 3,
+            // Blank codes mean "use the provider default" and must be stored as null.
+            CarrierProduct = "  ",
+            CarrierProcedure = "",
+            CarrierParticipation = null,
+            MaxLength = rate.MaxLength,
+            MaxWidth = rate.MaxWidth,
+            MaxHeight = rate.MaxHeight,
+            MaxWeight = rate.MaxWeight,
+            Price = rate.Price,
+            AllowedCountryIds = new List<Guid> { ShippingTestDataSeeder.GermanyCountryId }
+        };
+        var response = await PutAsJsonAsync($"/api/v1/ShippingProviders/{provider.Id}/rates/{rate.Id}", dto);
+
+        TestAssertions.AssertHttpSuccess(response);
+        DbContext.ChangeTracker.Clear();
+        var updated = await DbContext.ShippingProviderRate.FirstAsync(r => r.Id == rate.Id);
+        TestAssertions.AssertEqual("Standardpaket", updated.Description);
+        TestAssertions.AssertFalse(updated.IsActive);
+        TestAssertions.AssertEqual(3, updated.SortOrder);
+        TestAssertions.AssertNull(updated.CarrierProduct);
+        TestAssertions.AssertNull(updated.CarrierProcedure);
+        TestAssertions.AssertNull(updated.CarrierParticipation);
+    }
+
+    [Fact]
+    public async Task GetRateDetail_ShouldReturnNewFields()
+    {
+        var provider = await SeedProviderAsync();
+        var rate = ShippingTestDataSeeder.AddRate(DbContext, provider,
+            isActive: false, sortOrder: 7, carrierProduct: "V62WP",
+            carrierProcedure: "62", carrierParticipation: "01");
+        rate.Description = "Warenpost";
+        await DbContext.SaveChangesAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var response = await Client.GetAsync($"/api/v1/ShippingProviders/{provider.Id}/rates/{rate.Id}");
+
+        TestAssertions.AssertHttpSuccess(response);
+        var result = await ReadResponseAsync<Result<ShippingProviderRateDetailDto>>(response);
+        TestAssertions.AssertNotNull(result.Data);
+        TestAssertions.AssertEqual("Warenpost", result.Data!.Description);
+        TestAssertions.AssertFalse(result.Data.IsActive);
+        TestAssertions.AssertEqual(7, result.Data.SortOrder);
+        TestAssertions.AssertEqual("V62WP", result.Data.CarrierProduct);
+        TestAssertions.AssertEqual("62", result.Data.CarrierProcedure);
+        TestAssertions.AssertEqual("01", result.Data.CarrierParticipation);
+    }
+
+    [Fact]
     public async Task CreateRate_WithNonexistentCountryId_ShouldReturnBadRequest()
     {
         var provider = await SeedProviderAsync();

@@ -95,7 +95,7 @@ public sealed class DpdConnector : ShippingConnectorBase, IShippingCarrierConnec
                         },
                         ParcelData = new
                         {
-                            ShipService = config.Product,
+                            ShipService = request.CarrierProduct ?? config.Product,
                             Weight = request.WeightKg.ToString(CultureInfo.InvariantCulture),
                             Content = request.Reference,
                             YourInternalID = request.Reference,

@@ -75,8 +75,13 @@ public sealed class DhlConnector : ShippingConnectorBase, IShippingCarrierConnec
             }
 
             var isDomestic = request.CountryIsoCode.Equals(config.Sender.CountryCode, StringComparison.OrdinalIgnoreCase);
-            var product = config.Product ?? (isDomestic ? "V01PAK" : "V53WPAK");
-            var billingNumber = $"{context.AccountNumber}{config.Procedure}{config.Participation}";
+            // The booked shipping option may override the provider defaults. Product and
+            // procedure/participation are coupled in the billing number — an option carrying
+            // e.g. Warenpost must bring its own procedure along.
+            var product = request.CarrierProduct ?? config.Product ?? (isDomestic ? "V01PAK" : "V53WPAK");
+            var procedure = request.CarrierProcedure ?? config.Procedure;
+            var participation = request.CarrierParticipation ?? config.Participation;
+            var billingNumber = $"{context.AccountNumber}{procedure}{participation}";
 
             var body = new
             {

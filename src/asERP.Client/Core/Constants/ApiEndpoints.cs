@@ -71,6 +71,8 @@ public static class ApiEndpoints
     {
         public const string Base = $"{ApiBase}/shippingproviders";
         public static string ById(Guid id) => $"{Base}/{id}";
+        public static string Rates(Guid providerId) => $"{Base}/{providerId}/rates";
+        public static string RateById(Guid providerId, Guid id) => $"{Base}/{providerId}/rates/{id}";
     }
 
     // Shippings

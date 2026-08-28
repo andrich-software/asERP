@@ -30,7 +30,8 @@ public class ShippingProviderRateRepository : GenericRepository<ShippingProvider
         return await Context.ShippingProviderRate
             .Where(x => x.ShippingProviderId == providerId)
             .Include(x => x.AllowedCountries)
-            .OrderBy(x => x.Name)
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Name)
             .ToListAsync();
     }
 

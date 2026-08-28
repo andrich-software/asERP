@@ -15,6 +15,18 @@ public class ShippingProviderRateConfiguration : IEntityTypeConfiguration<Shippi
         builder.HasIndex(e => new { e.ShippingProviderId, e.Name, e.TenantId })
             .IsUnique();
 
+        builder.Property(e => e.Description)
+            .HasMaxLength(500);
+
+        builder.Property(e => e.CarrierProduct)
+            .HasMaxLength(50);
+
+        builder.Property(e => e.CarrierProcedure)
+            .HasMaxLength(10);
+
+        builder.Property(e => e.CarrierParticipation)
+            .HasMaxLength(10);
+
         builder.Property(e => e.MaxLength)
             .HasPrecision(18, 4);
 

@@ -34,6 +34,11 @@ public static class Routes
     public const string ShippingList = "Shippings";
     public const string ShippingDetail = "ShippingDetail";
 
+    // Shipping methods (carriers + their shipping options)
+    public const string ShippingProviderList = "ShippingProviders";
+    public const string ShippingProviderEdit = "ShippingProviderEdit";
+    public const string ShippingRateEdit = "ShippingRateEdit";
+
     // Products
     public const string ProductList = "Products";
     public const string ProductDetail = "ProductDetail";

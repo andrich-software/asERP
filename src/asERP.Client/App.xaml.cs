@@ -21,6 +21,7 @@ using asERP.Client.Features.Search;
 using asERP.Client.Features.Shell;
 using asERP.Client.Features.Shell.Models;
 using asERP.Client.Features.Shell.Views;
+using asERP.Client.Features.ShippingProviders;
 using asERP.Client.Features.Shippings;
 using asERP.Client.Features.Statistics;
 using asERP.Client.Features.Superadmin;
@@ -404,6 +405,7 @@ public partial class App : Application
         CustomersModule.RegisterServices(services);
         SalessModule.RegisterServices(services);
         ShippingsModule.RegisterServices(services);
+        ShippingProvidersModule.RegisterServices(services);
         ReturnsModule.RegisterServices(services);
         ProductsModule.RegisterServices(services);
         ManufacturersModule.RegisterServices(services);
@@ -438,6 +440,7 @@ public partial class App : Application
         CustomersModule.RegisterViews(views);
         SalessModule.RegisterViews(views);
         ShippingsModule.RegisterViews(views);
+        ShippingProvidersModule.RegisterViews(views);
         ProductsModule.RegisterViews(views);
         ManufacturersModule.RegisterViews(views);
         CategoriesModule.RegisterViews(views);
@@ -465,6 +468,7 @@ public partial class App : Application
         nestedRoutes.AddRange(CustomersModule.GetRoutes(views));
         nestedRoutes.AddRange(SalessModule.GetRoutes(views));
         nestedRoutes.AddRange(ShippingsModule.GetRoutes(views));
+        nestedRoutes.AddRange(ShippingProvidersModule.GetRoutes(views));
         nestedRoutes.AddRange(ProductsModule.GetRoutes(views));
         nestedRoutes.AddRange(ManufacturersModule.GetRoutes(views));
         nestedRoutes.AddRange(CategoriesModule.GetRoutes(views));

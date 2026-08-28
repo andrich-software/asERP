@@ -112,7 +112,7 @@ public sealed class UpsConnector : ShippingConnectorBase, IShippingCarrierConnec
                                 BillShipper = new { AccountNumber = context.AccountNumber }
                             }
                         },
-                        Service = new { Code = config.ServiceCode },
+                        Service = new { Code = request.CarrierProduct ?? config.ServiceCode },
                         Package = new
                         {
                             Packaging = new { Code = "02" },

@@ -50,6 +50,12 @@ public class ShippingProviderRateCreateHandler : IRequestHandler<ShippingProvide
             {
                 ShippingProviderId = request.ShippingProviderId,
                 Name = request.Name,
+                Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
+                IsActive = request.IsActive,
+                SortOrder = request.SortOrder,
+                CarrierProduct = NormalizeCode(request.CarrierProduct),
+                CarrierProcedure = NormalizeCode(request.CarrierProcedure),
+                CarrierParticipation = NormalizeCode(request.CarrierParticipation),
                 MaxLength = request.MaxLength,
                 MaxWidth = request.MaxWidth,
                 MaxHeight = request.MaxHeight,
@@ -74,4 +80,8 @@ public class ShippingProviderRateCreateHandler : IRequestHandler<ShippingProvide
                 "An error occurred while creating the shipping option.");
         }
     }
+
+    /// <summary>Carrier codes are exact identifiers — trim whitespace, treat blank as "not set".</summary>
+    internal static string? NormalizeCode(string? code)
+        => string.IsNullOrWhiteSpace(code) ? null : code.Trim();
 }

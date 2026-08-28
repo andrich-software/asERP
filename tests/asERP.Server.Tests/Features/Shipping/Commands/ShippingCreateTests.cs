@@ -179,6 +179,21 @@ public class ShippingCreateTests : TenantIsolatedTestBase
     }
 
     [Fact]
+    public async Task CreateShipping_InactiveRate_ShouldReturnBadRequest()
+    {
+        var (provider, _, sales) = await SeedShippingSetupAsync();
+        var inactiveRate = ShippingTestDataSeeder.AddRate(DbContext, provider, name: "Retired option",
+            isActive: false);
+        await DbContext.SaveChangesAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var dto = CreateValidInputDto(sales.Id, inactiveRate.Id);
+        var response = await PostAsJsonAsync("/api/v1/Shippings", dto);
+
+        TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task CreateShipping_ItemOfOtherSales_ShouldReturnBadRequest()
     {
         var (_, rate, sales) = await SeedShippingSetupAsync();

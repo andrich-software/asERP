@@ -73,7 +73,7 @@ public sealed class GlsConnector : ShippingConnectorBase, IShippingCarrierConnec
             {
                 Shipment = new
                 {
-                    Product = config.Product,
+                    Product = request.CarrierProduct ?? config.Product,
                     ShipmentReference = new[] { request.Reference },
                     Shipper = new
                     {
