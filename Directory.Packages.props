@@ -40,7 +40,7 @@
     <PackageVersion Include="Uno.CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.206" />
     <PackageVersion Include="Uno.Extensions.Navigation" Version="7.0.4" />
     <PackageVersion Include="Uno.UI.Adapter.Microsoft.Extensions.Logging" Version="6.4.242" />
-    <PackageVersion Include="Uno.WinUI" Version="6.6.184" />
+    <PackageVersion Include="Uno.WinUI" Version="6.7.65" />
     <PackageVersion Include="Uno.WinUI.Graphics2DSK" Version="6.4.242" />
     <PackageVersion Include="Uno.WinUI.Lottie" Version="6.4.242" />
     <PackageVersion Include="Uno.WinUI.Runtime.Skia.Android" Version="6.6.184" />
