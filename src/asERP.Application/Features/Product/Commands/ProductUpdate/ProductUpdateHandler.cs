@@ -54,201 +54,191 @@ public class ProductUpdateHandler : IRequestHandler<ProductUpdateCommand, Result
             // Check if the validation error is about product not found
             if (validationResult.Errors.Any(e => e.ErrorMessage.Contains("Product not found")))
             {
-                return Result<Guid>.Fail(ResultStatusCode.NotFound, validationErrors);
+                return Result<Guid>.NotFound(ErrorCodes.Product.NotFound, validationErrors);
             }
 
-            return Result<Guid>.Fail(ResultStatusCode.BadRequest, validationErrors);
+            return Result<Guid>.Invalid(ErrorCodes.Product.Invalid, validationErrors);
         }
 
-        try
+        // Load existing product incl. variant axes/options for tracking
+        var productToUpdate = await _productRepository.GetWithDetailsAsync(request.Id);
+
+        if (productToUpdate == null)
         {
-            // Load existing product incl. variant axes/options for tracking
-            var productToUpdate = await _productRepository.GetWithDetailsAsync(request.Id);
+            _logger.LogWarning("Product with ID {Id} not found for update", request.Id);
+            return Result<Guid>.NotFound(ErrorCodes.Product.NotFound, "Product not found.");
+        }
 
-            if (productToUpdate == null)
+        // Cross-entity variant rules: type transitions and variant option sets
+        var transitionError = ProductVariantRules.ValidateTypeTransition(productToUpdate, request, productToUpdate.Variants.Count);
+        if (transitionError != null)
+        {
+            _logger.LogWarning("Type transition validation failed in update request: {Error}", transitionError);
+            return Result<Guid>.Invalid(ErrorCodes.Product.Invalid, transitionError);
+        }
+
+        if (request.ProductType == ProductType.Variant)
+        {
+            var (variantError, _) = await ProductVariantRules.ValidateVariantAsync(request, productToUpdate.Id, _productRepository);
+            if (variantError != null)
             {
-                _logger.LogWarning("Product with ID {Id} not found for update", request.Id);
-                return Result<Guid>.Fail(ResultStatusCode.NotFound, "Product not found.");
+                _logger.LogWarning("Variant validation failed in update request: {Error}", variantError);
+                return Result<Guid>.Invalid(ErrorCodes.Product.Invalid, variantError);
+            }
+        }
+        else if (request.ProductType == ProductType.VariantParent)
+        {
+            var axisError = await ProductVariantRules.ValidateParentAxesAsync(request, _productAttributeRepository);
+            if (axisError != null)
+            {
+                _logger.LogWarning("Variant axis validation failed in update request: {Error}", axisError);
+                return Result<Guid>.Invalid(ErrorCodes.Product.Invalid, axisError);
             }
 
-            // Cross-entity variant rules: type transitions and variant option sets
-            var transitionError = ProductVariantRules.ValidateTypeTransition(productToUpdate, request, productToUpdate.Variants.Count);
-            if (transitionError != null)
+            // Removing an axis is only allowed while no variant carries a value of it
+            var requestedAxisIds = request.VariantAxisAttributeIds.Distinct().ToList();
+            foreach (var axis in productToUpdate.VariantAxes.Where(a => !requestedAxisIds.Contains(a.ProductAttributeId)))
             {
-                _logger.LogWarning("Type transition validation failed in update request: {Error}", transitionError);
-                return Result<Guid>.Fail(ResultStatusCode.BadRequest, transitionError);
-            }
+                var axisInUse = productToUpdate.Variants.Any(v => v.VariantOptions
+                    .Any(o => o.ProductAttributeValue?.ProductAttributeId == axis.ProductAttributeId));
 
-            if (request.ProductType == ProductType.Variant)
-            {
-                var (variantError, _) = await ProductVariantRules.ValidateVariantAsync(request, productToUpdate.Id, _productRepository);
-                if (variantError != null)
+                if (axisInUse)
                 {
-                    _logger.LogWarning("Variant validation failed in update request: {Error}", variantError);
-                    return Result<Guid>.Fail(ResultStatusCode.BadRequest, variantError);
+                    var message = "A variant axis that is still used by variants cannot be removed.";
+                    _logger.LogWarning("Variant axis validation failed in update request: {Error}", message);
+                    return Result<Guid>.Invalid(ErrorCodes.Product.Invalid, message);
                 }
             }
-            else if (request.ProductType == ProductType.VariantParent)
+        }
+
+        // Update properties
+        productToUpdate.Sku = request.Sku;
+        productToUpdate.Name = request.Name;
+        productToUpdate.NameOptimized = request.NameOptimized;
+        productToUpdate.Ean = request.Ean;
+        productToUpdate.Asin = request.Asin;
+        productToUpdate.Description = request.Description;
+        productToUpdate.DescriptionOptimized = request.DescriptionOptimized;
+        productToUpdate.UseOptimized = request.UseOptimized;
+        productToUpdate.Price = request.Price;
+        productToUpdate.Msrp = request.Msrp;
+        productToUpdate.Weight = request.Weight;
+        productToUpdate.Width = request.Width;
+        productToUpdate.Height = request.Height;
+        productToUpdate.Depth = request.Depth;
+        productToUpdate.TaxClassId = request.TaxClassId;
+        productToUpdate.ManufacturerId = request.ManufacturerId;
+        productToUpdate.ProductType = request.ProductType;
+        productToUpdate.VariantSortOrder = request.VariantSortOrder;
+
+        if (request.ProductType == ProductType.VariantParent)
+        {
+            // Sync axes: remove unused (verified above), add new, keep requested order
+            var requestedAxisIds = request.VariantAxisAttributeIds.Distinct().ToList();
+
+            foreach (var axisToRemove in productToUpdate.VariantAxes
+                         .Where(a => !requestedAxisIds.Contains(a.ProductAttributeId)).ToList())
             {
-                var axisError = await ProductVariantRules.ValidateParentAxesAsync(request, _productAttributeRepository);
-                if (axisError != null)
+                productToUpdate.VariantAxes.Remove(axisToRemove);
+                _productRepository.RemoveVariantAxis(axisToRemove);
+            }
+
+            for (var i = 0; i < requestedAxisIds.Count; i++)
+            {
+                var existingAxis = productToUpdate.VariantAxes.FirstOrDefault(a => a.ProductAttributeId == requestedAxisIds[i]);
+                if (existingAxis != null)
                 {
-                    _logger.LogWarning("Variant axis validation failed in update request: {Error}", axisError);
-                    return Result<Guid>.Fail(ResultStatusCode.BadRequest, axisError);
+                    existingAxis.SortOrder = i;
                 }
-
-                // Removing an axis is only allowed while no variant carries a value of it
-                var requestedAxisIds = request.VariantAxisAttributeIds.Distinct().ToList();
-                foreach (var axis in productToUpdate.VariantAxes.Where(a => !requestedAxisIds.Contains(a.ProductAttributeId)))
+                else
                 {
-                    var axisInUse = productToUpdate.Variants.Any(v => v.VariantOptions
-                        .Any(o => o.ProductAttributeValue?.ProductAttributeId == axis.ProductAttributeId));
-
-                    if (axisInUse)
+                    var axis = new Domain.Entities.ProductVariantAxis
                     {
-                        var message = "A variant axis that is still used by variants cannot be removed.";
-                        _logger.LogWarning("Variant axis validation failed in update request: {Error}", message);
-                        return Result<Guid>.Fail(ResultStatusCode.BadRequest, message);
-                    }
-                }
-            }
-
-            // Update properties
-            productToUpdate.Sku = request.Sku;
-            productToUpdate.Name = request.Name;
-            productToUpdate.NameOptimized = request.NameOptimized;
-            productToUpdate.Ean = request.Ean;
-            productToUpdate.Asin = request.Asin;
-            productToUpdate.Description = request.Description;
-            productToUpdate.DescriptionOptimized = request.DescriptionOptimized;
-            productToUpdate.UseOptimized = request.UseOptimized;
-            productToUpdate.Price = request.Price;
-            productToUpdate.Msrp = request.Msrp;
-            productToUpdate.Weight = request.Weight;
-            productToUpdate.Width = request.Width;
-            productToUpdate.Height = request.Height;
-            productToUpdate.Depth = request.Depth;
-            productToUpdate.TaxClassId = request.TaxClassId;
-            productToUpdate.ManufacturerId = request.ManufacturerId;
-            productToUpdate.ProductType = request.ProductType;
-            productToUpdate.VariantSortOrder = request.VariantSortOrder;
-
-            if (request.ProductType == ProductType.VariantParent)
-            {
-                // Sync axes: remove unused (verified above), add new, keep requested order
-                var requestedAxisIds = request.VariantAxisAttributeIds.Distinct().ToList();
-
-                foreach (var axisToRemove in productToUpdate.VariantAxes
-                             .Where(a => !requestedAxisIds.Contains(a.ProductAttributeId)).ToList())
-                {
-                    productToUpdate.VariantAxes.Remove(axisToRemove);
-                    _productRepository.RemoveVariantAxis(axisToRemove);
-                }
-
-                for (var i = 0; i < requestedAxisIds.Count; i++)
-                {
-                    var existingAxis = productToUpdate.VariantAxes.FirstOrDefault(a => a.ProductAttributeId == requestedAxisIds[i]);
-                    if (existingAxis != null)
-                    {
-                        existingAxis.SortOrder = i;
-                    }
-                    else
-                    {
-                        var axis = new Domain.Entities.ProductVariantAxis
-                        {
-                            ParentProductId = productToUpdate.Id,
-                            ProductAttributeId = requestedAxisIds[i],
-                            SortOrder = i,
-                            TenantId = productToUpdate.TenantId
-                        };
-                        productToUpdate.VariantAxes.Add(axis);
-                        _productRepository.AddVariantAxis(axis);
-                    }
-                }
-            }
-            else if (request.ProductType == ProductType.Variant)
-            {
-                // Sync option set: remove unselected values, add missing ones
-                var requestedOptionIds = request.VariantOptionValueIds.Distinct().ToHashSet();
-
-                foreach (var optionToRemove in productToUpdate.VariantOptions
-                             .Where(o => !requestedOptionIds.Contains(o.ProductAttributeValueId)).ToList())
-                {
-                    productToUpdate.VariantOptions.Remove(optionToRemove);
-                    _productRepository.RemoveVariantOption(optionToRemove);
-                }
-
-                var existingOptionIds = productToUpdate.VariantOptions.Select(o => o.ProductAttributeValueId).ToHashSet();
-                foreach (var valueId in requestedOptionIds.Where(id => !existingOptionIds.Contains(id)))
-                {
-                    var option = new Domain.Entities.ProductVariantOption
-                    {
-                        ProductId = productToUpdate.Id,
-                        ProductAttributeValueId = valueId,
+                        ParentProductId = productToUpdate.Id,
+                        ProductAttributeId = requestedAxisIds[i],
+                        SortOrder = i,
                         TenantId = productToUpdate.TenantId
                     };
-                    productToUpdate.VariantOptions.Add(option);
-                    _productRepository.AddVariantOption(option);
+                    productToUpdate.VariantAxes.Add(axis);
+                    _productRepository.AddVariantAxis(axis);
                 }
             }
+        }
+        else if (request.ProductType == ProductType.Variant)
+        {
+            // Sync option set: remove unselected values, add missing ones
+            var requestedOptionIds = request.VariantOptionValueIds.Distinct().ToHashSet();
 
-            // Sync category assignments: remove unselected joins, add missing ones (explicitly via
-            // the DbSet — never through the UpdateAsync graph).
-            var requestedCategoryIds = request.CategoryIds.Distinct().ToList();
-            foreach (var categoryId in requestedCategoryIds)
+            foreach (var optionToRemove in productToUpdate.VariantOptions
+                         .Where(o => !requestedOptionIds.Contains(o.ProductAttributeValueId)).ToList())
             {
-                if (!await _categoryRepository.ExistsAsync(categoryId))
-                {
-                    return Result<Guid>.Fail(ResultStatusCode.BadRequest,
-                        $"The following category IDs do not exist: {categoryId}");
-                }
+                productToUpdate.VariantOptions.Remove(optionToRemove);
+                _productRepository.RemoveVariantOption(optionToRemove);
             }
 
-            var existingCategoryLinks = await _productRepository.GetCategoryLinksAsync(productToUpdate.Id);
-            var categoriesChanged = false;
-
-            foreach (var linkToRemove in existingCategoryLinks.Where(l => !requestedCategoryIds.Contains(l.CategoryId)))
+            var existingOptionIds = productToUpdate.VariantOptions.Select(o => o.ProductAttributeValueId).ToHashSet();
+            foreach (var valueId in requestedOptionIds.Where(id => !existingOptionIds.Contains(id)))
             {
-                _productRepository.RemoveProductCategory(linkToRemove);
-                categoriesChanged = true;
-            }
-
-            var existingCategoryIds = existingCategoryLinks.Select(l => l.CategoryId).ToHashSet();
-            foreach (var categoryId in requestedCategoryIds.Where(id => !existingCategoryIds.Contains(id)))
-            {
-                _productRepository.AddProductCategory(new Domain.Entities.ProductCategory
+                var option = new Domain.Entities.ProductVariantOption
                 {
                     ProductId = productToUpdate.Id,
-                    CategoryId = categoryId,
+                    ProductAttributeValueId = valueId,
                     TenantId = productToUpdate.TenantId
-                });
-                categoriesChanged = true;
+                };
+                productToUpdate.VariantOptions.Add(option);
+                _productRepository.AddVariantOption(option);
             }
-
-            // Update in database
-            await _productRepository.UpdateAsync(productToUpdate);
-
-            await _mediator.Publish(
-                new ProductChangedNotification(productToUpdate.Id, productToUpdate.TenantId, ProductChangeKind.Updated),
-                cancellationToken);
-
-            if (categoriesChanged)
-            {
-                await _mediator.Publish(
-                    new ProductCategoriesChangedNotification(productToUpdate.Id, productToUpdate.TenantId),
-                    cancellationToken);
-            }
-
-            _logger.LogInformation("Successfully updated product with ID: {Id}", productToUpdate.Id);
-
-            return Result<Guid>.Success(productToUpdate.Id);
         }
-        catch (Exception ex)
+
+        // Sync category assignments: remove unselected joins, add missing ones (explicitly via
+        // the DbSet — never through the UpdateAsync graph).
+        var requestedCategoryIds = request.CategoryIds.Distinct().ToList();
+        foreach (var categoryId in requestedCategoryIds)
         {
-            _logger.LogError(ex, "Error updating product");
-
-            return Result<Guid>.Fail(ResultStatusCode.InternalServerError,
-                "An error occurred while updating the product.");
+            if (!await _categoryRepository.ExistsAsync(categoryId))
+            {
+                return Result<Guid>.Invalid(ErrorCodes.Product.Invalid,
+                    $"The following category IDs do not exist: {categoryId}");
+            }
         }
+
+        var existingCategoryLinks = await _productRepository.GetCategoryLinksAsync(productToUpdate.Id);
+        var categoriesChanged = false;
+
+        foreach (var linkToRemove in existingCategoryLinks.Where(l => !requestedCategoryIds.Contains(l.CategoryId)))
+        {
+            _productRepository.RemoveProductCategory(linkToRemove);
+            categoriesChanged = true;
+        }
+
+        var existingCategoryIds = existingCategoryLinks.Select(l => l.CategoryId).ToHashSet();
+        foreach (var categoryId in requestedCategoryIds.Where(id => !existingCategoryIds.Contains(id)))
+        {
+            _productRepository.AddProductCategory(new Domain.Entities.ProductCategory
+            {
+                ProductId = productToUpdate.Id,
+                CategoryId = categoryId,
+                TenantId = productToUpdate.TenantId
+            });
+            categoriesChanged = true;
+        }
+
+        // Update in database
+        await _productRepository.UpdateAsync(productToUpdate);
+
+        await _mediator.Publish(
+            new ProductChangedNotification(productToUpdate.Id, productToUpdate.TenantId, ProductChangeKind.Updated),
+            cancellationToken);
+
+        if (categoriesChanged)
+        {
+            await _mediator.Publish(
+                new ProductCategoriesChangedNotification(productToUpdate.Id, productToUpdate.TenantId),
+                cancellationToken);
+        }
+
+        _logger.LogInformation("Successfully updated product with ID: {Id}", productToUpdate.Id);
+
+        return Result<Guid>.Success(productToUpdate.Id);
     }
 }

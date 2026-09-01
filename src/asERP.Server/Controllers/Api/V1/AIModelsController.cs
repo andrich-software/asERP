@@ -6,6 +6,7 @@ using asERP.Application.Features.AiModel.Queries.AiModelList;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.AiModel;
 using asERP.Domain.Wrapper;
+using asERP.Server.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,15 +21,15 @@ public class AiModelsController(IMediator mediator) : ControllerBase
 {
     // GET: api/v1/<AiModelsController>
     [HttpGet]
-    public async Task<ActionResult<PaginatedResult<AiModelListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<AiModelListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateCreated Descending";
+            sortBy = "DateCreated Descending";
         }
 
-        var response = await mediator.Send(new AiModelListQuery(pageNumber, pageSize, searchString, salesBy));
-        return StatusCode((int)response.StatusCode, response);
+        var response = await mediator.Send(new AiModelListQuery(pageNumber, pageSize, searchString, sortBy));
+        return response.ToActionResult();
     }
 
     // GET: api/v1/<AiModelsController>/5
@@ -40,11 +41,11 @@ public class AiModelsController(IMediator mediator) : ControllerBase
     {
         if (!Guid.TryParse(id, out var guidId))
         {
-            return BadRequest(Result<AiModelDetailDto>.Fail(ResultStatusCode.BadRequest, "Invalid GUID format"));
+            return BadRequest(Result<AiModelDetailDto>.Invalid(ErrorCodes.AiModel.Invalid, "Invalid GUID format"));
         }
 
         var response = await mediator.Send(new AiModelDetailQuery { Id = guidId });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // POST: api/v1/<AiModelsController>
@@ -54,7 +55,7 @@ public class AiModelsController(IMediator mediator) : ControllerBase
     public async Task<ActionResult> Create(AiModelCreateCommand aiModelCreateCommand)
     {
         var response = await mediator.Send(aiModelCreateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // PUT: api/v1/<AiModelsController>/5
@@ -67,12 +68,12 @@ public class AiModelsController(IMediator mediator) : ControllerBase
     {
         if (!Guid.TryParse(id, out var guidId))
         {
-            return BadRequest(Result<Guid>.Fail(ResultStatusCode.BadRequest, "Invalid GUID format"));
+            return BadRequest(Result<Guid>.Invalid(ErrorCodes.AiModel.Invalid, "Invalid GUID format"));
         }
 
         aiModelUpdateCommand.Id = guidId;
         var response = await mediator.Send(aiModelUpdateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // DELETE: api/v1/<AiModelsController>/5

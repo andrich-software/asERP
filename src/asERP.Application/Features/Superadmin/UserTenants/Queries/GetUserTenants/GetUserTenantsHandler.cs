@@ -13,34 +13,21 @@ namespace asERP.Application.Features.Superadmin.UserTenants.Queries.GetUserTenan
 public class GetUserTenantsHandler : IRequestHandler<GetUserTenantsQuery, Result<List<UserTenantAssignmentDto>>>
 {
     private readonly IUserTenantRepository _userTenantRepository;
-    private readonly IValidator<GetUserTenantsQuery> _validator;
     private readonly ITenantContext _tenantContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public GetUserTenantsHandler(
         IUserTenantRepository userTenantRepository,
-        IValidator<GetUserTenantsQuery> validator,
         ITenantContext tenantContext,
         IHttpContextAccessor httpContextAccessor)
     {
         _userTenantRepository = userTenantRepository;
-        _validator = validator;
         _tenantContext = tenantContext;
         _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<Result<List<UserTenantAssignmentDto>>> Handle(GetUserTenantsQuery request, CancellationToken cancellationToken)
     {
-        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validationResult.IsValid)
-        {
-            var result = new Result<List<UserTenantAssignmentDto>>();
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-            return result;
-        }
-
         // Check user role for tenant filtering
         var currentUser = _httpContextAccessor.HttpContext?.User;
         var isSuperadmin = currentUser?.IsInRole("Superadmin") ?? false;

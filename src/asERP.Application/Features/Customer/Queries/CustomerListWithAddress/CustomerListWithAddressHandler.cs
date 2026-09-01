@@ -46,7 +46,7 @@ public class CustomerListWithAddressHandler : IRequestHandler<CustomerListWithAd
             .Include(c => c.CustomerAddresses);
 
         return await baseQuery
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(c => new CustomerListWithAddressDto
             {
                 Id = c.Id,

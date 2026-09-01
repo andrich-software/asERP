@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
 using asERP.Domain.Wrapper;
@@ -30,23 +29,6 @@ public class CustomerDeleteHandler : IRequestHandler<CustomerDeleteCommand, Resu
 
         var result = new Result<int>();
 
-        // Validate incoming data
-        var validator = new CustomerDeleteValidator(_customerRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in delete request for {0}: {1}",
-                nameof(CustomerDeleteCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
         try
         {
             // Get entity from database first
@@ -54,9 +36,7 @@ public class CustomerDeleteHandler : IRequestHandler<CustomerDeleteCommand, Resu
 
             if (customerToDelete == null)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("Customer not found");
+                result.Fail(ErrorType.NotFound, ErrorCodes.Customer.NotFound, "Customer not found");
 
                 _logger.LogWarning("Customer with ID: {Id} not found for deletion", request.Id);
                 return result;
@@ -73,33 +53,23 @@ public class CustomerDeleteHandler : IRequestHandler<CustomerDeleteCommand, Resu
             await _customerRepository.DeleteAsync(customerToDelete);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
+            result.Status = ResultStatus.NoContent;
             result.Data = 1;
 
             _logger.LogInformation("Successfully deleted customer with ID: {Id}", customerToDelete.Id);
         }
         catch (InvalidOperationException ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add("Customer not found");
+            result.Fail(ErrorType.NotFound, ErrorCodes.Customer.NotFound, "Customer not found");
 
             _logger.LogWarning("Customer with ID: {Id} not found during deletion: {Message}", request.Id, ex.Message);
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
         {
             // Handle concurrent deletion - customer was already deleted by another request
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add("Customer not found");
+            result.Fail(ErrorType.NotFound, ErrorCodes.Customer.NotFound, "Customer not found");
 
             _logger.LogWarning("Customer with ID: {Id} was deleted by another request: {Message}", request.Id, ex.Message);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the customer.",
-                "Error deleting customer.");
         }
 
         return result;

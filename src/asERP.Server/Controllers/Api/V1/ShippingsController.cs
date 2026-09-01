@@ -31,16 +31,16 @@ public class ShippingsController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PaginatedResult<ShipmentListItemDto>>> GetAll(
-        int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "",
+        int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "",
         [FromQuery] ShippingStatus? status = null, bool problemsOnly = false, [FromQuery] Guid? salesId = null)
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "ShippedAt Descending";
+            sortBy = "ShippedAt Descending";
         }
 
         var response = await mediator.Send(new ShippingListQuery(
-            pageNumber, pageSize, searchString, salesBy, status, problemsOnly, salesId));
+            pageNumber, pageSize, searchString, sortBy, status, problemsOnly, salesId));
         return response.ToActionResult();
     }
 

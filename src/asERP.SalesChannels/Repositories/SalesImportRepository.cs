@@ -636,6 +636,13 @@ public class SalesImportRepository : ISalesImportRepository
     /// <summary>Adds a customer↔sales-channel link to the context (deferred; committed with the order).</summary>
     private void AddCustomerSalesChannelLink(Guid customerId, Guid salesChannelId, string remoteCustomerId)
     {
+        // Guest orders have no remote customer id; a link with an empty one maps nothing back to the shop
+        // and would make every later guest resolve to this customer — see GetCustomerByRemoteCustomerIdAsync.
+        if (string.IsNullOrWhiteSpace(remoteCustomerId))
+        {
+            return;
+        }
+
         _dbContext.CustomerSalesChannel.Add(new CustomerSalesChannel
         {
             CustomerId = customerId,

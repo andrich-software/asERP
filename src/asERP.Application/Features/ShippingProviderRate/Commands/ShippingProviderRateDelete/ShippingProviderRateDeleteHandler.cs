@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -44,9 +43,7 @@ public class ShippingProviderRateDeleteHandler : IRequestHandler<ShippingProvide
 
             if (await _shippingProviderRateRepository.HasShipmentsAsync(request.Id))
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("The shipping option cannot be deleted because shipments reference it.");
+                result.Fail(ErrorType.Validation, ErrorCodes.ShippingProviderRate.Invalid, "The shipping option cannot be deleted because shipments reference it.");
                 return result;
             }
 
@@ -55,7 +52,7 @@ public class ShippingProviderRateDeleteHandler : IRequestHandler<ShippingProvide
             await _shippingProviderRateRepository.DeleteAsync(rateToDelete);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
+            result.Status = ResultStatus.NoContent;
             result.Data = request.Id;
 
             _logger.LogInformation("Successfully deleted shipping option with ID: {Id}", request.Id);
@@ -63,12 +60,6 @@ public class ShippingProviderRateDeleteHandler : IRequestHandler<ShippingProvide
         catch (NotFoundException)
         {
             throw;
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the shipping option.",
-                "Error deleting shipping option {Id}.", request.Id);
         }
 
         return result;

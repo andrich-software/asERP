@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.SalesChannel;
 using asERP.Domain.Dtos.ShopDomain;
@@ -12,32 +11,15 @@ namespace asERP.Application.Features.SalesChannel.Queries.SalesChannelDetail;
 
 /// <summary>
 /// Handler for processing sales channel detail queries.
-/// Implements IRequestHandler from MediatR to handle SalesChannelDetailQuery requests
+/// Implements IRequestHandler from the custom mediator to handle SalesChannelDetailQuery requests
 /// and return detailed sales channel information wrapped in a Result.
 /// </summary>
 public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery, Result<SalesChannelDetailDto>>
 {
-    /// <summary>
-    /// Logger for recording handler operations
-    /// </summary>
     private readonly IAppLogger<SalesChannelDetailHandler> _logger;
-
-    /// <summary>
-    /// Repository for sales channel data operations
-    /// </summary>
     private readonly ISalesChannelRepository _salesChannelRepository;
-
-    /// <summary>
-    /// Repository for asShop host bindings (shown on the detail view of asShop channels)
-    /// </summary>
     private readonly IShopDomainRepository _shopDomainRepository;
 
-    /// <summary>
-    /// Constructor that initializes the handler with required dependencies
-    /// </summary>
-    /// <param name="logger">Logger for recording operations</param>
-    /// <param name="salesChannelRepository">Repository for sales channel data access</param>
-    /// <param name="shopDomainRepository">Repository for asShop host bindings</param>
     public SalesChannelDetailHandler(
         IAppLogger<SalesChannelDetailHandler> logger,
         ISalesChannelRepository salesChannelRepository,
@@ -48,12 +30,6 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
         _shopDomainRepository = shopDomainRepository ?? throw new ArgumentNullException(nameof(shopDomainRepository));
     }
 
-    /// <summary>
-    /// Handles the sales channel detail query request
-    /// </summary>
-    /// <param name="request">The query containing the sales channel ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Result containing detailed sales channel information if successful</returns>
     public async Task<Result<SalesChannelDetailDto>> Handle(SalesChannelDetailQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Retrieving sales channel details for ID: {Id}", request.Id);
@@ -93,7 +69,7 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
 
             // Set successful result with the sales channel details
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = data;
 
             _logger.LogInformation("Sales channel with ID {Id} retrieved successfully", request.Id);
@@ -101,18 +77,9 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
         catch (Application.Exceptions.NotFoundException)
         {
             // Handle not found exceptions specifically
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add($"Sales channel with ID {request.Id} not found");
+            result.Fail(ErrorType.NotFound, ErrorCodes.SalesChannel.NotFound, $"Sales channel with ID {request.Id} not found");
 
             _logger.LogWarning("Sales channel with ID {Id} not found", request.Id);
-        }
-        catch (Exception ex)
-        {
-            // Handle any other exceptions during sales channel retrieval
-            result.FromException(_logger, ex,
-                "An error occurred while retrieving the sales channel.",
-                "Error retrieving sales channel {Id}.", request.Id);
         }
 
         return result;

@@ -4,6 +4,7 @@ using asERP.Application.Features.GoodsReceipt.Queries.GoodsReceiptList;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.GoodsReceipt;
 using asERP.Domain.Wrapper;
+using asERP.Server.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,11 +23,11 @@ public class GoodsReceiptsController(IMediator mediator) : ControllerBase
         int pageNumber = 0,
         int pageSize = 50,
         string searchTerm = "",
-        string salesBy = "")
+        string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "ReceiptDate Descending";
+            sortBy = "ReceiptDate Descending";
         }
 
         var response = await mediator.Send(new GoodsReceiptListQuery
@@ -34,10 +35,10 @@ public class GoodsReceiptsController(IMediator mediator) : ControllerBase
             PageNumber = pageNumber,
             PageSize = pageSize,
             SearchTerm = searchTerm,
-            SalesBy = salesBy
+            SortBy = sortBy
         });
 
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // GET: api/v1/goodsreceipts/5
@@ -47,7 +48,7 @@ public class GoodsReceiptsController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<GoodsReceiptDetailDto>> GetDetails(Guid id)
     {
         var response = await mediator.Send(new GoodsReceiptDetailQuery { Id = id });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // POST: api/v1/goodsreceipts
@@ -57,6 +58,6 @@ public class GoodsReceiptsController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<int>> Create(GoodsReceiptCreateCommand goodsReceiptCreateCommand)
     {
         var response = await mediator.Send(goodsReceiptCreateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 }

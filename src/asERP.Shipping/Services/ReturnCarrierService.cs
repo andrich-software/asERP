@@ -71,7 +71,7 @@ public sealed class ReturnCarrierService : IReturnCarrierService
 
         if (core.Result.IsPermanentFailure || core.ReturnShipment is null || core.ReturnShipment.ShippingProviderId is null)
         {
-            return Result<ShipmentLabelResult>.Fail(ResultStatusCode.BadRequest,
+            return Result<ShipmentLabelResult>.Invalid(ErrorCodes.ReturnCarrier.Invalid,
                 core.Result.ErrorMessage ?? "Return-label creation failed.");
         }
 
@@ -184,14 +184,14 @@ public sealed class ReturnCarrierService : IReturnCarrierService
 
         if (returnShipment is null)
         {
-            return new Result { Succeeded = false, StatusCode = ResultStatusCode.BadRequest, Messages = [$"Return {returnShipmentId} not found."] };
+            return Result.Invalid(ErrorCodes.ReturnCarrier.Invalid, $"Return {returnShipmentId} not found.");
         }
 
         _tenantContext.SetCurrentTenantId(returnShipment.TenantId);
 
         if (string.IsNullOrEmpty(returnShipment.CarrierShipmentId) || returnShipment.ShippingProviderId is null)
         {
-            return new Result { Succeeded = true, StatusCode = ResultStatusCode.Ok };
+            return Result.Ok();
         }
 
         var provider = await _context.ShippingProvider
@@ -200,13 +200,13 @@ public sealed class ReturnCarrierService : IReturnCarrierService
 
         if (provider is null)
         {
-            return new Result { Succeeded = false, StatusCode = ResultStatusCode.BadRequest, Messages = ["The shipping provider of this return no longer exists."] };
+            return Result.Invalid(ErrorCodes.ReturnCarrier.Invalid, "The shipping provider of this return no longer exists.");
         }
 
         var connector = _registry.Resolve(provider.Type);
         if (connector is null)
         {
-            return new Result { Succeeded = false, StatusCode = ResultStatusCode.BadRequest, Messages = [$"No connector is available for carrier {provider.Type}."] };
+            return Result.Invalid(ErrorCodes.ReturnCarrier.Invalid, $"No connector is available for carrier {provider.Type}.");
         }
 
         var carrierContext = _contextFactory.Create(provider, cancellationToken);
@@ -214,15 +214,11 @@ public sealed class ReturnCarrierService : IReturnCarrierService
 
         if (!result.Success)
         {
-            return new Result
-            {
-                Succeeded = false,
-                StatusCode = ResultStatusCode.BadRequest,
-                Messages = [$"Carrier-side cancellation failed: {result.ErrorMessage}"]
-            };
+            return Result.Invalid(ErrorCodes.Returns.Invalid,
+                $"Carrier-side cancellation failed: {result.ErrorMessage}");
         }
 
-        return new Result { Succeeded = true, StatusCode = ResultStatusCode.Ok };
+        return Result.Ok();
     }
 
     /// <summary>Builds the carrier-agnostic request — the customer's delivery address is the return sender.</summary>

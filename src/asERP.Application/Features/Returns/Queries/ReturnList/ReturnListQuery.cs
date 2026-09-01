@@ -10,7 +10,7 @@ public class ReturnListQuery : IRequest<PaginatedResult<ReturnShipmentListItemDt
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public string SearchString { get; set; }
-    public string[] SalesBy { get; set; }
+    public string[] SortBy { get; set; }
     public ReturnShipmentStatus? Status { get; set; }
     public Guid? SalesId { get; set; }
 
@@ -18,7 +18,7 @@ public class ReturnListQuery : IRequest<PaginatedResult<ReturnShipmentListItemDt
         int pageNumber = 0,
         int pageSize = 10,
         string searchString = "",
-        string salesBy = "",
+        string sortBy = "",
         ReturnShipmentStatus? status = null,
         Guid? salesId = null)
     {
@@ -28,10 +28,10 @@ public class ReturnListQuery : IRequest<PaginatedResult<ReturnShipmentListItemDt
         Status = status;
         SalesId = salesId;
 
-        if (!string.IsNullOrWhiteSpace(salesBy))
+        if (!string.IsNullOrWhiteSpace(sortBy))
         {
-            SalesBy = salesBy.Split(',');
+            SortBy = sortBy.Split(',');
         }
-        else SalesBy = new string[] { };
+        else SortBy = new string[] { };
     }
 }

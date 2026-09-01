@@ -144,14 +144,14 @@ public class TaxClassListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetTaxClassList_WithSalesBy_ShouldReturnSalesedResults()
+    public async Task GetTaxClassList_WithSortBy_ShouldReturnSalesedResults()
     {
         // Arrange
         await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
         // Act
-        var response = await Client.GetAsync("/api/v1/TaxClasses?salesBy=TaxRate");
+        var response = await Client.GetAsync("/api/v1/TaxClasses?sortBy=TaxRate");
 
         // Assert
         TestAssertions.AssertHttpSuccess(response);
@@ -377,14 +377,14 @@ public class TaxClassListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetTaxClassList_WithMultipleSalesByFields_ShouldHandleCorrectly()
+    public async Task GetTaxClassList_WithMultipleSortByFields_ShouldHandleCorrectly()
     {
         // Arrange
         await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
         // Act
-        var response = await Client.GetAsync("/api/v1/TaxClasses?salesBy=TaxRate,Id");
+        var response = await Client.GetAsync("/api/v1/TaxClasses?sortBy=TaxRate,Id");
 
         // Assert
         TestAssertions.AssertHttpSuccess(response);

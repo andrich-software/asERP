@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 using Microsoft.EntityFrameworkCore;
@@ -31,46 +30,22 @@ public class TenantDeleteHandler : IRequestHandler<TenantDeleteCommand, Result<G
 
         var result = new Result<Guid>();
 
-        var validator = new TenantDeleteValidator(_tenantRepository, _tenantPermissionService);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in delete request for {0}: {1}",
-                nameof(TenantDeleteCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
         try
         {
             await _tenantRepository.DeleteTenantWithCascadeAsync(request.TenantId, cancellationToken);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
+            result.Status = ResultStatus.NoContent;
             result.Data = request.TenantId;
 
             _logger.LogInformation("Successfully deleted tenant with ID: {TenantId}", request.TenantId);
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add("Tenant was already deleted by another request");
+            result.Fail(ErrorType.NotFound, ErrorCodes.Tenant.NotFound, "Tenant was already deleted by another request");
 
             _logger.LogWarning("Tenant with ID: {TenantId} was deleted by another request: {Message}",
                 request.TenantId, ex.Message);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the tenant.",
-                "Error deleting tenant {TenantId}.", request.TenantId);
         }
 
         return result;

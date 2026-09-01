@@ -307,7 +307,7 @@ public class CountryDetailQueryTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<CountryDetailDto>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertTrue(result.Succeeded);
-        TestAssertions.AssertEqual(ResultStatusCode.Ok, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Ok, result.Status);
     }
 
     [Fact]

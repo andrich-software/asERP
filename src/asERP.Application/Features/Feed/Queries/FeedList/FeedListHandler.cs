@@ -35,7 +35,7 @@ public class FeedListHandler : IRequestHandler<FeedListQuery, PaginatedResult<Fe
 
         return await _feedRepository.Entities
             .Specify(spec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(f => new FeedListDto
             {
                 Id = f.Id,

@@ -115,7 +115,7 @@ public class CategoryCreateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<object>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]

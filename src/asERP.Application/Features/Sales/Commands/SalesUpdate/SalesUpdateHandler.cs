@@ -38,23 +38,6 @@ public class SalesUpdateHandler : IRequestHandler<SalesUpdateCommand, Result<Gui
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new SalesUpdateValidator(_salesRepository, _customerRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(SalesUpdateCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
         try
         {
             // First check if sales exists globally
@@ -79,9 +62,7 @@ public class SalesUpdateHandler : IRequestHandler<SalesUpdateCommand, Result<Gui
             var customer = await _customerRepository.GetByCustomerIdAsync(request.CustomerId);
             if (customer == null)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("The specified customer does not exist or does not belong to your tenant.");
+                result.Fail(ErrorType.Validation, ErrorCodes.Sales.Invalid, "The specified customer does not exist or does not belong to your tenant.");
                 _logger.LogWarning("Cross-tenant customer access attempt for customer {CustomerId}", request.CustomerId);
                 return result;
             }
@@ -165,7 +146,7 @@ public class SalesUpdateHandler : IRequestHandler<SalesUpdateCommand, Result<Gui
             await transaction.CommitAsync(cancellationToken);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = salesToUpdate.Id;
 
             _logger.LogInformation("Successfully updated sales with ID: {Id}", salesToUpdate.Id);
@@ -174,14 +155,6 @@ public class SalesUpdateHandler : IRequestHandler<SalesUpdateCommand, Result<Gui
         {
             // Let NotFoundException bubble up to middleware for proper 404 handling
             throw;
-        }
-        catch (Exception ex)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add("An error occurred while updating the sales.");
-
-            _logger.LogError(ex, "Error updating sales with ID: {Id}", request.Id);
         }
 
         return result;

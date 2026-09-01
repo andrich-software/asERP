@@ -3,6 +3,7 @@ using asERP.Application.Features.WebAnalytics.Queries.WebTopProducts;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.WebAnalytics;
 using asERP.Domain.Wrapper;
+using asERP.Server.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +28,7 @@ public class WebStatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new WebSessionsSummaryQuery(salesChannelId));
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -44,7 +45,7 @@ public class WebStatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new WebTopProductsQuery(salesChannelId, startDate, endDate, count));
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }

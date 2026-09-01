@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.ShopDomain;
 using asERP.Domain.Wrapper;
@@ -25,35 +24,26 @@ public class ShopDomainListHandler : IRequestHandler<ShopDomainListQuery, Result
     {
         var result = new Result<List<ShopDomainListDto>>();
 
-        try
-        {
-            // Tenant isolation via the global query filter.
-            var shopDomains = await _shopDomainRepository.Entities
-                .Where(d => d.SalesChannelId == request.SalesChannelId)
-                .OrderByDescending(d => d.IsPrimary)
-                .ThenBy(d => d.Host)
-                .ThenBy(d => d.Port)
-                .Select(d => new ShopDomainListDto
-                {
-                    Id = d.Id,
-                    SalesChannelId = d.SalesChannelId,
-                    Host = d.Host,
-                    Port = d.Port,
-                    IsPrimary = d.IsPrimary,
-                    RedirectToPrimary = d.RedirectToPrimary
-                })
-                .ToListAsync(cancellationToken);
+        // Tenant isolation via the global query filter.
+        var shopDomains = await _shopDomainRepository.Entities
+            .Where(d => d.SalesChannelId == request.SalesChannelId)
+            .OrderByDescending(d => d.IsPrimary)
+            .ThenBy(d => d.Host)
+            .ThenBy(d => d.Port)
+            .Select(d => new ShopDomainListDto
+            {
+                Id = d.Id,
+                SalesChannelId = d.SalesChannelId,
+                Host = d.Host,
+                Port = d.Port,
+                IsPrimary = d.IsPrimary,
+                RedirectToPrimary = d.RedirectToPrimary
+            })
+            .ToListAsync(cancellationToken);
 
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = shopDomains;
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while listing shop domains.",
-                "Error listing shop domains for sales channel {SalesChannelId}.", request.SalesChannelId);
-        }
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = shopDomains;
 
         return result;
     }

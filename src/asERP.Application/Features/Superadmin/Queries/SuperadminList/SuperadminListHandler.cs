@@ -50,8 +50,8 @@ public class SuperadminListHandler : IRequestHandler<SuperadminListQuery, Pagina
         }
 
         // Apply salesing
-        query = request.SalesBy.Any()
-            ? query.ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+        query = request.SortBy.Any()
+            ? query.ApplySafeOrdering(request.SortBy, AllowedSortFields)
             : query.OrderBy(t => t.Name);
 
         return await query

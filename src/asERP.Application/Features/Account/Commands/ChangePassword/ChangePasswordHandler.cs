@@ -28,63 +28,38 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, Resu
     {
         var result = new Result<string>();
 
-        var validator = new ChangePasswordValidator();
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-            return result;
-        }
-
         var userId = _httpContextAccessor.HttpContext.GetUserId();
         if (string.IsNullOrWhiteSpace(userId))
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.Unauthorized;
-            result.Messages.Add("Authenticated user context is required.");
+            result.Fail(ErrorType.Unauthorized, ErrorCodes.Account.Unauthorized, "Authenticated user context is required.");
             return result;
         }
 
-        try
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
         {
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("Current user not found.");
-                return result;
-            }
-
-            var changeResult = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
-            if (!changeResult.Succeeded)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.AddRange(changeResult.Errors.Select(e => e.Description));
-                _logger.LogWarning("Password change failed for user {UserId}: {Errors}", userId,
-                    string.Join(", ", result.Messages));
-                return result;
-            }
-
-            user.DateModified = DateTime.UtcNow;
-            await _userManager.UpdateAsync(user);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
-            result.Data = user.Id;
-
-            _logger.LogInformation("User {UserId} changed own password", user.Id);
+            result.Fail(ErrorType.NotFound, ErrorCodes.Account.NotFound, "Current user not found.");
+            return result;
         }
-        catch (Exception ex)
+
+        var changeResult = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (!changeResult.Succeeded)
         {
-            // Never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while changing the password.",
-                "Error changing password.");
+            result.Fail(ErrorType.Validation, ErrorCodes.Account.Invalid);
+            result.Messages.AddRange(changeResult.Errors.Select(e => e.Description));
+            _logger.LogWarning("Password change failed for user {UserId}: {Errors}", userId,
+                string.Join(", ", result.Messages));
+            return result;
         }
+
+        user.DateModified = DateTime.UtcNow;
+        await _userManager.UpdateAsync(user);
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.NoContent;
+        result.Data = user.Id;
+
+        _logger.LogInformation("User {UserId} changed own password", user.Id);
 
         return result;
     }

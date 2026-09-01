@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
 using asERP.Domain.Wrapper;
@@ -25,28 +24,18 @@ public class FeedLogCreateHandler : IRequestHandler<FeedLogCreateCommand, Result
     {
         var result = new Result<Guid>();
 
-        try
+        var log = new FeedLog
         {
-            var log = new FeedLog
-            {
-                FeedId = request.FeedId,
-                IpAddress = Truncate(request.IpAddress, MaxIpLength),
-                UserAgent = Truncate(request.UserAgent, MaxUserAgentLength)
-            };
+            FeedId = request.FeedId,
+            IpAddress = Truncate(request.IpAddress, MaxIpLength),
+            UserAgent = Truncate(request.UserAgent, MaxUserAgentLength)
+        };
 
-            await _feedLogRepository.CreateAsync(log);
+        await _feedLogRepository.CreateAsync(log);
 
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Created;
-            result.Data = log.Id;
-        }
-        catch (Exception ex)
-        {
-            // Logging must never break feed delivery — swallow into a failed Result the caller can ignore.
-            result.FromException(_logger, ex,
-                "An error occurred while recording the feed access.",
-                "Error recording access for feed {Id}.", request.FeedId);
-        }
+        result.Succeeded = true;
+        result.Status = ResultStatus.Created;
+        result.Data = log.Id;
 
         return result;
     }

@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -31,50 +30,22 @@ public class CountryCreateHandler : IRequestHandler<CountryCreateCommand, Result
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new CountryCreateValidator(_countryRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        // If validation fails, return a bad request result with validation error messages
-        if (!validationResult.IsValid)
+        // Manual mapping to domain entity
+        var countryToCreate = new Domain.Entities.Country
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+            Name = request.Name,
+            CountryCode = request.CountryCode
+        };
 
-            _logger.LogWarning("Validation errors in create request for {0}: {1}",
-                nameof(CountryCreateCommand),
-                string.Join(", ", result.Messages));
+        // Add the new country to the database
+        await _countryRepository.CreateAsync(countryToCreate);
 
-            return result;
-        }
+        // Set successful result with the new country ID
+        result.Succeeded = true;
+        result.Status = ResultStatus.Created;
+        result.Data = countryToCreate.Id;
 
-        try
-        {
-            // Manual mapping to domain entity
-            var countryToCreate = new Domain.Entities.Country
-            {
-                Name = request.Name,
-                CountryCode = request.CountryCode
-            };
-
-            // Add the new country to the database
-            await _countryRepository.CreateAsync(countryToCreate);
-
-            // Set successful result with the new country ID
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Created;
-            result.Data = countryToCreate.Id;
-
-            _logger.LogInformation("Successfully created country with ID: {Id}", countryToCreate.Id);
-        }
-        catch (Exception ex)
-        {
-            // Handle any exceptions during country creation; never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while creating the country.",
-                "Error creating country.");
-        }
+        _logger.LogInformation("Successfully created country with ID: {Id}", countryToCreate.Id);
 
         return result;
     }

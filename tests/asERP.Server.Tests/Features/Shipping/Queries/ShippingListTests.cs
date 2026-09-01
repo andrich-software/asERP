@@ -195,7 +195,7 @@ public class ShippingListTests : TenantIsolatedTestBase
         await DbContext.SaveChangesAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var result = await GetListAsync("?salesBy=IsProblem%20descending");
+        var result = await GetListAsync("?sortBy=IsProblem%20descending");
 
         TestAssertions.AssertEqual(3, result.Data.Count);
         TestAssertions.AssertEqual(problem.Id, result.Data[0].Id);

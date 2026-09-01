@@ -33,9 +33,7 @@ public class SalesShippableItemsHandler : IRequestHandler<SalesShippableItemsQue
         var sales = await _salesRepository.GetWithDetailsAsync(request.Id);
         if (sales == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add($"Sales with ID {request.Id} not found");
+            result.Fail(ErrorType.NotFound, ErrorCodes.Sales.NotFound, $"Sales with ID {request.Id} not found");
 
             _logger.LogWarning("Sales with ID {Id} not found", request.Id);
             return result;
@@ -83,7 +81,7 @@ public class SalesShippableItemsHandler : IRequestHandler<SalesShippableItemsQue
         }).ToList();
 
         result.Succeeded = true;
-        result.StatusCode = ResultStatusCode.Ok;
+        result.Status = ResultStatus.Ok;
         result.Data = data;
 
         return result;

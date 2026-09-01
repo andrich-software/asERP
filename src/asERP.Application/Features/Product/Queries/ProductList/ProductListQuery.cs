@@ -9,7 +9,7 @@ public class ProductListQuery : IRequest<PaginatedResult<ProductListDto>>
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public string SearchString { get; set; }
-    public string[] SalesBy { get; set; }
+    public string[] SortBy { get; set; }
 
     /// <summary>When false (default), variant child products are excluded from the top-level list.</summary>
     public bool IncludeVariants { get; set; }
@@ -17,7 +17,7 @@ public class ProductListQuery : IRequest<PaginatedResult<ProductListDto>>
     /// <summary>When true, only products below their minimum stock in at least one warehouse are returned.</summary>
     public bool LowStockOnly { get; set; }
 
-    public ProductListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string salesBy = "", bool includeVariants = false, bool lowStockOnly = false)
+    public ProductListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string sortBy = "", bool includeVariants = false, bool lowStockOnly = false)
     {
         PageNumber = pageNumber;
         PageSize = pageSize;
@@ -25,10 +25,10 @@ public class ProductListQuery : IRequest<PaginatedResult<ProductListDto>>
         IncludeVariants = includeVariants;
         LowStockOnly = lowStockOnly;
 
-        if (!string.IsNullOrWhiteSpace(salesBy))
+        if (!string.IsNullOrWhiteSpace(sortBy))
         {
-            SalesBy = salesBy.Split(',');
+            SortBy = sortBy.Split(',');
         }
-        else SalesBy = new string[] { };
+        else SortBy = new string[] { };
     }
 }

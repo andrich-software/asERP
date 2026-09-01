@@ -267,12 +267,12 @@ public class SalesChannelListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSalesChannelsList_WithSalesBy_ShouldReturnSalesedResults()
+    public async Task GetSalesChannelsList_WithSortBy_ShouldReturnSalesedResults()
     {
         await SeedTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/SalesChannels?SalesBy=Name desc");
+        var response = await Client.GetAsync("/api/v1/SalesChannels?SortBy=Name desc");
 
         TestAssertions.AssertEqual(HttpStatusCode.OK, response.StatusCode);
         var result = await ReadResponseAsync<PaginatedResult<SalesChannelListDto>>(response);
@@ -284,12 +284,12 @@ public class SalesChannelListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSalesChannelsList_WithMultipleSalesBy_ShouldReturnSalesedResults()
+    public async Task GetSalesChannelsList_WithMultipleSortBy_ShouldReturnSalesedResults()
     {
         await SeedTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/SalesChannels?SalesBy=Type,Name");
+        var response = await Client.GetAsync("/api/v1/SalesChannels?SortBy=Type,Name");
 
         TestAssertions.AssertEqual(HttpStatusCode.OK, response.StatusCode);
         var result = await ReadResponseAsync<PaginatedResult<SalesChannelListDto>>(response);

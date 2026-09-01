@@ -3,7 +3,6 @@ using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Exceptions;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
@@ -56,9 +55,7 @@ public class ShippingCancelHandler : IRequestHandler<ShippingCancelCommand, Resu
 
             if (shipping.Status is ShippingStatus.Delivered or ShippingStatus.Cancelled)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add($"A shipment in status {shipping.Status} cannot be cancelled.");
+                result.Fail(ErrorType.Validation, ErrorCodes.Shipping.Invalid, $"A shipment in status {shipping.Status} cannot be cancelled.");
                 return result;
             }
 
@@ -86,7 +83,7 @@ public class ShippingCancelHandler : IRequestHandler<ShippingCancelCommand, Resu
             if (!statusResult.Succeeded)
             {
                 result.Succeeded = false;
-                result.StatusCode = statusResult.StatusCode;
+                result.Error = statusResult.Error;
                 result.Messages.AddRange(statusResult.Messages);
                 return result;
             }
@@ -103,7 +100,7 @@ public class ShippingCancelHandler : IRequestHandler<ShippingCancelCommand, Resu
             await _salesShippingStatusService.RecomputeAsync(shipping.SalesId, cancellationToken);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = shipping.Id;
 
             _logger.LogInformation("Successfully cancelled shipment with ID: {Id}", shipping.Id);
@@ -111,12 +108,6 @@ public class ShippingCancelHandler : IRequestHandler<ShippingCancelCommand, Resu
         catch (NotFoundException)
         {
             throw;
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while cancelling the shipment.",
-                "Error cancelling shipment {Id}.", request.Id);
         }
 
         return result;

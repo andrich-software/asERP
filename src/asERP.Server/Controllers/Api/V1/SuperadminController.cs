@@ -34,10 +34,10 @@ public class SuperadminController(IMediator mediator) : ControllerBase
     /// <param name="pageNumber">Page number (default: 0)</param>
     /// <param name="pageSize">Page size (default: 10)</param>
     /// <param name="searchString">Search string for filtering tenants</param>
-    /// <param name="salesBy">Sales by clause</param>
+    /// <param name="sortBy">Sort clause</param>
     /// <returns>Paginated list of tenants</returns>
     [HttpGet("tenants")]
-    public async Task<ActionResult<PaginatedResult<SuperadminTenantListDto>>> GetTenants(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<SuperadminTenantListDto>>> GetTenants(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
         var accessCheckResult = await this.EnsureSuperadminAccessAsync();
         if (accessCheckResult is not null)
@@ -45,13 +45,13 @@ public class SuperadminController(IMediator mediator) : ControllerBase
             return accessCheckResult;
         }
 
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "Name Ascending";
+            sortBy = "Name Ascending";
         }
 
-        var response = await mediator.Send(new SuperadminListQuery(pageNumber, pageSize, searchString, salesBy));
-        return StatusCode((int)response.StatusCode, response);
+        var response = await mediator.Send(new SuperadminListQuery(pageNumber, pageSize, searchString, sortBy));
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public class SuperadminController(IMediator mediator) : ControllerBase
         }
 
         var response = await mediator.Send(new SuperadminDetailQuery(id));
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -85,7 +85,7 @@ public class SuperadminController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<Result<int>>> CreateTenant(SuperadminCreateCommand tenantCreateCommand)
     {
         var response = await mediator.Send(tenantCreateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ public class SuperadminController(IMediator mediator) : ControllerBase
     {
         tenantUpdateCommand.Id = id;
         var response = await mediator.Send(tenantUpdateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -120,7 +120,7 @@ public class SuperadminController(IMediator mediator) : ControllerBase
     {
         var command = new SuperadminDeleteCommand(id);
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -129,18 +129,18 @@ public class SuperadminController(IMediator mediator) : ControllerBase
     /// <param name="pageNumber">Page number (default: 0)</param>
     /// <param name="pageSize">Page size (default: 10)</param>
     /// <param name="searchString">Search string for filtering users</param>
-    /// <param name="salesBy">Sales by clause</param>
+    /// <param name="sortBy">Sort clause</param>
     /// <returns>Paginated list of users</returns>
     [HttpGet("users")]
-    public async Task<ActionResult<PaginatedResult<UserListDto>>> GetUsers(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<UserListDto>>> GetUsers(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateCreated Descending";
+            sortBy = "DateCreated Descending";
         }
 
-        var response = await mediator.Send(new UserListQuery(pageNumber, pageSize, searchString, salesBy));
-        return StatusCode((int)response.StatusCode, response);
+        var response = await mediator.Send(new UserListQuery(pageNumber, pageSize, searchString, sortBy));
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -160,7 +160,7 @@ public class SuperadminController(IMediator mediator) : ControllerBase
         }
 
         var response = await mediator.Send(new UserDetailQuery { Id = id });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -174,7 +174,7 @@ public class SuperadminController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<string>> CreateUser(UserCreateCommand userCreateCommand)
     {
         var response = await mediator.Send(userCreateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -192,13 +192,13 @@ public class SuperadminController(IMediator mediator) : ControllerBase
         if (!string.IsNullOrWhiteSpace(userUpdateCommand.Id) &&
             !string.Equals(userUpdateCommand.Id, id, StringComparison.OrdinalIgnoreCase))
         {
-            var mismatchResult = Result<string>.Fail(ResultStatusCode.BadRequest, "User ID in the payload must match the route parameter.");
+            var mismatchResult = Result<string>.Invalid(ErrorCodes.User.Invalid, "User ID in the payload must match the route parameter.");
             return BadRequest(mismatchResult);
         }
 
         userUpdateCommand.Id = id;
         var response = await mediator.Send(userUpdateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -223,12 +223,12 @@ public class SuperadminController(IMediator mediator) : ControllerBase
     {
         var command = new UserDeleteCommand { Id = id };
         var response = await mediator.Send(command);
-        if (response.StatusCode == ResultStatusCode.NoContent)
+        if (response.Status == ResultStatus.NoContent)
         {
             return NoContent();
         }
 
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -248,7 +248,7 @@ public class SuperadminController(IMediator mediator) : ControllerBase
         }
 
         var response = await mediator.Send(new GetUserTenantsQuery(id));
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -265,7 +265,7 @@ public class SuperadminController(IMediator mediator) : ControllerBase
     {
         command.UserId = id;
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -282,7 +282,7 @@ public class SuperadminController(IMediator mediator) : ControllerBase
     {
         if (!Guid.TryParse(tenantId, out var parsedTenantId) || parsedTenantId == Guid.Empty)
         {
-            var invalidResult = Result<bool>.Fail(ResultStatusCode.BadRequest, "Invalid tenant identifier.");
+            var invalidResult = Result<bool>.Invalid(ErrorCodes.Superadmin.Invalid, "Invalid tenant identifier.");
             return BadRequest(invalidResult);
         }
 
@@ -293,6 +293,6 @@ public class SuperadminController(IMediator mediator) : ControllerBase
         };
 
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 }

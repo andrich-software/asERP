@@ -24,15 +24,15 @@ public class FeedsController(IMediator mediator) : ControllerBase
 {
     // GET: api/v1/feeds
     [HttpGet]
-    public async Task<ActionResult<PaginatedResult<FeedListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<FeedListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateCreated Descending";
+            sortBy = "DateCreated Descending";
         }
 
-        var response = await mediator.Send(new FeedListQuery(pageNumber, pageSize, searchString, salesBy));
-        return StatusCode((int)response.StatusCode, response);
+        var response = await mediator.Send(new FeedListQuery(pageNumber, pageSize, searchString, sortBy));
+        return response.ToActionResult();
     }
 
     // GET: api/v1/feeds/{id}
@@ -47,7 +47,7 @@ public class FeedsController(IMediator mediator) : ControllerBase
             response.Data.PublicUrl = $"{Request.Scheme}://{Request.Host}/feed/{id}";
         }
 
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // POST: api/v1/feeds
@@ -57,7 +57,7 @@ public class FeedsController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<Guid>> Create(FeedCreateCommand command)
     {
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // PUT: api/v1/feeds/{id}
@@ -69,17 +69,13 @@ public class FeedsController(IMediator mediator) : ControllerBase
     {
         if (command.Id != Guid.Empty && command.Id != id)
         {
-            return BadRequest(new Result<Guid>
-            {
-                Succeeded = false,
-                StatusCode = ResultStatusCode.BadRequest,
-                Messages = { "ID in URL does not match ID in request body" }
-            });
+            return BadRequest(Result<Guid>.Invalid(
+                ErrorCodes.Feed.Invalid, "ID in URL does not match ID in request body"));
         }
 
         command.Id = id;
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // DELETE: api/v1/feeds/{id}
@@ -94,18 +90,18 @@ public class FeedsController(IMediator mediator) : ControllerBase
 
     // GET: api/v1/feeds/{id}/logs
     [HttpGet("{id:guid}/logs")]
-    public async Task<ActionResult<PaginatedResult<FeedLogDto>>> GetLogs(Guid id, int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<FeedLogDto>>> GetLogs(Guid id, int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        var response = await mediator.Send(new FeedLogListQuery(id, pageNumber, pageSize, searchString, salesBy));
-        return StatusCode((int)response.StatusCode, response);
+        var response = await mediator.Send(new FeedLogListQuery(id, pageNumber, pageSize, searchString, sortBy));
+        return response.ToActionResult();
     }
 
     // GET: api/v1/feeds/{id}/products
     [HttpGet("{id:guid}/products")]
-    public async Task<ActionResult<PaginatedResult<FeedProductSelectionDto>>> GetProducts(Guid id, int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<FeedProductSelectionDto>>> GetProducts(Guid id, int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        var response = await mediator.Send(new FeedProductSelectionListQuery(id, pageNumber, pageSize, searchString, salesBy));
-        return StatusCode((int)response.StatusCode, response);
+        var response = await mediator.Send(new FeedProductSelectionListQuery(id, pageNumber, pageSize, searchString, sortBy));
+        return response.ToActionResult();
     }
 
     // PUT: api/v1/feeds/{id}/products
@@ -120,6 +116,6 @@ public class FeedsController(IMediator mediator) : ControllerBase
             Changes = dto.Changes
         });
 
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 }

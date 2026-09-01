@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
-using asERP.Application.Extensions;
 using asERP.Application.Features.Tenant.Commands.TenantCreate;
 using asERP.Application.Mediator;
 using asERP.Domain.Constants;
@@ -58,25 +57,19 @@ public class SetupInitializeHandler : IRequestHandler<SetupInitializeCommand, Re
             // let anyone probe which accounts exist.
             if (!await _setupStatusService.IsSetupRequiredAsync())
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.Forbidden;
-                result.Messages.Add("Die Ersteinrichtung wurde bereits abgeschlossen.");
+                result.Fail(ErrorType.Forbidden, ErrorCodes.Setup.Forbidden, "Die Ersteinrichtung wurde bereits abgeschlossen.");
                 return result;
             }
 
-            var validator = new SetupInitializeValidator(_userRepository);
-            var validationResult = await validator.ValidateAsync(request, cancellationToken);
+            // Validated here rather than by the mediator, so it runs strictly after the guard above
+            // (hence ISkipPipelineValidation on the command).
+            var validationResult = await new SetupInitializeValidator(_userRepository)
+                .ValidateAsync(request, cancellationToken);
 
             if (!validationResult.IsValid)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
+                result.Fail(ErrorType.Validation, ErrorCodes.Setup.Invalid);
                 result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-                _logger.LogWarning("Validation errors in create request for {0}: {1}",
-                    nameof(SetupInitializeCommand),
-                    string.Join(", ", result.Messages));
-
                 return result;
             }
 
@@ -94,25 +87,36 @@ public class SetupInitializeHandler : IRequestHandler<SetupInitializeCommand, Re
             var createErrors = (await _userRepository.CreateSuperadminAsync(superadmin, request.Password)).ToList();
             if (createErrors.Count > 0)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
+                result.Fail(ErrorType.Validation, ErrorCodes.Setup.Invalid);
                 result.Messages.AddRange(createErrors.Select(e => e.Description));
                 return result;
             }
 
-            var tenantResult = await _mediator.Send(new TenantCreateCommand
+            Result<Guid> tenantResult;
+            try
             {
-                Name = request.TenantName,
-                Description = request.TenantDescription,
-                UserId = superadmin.Id
-            }, cancellationToken);
+                tenantResult = await _mediator.Send(new TenantCreateCommand
+                {
+                    Name = request.TenantName,
+                    Description = request.TenantDescription,
+                    UserId = superadmin.Id
+                }, cancellationToken);
+            }
+            catch (Exception)
+            {
+                // The superadmin already exists at this point; without this compensation a throwing
+                // tenant creation (e.g. failed validation) would leave the setup half-finished and
+                // unrepeatable, because the next attempt trips over the orphaned account.
+                await DeleteSuperadminBestEffortAsync(superadmin);
+                throw;
+            }
 
             if (!tenantResult.Succeeded)
             {
                 await DeleteSuperadminBestEffortAsync(superadmin);
 
                 result.Succeeded = false;
-                result.StatusCode = tenantResult.StatusCode;
+                result.Error = tenantResult.Error;
                 result.Messages.AddRange(tenantResult.Messages);
                 return result;
             }
@@ -120,18 +124,12 @@ public class SetupInitializeHandler : IRequestHandler<SetupInitializeCommand, Re
             await _settingsService.SetSettingValueAsync(SettingKeys.SetupCompleted, "True");
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Created;
+            result.Status = ResultStatus.Created;
             result.Data = tenantResult.Data;
 
             _logger.LogInformation(
                 "Initial server setup completed: Superadmin {UserId} and tenant {TenantId} created",
                 superadmin.Id, tenantResult.Data);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred during the initial server setup.",
-                "Error running initial server setup for {Email}.", request.Email);
         }
         finally
         {

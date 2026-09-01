@@ -375,7 +375,7 @@ public class WarehouseCreateCommandTests : TenantIsolatedTestBase
 
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertTrue(result.Succeeded);
-        TestAssertions.AssertEqual(ResultStatusCode.Created, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Created, result.Status);
         TestAssertions.AssertTrue(result.Data != Guid.Empty);
         TestAssertions.AssertNotNull(result.Messages);
     }

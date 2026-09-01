@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -8,26 +7,14 @@ namespace asERP.Application.Features.TaxClass.Commands.TaxClassCreate;
 
 /// <summary>
 /// Handler for processing tax class creation commands.
-/// Implements IRequestHandler from MediatR to handle TaxClassCreateCommand requests
+/// Implements IRequestHandler from the custom mediator to handle TaxClassCreateCommand requests
 /// and return the ID of the newly created tax class wrapped in a Result.
 /// </summary>
 public class TaxClassCreateHandler : IRequestHandler<TaxClassCreateCommand, Result<Guid>>
 {
-    /// <summary>
-    /// Logger for recording handler operations
-    /// </summary>
     private readonly IAppLogger<TaxClassCreateHandler> _logger;
-
-    /// <summary>
-    /// Repository for tax class data operations
-    /// </summary>
     private readonly ITaxClassRepository _taxClassRepository;
 
-    /// <summary>
-    /// Constructor that initializes the handler with required dependencies
-    /// </summary>
-    /// <param name="logger">Logger for recording operations</param>
-    /// <param name="taxClassRepository">Repository for tax class data access</param>
     public TaxClassCreateHandler(
         IAppLogger<TaxClassCreateHandler> logger,
         ITaxClassRepository taxClassRepository)
@@ -36,61 +23,27 @@ public class TaxClassCreateHandler : IRequestHandler<TaxClassCreateCommand, Resu
         _taxClassRepository = taxClassRepository ?? throw new ArgumentNullException(nameof(taxClassRepository));
     }
 
-    /// <summary>
-    /// Handles the tax class creation request
-    /// </summary>
-    /// <param name="request">The tax class creation command with tax class details</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Result containing the ID of the newly created tax class if successful</returns>
     public async Task<Result<Guid>> Handle(TaxClassCreateCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating new tax class with tax rate: {TaxRate}", request.TaxRate);
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new TaxClassCreateValidator(_taxClassRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        // If validation fails, return a bad request result with validation error messages
-        if (!validationResult.IsValid)
+        // Manual mapping to domain entity
+        var taxClassToCreate = new Domain.Entities.TaxClass
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+            TaxRate = request.TaxRate
+        };
 
-            _logger.LogWarning("Validation errors in create request for {0}: {1}",
-                nameof(TaxClassCreateCommand),
-                string.Join(", ", result.Messages));
+        // Add the new tax class to the database
+        await _taxClassRepository.CreateAsync(taxClassToCreate);
 
-            return result;
-        }
+        // Set successful result with the new tax class ID
+        result.Succeeded = true;
+        result.Status = ResultStatus.Created;
+        result.Data = taxClassToCreate.Id;
 
-        try
-        {
-            // Manual mapping to domain entity
-            var taxClassToCreate = new Domain.Entities.TaxClass
-            {
-                TaxRate = request.TaxRate
-            };
-
-            // Add the new tax class to the database
-            await _taxClassRepository.CreateAsync(taxClassToCreate);
-
-            // Set successful result with the new tax class ID
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Created;
-            result.Data = taxClassToCreate.Id;
-
-            _logger.LogInformation("Successfully created tax class with ID: {Id}", taxClassToCreate.Id);
-        }
-        catch (Exception ex)
-        {
-            // Handle any exceptions during tax class creation
-            result.FromException(_logger, ex,
-                "An error occurred while creating the tax class.",
-                "Error creating tax class.");
-        }
+        _logger.LogInformation("Successfully created tax class with ID: {Id}", taxClassToCreate.Id);
 
         return result;
     }

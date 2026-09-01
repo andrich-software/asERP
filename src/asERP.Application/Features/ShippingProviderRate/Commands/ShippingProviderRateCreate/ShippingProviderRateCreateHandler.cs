@@ -30,55 +30,31 @@ public class ShippingProviderRateCreateHandler : IRequestHandler<ShippingProvide
         _logger.LogInformation("Creating shipping option {Name} for provider {ProviderId}",
             request.Name, request.ShippingProviderId);
 
-        var validator = new ShippingProviderRateCreateValidator(
-            _shippingProviderRepository, _shippingProviderRateRepository, _countryRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        var rateToCreate = new Domain.Entities.ShippingProviderRate
         {
-            var validationErrors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
+            ShippingProviderId = request.ShippingProviderId,
+            Name = request.Name,
+            Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
+            IsActive = request.IsActive,
+            SortOrder = request.SortOrder,
+            CarrierProduct = NormalizeCode(request.CarrierProduct),
+            CarrierProcedure = NormalizeCode(request.CarrierProcedure),
+            CarrierParticipation = NormalizeCode(request.CarrierParticipation),
+            MaxLength = request.MaxLength,
+            MaxWidth = request.MaxWidth,
+            MaxHeight = request.MaxHeight,
+            MaxWeight = request.MaxWeight,
+            Price = request.Price
+        };
 
-            _logger.LogWarning("Validation errors in create request for {0}: {1}",
-                nameof(ShippingProviderRateCreateCommand), validationErrors);
+        await _shippingProviderRateRepository.CreateAsync(rateToCreate);
+        await _shippingProviderRateRepository.ReplaceAllowedCountriesAsync(rateToCreate.Id, request.AllowedCountryIds);
 
-            return Result<Guid>.Fail(ResultStatusCode.BadRequest, validationErrors);
-        }
+        _logger.LogInformation("Successfully created shipping option with ID: {Id}", rateToCreate.Id);
 
-        try
-        {
-            var rateToCreate = new Domain.Entities.ShippingProviderRate
-            {
-                ShippingProviderId = request.ShippingProviderId,
-                Name = request.Name,
-                Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
-                IsActive = request.IsActive,
-                SortOrder = request.SortOrder,
-                CarrierProduct = NormalizeCode(request.CarrierProduct),
-                CarrierProcedure = NormalizeCode(request.CarrierProcedure),
-                CarrierParticipation = NormalizeCode(request.CarrierParticipation),
-                MaxLength = request.MaxLength,
-                MaxWidth = request.MaxWidth,
-                MaxHeight = request.MaxHeight,
-                MaxWeight = request.MaxWeight,
-                Price = request.Price
-            };
-
-            await _shippingProviderRateRepository.CreateAsync(rateToCreate);
-            await _shippingProviderRateRepository.ReplaceAllowedCountriesAsync(rateToCreate.Id, request.AllowedCountryIds);
-
-            _logger.LogInformation("Successfully created shipping option with ID: {Id}", rateToCreate.Id);
-
-            var result = Result<Guid>.Success(rateToCreate.Id);
-            result.StatusCode = ResultStatusCode.Created;
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error creating shipping option");
-
-            return Result<Guid>.Fail(ResultStatusCode.InternalServerError,
-                "An error occurred while creating the shipping option.");
-        }
+        var result = Result<Guid>.Success(rateToCreate.Id);
+        result.Status = ResultStatus.Created;
+        return result;
     }
 
     /// <summary>Carrier codes are exact identifiers — trim whitespace, treat blank as "not set".</summary>

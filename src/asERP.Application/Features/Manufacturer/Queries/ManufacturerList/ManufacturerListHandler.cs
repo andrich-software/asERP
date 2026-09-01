@@ -39,7 +39,7 @@ public class ManufacturerListHandler : IRequestHandler<ManufacturerListQuery, Pa
 
         return await _manufacturerRepository.Entities
             .Specify(manufacturerFilterSpec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(m => new ManufacturerListDto
             {
                 Id = m.Id,

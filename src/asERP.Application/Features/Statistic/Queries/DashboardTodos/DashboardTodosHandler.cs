@@ -32,36 +32,28 @@ public class DashboardTodosHandler : IRequestHandler<DashboardTodosQuery, Result
 
     public async Task<Result<DashboardTodosDto>> Handle(DashboardTodosQuery request, CancellationToken cancellationToken)
     {
-        try
-        {
-            _logger.LogInformation("Handle DashboardTodosQuery");
+        _logger.LogInformation("Handle DashboardTodosQuery");
 
-            var now = DateTime.UtcNow;
-            var dto = new DashboardTodosDto();
+        var now = DateTime.UtcNow;
+        var dto = new DashboardTodosDto();
 
-            dto.SalessReadyToShip = await _salesRepository.Entities
-                .CountAsync(SalesQuickFilterPredicates.ReadyToShip(), cancellationToken);
+        dto.SalessReadyToShip = await _salesRepository.Entities
+            .CountAsync(SalesQuickFilterPredicates.ReadyToShip(), cancellationToken);
 
-            dto.SalessPaymentOverdue = await _salesRepository.Entities
-                .CountAsync(
-                    SalesQuickFilterPredicates.PaymentOverdue(now.Subtract(SalesQuickFilterPredicates.PaymentOverdueAfter)),
-                    cancellationToken);
+        dto.SalessPaymentOverdue = await _salesRepository.Entities
+            .CountAsync(
+                SalesQuickFilterPredicates.PaymentOverdue(now.Subtract(SalesQuickFilterPredicates.PaymentOverdueAfter)),
+                cancellationToken);
 
-            var labelOutbox = _shippingRepository.GetContext<ShippingLabelOutbox>();
-            dto.ShippingProblems = await _shippingRepository.Entities
-                .CountAsync(
-                    ShippingProblemFilter.IsProblem(labelOutbox, now.Subtract(ShippingProblemFilter.OverdueAfter)),
-                    cancellationToken);
+        var labelOutbox = _shippingRepository.GetContext<ShippingLabelOutbox>();
+        dto.ShippingProblems = await _shippingRepository.Entities
+            .CountAsync(
+                ShippingProblemFilter.IsProblem(labelOutbox, now.Subtract(ShippingProblemFilter.OverdueAfter)),
+                cancellationToken);
 
-            dto.ProductsToReorder = await _productRepository.Entities
-                .CountAsync(ProductStockFilters.LowStock, cancellationToken);
+        dto.ProductsToReorder = await _productRepository.Entities
+            .CountAsync(ProductStockFilters.LowStock, cancellationToken);
 
-            return Result<DashboardTodosDto>.Success(dto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error while calculating dashboard todos: {0}", ex.Message);
-            return Result<DashboardTodosDto>.Fail(ResultStatusCode.InternalServerError, "Error while calculating dashboard todos");
-        }
+        return Result<DashboardTodosDto>.Success(dto);
     }
 }

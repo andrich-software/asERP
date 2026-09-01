@@ -70,7 +70,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
             // Run a dummy password hash so the response time for an unknown email matches the
             // time for a known one — avoids a timing oracle that would confirm registered accounts.
             _userManager.PasswordHasher.VerifyHashedPassword(new ApplicationUser(), DummyPasswordHash, request.Password ?? string.Empty);
-            return Result<LoginResponseDto>.Fail(ResultStatusCode.Unauthorized, "Ungültige Anmeldedaten.");
+            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Ungültige Anmeldedaten.");
         }
 
         // lockoutOnFailure: true enables Identity account lockout (configured in IdentityServicesRegistration)
@@ -79,7 +79,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
 
         if (!result.Succeeded)
         {
-            return Result<LoginResponseDto>.Fail(ResultStatusCode.Unauthorized, "Ungültige Anmeldedaten.");
+            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Ungültige Anmeldedaten.");
         }
 
         // Load user's available tenants
@@ -116,7 +116,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
         if (!_serverInfoService.IsRegistrationEnabled)
         {
             _logger.LogWarning("Registration attempt rejected — registration is disabled on this server.");
-            return Result<LoginResponseDto>.Fail(ResultStatusCode.Forbidden, "Die Registrierung ist auf diesem Server deaktiviert.");
+            return Result<LoginResponseDto>.Forbidden(ErrorCodes.Auth.Forbidden, "Die Registrierung ist auf diesem Server deaktiviert.");
         }
 
         var user = new ApplicationUser
@@ -213,7 +213,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
             errorMessage = "Registrierung fehlgeschlagen.";
         }
 
-        return Result<LoginResponseDto>.Fail(ResultStatusCode.BadRequest, errorMessage);
+        return Result<LoginResponseDto>.Invalid(ErrorCodes.Auth.Invalid, errorMessage);
     }
 
     private async Task<JwtSecurityToken> GenerateToken(ApplicationUser user, List<TenantListDto> availableTenants, Guid? defaultTenantId)
@@ -263,7 +263,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
         {
-            return Result<LoginResponseDto>.Fail(ResultStatusCode.Unauthorized, "Refresh-Token fehlt.");
+            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Refresh-Token fehlt.");
         }
 
         var hash = HashToken(refreshToken);
@@ -272,7 +272,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
         if (stored == null)
         {
             _logger.LogWarning("Refresh attempt with unknown token hash");
-            return Result<LoginResponseDto>.Fail(ResultStatusCode.Unauthorized, "Refresh-Token ungültig.");
+            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Refresh-Token ungültig.");
         }
 
         // Replay detection: a previously-revoked token is being presented again.
@@ -281,18 +281,18 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
         {
             _logger.LogWarning("Refresh-token replay detected for family {Family} (user {UserId}) — revoking family", stored.Family, stored.UserId);
             await _refreshTokenRepository.RevokeFamilyAsync(stored.Family, DateTime.UtcNow);
-            return Result<LoginResponseDto>.Fail(ResultStatusCode.Unauthorized, "Refresh-Token ungültig.");
+            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Refresh-Token ungültig.");
         }
 
         if (stored.ExpiresAt <= DateTime.UtcNow)
         {
-            return Result<LoginResponseDto>.Fail(ResultStatusCode.Unauthorized, "Refresh-Token abgelaufen.");
+            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Refresh-Token abgelaufen.");
         }
 
         var user = await _userManager.FindByIdAsync(stored.UserId);
         if (user == null)
         {
-            return Result<LoginResponseDto>.Fail(ResultStatusCode.Unauthorized, "Benutzer nicht gefunden.");
+            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Benutzer nicht gefunden.");
         }
 
         var availableTenants = await _userTenantService.GetUserTenantsAsync(user.Id);
@@ -424,8 +424,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
         if (user == null)
         {
             _logger.LogDebug("ResetPassword: no account for {Email}", request.Email);
-            return Result<ResetPasswordResponse>.Fail(
-                ResultStatusCode.BadRequest,
+            return Result<ResetPasswordResponse>.Invalid(ErrorCodes.Auth.Invalid,
                 "Das Zurücksetzen des Passworts ist fehlgeschlagen. Bitte überprüfen Sie Ihre Eingaben."
             );
         }
@@ -481,6 +480,6 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
             errorMessage = "Das Zurücksetzen des Passworts ist fehlgeschlagen.";
         }
 
-        return Result<ResetPasswordResponse>.Fail(ResultStatusCode.BadRequest, errorMessage);
+        return Result<ResetPasswordResponse>.Invalid(ErrorCodes.Auth.Invalid, errorMessage);
     }
 }

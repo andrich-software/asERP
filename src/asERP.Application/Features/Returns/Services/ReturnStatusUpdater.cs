@@ -45,24 +45,20 @@ public class ReturnStatusUpdater : IReturnStatusUpdater
         var returnShipment = await _returnShipmentRepository.GetByIdAsync(returnShipmentId);
         if (returnShipment == null)
         {
-            return new Result { Succeeded = false, StatusCode = ResultStatusCode.NotFound, Messages = [$"Return {returnShipmentId} not found."] };
+            return Result.NotFound(ErrorCodes.Returns.NotFound, $"Return {returnShipmentId} not found.");
         }
 
         var oldStatus = returnShipment.Status;
 
         if (oldStatus == newStatus)
         {
-            return new Result { Succeeded = true, StatusCode = ResultStatusCode.Ok };
+            return Result.Ok();
         }
 
         if (TerminalStatuses.Contains(oldStatus))
         {
-            return new Result
-            {
-                Succeeded = false,
-                StatusCode = ResultStatusCode.BadRequest,
-                Messages = [$"A return in status {oldStatus} cannot change its status anymore."]
-            };
+            return Result.Invalid(ErrorCodes.Returns.Invalid,
+                $"A return in status {oldStatus} cannot change its status anymore.");
         }
 
         returnShipment.Status = newStatus;
@@ -103,6 +99,6 @@ public class ReturnStatusUpdater : IReturnStatusUpdater
             new SalesChangedNotification(returnShipment.SalesId, returnShipment.TenantId, SalesChangeKind.StatusChanged),
             cancellationToken);
 
-        return new Result { Succeeded = true, StatusCode = ResultStatusCode.Ok };
+        return Result.Ok();
     }
 }

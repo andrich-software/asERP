@@ -29,14 +29,14 @@ public class ShippingProvidersController(IMediator mediator) : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<PaginatedResult<ShippingProviderListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<ShippingProviderListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "Name Ascending";
+            sortBy = "Name Ascending";
         }
 
-        var response = await mediator.Send(new ShippingProviderListQuery(pageNumber, pageSize, searchString, salesBy));
+        var response = await mediator.Send(new ShippingProviderListQuery(pageNumber, pageSize, searchString, sortBy));
         return response.ToActionResult();
     }
 

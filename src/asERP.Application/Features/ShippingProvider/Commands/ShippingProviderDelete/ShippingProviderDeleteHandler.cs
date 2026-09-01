@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -48,9 +47,7 @@ public class ShippingProviderDeleteHandler : IRequestHandler<ShippingProviderDel
             // Shipments are order history — never orphan them by deleting their provider.
             if (await _shippingProviderRepository.HasShipmentsAsync(request.Id))
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("The shipping provider cannot be deleted because shipments reference it. Disable it instead.");
+                result.Fail(ErrorType.Validation, ErrorCodes.ShippingProvider.Invalid, "The shipping provider cannot be deleted because shipments reference it. Disable it instead.");
                 return result;
             }
 
@@ -65,7 +62,7 @@ public class ShippingProviderDeleteHandler : IRequestHandler<ShippingProviderDel
             await _shippingProviderRepository.DeleteAsync(providerToDelete);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
+            result.Status = ResultStatus.NoContent;
             result.Data = request.Id;
 
             _logger.LogInformation("Successfully deleted shipping provider with ID: {Id}", request.Id);
@@ -73,12 +70,6 @@ public class ShippingProviderDeleteHandler : IRequestHandler<ShippingProviderDel
         catch (NotFoundException)
         {
             throw;
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the shipping provider.",
-                "Error deleting shipping provider {Id}.", request.Id);
         }
 
         return result;

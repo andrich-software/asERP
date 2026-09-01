@@ -5,7 +5,7 @@ namespace asERP.Application.Features.Invoice.Commands.InvoiceDelete;
 
 /// <summary>
 /// Command for deleting an existing invoice from the system.
-/// Implements IRequest to work with MediatR, returning the ID of the deleted invoice wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning the ID of the deleted invoice wrapped in a Result.
 /// </summary>
 public class InvoiceDeleteCommand : IRequest<Result<Guid>>
 {

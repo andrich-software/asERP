@@ -43,7 +43,7 @@ public class GoodsReceiptListHandler : IRequestHandler<GoodsReceiptListQuery, Pa
 
         return await _goodsReceiptRepository.Entities
             .Specify(filterSpec)
-            .ApplySafeOrdering(new[] { request.SalesBy }, AllowedSortFields)
+            .ApplySafeOrdering(new[] { request.SortBy }, AllowedSortFields)
             .Select(gr => MapToGoodsReceiptListDto(gr))
             .ToPaginatedListAsync(request.PageNumber, request.PageSize);
     }

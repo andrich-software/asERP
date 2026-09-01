@@ -39,7 +39,7 @@ public class CustomerListHandler : IRequestHandler<CustomerListQuery, PaginatedR
 
         return await _customerRepository.Entities
             .Specify(customerFilterSpec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(c => new CustomerListDto
             {
                 Id = c.Id,

@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -29,22 +28,6 @@ public class ShippingProviderRateUpdateHandler : IRequestHandler<ShippingProvide
 
         var result = new Result<Guid>();
 
-        var validator = new ShippingProviderRateUpdateValidator(_shippingProviderRateRepository, _countryRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(ShippingProviderRateUpdateCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
         try
         {
             var existsGlobally = await _shippingProviderRateRepository.ExistsGloballyAsync(request.Id);
@@ -64,9 +47,7 @@ public class ShippingProviderRateUpdateHandler : IRequestHandler<ShippingProvide
             // A shipping option cannot move to another carrier — its shipments were booked against this one.
             if (rateToUpdate.ShippingProviderId != request.ShippingProviderId)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("The shipping provider of an option cannot be changed. Create a new option instead.");
+                result.Fail(ErrorType.Validation, ErrorCodes.ShippingProviderRate.Invalid, "The shipping provider of an option cannot be changed. Create a new option instead.");
                 return result;
             }
 
@@ -87,7 +68,7 @@ public class ShippingProviderRateUpdateHandler : IRequestHandler<ShippingProvide
             await _shippingProviderRateRepository.ReplaceAllowedCountriesAsync(rateToUpdate.Id, request.AllowedCountryIds);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = rateToUpdate.Id;
 
             _logger.LogInformation("Successfully updated shipping option with ID: {Id}", rateToUpdate.Id);
@@ -95,12 +76,6 @@ public class ShippingProviderRateUpdateHandler : IRequestHandler<ShippingProvide
         catch (NotFoundException)
         {
             throw;
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while updating the shipping option.",
-                "Error updating shipping option {Id}.", request.Id);
         }
 
         return result;

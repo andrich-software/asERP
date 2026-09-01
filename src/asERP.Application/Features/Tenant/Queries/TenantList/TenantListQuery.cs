@@ -10,22 +10,22 @@ public class TenantListQuery : IRequest<PaginatedResult<TenantListDto>>
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public string SearchString { get; set; }
-    public string[] SalesBy { get; set; }
+    public string[] SortBy { get; set; }
 
-    public TenantListQuery(string userId, int pageNumber = 1, int pageSize = 10, string searchString = "", string salesBy = "")
+    public TenantListQuery(string userId, int pageNumber = 1, int pageSize = 10, string searchString = "", string sortBy = "")
     {
         UserId = userId;
         PageNumber = pageNumber;
         PageSize = pageSize;
         SearchString = searchString;
 
-        if (!string.IsNullOrWhiteSpace(salesBy))
+        if (!string.IsNullOrWhiteSpace(sortBy))
         {
-            SalesBy = salesBy.Split(',');
+            SortBy = sortBy.Split(',');
         }
         else
         {
-            SalesBy = Array.Empty<string>();
+            SortBy = Array.Empty<string>();
         }
     }
 }

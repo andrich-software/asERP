@@ -297,7 +297,7 @@ public class SalesChannelDeleteCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertEqual(ResultStatusCode.NotFound, result.StatusCode);
+        TestAssertions.AssertEqual(ErrorType.NotFound, result.Error!.Type);
         TestAssertions.AssertNotEmpty(result.Messages);
         TestAssertions.AssertTrue(result.Messages.Any(m => m.Contains(nonExistentId.ToString()) || m.Contains("not found")));
     }

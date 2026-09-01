@@ -30,8 +30,7 @@ public class TenantOAuthAppSettingsListHandler
         var tenantId = _tenantContext.GetCurrentTenantId();
         if (!tenantId.HasValue)
         {
-            return Result<List<TenantOAuthAppSettingsListDto>>.Fail(
-                ResultStatusCode.BadRequest, "No active tenant in context.");
+            return Result<List<TenantOAuthAppSettingsListDto>>.Invalid(ErrorCodes.TenantOauthAppSettings.Invalid, "No active tenant in context.");
         }
 
         var rows = await _repository.GetByTenantIdAsync(tenantId.Value);

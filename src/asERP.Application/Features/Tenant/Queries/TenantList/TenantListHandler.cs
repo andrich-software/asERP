@@ -77,8 +77,8 @@ public class TenantListHandler : IRequestHandler<TenantListQuery, PaginatedResul
         }
 
         // Apply salesing
-        query = request.SalesBy.Any()
-            ? query.ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+        query = request.SortBy.Any()
+            ? query.ApplySafeOrdering(request.SortBy, AllowedSortFields)
             : query.OrderBy(t => t.Name);
 
         // Return paginated result

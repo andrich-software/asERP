@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -25,69 +24,42 @@ public class SuperadminUpdateHandler : IRequestHandler<SuperadminUpdateCommand, 
 
         var result = new Result<Guid>();
 
-        var validator = new SuperadminUpdateValidator(_tenantRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        var tenantToUpdate = await _tenantRepository.GetByIdAsync(request.Id);
 
-        if (!validationResult.IsValid)
+        if (tenantToUpdate == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+            result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, "Tenant not found.");
 
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(SuperadminUpdateCommand),
-                string.Join(", ", result.Messages));
-
+            _logger.LogWarning("Tenant with ID {Id} not found for update", request.Id);
             return result;
         }
 
-        try
-        {
-            var tenantToUpdate = await _tenantRepository.GetByIdAsync(request.Id);
+        tenantToUpdate.Name = request.Name;
+        tenantToUpdate.Description = request.Description;
+        tenantToUpdate.CompanyName = request.CompanyName;
+        tenantToUpdate.ContactEmail = request.ContactEmail;
+        tenantToUpdate.Phone = request.Phone;
+        tenantToUpdate.Website = request.Website;
+        tenantToUpdate.Street = request.Street;
+        tenantToUpdate.Street2 = request.Street2;
+        tenantToUpdate.PostalCode = request.PostalCode;
+        tenantToUpdate.City = request.City;
+        tenantToUpdate.State = request.State;
+        tenantToUpdate.Country = request.Country;
+        tenantToUpdate.Iban = request.Iban;
+        tenantToUpdate.BankName = request.BankName;
+        tenantToUpdate.Bic = request.Bic;
+        tenantToUpdate.TaxId = request.TaxId;
+        tenantToUpdate.VatId = request.VatId;
+        tenantToUpdate.LogoPath = request.LogoPath;
 
-            if (tenantToUpdate == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("Tenant not found.");
+        await _tenantRepository.UpdateAsync(tenantToUpdate);
 
-                _logger.LogWarning("Tenant with ID {Id} not found for update", request.Id);
-                return result;
-            }
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = tenantToUpdate.Id;
 
-            tenantToUpdate.Name = request.Name;
-            tenantToUpdate.Description = request.Description;
-            tenantToUpdate.CompanyName = request.CompanyName;
-            tenantToUpdate.ContactEmail = request.ContactEmail;
-            tenantToUpdate.Phone = request.Phone;
-            tenantToUpdate.Website = request.Website;
-            tenantToUpdate.Street = request.Street;
-            tenantToUpdate.Street2 = request.Street2;
-            tenantToUpdate.PostalCode = request.PostalCode;
-            tenantToUpdate.City = request.City;
-            tenantToUpdate.State = request.State;
-            tenantToUpdate.Country = request.Country;
-            tenantToUpdate.Iban = request.Iban;
-            tenantToUpdate.BankName = request.BankName;
-            tenantToUpdate.Bic = request.Bic;
-            tenantToUpdate.TaxId = request.TaxId;
-            tenantToUpdate.VatId = request.VatId;
-            tenantToUpdate.LogoPath = request.LogoPath;
-
-            await _tenantRepository.UpdateAsync(tenantToUpdate);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = tenantToUpdate.Id;
-
-            _logger.LogInformation("Successfully updated tenant with ID: {Id}", tenantToUpdate.Id);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while updating the tenant.",
-                "Error updating tenant {Id}.", request.Id);
-        }
+        _logger.LogInformation("Successfully updated tenant with ID: {Id}", tenantToUpdate.Id);
 
         return result;
     }

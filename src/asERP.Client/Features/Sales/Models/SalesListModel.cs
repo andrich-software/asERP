@@ -78,7 +78,7 @@ public partial record SalesListModel
         .Combine(Filter, CurrentPage, PageSize, SortSales)
         .SelectAsync(async (combined, ct) =>
         {
-            var (filter, page, size, salesBy) = combined;
+            var (filter, page, size, sortBy) = combined;
             filter ??= new SalesListFilter();
 
             var parameters = new QueryParameters
@@ -86,7 +86,7 @@ public partial record SalesListModel
                 PageNumber = page,
                 PageSize = size,
                 SearchString = string.IsNullOrWhiteSpace(filter.SearchQuery) ? null : filter.SearchQuery,
-                SalesBy = salesBy
+                SortBy = sortBy
             };
 
             var response = await _salesService.GetSalessAsync(parameters, filter.QuickFilter, ct);
@@ -196,9 +196,9 @@ public partial record SalesListModel
     /// <summary>
     /// Change the sort sales.
     /// </summary>
-    public async ValueTask SetSortSales(string salesBy, CancellationToken ct = default)
+    public async ValueTask SetSortSales(string sortBy, CancellationToken ct = default)
     {
-        await SortSales.UpdateAsync(_ => salesBy, ct);
+        await SortSales.UpdateAsync(_ => sortBy, ct);
         await CurrentPage.UpdateAsync(_ => 0, ct); // Reset to first page when sorting changes
     }
 

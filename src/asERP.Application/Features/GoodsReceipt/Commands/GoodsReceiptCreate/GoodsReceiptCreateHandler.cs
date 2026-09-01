@@ -45,77 +45,49 @@ public class GoodsReceiptCreateHandler : IRequestHandler<GoodsReceiptCreateComma
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new GoodsReceiptCreateValidator(_productRepository, _warehouseRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        var createdBy = _httpContextAccessor.HttpContext.GetUserId() ?? "System";
 
-        if (!validationResult.IsValid)
+        // Manual mapping
+        var goodsReceiptToCreate = new Domain.Entities.GoodsReceipt
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+            ReceiptDate = request.ReceiptDate,
+            ProductId = request.ProductId,
+            Quantity = request.Quantity,
+            WarehouseId = request.WarehouseId,
+            Supplier = request.Supplier,
+            Notes = request.Notes,
+            CreatedBy = createdBy
+        };
 
-            _logger.LogWarning("Validation errors in create request for {0}: {1}",
-                nameof(GoodsReceiptCreateCommand),
-                string.Join(", ", result.Messages));
+        // The receipt document and the stock update are two separate writes; wrap them in one
+        // transaction so a failure mid-way cannot record a receipt without the stock increment.
+        await using var transaction = await _goodsReceiptRepository.BeginTransactionAsync(cancellationToken);
 
-            return result;
-        }
+        // Add the new goods receipt to the database
+        await _goodsReceiptRepository.CreateAsync(goodsReceiptToCreate);
 
+        // Update product stock
+        await UpdateProductStock(request.ProductId, request.WarehouseId, request.Quantity);
+
+        await transaction.CommitAsync(cancellationToken);
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Created;
+        result.Data = goodsReceiptToCreate.Id;
+
+        _logger.LogInformation("Successfully created goods receipt with ID: {Id}", goodsReceiptToCreate.Id);
+
+        // Stock changed → let channels mirror the new level. Published after commit so the
+        // export never fires for a rolled-back receipt; a failed enqueue must not fail the receipt.
         try
         {
-            var createdBy = _httpContextAccessor.HttpContext.GetUserId() ?? "System";
-
-            // Manual mapping
-            var goodsReceiptToCreate = new Domain.Entities.GoodsReceipt
-            {
-                ReceiptDate = request.ReceiptDate,
-                ProductId = request.ProductId,
-                Quantity = request.Quantity,
-                WarehouseId = request.WarehouseId,
-                Supplier = request.Supplier,
-                Notes = request.Notes,
-                CreatedBy = createdBy
-            };
-
-            // The receipt document and the stock update are two separate writes; wrap them in one
-            // transaction so a failure mid-way cannot record a receipt without the stock increment.
-            await using var transaction = await _goodsReceiptRepository.BeginTransactionAsync(cancellationToken);
-
-            // Add the new goods receipt to the database
-            await _goodsReceiptRepository.CreateAsync(goodsReceiptToCreate);
-
-            // Update product stock
-            await UpdateProductStock(request.ProductId, request.WarehouseId, request.Quantity);
-
-            await transaction.CommitAsync(cancellationToken);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Created;
-            result.Data = goodsReceiptToCreate.Id;
-
-            _logger.LogInformation("Successfully created goods receipt with ID: {Id}", goodsReceiptToCreate.Id);
-
-            // Stock changed → let channels mirror the new level. Published after commit so the
-            // export never fires for a rolled-back receipt; a failed enqueue must not fail the receipt.
-            try
-            {
-                await _mediator.Publish(
-                    new StockChangedNotification(request.ProductId, request.WarehouseId, _tenantContext.GetCurrentTenantId()),
-                    cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "StockChangedNotification failed for goods receipt {Id}", goodsReceiptToCreate.Id);
-            }
+            await _mediator.Publish(
+                new StockChangedNotification(request.ProductId, request.WarehouseId, _tenantContext.GetCurrentTenantId()),
+                cancellationToken);
         }
         catch (Exception ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add("An error occurred while creating the goods receipt.");
-
-            _logger.LogError(ex, "Error creating goods receipt for product {ProductId}", request.ProductId);
+            _logger.LogError(ex, "StockChangedNotification failed for goods receipt {Id}", goodsReceiptToCreate.Id);
         }
 
         return result;

@@ -6,7 +6,7 @@ namespace asERP.Application.Features.Tenant.Queries.TenantDetail;
 
 /// <summary>
 /// Query for retrieving detailed information about a specific tenant.
-/// Implements IRequest to work with MediatR, returning tenant details wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning tenant details wrapped in a Result.
 /// </summary>
 public class TenantDetailQuery : IRequest<Result<TenantDetailDto>>
 {

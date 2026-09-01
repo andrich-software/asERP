@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using asERP.Application.Contracts.Identity;
 using asERP.Application.Models.Identity;
 using asERP.Domain.Dtos.Auth;
+using asERP.Server.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +26,7 @@ public class AuthController(IAuthService authenticationService, ILogger<AuthCont
     public async Task<ActionResult<LoginResponseDto>> Login(AuthRequest request)
     {
         var result = await authenticationService.Login(request);
-        return StatusCode((int)result.StatusCode, result);
+        return result.ToActionResult();
     }
 
     [HttpPost("register")]
@@ -42,8 +43,8 @@ public class AuthController(IAuthService authenticationService, ILogger<AuthCont
 
         var result = await authenticationService.Register(request);
 
-        logger.LogDebug("📊 Registration result - StatusCode: {StatusCode}, Succeeded: {Succeeded}",
-            result.StatusCode, result.Succeeded);
+        logger.LogDebug("📊 Registration result - Status: {Status}, Succeeded: {Succeeded}",
+            result.Status, result.Succeeded);
 
         if (!result.Succeeded)
         {
@@ -54,7 +55,7 @@ public class AuthController(IAuthService authenticationService, ILogger<AuthCont
             logger.LogDebug("✅ Registration succeeded - UserId: {UserId}", result.Data?.UserId);
         }
 
-        return StatusCode((int)result.StatusCode, result);
+        return result.ToActionResult();
     }
 
     [HttpPost("refresh-token")]
@@ -64,7 +65,7 @@ public class AuthController(IAuthService authenticationService, ILogger<AuthCont
     public async Task<ActionResult<LoginResponseDto>> RefreshToken(RefreshTokenRequestDto request)
     {
         var result = await authenticationService.RefreshToken(request.RefreshToken);
-        return StatusCode((int)result.StatusCode, result);
+        return result.ToActionResult();
     }
 
     /// <summary>
@@ -101,10 +102,10 @@ public class AuthController(IAuthService authenticationService, ILogger<AuthCont
             Message = result.Data?.Message ?? result.Messages.FirstOrDefault() ?? "Ein Fehler ist aufgetreten."
         };
 
-        logger.LogDebug("📊 ForgotPassword result - StatusCode: {StatusCode}, Succeeded: {Succeeded}",
-            result.StatusCode, response.Succeeded);
+        logger.LogDebug("📊 ForgotPassword result - Status: {Status}, Succeeded: {Succeeded}",
+            result.Status, response.Succeeded);
 
-        return StatusCode((int)result.StatusCode, response);
+        return StatusCode(result.ToHttpStatusCode(), response);
     }
 
     [HttpPost("reset-password")]
@@ -130,9 +131,9 @@ public class AuthController(IAuthService authenticationService, ILogger<AuthCont
             Message = result.Data?.Message ?? result.Messages.FirstOrDefault() ?? "Ein Fehler ist aufgetreten."
         };
 
-        logger.LogDebug("📊 ResetPassword result - StatusCode: {StatusCode}, Succeeded: {Succeeded}",
-            result.StatusCode, response.Succeeded);
+        logger.LogDebug("📊 ResetPassword result - Status: {Status}, Succeeded: {Succeeded}",
+            result.Status, response.Succeeded);
 
-        return StatusCode((int)result.StatusCode, response);
+        return StatusCode(result.ToHttpStatusCode(), response);
     }
 }

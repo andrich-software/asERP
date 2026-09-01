@@ -21,19 +21,11 @@ public class WebSessionsSummaryHandler : IRequestHandler<WebSessionsSummaryQuery
 
     public async Task<Result<WebSessionsSummaryDto>> Handle(WebSessionsSummaryQuery request, CancellationToken cancellationToken)
     {
-        try
-        {
-            _logger.LogInformation("Handle WebSessionsSummaryQuery for channel {0}", request.SalesChannelId);
+        _logger.LogInformation("Handle WebSessionsSummaryQuery for channel {0}", request.SalesChannelId);
 
-            // The query service reads the tenant from ITenantContext and fails closed, so isolation
-            // does not depend on this handler. We only forward the channel filter.
-            var dto = await _queryService.GetSessionsSummaryAsync(request.SalesChannelId, cancellationToken);
-            return Result<WebSessionsSummaryDto>.Success(dto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error while loading web session summary: {0}", ex.Message);
-            return Result<WebSessionsSummaryDto>.Fail(ResultStatusCode.InternalServerError, "Error while loading web session summary");
-        }
+        // The query service reads the tenant from ITenantContext and fails closed, so isolation
+        // does not depend on this handler. We only forward the channel filter.
+        var dto = await _queryService.GetSessionsSummaryAsync(request.SalesChannelId, cancellationToken);
+        return Result<WebSessionsSummaryDto>.Success(dto);
     }
 }

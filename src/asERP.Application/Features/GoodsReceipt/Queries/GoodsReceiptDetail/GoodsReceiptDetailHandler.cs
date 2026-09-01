@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.GoodsReceipt;
 using asERP.Domain.Wrapper;
@@ -26,33 +25,21 @@ public class GoodsReceiptDetailHandler : IRequestHandler<GoodsReceiptDetailQuery
 
         var result = new Result<GoodsReceiptDetailDto>();
 
-        try
+        var goodsReceipt = await _goodsReceiptRepository.GetByIdWithDetailsAsync(request.Id);
+
+        if (goodsReceipt == null)
         {
-            var goodsReceipt = await _goodsReceiptRepository.GetByIdWithDetailsAsync(request.Id);
-
-            if (goodsReceipt == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Goods receipt with ID {request.Id} not found.");
-                return result;
-            }
-
-            var dto = MapToGoodsReceiptDetailDto(goodsReceipt);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = dto;
-
-            _logger.LogInformation("Successfully retrieved goods receipt details for ID: {Id}", request.Id);
+            result.Fail(ErrorType.NotFound, ErrorCodes.GoodsReceipt.NotFound, $"Goods receipt with ID {request.Id} not found.");
+            return result;
         }
-        catch (Exception ex)
-        {
-            // Never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while retrieving goods receipt details.",
-                "Error retrieving goods receipt details for ID {Id}.", request.Id);
-        }
+
+        var dto = MapToGoodsReceiptDetailDto(goodsReceipt);
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = dto;
+
+        _logger.LogInformation("Successfully retrieved goods receipt details for ID: {Id}", request.Id);
 
         return result;
     }

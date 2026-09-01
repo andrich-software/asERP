@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -29,9 +28,7 @@ public class FeedDeleteHandler : IRequestHandler<FeedDeleteCommand, Result<Guid>
             var feed = await _feedRepository.GetByIdAsync(request.Id);
             if (feed == null)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Feed with ID {request.Id} not found");
+                result.Fail(ErrorType.NotFound, ErrorCodes.Feed.NotFound, $"Feed with ID {request.Id} not found");
                 return result;
             }
 
@@ -39,22 +36,14 @@ public class FeedDeleteHandler : IRequestHandler<FeedDeleteCommand, Result<Guid>
             await _feedRepository.DeleteAsync(feed);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
+            result.Status = ResultStatus.NoContent;
             result.Data = feed.Id;
 
             _logger.LogInformation("Successfully deleted feed with ID: {Id}", feed.Id);
         }
         catch (NotFoundException)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add($"Feed with ID {request.Id} not found");
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the feed.",
-                "Error deleting feed {Id}.", request.Id);
+            result.Fail(ErrorType.NotFound, ErrorCodes.Feed.NotFound, $"Feed with ID {request.Id} not found");
         }
 
         return result;

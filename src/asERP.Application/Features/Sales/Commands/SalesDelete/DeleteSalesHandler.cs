@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -25,46 +24,33 @@ public class DeleteSalesHandler : IRequestHandler<DeleteSalesCommand, Result<Gui
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new DeleteSalesValidator(_salesRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        // Create entity to delete
+        var salesToDelete = new Domain.Entities.Sales
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in delete request for {0}: {1}",
-                nameof(DeleteSalesCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
+            Id = request.Id
+        };
 
         try
         {
-            // Create entity to delete
-            var salesToDelete = new Domain.Entities.Sales
-            {
-                Id = request.Id
-            };
-
-            // Delete from database
             await _salesRepository.DeleteAsync(salesToDelete);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = salesToDelete.Id;
-
-            _logger.LogInformation("Successfully deleted sales with ID: {Id}", salesToDelete.Id);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException)
         {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the sales.",
-                "Error deleting sales.");
+            // This DELETE is idempotent — SalesController answers 204 whatever comes back — so
+            // "row already gone" (InvalidOperationException) and "row belongs to another tenant"
+            // (UnauthorizedAccessException) must not surface as an error. Deliberately narrow: a
+            // real infrastructure failure still bubbles up to the GlobalExceptionHandler.
+            _logger.LogWarning("Sales {Id} was not deletable in this context: {Message}", request.Id, ex.Message);
+
+            result.Fail(ErrorType.NotFound, ErrorCodes.Sales.NotFound, "Sales not found");
+            return result;
         }
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = salesToDelete.Id;
+
+        _logger.LogInformation("Successfully deleted sales with ID: {Id}", salesToDelete.Id);
 
         return result;
     }

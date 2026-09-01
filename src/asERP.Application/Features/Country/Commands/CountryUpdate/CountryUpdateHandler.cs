@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -25,57 +24,28 @@ public class CountryUpdateHandler : IRequestHandler<CountryUpdateCommand, Result
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new CountryUpdateValidator(_countryRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        // Get the country for tracking (required for update)
+        var countryToUpdate = await _countryRepository.GetByIdAsync(request.Id, true);
+        if (countryToUpdate == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+            result.Fail(ErrorType.NotFound, ErrorCodes.Country.NotFound, "Country not found or access denied due to tenant isolation.");
 
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(CountryUpdateCommand),
-                string.Join(", ", result.Messages));
-
+            _logger.LogWarning("Country with ID {Id} not found or access denied due to tenant isolation", request.Id);
             return result;
         }
 
-        try
-        {
-            // Get the country for tracking (required for update)
-            var countryToUpdate = await _countryRepository.GetByIdAsync(request.Id, true);
-            if (countryToUpdate == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("Country not found or access denied due to tenant isolation.");
+        // Update the existing entity properties
+        countryToUpdate.Name = request.Name;
+        countryToUpdate.CountryCode = request.CountryCode;
 
-                _logger.LogWarning("Country with ID {Id} not found or access denied due to tenant isolation", request.Id);
-                return result;
-            }
+        // Update in database
+        await _countryRepository.UpdateAsync(countryToUpdate);
 
-            // Update the existing entity properties
-            countryToUpdate.Name = request.Name;
-            countryToUpdate.CountryCode = request.CountryCode;
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = countryToUpdate.Id;
 
-            // Update in database
-            await _countryRepository.UpdateAsync(countryToUpdate);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = countryToUpdate.Id;
-
-            _logger.LogInformation("Successfully updated country with ID: {Id}", countryToUpdate.Id);
-        }
-        catch (Exception ex)
-        {
-            // Never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while updating the country.",
-                "Error updating country.");
-        }
+        _logger.LogInformation("Successfully updated country with ID: {Id}", countryToUpdate.Id);
 
         return result;
     }

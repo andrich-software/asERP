@@ -7,7 +7,7 @@ namespace asERP.Application.Features.Manufacturer.Commands.ManufacturerCreate;
 /// <summary>
 /// Command for creating a new manufacturer in the system.
 /// Inherits from ManufacturerInputDto to get all manufacturer properties and implements IRequest
-/// to work with MediatR, returning the ID of the newly created manufacturer wrapped in a Result.
+/// to work with the custom mediator, returning the ID of the newly created manufacturer wrapped in a Result.
 /// </summary>
 public class ManufacturerCreateCommand : ManufacturerInputDto, IRequest<Result<Guid>>
 {

@@ -270,7 +270,7 @@ public class SettingUpdateCommandTests : GlobalTestBase
         TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -322,7 +322,7 @@ public class SettingUpdateCommandTests : GlobalTestBase
         TestAssertions.AssertTrue(result.Succeeded);
         TestAssertions.AssertNotNull(result.Messages);
         TestAssertions.AssertEqual(settingId, result.Data);
-        TestAssertions.AssertEqual(ResultStatusCode.Ok, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Ok, result.Status);
     }
 
     [Fact]

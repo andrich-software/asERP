@@ -6,7 +6,7 @@ namespace asERP.Application.Features.Superadmin.Users.Queries.UserDetail;
 
 /// <summary>
 /// Query for retrieving detailed information about a specific user.
-/// Implements IRequest to work with MediatR, returning user details wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning user details wrapped in a Result.
 /// </summary>
 public class UserDetailQuery : IRequest<Result<UserDetailDto>>
 {

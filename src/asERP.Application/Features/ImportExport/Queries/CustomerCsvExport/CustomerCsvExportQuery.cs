@@ -5,7 +5,7 @@ namespace asERP.Application.Features.ImportExport.Queries.CustomerCsvExport;
 
 /// <summary>
 /// Query for exporting customers to a CSV file.
-/// Implements IRequest to work with MediatR, returning a Result with CSV file data.
+/// Implements IRequest to work with the custom mediator, returning a Result with CSV file data.
 /// </summary>
 public class CustomerCsvExportQuery : IRequest<Result<CustomerCsvExportResult>>
 {

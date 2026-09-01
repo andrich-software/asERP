@@ -46,8 +46,8 @@ public class CountryListHandler : IRequestHandler<CountryListQuery, PaginatedRes
         }
 
         // Apply salesing; fall back to the default Name ordering when the client provided none.
-        query = request.SalesBy.Any()
-            ? query.ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+        query = request.SortBy.Any()
+            ? query.ApplySafeOrdering(request.SortBy, AllowedSortFields)
             : query.OrderBy(c => c.Name);
 
         return await query

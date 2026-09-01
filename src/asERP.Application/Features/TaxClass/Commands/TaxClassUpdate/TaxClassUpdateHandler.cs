@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -26,55 +25,27 @@ public class TaxClassUpdateHandler : IRequestHandler<TaxClassUpdateCommand, Resu
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new TaxClassUpdateValidator(_taxClassRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        // Get the tax class for tracking (required for update)
+        var taxClassToUpdate = await _taxClassRepository.GetByIdAsync(request.Id, true);
+        if (taxClassToUpdate == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+            result.Fail(ErrorType.NotFound, ErrorCodes.TaxClass.NotFound, "TaxClass not found or access denied due to tenant isolation.");
 
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(TaxClassUpdateCommand),
-                string.Join(", ", result.Messages));
-
+            _logger.LogWarning("TaxClass with ID {Id} not found or access denied due to tenant isolation", request.Id);
             return result;
         }
 
-        try
-        {
-            // Get the tax class for tracking (required for update)
-            var taxClassToUpdate = await _taxClassRepository.GetByIdAsync(request.Id, true);
-            if (taxClassToUpdate == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("TaxClass not found or access denied due to tenant isolation.");
+        // Update the existing entity properties
+        taxClassToUpdate.TaxRate = request.TaxRate;
 
-                _logger.LogWarning("TaxClass with ID {Id} not found or access denied due to tenant isolation", request.Id);
-                return result;
-            }
+        // Update in database
+        await _taxClassRepository.UpdateAsync(taxClassToUpdate);
 
-            // Update the existing entity properties
-            taxClassToUpdate.TaxRate = request.TaxRate;
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = taxClassToUpdate.Id;
 
-            // Update in database
-            await _taxClassRepository.UpdateAsync(taxClassToUpdate);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = taxClassToUpdate.Id;
-
-            _logger.LogInformation("Successfully updated tax class with ID: {Id}", taxClassToUpdate.Id);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while updating the tax class.",
-                "Error updating tax class.");
-        }
+        _logger.LogInformation("Successfully updated tax class with ID: {Id}", taxClassToUpdate.Id);
 
         return result;
     }

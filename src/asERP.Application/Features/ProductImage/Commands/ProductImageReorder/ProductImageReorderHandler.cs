@@ -25,7 +25,7 @@ public class ProductImageReorderHandler : IRequestHandler<ProductImageReorderCom
         var images = await _productImageRepository.GetByProductIdAsync(request.ProductId);
         if (images.Count == 0)
         {
-            return Result<Guid>.Fail(ResultStatusCode.NotFound, "Product has no images to reorder");
+            return Result<Guid>.NotFound(ErrorCodes.ProductImage.NotFound, "Product has no images to reorder");
         }
 
         // The requested ids must be exactly the product's image ids — no extras, none missing.
@@ -35,7 +35,7 @@ public class ProductImageReorderHandler : IRequestHandler<ProductImageReorderCom
             || requestedIds.Distinct().Count() != requestedIds.Count
             || !requestedIds.All(existingIds.Contains))
         {
-            return Result<Guid>.Fail(ResultStatusCode.BadRequest,
+            return Result<Guid>.Invalid(ErrorCodes.ProductImage.Invalid,
                 "The provided image ids must match exactly the product's images.");
         }
 

@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -21,30 +20,19 @@ public class FeedProductSelectionUpdateHandler : IRequestHandler<FeedProductSele
     {
         var result = new Result<Guid>();
 
-        try
+        // Existence + tenant ownership check (GetByIdAsync is tenant-filtered).
+        var feed = await _feedRepository.GetByIdAsync(request.FeedId, asNoTracking: true);
+        if (feed == null)
         {
-            // Existence + tenant ownership check (GetByIdAsync is tenant-filtered).
-            var feed = await _feedRepository.GetByIdAsync(request.FeedId, asNoTracking: true);
-            if (feed == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Feed with ID {request.FeedId} not found");
-                return result;
-            }
-
-            await _feedRepository.ApplyProductSelectionAsync(request.FeedId, request.Changes, cancellationToken);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = request.FeedId;
+            result.Fail(ErrorType.NotFound, ErrorCodes.Feed.NotFound, $"Feed with ID {request.FeedId} not found");
+            return result;
         }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while updating the feed product selection.",
-                "Error updating product selection for feed {Id}.", request.FeedId);
-        }
+
+        await _feedRepository.ApplyProductSelectionAsync(request.FeedId, request.Changes, cancellationToken);
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = request.FeedId;
 
         return result;
     }

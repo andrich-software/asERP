@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -26,55 +25,27 @@ public class SettingUpdateQuery : IRequestHandler<SettingUpdateCommand, Result<G
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new SettingUpdateValidator(_settingRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        // Get the existing entity to preserve fields we don't want to overwrite
+        var existingSetting = await _settingRepository.GetByIdAsync(request.Id);
+        if (existingSetting == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(SettingUpdateCommand),
-                string.Join(", ", result.Messages));
-
+            result.Fail(ErrorType.NotFound, ErrorCodes.Setting.NotFound, "Setting not found");
             return result;
         }
 
-        try
-        {
-            // Get the existing entity to preserve fields we don't want to overwrite
-            var existingSetting = await _settingRepository.GetByIdAsync(request.Id);
-            if (existingSetting == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("Setting not found");
-                return result;
-            }
+        // Update only the fields that should be modified
+        existingSetting.Key = request.Key;
+        existingSetting.Value = request.Value;
+        existingSetting.DateModified = DateTime.UtcNow;
 
-            // Update only the fields that should be modified
-            existingSetting.Key = request.Key;
-            existingSetting.Value = request.Value;
-            existingSetting.DateModified = DateTime.UtcNow;
+        // Update in database
+        await _settingRepository.UpdateAsync(existingSetting);
 
-            // Update in database
-            await _settingRepository.UpdateAsync(existingSetting);
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = existingSetting.Id;
 
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = existingSetting.Id;
-
-            _logger.LogInformation("Successfully updated setting with ID: {Id}", existingSetting.Id);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while updating the setting.",
-                "Error updating setting.");
-        }
+        _logger.LogInformation("Successfully updated setting with ID: {Id}", existingSetting.Id);
 
         return result;
     }

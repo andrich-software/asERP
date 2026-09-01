@@ -17,6 +17,7 @@ using asERP.Domain.Dtos.Sales;
 using asERP.Domain.Dtos.Shipping;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
+using asERP.Server.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,66 +32,66 @@ public class SalessController(IMediator mediator) : ControllerBase
 {
     // GET: api/v1/<SalessController>
     [HttpGet]
-    public async Task<ActionResult<PaginatedResult<SalesListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "", [FromQuery] Guid? salesChannelId = null, [FromQuery] SalesQuickFilter filter = SalesQuickFilter.All)
+    public async Task<ActionResult<PaginatedResult<SalesListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "", [FromQuery] Guid? salesChannelId = null, [FromQuery] SalesQuickFilter filter = SalesQuickFilter.All)
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateSalesed Descending";
+            sortBy = "DateSalesed Descending";
         }
 
-        var saless = await mediator.Send(new SalesListQuery(pageNumber, pageSize, searchString, salesBy, salesChannelId, filter));
+        var saless = await mediator.Send(new SalesListQuery(pageNumber, pageSize, searchString, sortBy, salesChannelId, filter));
         return Ok(saless);
     }
 
     // GET: api/v1/<SalessController>/customer/{customerId}
     [HttpGet("customer/{customerId:int}")]
-    public async Task<ActionResult<PaginatedResult<SalesListDto>>> GetByCustomer(int customerId, int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<SalesListDto>>> GetByCustomer(int customerId, int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateSalesed Descending";
+            sortBy = "DateSalesed Descending";
         }
 
-        var saless = await mediator.Send(new SalesCustomerListQuery(customerId, pageNumber, pageSize, searchString, salesBy));
+        var saless = await mediator.Send(new SalesCustomerListQuery(customerId, pageNumber, pageSize, searchString, sortBy));
         return Ok(saless);
     }
 
     // GET: api/v1/<SalessController>/ready-for-delivery
     [HttpGet("ready-for-delivery")]
-    public async Task<ActionResult<PaginatedResult<SalesListDto>>> GetReadyForDelivery(int pageNumber = 0, int pageSize = 10, string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<SalesListDto>>> GetReadyForDelivery(int pageNumber = 0, int pageSize = 10, string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateSalesed Descending";
+            sortBy = "DateSalesed Descending";
         }
 
-        var saless = await mediator.Send(new SalesReadyForDeliveryListQuery(pageNumber, pageSize, salesBy));
+        var saless = await mediator.Send(new SalesReadyForDeliveryListQuery(pageNumber, pageSize, sortBy));
         return Ok(saless);
     }
 
     // GET: api/v1/<SalessController>/ready-to-ship
     [HttpGet("ready-to-ship")]
-    public async Task<ActionResult<PaginatedResult<SalesReadyToShipListDto>>> GetReadyToShip(int pageNumber = 0, int pageSize = 10, string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<SalesReadyToShipListDto>>> GetReadyToShip(int pageNumber = 0, int pageSize = 10, string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateSalesed Descending";
+            sortBy = "DateSalesed Descending";
         }
 
-        var saless = await mediator.Send(new SalesReadyToShipListQuery(pageNumber, pageSize, salesBy));
+        var saless = await mediator.Send(new SalesReadyToShipListQuery(pageNumber, pageSize, sortBy));
         return Ok(saless);
     }
 
     // GET: api/v1/<SalessController>/not-paid
     [HttpGet("not-paid")]
-    public async Task<ActionResult<PaginatedResult<SalesListDto>>> GetNotPaid(int pageNumber = 0, int pageSize = 10, string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<SalesListDto>>> GetNotPaid(int pageNumber = 0, int pageSize = 10, string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateSalesed Descending";
+            sortBy = "DateSalesed Descending";
         }
 
-        var saless = await mediator.Send(new SalesNotPaidListQuery(pageNumber, pageSize, salesBy));
+        var saless = await mediator.Send(new SalesNotPaidListQuery(pageNumber, pageSize, sortBy));
         return Ok(saless);
     }
 
@@ -101,7 +102,7 @@ public class SalessController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<SalesDetailDto>> GetDetails(Guid id)
     {
         var response = await mediator.Send(new SalesDetailQuery { Id = id });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // GET: api/v1/<SalessController>/5/shippable-items
@@ -111,7 +112,7 @@ public class SalessController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<List<ShippableSalesItemDto>>> GetShippableItems(Guid id)
     {
         var response = await mediator.Send(new SalesShippableItemsQuery { Id = id });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // GET: api/v1/<SalessController>/5/returnable-items
@@ -121,7 +122,7 @@ public class SalessController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<List<ReturnableSalesItemDto>>> GetReturnableItems(Guid id)
     {
         var response = await mediator.Send(new SalesReturnableItemsQuery { Id = id });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // GET: api/v1/<SalessController>/5/shipping-options
@@ -131,7 +132,7 @@ public class SalessController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<List<ApplicableShippingRateDto>>> GetShippingOptions(Guid id)
     {
         var response = await mediator.Send(new ShippingOptionsForSalesQuery { Id = id });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // POST: api/v1/<SalessController>
@@ -146,7 +147,7 @@ public class SalessController(IMediator mediator) : ControllerBase
         }
 
         var response = await mediator.Send(salesCreateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // PUT: api/v1/<SalessController>/5
@@ -165,7 +166,7 @@ public class SalessController(IMediator mediator) : ControllerBase
 
         salesUpdateCommand.Id = id;
         var response = await mediator.Send(salesUpdateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // POST: api/v1/<SalessController>/5/cancel
@@ -176,7 +177,7 @@ public class SalessController(IMediator mediator) : ControllerBase
     public async Task<ActionResult> Cancel(Guid id)
     {
         var response = await mediator.Send(new SalesCancelCommand { Id = id });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // DELETE: api/v1/<SalesController>/5

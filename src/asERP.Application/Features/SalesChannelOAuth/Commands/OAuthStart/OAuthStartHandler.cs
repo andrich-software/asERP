@@ -48,19 +48,19 @@ public class OAuthStartHandler : IRequestHandler<OAuthStartCommand, Result<OAuth
         var tenantId = _tenantContext.GetCurrentTenantId();
         if (!tenantId.HasValue)
         {
-            return Result<OAuthStartResponseDto>.Fail(ResultStatusCode.BadRequest, "No active tenant.");
+            return Result<OAuthStartResponseDto>.Invalid(ErrorCodes.SalesChannelOauth.Invalid, "No active tenant.");
         }
 
         if (request.Provider is not (SalesChannelType.eBay or SalesChannelType.Amazon))
         {
-            return Result<OAuthStartResponseDto>.Fail(ResultStatusCode.BadRequest,
+            return Result<OAuthStartResponseDto>.Invalid(ErrorCodes.SalesChannelOauth.Invalid,
                 $"OAuth is not supported for provider {request.Provider}.");
         }
 
         var channel = await _salesChannelRepository.GetByIdAsync(request.SalesChannelId);
         if (channel is null || channel.Type != request.Provider)
         {
-            return Result<OAuthStartResponseDto>.Fail(ResultStatusCode.NotFound,
+            return Result<OAuthStartResponseDto>.NotFound(ErrorCodes.SalesChannelOauth.NotFound,
                 $"SalesChannel {request.SalesChannelId} not found or its type does not match {request.Provider}.");
         }
 
@@ -68,15 +68,16 @@ public class OAuthStartHandler : IRequestHandler<OAuthStartCommand, Result<OAuth
             tenantId.Value, request.Provider, cancellationToken);
         if (!credsResult.Succeeded)
         {
-            return Result<OAuthStartResponseDto>.Fail(credsResult.StatusCode,
-                string.Join("; ", credsResult.Messages));
+            return Result<OAuthStartResponseDto>.Failure(
+                credsResult.Error ?? new Error(ErrorType.Validation, ErrorCodes.SalesChannelOauth.Invalid,
+                    string.Join("; ", credsResult.Messages)));
         }
         var creds = credsResult.Data;
 
         var publicBaseUrl = (await _settings.GetSettingValueAsync("OAuth.PublicBaseUrl"))?.TrimEnd('/');
         if (string.IsNullOrEmpty(publicBaseUrl))
         {
-            return Result<OAuthStartResponseDto>.Fail(ResultStatusCode.BadRequest,
+            return Result<OAuthStartResponseDto>.Invalid(ErrorCodes.SalesChannelOauth.Invalid,
                 "OAuth.PublicBaseUrl is not configured. Set it in System Settings before starting an OAuth flow.");
         }
         var browserCallbackUrl = $"{publicBaseUrl}/api/v1/saleschannels/oauth/{request.Provider.ToString().ToLowerInvariant()}/callback";

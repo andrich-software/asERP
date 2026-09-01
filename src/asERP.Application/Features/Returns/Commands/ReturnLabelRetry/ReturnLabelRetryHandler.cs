@@ -45,16 +45,14 @@ public class ReturnLabelRetryHandler : IRequestHandler<ReturnLabelRetryCommand, 
 
         if (returnShipment.LabelData is { Length: > 0 })
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.Add("The return already has a label.");
+            result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, "The return already has a label.");
             return result;
         }
 
         var labelResult = await _returnCarrierService.CreateReturnLabelAsync(request.Id, cancellationToken);
 
         result.Succeeded = labelResult.Succeeded;
-        result.StatusCode = labelResult.Succeeded ? ResultStatusCode.Ok : labelResult.StatusCode;
+        result.Error = labelResult.Error;
         result.Messages.AddRange(labelResult.Messages);
         result.Data = request.Id;
 

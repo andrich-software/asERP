@@ -61,7 +61,9 @@ Commands and queries live in `src/asERP.Application/Features/{Area}/{Commands|Qu
 
 The Mediator is **custom** — `asERP.Application.Mediator.CustomMediator` resolves `IRequestHandler<,>` via DI and dispatches by reflection. Do not add the `MediatR` NuGet package; some legacy doc comments mention it but the implementation is in-house.
 
-Returns are wrapped in `Result<T>` / `PaginatedResult<T>` (`asERP.Domain.Wrapper`). The extension `response.ToActionResult()` maps `Result` to the right HTTP status with RFC 7807 problem details on failures.
+Returns are wrapped in `Result<T>` / `PaginatedResult<T>` (`asERP.Domain.Wrapper`). Those carry a semantic outcome — `Status` for successes, an `Error` with an `ErrorType` and a stable code for failures — and **no HTTP status**.
+
+`Extensions/ResultExtensions.ToActionResult()` is the single place that turns that into a status code (`ErrorType.NotFound` → 404, `ResultStatus.Created` → 201, …). Controllers must always return `response.ToActionResult()`; the rare endpoint that answers with a hand-built body can take just the number from `response.ToHttpStatusCode()`. Never read a status off the result yourself.
 
 ## Roles & Authorization
 
@@ -73,8 +75,9 @@ See root `CLAUDE.md` for the role matrix. In Server code:
 
 ## Validation & Error Handling
 
-- **FluentValidation** registered via `FluentValidation.DependencyInjectionExtensions`.
+- **FluentValidation** registered via `FluentValidation.DependencyInjectionExtensions`. Request validation runs in `CustomMediator.Send` before the handler — controllers and handlers contain no validation code.
 - `GlobalExceptionHandler` (an `IExceptionHandler`, not a filter) converts unhandled exceptions to RFC 7807 `ProblemDetails`. It masks 5xx messages and only echoes 4xx messages to clients — never leak internals in exception text.
+- A failed validation arrives there as `asERP.Application.Exceptions.ValidationException` and becomes a 400 `ValidationProblemDetails` (`application/problem+json`) with the standard `errors: { "Field": [...] }` dictionary. Business failures still travel in the `Result` envelope via `ToActionResult()` — both shapes are in use, and the client parses both.
 - Don't catch and swallow — let the global handler handle it unless you have a specific recovery path.
 
 ## Versioning & Swagger

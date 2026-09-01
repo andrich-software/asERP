@@ -43,7 +43,7 @@ public class FeedLogListHandler : IRequestHandler<FeedLogListQuery, PaginatedRes
         query = query.OrderByDescending(l => l.DateCreated);
 
         return await query
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(l => new FeedLogDto
             {
                 Id = l.Id,

@@ -10,11 +10,8 @@ public class TenantListValidator : AbstractValidator<TenantListQuery>
             .NotNull().WithMessage("{PropertyName} must not be null.")
             .NotEmpty().WithMessage("{PropertyName} is required.");
 
-        RuleFor(p => p.PageNumber)
-            .GreaterThan(0).WithMessage("{PropertyName} must be greater than 0.");
-
-        RuleFor(p => p.PageSize)
-            .GreaterThan(0).WithMessage("{PropertyName} must be greater than 0.")
-            .LessThanOrEqualTo(100).WithMessage("{PropertyName} must not exceed 100.");
+        // No rules on PageNumber/PageSize: paging is zero-based and ToPaginatedListAsync already
+        // clamps both (negative page → 0, size ≤ 0 → 10, size > 200 → 200). Rejecting those values
+        // here would turn requests the rest of the system serves fine into 400s.
     }
 }

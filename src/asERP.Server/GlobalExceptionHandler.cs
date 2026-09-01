@@ -10,6 +10,12 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
+        if (exception is ValidationException validationException)
+        {
+            await WriteValidationProblemAsync(httpContext, validationException, cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+
         var problemDetails = new ProblemDetails();
         problemDetails.Instance = httpContext.Request.Path;
 
@@ -51,6 +57,30 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
         problemDetails.Status = httpContext.Response.StatusCode;
         await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken).ConfigureAwait(false);
         return true;
+    }
+
+    /// <summary>
+    /// Renders a failed request validation as RFC 9457 problem details with the standard per-field
+    /// <c>errors</c> dictionary. Logged as a warning, not an error: an invalid request is a client
+    /// mistake, and a rejected form submission must not show up as a server fault.
+    /// </summary>
+    private async Task WriteValidationProblemAsync(HttpContext httpContext, ValidationException exception, CancellationToken cancellationToken)
+    {
+        logger.LogWarning("Validation failed at {Path}: {Errors}",
+            httpContext.Request.Path,
+            string.Join("; ", exception.ValidationErrors));
+
+        var problemDetails = new ValidationProblemDetails(exception.Errors.ToDictionary(entry => entry.Key, entry => entry.Value))
+        {
+            Title = "One or more validation errors occurred.",
+            Status = (int)HttpStatusCode.BadRequest,
+            Instance = httpContext.Request.Path
+        };
+
+        httpContext.Response.StatusCode = problemDetails.Status.Value;
+        await httpContext.Response
+            .WriteAsJsonAsync(problemDetails, options: null, contentType: "application/problem+json", cancellationToken)
+            .ConfigureAwait(false);
     }
 }
 

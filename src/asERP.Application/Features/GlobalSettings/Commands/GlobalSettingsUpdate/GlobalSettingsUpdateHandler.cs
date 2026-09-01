@@ -34,7 +34,7 @@ public class GlobalSettingsUpdateHandler : IRequestHandler<GlobalSettingsUpdateC
         {
             if (GlobalSettingsRules.IsHidden(entry.Key) || !existing.ContainsKey(entry.Key))
             {
-                return Result<int>.Fail(ResultStatusCode.BadRequest,
+                return Result<int>.Invalid(ErrorCodes.Setting.Invalid,
                     $"Unknown setting key '{entry.Key}'.");
             }
         }
@@ -67,6 +67,6 @@ public class GlobalSettingsUpdateHandler : IRequestHandler<GlobalSettingsUpdateC
         }
 
         _logger.LogInformation("Updated {Count} global settings", updated);
-        return new Result<int> { Succeeded = true, Data = updated, StatusCode = ResultStatusCode.NoContent };
+        return new Result<int> { Succeeded = true, Data = updated, Status = ResultStatus.NoContent };
     }
 }

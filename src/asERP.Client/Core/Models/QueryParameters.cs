@@ -25,7 +25,7 @@ public record QueryParameters
     /// Sort sales (e.g., "Name Ascending", "DateCreated Descending").
     /// Multiple sort fields can be separated by commas.
     /// </summary>
-    public string? SalesBy { get; init; }
+    public string? SortBy { get; init; }
 
     /// <summary>
     /// Optional SalesChannel filter. When set, only results for this channel are returned.
@@ -60,9 +60,9 @@ public record QueryParameters
             parameters.Add($"searchString={Uri.EscapeDataString(SearchString)}");
         }
 
-        if (!string.IsNullOrWhiteSpace(SalesBy))
+        if (!string.IsNullOrWhiteSpace(SortBy))
         {
-            parameters.Add($"salesBy={Uri.EscapeDataString(SalesBy)}");
+            parameters.Add($"sortBy={Uri.EscapeDataString(SortBy)}");
         }
 
         if (SalesChannelId.HasValue)
@@ -106,5 +106,5 @@ public record QueryParameters
     /// <summary>
     /// Creates a new QueryParameters with a sort sales.
     /// </summary>
-    public QueryParameters WithSalesBy(string? salesBy) => this with { SalesBy = salesBy, PageNumber = 0 };
+    public QueryParameters WithSortBy(string? sortBy) => this with { SortBy = sortBy, PageNumber = 0 };
 }

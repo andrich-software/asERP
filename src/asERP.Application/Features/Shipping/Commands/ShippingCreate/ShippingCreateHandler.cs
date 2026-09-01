@@ -45,167 +45,143 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
 
         var result = new Result<Guid>();
 
-        var validator = new ShippingCreateValidator(_salesRepository, _shippingProviderRateRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        var rate = await _shippingProviderRateRepository.GetWithCountriesAsync(request.ShippingProviderRateId);
+        if (rate == null)
         {
-            var validationErrors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in create request for {0}: {1}",
-                nameof(ShippingCreateCommand), validationErrors);
-
-            return Result<Guid>.Fail(ResultStatusCode.BadRequest, validationErrors);
+            return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid, "The shipping option does not exist.");
         }
 
-        try
+        if (!rate.ShippingProvider.IsEnabled)
         {
-            var rate = await _shippingProviderRateRepository.GetWithCountriesAsync(request.ShippingProviderRateId);
-            if (rate == null)
-            {
-                return Result<Guid>.Fail(ResultStatusCode.BadRequest, "The shipping option does not exist.");
-            }
-
-            if (!rate.ShippingProvider.IsEnabled)
-            {
-                return Result<Guid>.Fail(ResultStatusCode.BadRequest,
-                    $"The shipping provider '{rate.ShippingProvider.Name}' is disabled.");
-            }
-
-            if (!rate.IsActive)
-            {
-                return Result<Guid>.Fail(ResultStatusCode.BadRequest,
-                    $"The shipping option '{rate.Name}' is deactivated.");
-            }
-
-            var sales = await _salesRepository.GetWithDetailsAsync(request.SalesId);
-            if (sales == null)
-            {
-                return Result<Guid>.Fail(ResultStatusCode.BadRequest, "The sales order does not exist.");
-            }
-
-            var destinationCheck = await ValidateDestinationCountryAsync(sales, rate);
-            if (destinationCheck != null)
-            {
-                return Result<Guid>.Fail(ResultStatusCode.BadRequest, destinationCheck);
-            }
-
-            var limitError = ValidateRateLimits(request, rate);
-            if (limitError != null)
-            {
-                return Result<Guid>.Fail(ResultStatusCode.BadRequest, limitError);
-            }
-
-            var assignments = request.SalesItemIds.Distinct()
-                .Select(id => new SalesItemAssignment(id, null))
-                .Concat(request.Items.Select(i => new SalesItemAssignment(i.SalesItemId, i.Quantity)))
-                .ToList();
-
-            foreach (var assignment in assignments)
-            {
-                var item = sales.SalesItems.FirstOrDefault(i => i.Id == assignment.SalesItemId);
-                if (item == null)
-                {
-                    return Result<Guid>.Fail(ResultStatusCode.BadRequest,
-                        $"Sales item {assignment.SalesItemId} does not belong to this sales order.");
-                }
-
-                if (item.ShippingId != null)
-                {
-                    return Result<Guid>.Fail(ResultStatusCode.BadRequest,
-                        $"Sales item {assignment.SalesItemId} is already assigned to another shipment.");
-                }
-
-                if (assignment.Quantity is not double quantity)
-                {
-                    continue;
-                }
-
-                if (quantity > item.Quantity + SalesItemAssignment.QuantityTolerance)
-                {
-                    return Result<Guid>.Fail(ResultStatusCode.BadRequest,
-                        $"The requested quantity ({quantity}) for sales item {assignment.SalesItemId} exceeds the open quantity ({item.Quantity}).");
-                }
-
-                // A split would have to divide serial-number rows arbitrarily — force whole lines.
-                if (quantity < item.Quantity - SalesItemAssignment.QuantityTolerance && item.SerialNumbers.Any())
-                {
-                    return Result<Guid>.Fail(ResultStatusCode.BadRequest,
-                        $"Sales item {assignment.SalesItemId} has serial numbers and must be shipped as a whole line.");
-                }
-            }
-
-            var shippingToCreate = new Domain.Entities.Shipping
-            {
-                SalesId = sales.Id,
-                ShippingProviderId = rate.ShippingProviderId,
-                ShippingProviderRateId = rate.Id,
-                Status = ShippingStatus.Open,
-                TrackingNumber = request.TrackingNumber ?? string.Empty,
-                ShippingCost = request.ShippingCost ?? rate.Price,
-                TaxRate = request.TaxRate,
-                WeightKg = request.WeightKg,
-                LengthCm = request.LengthCm,
-                WidthCm = request.WidthCm,
-                HeightCm = request.HeightCm,
-                TenantId = sales.TenantId
-            };
-
-            // The shipment row, item assignment and history are wrapped in a single transaction
-            // so a failure mid-way cannot leave a shipment without its item assignment. It also
-            // narrows the TOCTOU window on the item.ShippingId assignment (07.3) — the definitive
-            // guard is the conditional UPDATE (WHERE ShippingId IS NULL) in the repository.
-            await using var transaction = await _shippingRepository.BeginTransactionAsync(cancellationToken);
-
-            await _shippingRepository.CreateAsync(shippingToCreate);
-
-            // The sales aggregate is loaded untracked — stamp the items via a tracked update.
-            await _shippingRepository.AssignSalesItemsAsync(shippingToCreate.Id, assignments);
-
-            await _salesRepository.AddSalesHistoryAsync(new SalesHistory
-            {
-                SalesId = sales.Id,
-                ShippingId = shippingToCreate.Id,
-                UserId = Guid.Empty,
-                TenantId = sales.TenantId,
-                ShippingStatusOld = null,
-                ShippingStatusNew = ShippingStatus.Open.ToString(),
-                Description = $"Shipment created ({rate.ShippingProvider.Name} / {rate.Name})",
-                MessageKey = SalesHistoryMessage.ShipmentCreated,
-                MessageArgs = SalesHistoryMessage.EncodeArgs(rate.ShippingProvider.Name, rate.Name),
-                IsSystemGenerated = false
-            });
-
-            await _salesShippingStatusService.RecomputeAsync(sales.Id, cancellationToken);
-
-            await transaction.CommitAsync(cancellationToken);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Created;
-            result.Data = shippingToCreate.Id;
-
-            if (request.RequestLabel)
-            {
-                // The carrier service persists tracking number, label bytes and status itself;
-                // on transient failure it queues a background retry. Label problems never fail
-                // the shipment creation.
-                var labelResult = await _shippingCarrierService.CreateLabelAsync(shippingToCreate.Id, cancellationToken);
-                if (!labelResult.Succeeded)
-                {
-                    result.Messages.AddRange(labelResult.Messages);
-                }
-            }
-
-            _logger.LogInformation("Successfully created shipment with ID: {Id}", shippingToCreate.Id);
+            return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid,
+                $"The shipping provider '{rate.ShippingProvider.Name}' is disabled.");
         }
-        catch (Exception ex)
+
+        if (!rate.IsActive)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add("An error occurred while creating the shipment.");
-
-            _logger.LogError(ex, "Error creating shipment for sales {SalesId}", request.SalesId);
+            return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid,
+                $"The shipping option '{rate.Name}' is deactivated.");
         }
+
+        var sales = await _salesRepository.GetWithDetailsAsync(request.SalesId);
+        if (sales == null)
+        {
+            return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid, "The sales order does not exist.");
+        }
+
+        var destinationCheck = await ValidateDestinationCountryAsync(sales, rate);
+        if (destinationCheck != null)
+        {
+            return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid, destinationCheck);
+        }
+
+        var limitError = ValidateRateLimits(request, rate);
+        if (limitError != null)
+        {
+            return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid, limitError);
+        }
+
+        var assignments = request.SalesItemIds.Distinct()
+            .Select(id => new SalesItemAssignment(id, null))
+            .Concat(request.Items.Select(i => new SalesItemAssignment(i.SalesItemId, i.Quantity)))
+            .ToList();
+
+        foreach (var assignment in assignments)
+        {
+            var item = sales.SalesItems.FirstOrDefault(i => i.Id == assignment.SalesItemId);
+            if (item == null)
+            {
+                return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid,
+                    $"Sales item {assignment.SalesItemId} does not belong to this sales order.");
+            }
+
+            if (item.ShippingId != null)
+            {
+                return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid,
+                    $"Sales item {assignment.SalesItemId} is already assigned to another shipment.");
+            }
+
+            if (assignment.Quantity is not double quantity)
+            {
+                continue;
+            }
+
+            if (quantity > item.Quantity + SalesItemAssignment.QuantityTolerance)
+            {
+                return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid,
+                    $"The requested quantity ({quantity}) for sales item {assignment.SalesItemId} exceeds the open quantity ({item.Quantity}).");
+            }
+
+            // A split would have to divide serial-number rows arbitrarily — force whole lines.
+            if (quantity < item.Quantity - SalesItemAssignment.QuantityTolerance && item.SerialNumbers.Any())
+            {
+                return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid,
+                    $"Sales item {assignment.SalesItemId} has serial numbers and must be shipped as a whole line.");
+            }
+        }
+
+        var shippingToCreate = new Domain.Entities.Shipping
+        {
+            SalesId = sales.Id,
+            ShippingProviderId = rate.ShippingProviderId,
+            ShippingProviderRateId = rate.Id,
+            Status = ShippingStatus.Open,
+            TrackingNumber = request.TrackingNumber ?? string.Empty,
+            ShippingCost = request.ShippingCost ?? rate.Price,
+            TaxRate = request.TaxRate,
+            WeightKg = request.WeightKg,
+            LengthCm = request.LengthCm,
+            WidthCm = request.WidthCm,
+            HeightCm = request.HeightCm,
+            TenantId = sales.TenantId
+        };
+
+        // The shipment row, item assignment and history are wrapped in a single transaction
+        // so a failure mid-way cannot leave a shipment without its item assignment. It also
+        // narrows the TOCTOU window on the item.ShippingId assignment (07.3) — the definitive
+        // guard is the conditional UPDATE (WHERE ShippingId IS NULL) in the repository.
+        await using var transaction = await _shippingRepository.BeginTransactionAsync(cancellationToken);
+
+        await _shippingRepository.CreateAsync(shippingToCreate);
+
+        // The sales aggregate is loaded untracked — stamp the items via a tracked update.
+        await _shippingRepository.AssignSalesItemsAsync(shippingToCreate.Id, assignments);
+
+        await _salesRepository.AddSalesHistoryAsync(new SalesHistory
+        {
+            SalesId = sales.Id,
+            ShippingId = shippingToCreate.Id,
+            UserId = Guid.Empty,
+            TenantId = sales.TenantId,
+            ShippingStatusOld = null,
+            ShippingStatusNew = ShippingStatus.Open.ToString(),
+            Description = $"Shipment created ({rate.ShippingProvider.Name} / {rate.Name})",
+            MessageKey = SalesHistoryMessage.ShipmentCreated,
+            MessageArgs = SalesHistoryMessage.EncodeArgs(rate.ShippingProvider.Name, rate.Name),
+            IsSystemGenerated = false
+        });
+
+        await _salesShippingStatusService.RecomputeAsync(sales.Id, cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Created;
+        result.Data = shippingToCreate.Id;
+
+        if (request.RequestLabel)
+        {
+            // The carrier service persists tracking number, label bytes and status itself;
+            // on transient failure it queues a background retry. Label problems never fail
+            // the shipment creation.
+            var labelResult = await _shippingCarrierService.CreateLabelAsync(shippingToCreate.Id, cancellationToken);
+            if (!labelResult.Succeeded)
+            {
+                result.Messages.AddRange(labelResult.Messages);
+            }
+        }
+
+        _logger.LogInformation("Successfully created shipment with ID: {Id}", shippingToCreate.Id);
 
         return result;
     }

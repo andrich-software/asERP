@@ -22,43 +22,35 @@ public class SalessLatestHandler : IRequestHandler<SalessLatestQuery, Result<Sal
 
     public async Task<Result<SalessLatestDto>> Handle(SalessLatestQuery request, CancellationToken cancellationToken)
     {
-        try
-        {
-            _logger.LogInformation("Handle SalessLatestQuery - fetching {Count} latest saless", request.Count);
+        _logger.LogInformation("Handle SalessLatestQuery - fetching {Count} latest saless", request.Count);
 
-            var baseQuery = _salesRepository.Entities.AsQueryable();
-            if (request.SalesChannelId.HasValue)
-                baseQuery = baseQuery.Where(o => o.SalesChannelId == request.SalesChannelId.Value);
+        var baseQuery = _salesRepository.Entities.AsQueryable();
+        if (request.SalesChannelId.HasValue)
+            baseQuery = baseQuery.Where(o => o.SalesChannelId == request.SalesChannelId.Value);
 
-            var saless = await baseQuery
-                .Include(o => o.Customer)
-                .OrderByDescending(o => o.DateSalesed)
-                .Take(request.Count)
-                .Select(o => new SalessLatestItemDto
-                {
-                    Id = o.Id,
-                    SalesNumber = $"ORD-{o.DateSalesed.Year}-{o.SalesId:D6}",
-                    CustomerName = o.Customer != null
-                        ? $"{o.Customer.Firstname} {o.Customer.Lastname}".Trim()
-                        : $"{o.DeliveryAddressFirstName} {o.DeliveryAddressLastName}".Trim(),
-                    Amount = o.Total,
-                    Status = o.Status,
-                    SalesDate = o.DateSalesed
-                })
-                .ToListAsync(cancellationToken);
-
-            var dto = new SalessLatestDto
+        var saless = await baseQuery
+            .Include(o => o.Customer)
+            .OrderByDescending(o => o.DateSalesed)
+            .Take(request.Count)
+            .Select(o => new SalessLatestItemDto
             {
-                Saless = saless
-            };
+                Id = o.Id,
+                SalesNumber = $"ORD-{o.DateSalesed.Year}-{o.SalesId:D6}",
+                CustomerName = o.Customer != null
+                    ? $"{o.Customer.Firstname} {o.Customer.Lastname}".Trim()
+                    : $"{o.DeliveryAddressFirstName} {o.DeliveryAddressLastName}".Trim(),
+                Amount = o.Total,
+                Status = o.Status,
+                SalesDate = o.DateSalesed
+            })
+            .ToListAsync(cancellationToken);
 
-            _logger.LogInformation("Successfully fetched {Count} latest saless", saless.Count);
-            return Result<SalessLatestDto>.Success(dto);
-        }
-        catch (Exception ex)
+        var dto = new SalessLatestDto
         {
-            _logger.LogError("Error while fetching latest saless: {0}", ex.Message);
-            return Result<SalessLatestDto>.Fail(ResultStatusCode.InternalServerError, "Error while fetching latest saless");
-        }
+            Saless = saless
+        };
+
+        _logger.LogInformation("Successfully fetched {Count} latest saless", saless.Count);
+        return Result<SalessLatestDto>.Success(dto);
     }
 }

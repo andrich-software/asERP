@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -26,23 +25,6 @@ public class TaxClassDeleteHandler : IRequestHandler<TaxClassDeleteCommand, Resu
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new TaxClassDeleteValidator();
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in delete request for {0}: {1}",
-                nameof(TaxClassDeleteCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
         try
         {
             // Get entity from database first
@@ -50,9 +32,7 @@ public class TaxClassDeleteHandler : IRequestHandler<TaxClassDeleteCommand, Resu
 
             if (taxClassToDelete == null)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("TaxClass not found");
+                result.Fail(ErrorType.NotFound, ErrorCodes.TaxClass.NotFound, "TaxClass not found");
 
                 _logger.LogWarning("TaxClass with ID: {Id} not found for deletion", request.Id);
                 return result;
@@ -62,7 +42,7 @@ public class TaxClassDeleteHandler : IRequestHandler<TaxClassDeleteCommand, Resu
             await _taxClassRepository.DeleteAsync(taxClassToDelete);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = taxClassToDelete.Id;
 
             _logger.LogInformation("Successfully deleted tax class with ID: {Id}", taxClassToDelete.Id);
@@ -70,17 +50,9 @@ public class TaxClassDeleteHandler : IRequestHandler<TaxClassDeleteCommand, Resu
         catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
         {
             // Handle concurrent deletion - tax class was already deleted by another request
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add("TaxClass not found");
+            result.Fail(ErrorType.NotFound, ErrorCodes.TaxClass.NotFound, "TaxClass not found");
 
             _logger.LogWarning("TaxClass with ID: {Id} was deleted by another request: {Message}", request.Id, ex.Message);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the tax class.",
-                "Error deleting tax class.");
         }
 
         return result;

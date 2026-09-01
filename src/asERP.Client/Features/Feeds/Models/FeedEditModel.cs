@@ -204,7 +204,7 @@ public class FeedEditModel : AsyncInitializableModel
             PageNumber = Math.Max(0, page),
             PageSize = 25,
             SearchString = string.IsNullOrWhiteSpace(ProductSearch) ? null : ProductSearch,
-            SalesBy = "Name Ascending"
+            SortBy = "Name Ascending"
         };
 
         var response = await _feedService.GetFeedProductsAsync(_feedId.Value, parameters, ct);

@@ -99,7 +99,7 @@ public partial record ProductListModel
         .Combine(SearchQuery, CurrentPage, PageSize, SortSales, Toggles)
         .SelectAsync(async (combined, ct) =>
         {
-            var (query, page, size, salesBy, toggles) = combined;
+            var (query, page, size, sortBy, toggles) = combined;
             toggles ??= new ProductListFilter();
 
             var parameters = new QueryParameters
@@ -107,7 +107,7 @@ public partial record ProductListModel
                 PageNumber = page,
                 PageSize = size,
                 SearchString = string.IsNullOrWhiteSpace(query) ? null : query,
-                SalesBy = salesBy,
+                SortBy = sortBy,
                 IncludeVariants = toggles.IncludeVariants,
                 LowStockOnly = toggles.LowStockOnly
             };
@@ -324,9 +324,9 @@ public partial record ProductListModel
     /// <summary>
     /// Change the sort sales.
     /// </summary>
-    public async ValueTask SetSortSales(string salesBy, CancellationToken ct = default)
+    public async ValueTask SetSortSales(string sortBy, CancellationToken ct = default)
     {
-        await SortSales.UpdateAsync(_ => salesBy, ct);
+        await SortSales.UpdateAsync(_ => sortBy, ct);
         await CurrentPage.UpdateAsync(_ => 0, ct); // Reset to first page when sorting changes
     }
 

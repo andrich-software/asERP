@@ -311,7 +311,7 @@ public class CountryCreateCommandTests : TenantIsolatedTestBase
 
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertTrue(result.Succeeded);
-        TestAssertions.AssertEqual(ResultStatusCode.Created, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Created, result.Status);
         TestAssertions.AssertNotEqual(Guid.Empty, result.Data);
         TestAssertions.AssertNotNull(result.Messages);
     }

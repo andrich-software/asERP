@@ -72,7 +72,7 @@ public partial record FeedDetailModel
             {
                 PageNumber = page,
                 PageSize = 50,
-                SalesBy = "DateCreated Descending"
+                SortBy = "DateCreated Descending"
             };
 
             var response = await _feedService.GetFeedLogsAsync(_feedId, parameters, ct);
@@ -136,7 +136,7 @@ public partial record FeedDetailModel
                 PageNumber = page,
                 PageSize = 25,
                 SearchString = string.IsNullOrWhiteSpace(search) ? null : search,
-                SalesBy = sortBy
+                SortBy = sortBy
             };
 
             var response = await _feedService.GetFeedProductsAsync(_feedId, parameters, ct);

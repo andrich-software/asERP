@@ -330,7 +330,7 @@ public class AiPromptDetailQueryTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<AiPromptDetailDto>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertTrue(result.Succeeded);
-        TestAssertions.AssertEqual(ResultStatusCode.Ok, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Ok, result.Status);
     }
 
     [Fact]

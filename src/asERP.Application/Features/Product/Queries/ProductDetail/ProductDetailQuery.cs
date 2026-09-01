@@ -6,7 +6,7 @@ namespace asERP.Application.Features.Product.Queries.ProductDetail;
 
 /// <summary>
 /// Query for retrieving detailed information about a specific product.
-/// Implements IRequest to work with MediatR, returning product details wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning product details wrapped in a Result.
 /// </summary>
 public class ProductDetailQuery : IRequest<Result<ProductDetailDto>>
 {

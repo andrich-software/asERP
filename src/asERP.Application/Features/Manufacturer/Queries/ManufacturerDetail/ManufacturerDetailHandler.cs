@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Manufacturer;
 using asERP.Domain.Wrapper;
@@ -26,48 +25,37 @@ public class ManufacturerDetailHandler : IRequestHandler<ManufacturerDetailQuery
 
         var result = new Result<ManufacturerDetailDto>();
 
-        try
+        var manufacturer = await _manufacturerRepository.GetByIdAsync(request.Id, true);
+
+        if (manufacturer == null)
         {
-            var manufacturer = await _manufacturerRepository.GetByIdAsync(request.Id, true);
+            result.Fail(ErrorType.NotFound, ErrorCodes.Manufacturer.NotFound, $"Manufacturer with ID {request.Id} not found");
 
-            if (manufacturer == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Manufacturer with ID {request.Id} not found");
-
-                _logger.LogWarning("Manufacturer with ID {Id} not found", request.Id);
-                return result;
-            }
-
-            // Manual mapping to DTO entity
-            var data = new ManufacturerDetailDto
-            {
-                Id = manufacturer.Id,
-                Name = manufacturer.Name,
-                Street = manufacturer.Street,
-                City = manufacturer.City,
-                State = manufacturer.State,
-                Country = manufacturer.Country,
-                ZipCode = manufacturer.ZipCode,
-                Phone = manufacturer.Phone,
-                Email = manufacturer.Email,
-                Website = manufacturer.Website,
-                Logo = manufacturer.Logo
-            };
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = data;
-
-            _logger.LogInformation("Manufacturer with ID {Id} retrieved successfully", request.Id);
+            _logger.LogWarning("Manufacturer with ID {Id} not found", request.Id);
+            return result;
         }
-        catch (Exception ex)
+
+        // Manual mapping to DTO entity
+        var data = new ManufacturerDetailDto
         {
-            result.FromException(_logger, ex,
-                "An error occurred while retrieving the manufacturer.",
-                "Error retrieving manufacturer.");
-        }
+            Id = manufacturer.Id,
+            Name = manufacturer.Name,
+            Street = manufacturer.Street,
+            City = manufacturer.City,
+            State = manufacturer.State,
+            Country = manufacturer.Country,
+            ZipCode = manufacturer.ZipCode,
+            Phone = manufacturer.Phone,
+            Email = manufacturer.Email,
+            Website = manufacturer.Website,
+            Logo = manufacturer.Logo
+        };
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = data;
+
+        _logger.LogInformation("Manufacturer with ID {Id} retrieved successfully", request.Id);
 
         return result;
     }

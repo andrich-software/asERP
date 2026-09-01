@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Application.Notifications;
 using asERP.Domain.Wrapper;
@@ -32,23 +31,6 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new SalesChannelDeleteValidator(_salesChannelRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in delete request for {0}: {1}",
-                nameof(SalesChannelDeleteCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
         try
         {
             // Get entity from database first
@@ -56,9 +38,7 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
 
             if (salesChannel == null)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"SalesChannel with ID {request.Id} not found");
+                result.Fail(ErrorType.NotFound, ErrorCodes.SalesChannel.NotFound, $"SalesChannel with ID {request.Id} not found");
                 _logger.LogWarning("Sales channel {Id} not found", request.Id);
                 return result;
             }
@@ -80,7 +60,7 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
             await _webAnalyticsPurgeService.PurgeSalesChannelAsync(salesChannel.Id, cancellationToken);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
+            result.Status = ResultStatus.NoContent;
             result.Data = salesChannel.Id;
 
             _logger.LogInformation(
@@ -95,24 +75,14 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
         catch (asERP.Application.Exceptions.NotFoundException)
         {
             // Sales channel not found
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add($"SalesChannel with ID {request.Id} not found");
+            result.Fail(ErrorType.NotFound, ErrorCodes.SalesChannel.NotFound, $"SalesChannel with ID {request.Id} not found");
             _logger.LogWarning("Sales channel {Id} not found", request.Id);
         }
         catch (Exception ex) when (ex.Message.Contains("does not exist") || ex.Message.Contains("not found"))
         {
             // Handle race condition: Entity was deleted between check and delete
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add($"SalesChannel with ID {request.Id} not found");
+            result.Fail(ErrorType.NotFound, ErrorCodes.SalesChannel.NotFound, $"SalesChannel with ID {request.Id} not found");
             _logger.LogWarning("Sales channel {Id} was deleted by concurrent operation: {ExceptionType} - {Message}", request.Id, ex.GetType().Name, ex.Message);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the sales channel.",
-                "Error deleting sales channel {Id}.", request.Id);
         }
 
         return result;

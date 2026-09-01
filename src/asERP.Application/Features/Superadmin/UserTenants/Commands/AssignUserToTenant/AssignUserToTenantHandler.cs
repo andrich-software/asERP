@@ -15,40 +15,30 @@ public class AssignUserToTenantHandler : IRequestHandler<AssignUserToTenantComma
     private readonly IUserTenantRepository _userTenantRepository;
     private readonly ITenantRepository _tenantRepository;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IValidator<AssignUserToTenantCommand> _validator;
 
     public AssignUserToTenantHandler(
         IUserTenantRepository userTenantRepository,
         ITenantRepository tenantRepository,
-        UserManager<ApplicationUser> userManager,
-        IValidator<AssignUserToTenantCommand> validator)
+        UserManager<ApplicationUser> userManager)
     {
         _userTenantRepository = userTenantRepository;
         _tenantRepository = tenantRepository;
         _userManager = userManager;
-        _validator = validator;
     }
 
     public async Task<Result<int>> Handle(AssignUserToTenantCommand request, CancellationToken cancellationToken)
     {
-        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validationResult.IsValid)
-        {
-            var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-            return Result<int>.Fail(ResultStatusCode.BadRequest, errors);
-        }
-
         // Check if user exists
         var user = await _userManager.FindByIdAsync(request.UserId);
         if (user == null)
         {
-            return Result<int>.Fail(ResultStatusCode.BadRequest, "User not found");
+            return Result<int>.Invalid(ErrorCodes.Superadmin.Invalid, "User not found");
         }
 
         // Check if tenant exists
         if (!await _tenantRepository.ExistsAsync(request.TenantId))
         {
-            return Result<int>.Fail(ResultStatusCode.BadRequest, "Tenant not found");
+            return Result<int>.Invalid(ErrorCodes.Superadmin.Invalid, "Tenant not found");
         }
 
         // Check if assignment already exists
@@ -58,7 +48,7 @@ public class AssignUserToTenantHandler : IRequestHandler<AssignUserToTenantComma
 
         if (assignmentExists)
         {
-            return Result<int>.Fail(ResultStatusCode.BadRequest, "User is already assigned to this tenant");
+            return Result<int>.Invalid(ErrorCodes.Superadmin.AlreadyExists, "User is already assigned to this tenant");
         }
 
         // If this should be the default tenant, remove default flag from other assignments
@@ -91,11 +81,11 @@ public class AssignUserToTenantHandler : IRequestHandler<AssignUserToTenantComma
         }
         catch (Exception ex) when (ex is DbUpdateException or ArgumentException)
         {
-            return Result<int>.Fail(ResultStatusCode.BadRequest, "User is already assigned to this tenant");
+            return Result<int>.Invalid(ErrorCodes.Superadmin.AlreadyExists, "User is already assigned to this tenant");
         }
 
         var success = Result<int>.Success(1, "User successfully assigned to tenant");
-        success.StatusCode = ResultStatusCode.Created;
+        success.Status = ResultStatus.Created;
         return success;
     }
 }

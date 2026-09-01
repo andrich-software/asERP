@@ -37,7 +37,7 @@ public class TaxClassListHandler : IRequestHandler<TaxClassListQuery, PaginatedR
 
         return await _taxClassRepository.Entities
             .Specify(taxClassFilterSpec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(t => new TaxClassListDto
             {
                 Id = t.Id,

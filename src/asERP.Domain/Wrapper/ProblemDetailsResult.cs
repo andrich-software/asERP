@@ -40,7 +40,7 @@ public class ProblemDetailsResult : Result
         return new ProblemDetailsResult
         {
             Succeeded = false,
-            StatusCode = ResultStatusCode.BadRequest,
+            Error = new Error(ErrorType.Validation, ErrorCodes.Request.Invalid, detail),
             Type = type ?? "https://tools.ietf.org/html/rfc9110#section-15.5.1",
             Title = title,
             Detail = detail,
@@ -54,7 +54,7 @@ public class ProblemDetailsResult : Result
         return new ProblemDetailsResult
         {
             Succeeded = false,
-            StatusCode = ResultStatusCode.NotFound,
+            Error = new Error(ErrorType.NotFound, ErrorCodes.Request.NotFound, detail),
             Type = type ?? "https://tools.ietf.org/html/rfc9110#section-15.5.5",
             Title = title,
             Detail = detail,
@@ -68,7 +68,7 @@ public class ProblemDetailsResult : Result
         return new ProblemDetailsResult
         {
             Succeeded = false,
-            StatusCode = ResultStatusCode.Unauthorized,
+            Error = new Error(ErrorType.Unauthorized, ErrorCodes.Request.Unauthorized, detail),
             Type = type ?? "https://tools.ietf.org/html/rfc9110#section-15.5.2",
             Title = title,
             Detail = detail,
@@ -82,7 +82,7 @@ public class ProblemDetailsResult : Result
         return new ProblemDetailsResult
         {
             Succeeded = false,
-            StatusCode = ResultStatusCode.Forbidden,
+            Error = new Error(ErrorType.Forbidden, ErrorCodes.Request.Forbidden, detail),
             Type = type ?? "https://tools.ietf.org/html/rfc9110#section-15.5.4",
             Title = title,
             Detail = detail,
@@ -96,7 +96,7 @@ public class ProblemDetailsResult : Result
         return new ProblemDetailsResult
         {
             Succeeded = false,
-            StatusCode = ResultStatusCode.InternalServerError,
+            Error = new Error(ErrorType.Unexpected, ErrorCodes.Request.Unexpected, detail),
             Type = type ?? "https://tools.ietf.org/html/rfc9110#section-15.6.1",
             Title = title,
             Detail = detail,
@@ -162,7 +162,7 @@ public class ProblemDetailsResult<T> : ProblemDetailsResult, IResult<T>
         return new ProblemDetailsResult<T>
         {
             Succeeded = false,
-            StatusCode = ResultStatusCode.BadRequest,
+            Error = new Error(ErrorType.Validation, ErrorCodes.Request.Invalid, detail),
             Type = type ?? "https://tools.ietf.org/html/rfc9110#section-15.5.1",
             Title = title,
             Detail = detail,
@@ -177,7 +177,7 @@ public class ProblemDetailsResult<T> : ProblemDetailsResult, IResult<T>
         return new ProblemDetailsResult<T>
         {
             Succeeded = false,
-            StatusCode = ResultStatusCode.NotFound,
+            Error = new Error(ErrorType.NotFound, ErrorCodes.Request.NotFound, detail),
             Type = type ?? "https://tools.ietf.org/html/rfc9110#section-15.5.5",
             Title = title,
             Detail = detail,

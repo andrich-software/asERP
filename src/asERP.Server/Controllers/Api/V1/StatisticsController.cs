@@ -13,6 +13,7 @@ using asERP.Application.Features.Statistic.Queries.StatisticSalesOverview;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Statistic;
 using asERP.Domain.Wrapper;
+using asERP.Server.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,7 +33,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new SalesTodayQuery(salesChannelId, hours));
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -44,7 +45,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new SalessTodayQuery(salesChannelId, hours));
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -56,7 +57,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new CustomersTodayQuery(hours));
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -68,7 +69,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new DashboardTodosQuery());
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -80,7 +81,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new SalessLatestQuery(count, salesChannelId));
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -92,7 +93,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new ProductsBestSellingQuery(count, hours));
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -107,7 +108,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new RevenueChartQuery(startDate, endDate, salesChannelId));
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -119,7 +120,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new StatisticSalesQuery());
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -131,7 +132,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new StatisticProductQuery());
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -143,7 +144,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new StatisticSalesCustomerChartQuery());
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -155,7 +156,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new StatisticSalesOverviewQuery());
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }
@@ -167,7 +168,7 @@ public class StatisticsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new StatisticMostSellingProductsQuery());
 
         if (!result.Succeeded)
-            return StatusCode((int)result.StatusCode, result);
+            return result.ToActionResult();
 
         return Ok(result);
     }

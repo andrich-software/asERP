@@ -21,15 +21,15 @@ public class AiPromptsController(IMediator mediator) : ControllerBase
 {
     // GET: api/v1/<AiPromptsController>
     [HttpGet]
-    public async Task<ActionResult<PaginatedResult<AiPromptListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<AiPromptListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateCreated Descending";
+            sortBy = "DateCreated Descending";
         }
 
-        var response = await mediator.Send(new AiPromptListQuery(pageNumber, pageSize, searchString, salesBy));
-        return StatusCode((int)response.StatusCode, response);
+        var response = await mediator.Send(new AiPromptListQuery(pageNumber, pageSize, searchString, sortBy));
+        return response.ToActionResult();
     }
 
     // GET: api/v1/<AiPromptsController>/5
@@ -39,7 +39,7 @@ public class AiPromptsController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<AiPromptDetailDto>> GetDetails(Guid id)
     {
         var response = await mediator.Send(new AiPromptDetailQuery { Id = id });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // POST: api/v1/<AiPromptsController>
@@ -49,7 +49,7 @@ public class AiPromptsController(IMediator mediator) : ControllerBase
     public async Task<ActionResult> Create(AiPromptCreateCommand aIPromptCreateCommand)
     {
         var response = await mediator.Send(aIPromptCreateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // PUT: api/v1/<AiPromptsController>/5
@@ -86,7 +86,7 @@ public class AiPromptsController(IMediator mediator) : ControllerBase
 
         aIPromptUpdateCommand.Id = id;
         var response = await mediator.Send(aIPromptUpdateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // DELETE: api/v1/<AiPromptsController>/5

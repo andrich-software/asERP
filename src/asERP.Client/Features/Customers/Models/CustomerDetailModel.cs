@@ -64,7 +64,7 @@ public partial record CustomerDetailModel
             {
                 PageNumber = 0,
                 PageSize = 100,
-                SalesBy = "DateSalesed Descending"
+                SortBy = "DateSalesed Descending"
             };
 
             var response = await _salesService.GetSalessByCustomerAsync(t.Item1.CustomerId, parameters, ct);

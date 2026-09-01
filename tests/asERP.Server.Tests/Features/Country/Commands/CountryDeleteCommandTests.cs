@@ -306,7 +306,7 @@ public class CountryDeleteCommandTests : TenantIsolatedTestBase
 
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertTrue(result.Succeeded);
-        TestAssertions.AssertEqual(ResultStatusCode.Ok, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Ok, result.Status);
         TestAssertions.AssertEqual(countryId, result.Data);
         TestAssertions.AssertNotNull(result.Messages);
     }

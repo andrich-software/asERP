@@ -50,15 +50,15 @@ public class SalesChannelsController(
 
     // GET: api/v1/<SalesChannelsController>
     [HttpGet]
-    public async Task<ActionResult<PaginatedResult<SalesChannelListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<SalesChannelListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateCreated Descending";
+            sortBy = "DateCreated Descending";
         }
 
-        var response = await mediator.Send(new SalesChannelListQuery(pageNumber, pageSize, searchString, salesBy));
-        return StatusCode((int)response.StatusCode, response);
+        var response = await mediator.Send(new SalesChannelListQuery(pageNumber, pageSize, searchString, sortBy));
+        return response.ToActionResult();
     }
 
     // GET: api/v1/<SalesChannelsController>/5
@@ -68,7 +68,7 @@ public class SalesChannelsController(
     public async Task<ActionResult<SalesChannelDetailDto>> GetDetails(Guid id)
     {
         var response = await mediator.Send(new SalesChannelDetailQuery { Id = id });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // POST: api/v1/<SalesChannelsController>
@@ -78,7 +78,7 @@ public class SalesChannelsController(
     public async Task<ActionResult<int>> Create(SalesChannelCreateCommand salesChannelCreateCommand)
     {
         var response = await mediator.Send(salesChannelCreateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // PUT: api/v1/<SalesChannelsController>/5
@@ -92,18 +92,13 @@ public class SalesChannelsController(
         // Validate ID consistency between URL and request body
         if (salesChannelUpdateCommand.Id != Guid.Empty && salesChannelUpdateCommand.Id != id)
         {
-            var errorResult = new Result<Guid>
-            {
-                Succeeded = false,
-                StatusCode = ResultStatusCode.BadRequest,
-                Messages = { "ID in URL does not match ID in request body" }
-            };
-            return BadRequest(errorResult);
+            return BadRequest(Result<Guid>.Invalid(
+                ErrorCodes.SalesChannel.Invalid, "ID in URL does not match ID in request body"));
         }
 
         salesChannelUpdateCommand.Id = id;
         var response = await mediator.Send(salesChannelUpdateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // DELETE: api/v1/<SalesChannelController>/5

@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -32,58 +31,29 @@ public class AiPromptUpdateHandler : IRequestHandler<AiPromptUpdateCommand, Resu
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new AiPromptUpdateValidator(_aIPromptRepository, _aiModelRepository, _tenantContext);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        // Load existing AI prompt from database
+        var aIPromptToUpdate = await _aIPromptRepository.GetByIdAsync(request.Id);
 
-        if (!validationResult.IsValid)
+        if (aIPromptToUpdate == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(AiPromptUpdateCommand),
-                string.Join(", ", result.Messages));
-
+            _logger.LogWarning("AI prompt with ID {Id} not found for update", request.Id);
+            result.Fail(ErrorType.NotFound, ErrorCodes.AiPrompt.NotFound, "AI prompt not found.");
             return result;
         }
 
-        try
-        {
-            // Load existing AI prompt from database
-            var aIPromptToUpdate = await _aIPromptRepository.GetByIdAsync(request.Id);
+        // Update properties
+        aIPromptToUpdate.AiModelId = request.AiModelId;
+        aIPromptToUpdate.Identifier = request.Identifier;
+        aIPromptToUpdate.PromptText = request.PromptText;
 
-            if (aIPromptToUpdate == null)
-            {
-                _logger.LogWarning("AI prompt with ID {Id} not found for update", request.Id);
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("AI prompt not found.");
-                return result;
-            }
+        // Save changes (entity is already tracked, so just save)
+        await _aIPromptRepository.SaveChangesAsync();
 
-            // Update properties
-            aIPromptToUpdate.AiModelId = request.AiModelId;
-            aIPromptToUpdate.Identifier = request.Identifier;
-            aIPromptToUpdate.PromptText = request.PromptText;
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = aIPromptToUpdate.Id;
 
-            // Save changes (entity is already tracked, so just save)
-            await _aIPromptRepository.SaveChangesAsync();
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = aIPromptToUpdate.Id;
-
-            _logger.LogInformation("Successfully updated AI prompt with ID: {Id}", aIPromptToUpdate.Id);
-        }
-        catch (Exception ex)
-        {
-            // Never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while updating the AI prompt.",
-                "Error updating AI prompt.");
-        }
+        _logger.LogInformation("Successfully updated AI prompt with ID: {Id}", aIPromptToUpdate.Id);
 
         return result;
     }

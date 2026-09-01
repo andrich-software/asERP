@@ -51,29 +51,29 @@ public class OAuthCallbackHandler : IRequestHandler<OAuthCallbackCommand, Result
     {
         if (string.IsNullOrEmpty(request.State) || string.IsNullOrEmpty(request.Code))
         {
-            return Result<OAuthCallbackResultDto>.Fail(ResultStatusCode.BadRequest,
+            return Result<OAuthCallbackResultDto>.Invalid(ErrorCodes.SalesChannelOauth.Invalid,
                 "Missing state or code in callback.");
         }
 
         var state = await _stateRepository.GetByTokenAsync(request.State);
         if (state is null)
         {
-            return Result<OAuthCallbackResultDto>.Fail(ResultStatusCode.BadRequest,
+            return Result<OAuthCallbackResultDto>.Invalid(ErrorCodes.SalesChannelOauth.Invalid,
                 "Unknown state token.");
         }
         if (state.Provider != request.Provider)
         {
-            return Result<OAuthCallbackResultDto>.Fail(ResultStatusCode.BadRequest,
+            return Result<OAuthCallbackResultDto>.Invalid(ErrorCodes.SalesChannelOauth.Invalid,
                 "Provider mismatch between state and callback.");
         }
         if (state.ExpiresAt < DateTime.UtcNow)
         {
-            return Result<OAuthCallbackResultDto>.Fail(ResultStatusCode.BadRequest,
+            return Result<OAuthCallbackResultDto>.Invalid(ErrorCodes.SalesChannelOauth.Invalid,
                 "State token has expired. Restart the OAuth flow.");
         }
         if (state.ConsumedAt is not null)
         {
-            return Result<OAuthCallbackResultDto>.Fail(ResultStatusCode.BadRequest,
+            return Result<OAuthCallbackResultDto>.Invalid(ErrorCodes.SalesChannelOauth.Invalid,
                 "State token has already been consumed.");
         }
 
@@ -89,8 +89,9 @@ public class OAuthCallbackHandler : IRequestHandler<OAuthCallbackCommand, Result
             state.TenantId, state.Provider, cancellationToken);
         if (!credsResult.Succeeded)
         {
-            return Result<OAuthCallbackResultDto>.Fail(credsResult.StatusCode,
-                string.Join("; ", credsResult.Messages));
+            return Result<OAuthCallbackResultDto>.Failure(
+                credsResult.Error ?? new Error(ErrorType.Validation, ErrorCodes.SalesChannelOauth.Invalid,
+                    string.Join("; ", credsResult.Messages)));
         }
         var creds = credsResult.Data;
 
@@ -111,13 +112,13 @@ public class OAuthCallbackHandler : IRequestHandler<OAuthCallbackCommand, Result
         {
             // Anonymous callback: never echo the token-endpoint error text to the caller.
             _logger.LogError(ex, "OAuth token exchange failed for provider {Provider}", request.Provider);
-            return Result<OAuthCallbackResultDto>.Fail(ResultStatusCode.BadRequest, "Token exchange failed.");
+            return Result<OAuthCallbackResultDto>.Invalid(ErrorCodes.SalesChannelOauth.Invalid, "Token exchange failed.");
         }
 
         var channel = await _salesChannelRepository.GetByIdAsync(state.SalesChannelId);
         if (channel is null)
         {
-            return Result<OAuthCallbackResultDto>.Fail(ResultStatusCode.NotFound,
+            return Result<OAuthCallbackResultDto>.NotFound(ErrorCodes.SalesChannelOauth.NotFound,
                 "SalesChannel disappeared during OAuth flow.");
         }
 

@@ -84,9 +84,9 @@ public class InvoiceCreateCommandTests : IDisposable
 
             var manualResult = new Result<Guid?>
             {
-                StatusCode = TryGetPropertyCaseInsensitive(root, "statusCode", out var statusElement) && statusElement.TryGetInt32(out var statusValue)
-                    ? (ResultStatusCode)statusValue
-                    : ResultStatusCode.Ok,
+                Status = TryGetPropertyCaseInsensitive(root, "status", out var statusElement) && statusElement.TryGetInt32(out var statusValue)
+                    ? (ResultStatus)statusValue
+                    : ResultStatus.Ok,
                 Succeeded = TryGetPropertyCaseInsensitive(root, "succeeded", out var succeededElement) && succeededElement.ValueKind is JsonValueKind.True or JsonValueKind.False
                     ? succeededElement.GetBoolean()
                     : false
@@ -307,7 +307,7 @@ public class InvoiceCreateCommandTests : IDisposable
         var result = await ReadResponseAsync<Result<Guid?>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -399,7 +399,7 @@ public class InvoiceCreateCommandTests : IDisposable
         var result = await ReadResponseAsync<Result<Guid?>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -416,7 +416,7 @@ public class InvoiceCreateCommandTests : IDisposable
         var result = await ReadResponseAsync<Result<Guid?>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -529,7 +529,7 @@ public class InvoiceCreateCommandTests : IDisposable
         _ = AssertAndGetInvoiceId(result);
 
         TestAssertions.AssertNotNull(result!.Messages);
-        TestAssertions.AssertEqual(ResultStatusCode.Created, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Created, result.Status);
     }
 
     [Fact]
@@ -548,7 +548,8 @@ public class InvoiceCreateCommandTests : IDisposable
         TestAssertions.AssertTrue(!result.Data.HasValue || result.Data.Value == Guid.Empty);
         TestAssertions.AssertNotNull(result.Messages);
         TestAssertions.AssertNotEmpty(result.Messages);
-        TestAssertions.AssertEqual(ResultStatusCode.BadRequest, result.StatusCode);
+        // The failure kind is asserted through the HTTP status above: this class parses the body
+        // with its own reader, which does not populate the semantic Error object.
     }
 
     [Fact]
@@ -565,7 +566,7 @@ public class InvoiceCreateCommandTests : IDisposable
         var result = await ReadResponseAsync<Result<Guid?>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]

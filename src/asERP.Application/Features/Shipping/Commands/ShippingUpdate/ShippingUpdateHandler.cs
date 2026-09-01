@@ -2,7 +2,6 @@ using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Exceptions;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
@@ -31,22 +30,6 @@ public class ShippingUpdateHandler : IRequestHandler<ShippingUpdateCommand, Resu
 
         var result = new Result<Guid>();
 
-        var validator = new ShippingUpdateValidator();
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(ShippingUpdateCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
         try
         {
             var existsGlobally = await _shippingRepository.ExistsGloballyAsync(request.Id);
@@ -65,9 +48,7 @@ public class ShippingUpdateHandler : IRequestHandler<ShippingUpdateCommand, Resu
 
             if (shippingToUpdate.Status == ShippingStatus.Cancelled)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("A cancelled shipment cannot be updated.");
+                result.Fail(ErrorType.Validation, ErrorCodes.Shipping.Invalid, "A cancelled shipment cannot be updated.");
                 return result;
             }
 
@@ -113,14 +94,14 @@ public class ShippingUpdateHandler : IRequestHandler<ShippingUpdateCommand, Resu
                 if (!statusResult.Succeeded)
                 {
                     result.Succeeded = false;
-                    result.StatusCode = statusResult.StatusCode;
+                    result.Error = statusResult.Error;
                     result.Messages.AddRange(statusResult.Messages);
                     return result;
                 }
             }
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = shippingToUpdate.Id;
 
             _logger.LogInformation("Successfully updated shipment with ID: {Id}", shippingToUpdate.Id);
@@ -128,12 +109,6 @@ public class ShippingUpdateHandler : IRequestHandler<ShippingUpdateCommand, Resu
         catch (NotFoundException)
         {
             throw;
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while updating the shipment.",
-                "Error updating shipment {Id}.", request.Id);
         }
 
         return result;

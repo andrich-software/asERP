@@ -3,7 +3,6 @@ using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Exceptions;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
@@ -60,9 +59,7 @@ public class ReturnCancelHandler : IRequestHandler<ReturnCancelCommand, Result<G
 
             if (!CancellableStatuses.Contains(returnShipment.Status))
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add($"A return in status {returnShipment.Status} cannot be cancelled.");
+                result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"A return in status {returnShipment.Status} cannot be cancelled.");
                 return result;
             }
 
@@ -97,13 +94,13 @@ public class ReturnCancelHandler : IRequestHandler<ReturnCancelCommand, Result<G
             if (!statusResult.Succeeded)
             {
                 result.Succeeded = false;
-                result.StatusCode = statusResult.StatusCode;
+                result.Error = statusResult.Error;
                 result.Messages.AddRange(statusResult.Messages);
                 return result;
             }
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = returnShipment.Id;
 
             _logger.LogInformation("Successfully cancelled return with ID: {Id}", returnShipment.Id);
@@ -111,12 +108,6 @@ public class ReturnCancelHandler : IRequestHandler<ReturnCancelCommand, Result<G
         catch (NotFoundException)
         {
             throw;
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while cancelling the return.",
-                "Error cancelling return {Id}.", request.Id);
         }
 
         return result;

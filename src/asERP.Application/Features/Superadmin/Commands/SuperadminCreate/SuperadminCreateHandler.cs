@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -26,55 +25,30 @@ public class SuperadminCreateHandler : IRequestHandler<SuperadminCreateCommand, 
 
         var result = new Result<Guid>();
 
-        var validator = new SuperadminCreateValidator(_tenantRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        var tenantToCreate = new Domain.Entities.Tenant
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+            Name = request.Name,
+            Description = request.Description,
+            CompanyName = request.CompanyName,
+            ContactEmail = request.ContactEmail,
+            Phone = request.Phone,
+            Website = request.Website,
+            Street = request.Street,
+            Street2 = request.Street2,
+            PostalCode = request.PostalCode,
+            City = request.City,
+            State = request.State,
+            Country = request.Country,
+            Iban = request.Iban
+        };
 
-            _logger.LogWarning("Validation errors in create request for {0}: {1}",
-                nameof(SuperadminCreateCommand),
-                string.Join(", ", result.Messages));
+        await _tenantRepository.CreateAsync(tenantToCreate);
 
-            return result;
-        }
+        result.Succeeded = true;
+        result.Status = ResultStatus.Created;
+        result.Data = tenantToCreate.Id;
 
-        try
-        {
-            var tenantToCreate = new Domain.Entities.Tenant
-            {
-                Name = request.Name,
-                Description = request.Description,
-                CompanyName = request.CompanyName,
-                ContactEmail = request.ContactEmail,
-                Phone = request.Phone,
-                Website = request.Website,
-                Street = request.Street,
-                Street2 = request.Street2,
-                PostalCode = request.PostalCode,
-                City = request.City,
-                State = request.State,
-                Country = request.Country,
-                Iban = request.Iban
-            };
-
-            await _tenantRepository.CreateAsync(tenantToCreate);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Created;
-            result.Data = tenantToCreate.Id;
-
-            _logger.LogInformation("Successfully created tenant with ID: {Id}", tenantToCreate.Id);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while creating the tenant.",
-                "Error creating tenant {Name}.", request.Name);
-        }
+        _logger.LogInformation("Successfully created tenant with ID: {Id}", tenantToCreate.Id);
 
         return result;
     }

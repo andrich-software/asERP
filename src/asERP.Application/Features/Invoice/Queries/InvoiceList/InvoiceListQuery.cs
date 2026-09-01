@@ -6,7 +6,7 @@ namespace asERP.Application.Features.Invoice.Queries.InvoiceList;
 
 /// <summary>
 /// Query for retrieving a paginated list of invoices.
-/// Implements IRequest to work with MediatR, returning a paginated list of invoice DTOs.
+/// Implements IRequest to work with the custom mediator, returning a paginated list of invoice DTOs.
 /// </summary>
 public class InvoiceListQuery : IRequest<PaginatedResult<InvoiceListDto>>
 {
@@ -28,7 +28,7 @@ public class InvoiceListQuery : IRequest<PaginatedResult<InvoiceListDto>>
     /// <summary>
     /// Optional sorting parameters
     /// </summary>
-    public string[] SalesBy { get; set; }
+    public string[] SortBy { get; set; }
 
     /// <summary>
     /// Creates a new instance of InvoiceListQuery with the specified pagination and filtering parameters
@@ -36,17 +36,17 @@ public class InvoiceListQuery : IRequest<PaginatedResult<InvoiceListDto>>
     /// <param name="pageNumber">Page number (default: 1)</param>
     /// <param name="pageSize">Number of items per page (default: 10)</param>
     /// <param name="searchString">Search string for filtering (default: empty)</param>
-    /// <param name="salesBy">Comma-separated list of sorting parameters (default: empty)</param>
-    public InvoiceListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string salesBy = "")
+    /// <param name="sortBy">Comma-separated list of sorting parameters (default: empty)</param>
+    public InvoiceListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string sortBy = "")
     {
         PageNumber = pageNumber;
         PageSize = pageSize;
         SearchString = searchString;
 
-        if (!string.IsNullOrWhiteSpace(salesBy))
+        if (!string.IsNullOrWhiteSpace(sortBy))
         {
-            SalesBy = salesBy.Split(',');
+            SortBy = sortBy.Split(',');
         }
-        else SalesBy = new string[] { };
+        else SortBy = new string[] { };
     }
 }

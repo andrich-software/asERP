@@ -6,7 +6,7 @@ namespace asERP.Application.Features.Superadmin.Users.Commands.UserUpdate;
 
 /// <summary>
 /// Command for updating an existing user in the system.
-/// Implements IRequest to work with MediatR, returning the ID of the updated user wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning the ID of the updated user wrapped in a Result.
 /// </summary>
 public class UserUpdateCommand : IRequest<Result<string>>
 {

@@ -39,7 +39,7 @@ public class ShippingProviderListHandler : IRequestHandler<ShippingProviderListQ
 
         var query = _shippingProviderRepository.Entities
             .Specify(filterSpec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields);
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields);
 
         return await query
             .Select(p => new ShippingProviderListDto

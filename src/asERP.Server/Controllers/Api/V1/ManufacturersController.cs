@@ -6,6 +6,7 @@ using asERP.Application.Features.Manufacturer.Queries.ManufacturerList;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Manufacturer;
 using asERP.Domain.Wrapper;
+using asERP.Server.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,15 +21,15 @@ public class ManufacturersController(IMediator mediator) : ControllerBase
 {
     // GET: api/v1/<ManufacturersController>
     [HttpGet]
-    public async Task<ActionResult<PaginatedResult<ManufacturerListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<ManufacturerListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateCreated Descending";
+            sortBy = "DateCreated Descending";
         }
 
-        var response = await mediator.Send(new ManufacturerListQuery(pageNumber, pageSize, searchString, salesBy));
-        return StatusCode((int)response.StatusCode, response);
+        var response = await mediator.Send(new ManufacturerListQuery(pageNumber, pageSize, searchString, sortBy));
+        return response.ToActionResult();
     }
 
     // GET: api/v1/<ManufacturersController>/5
@@ -38,7 +39,7 @@ public class ManufacturersController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<ManufacturerDetailDto>> GetDetails(Guid id)
     {
         var response = await mediator.Send(new ManufacturerDetailQuery { Id = id });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // POST: api/v1/<ManufacturersController>
@@ -48,7 +49,7 @@ public class ManufacturersController(IMediator mediator) : ControllerBase
     public async Task<ActionResult> Create(ManufacturerCreateCommand manufacturerCreateCommand)
     {
         var response = await mediator.Send(manufacturerCreateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // PUT: api/v1/<ManufacturersController>/5
@@ -61,7 +62,7 @@ public class ManufacturersController(IMediator mediator) : ControllerBase
     {
         manufacturerUpdateCommand.Id = id;
         var response = await mediator.Send(manufacturerUpdateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // DELETE: api/v1/<ManufacturersController>/5
@@ -74,6 +75,6 @@ public class ManufacturersController(IMediator mediator) : ControllerBase
     {
         var command = new ManufacturerDeleteCommand { Id = id };
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 }

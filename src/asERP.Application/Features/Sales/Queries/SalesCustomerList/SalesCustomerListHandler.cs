@@ -44,7 +44,7 @@ public class SalesCustomerListHandler : IRequestHandler<SalesCustomerListQuery, 
 
         return await _salesRepository.Entities
             .Specify(salesFilterSpec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(o => new SalesListDto
             {
                 Id = o.Id,

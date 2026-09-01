@@ -42,6 +42,15 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
 
     public async Task<Customer?> GetCustomerByRemoteCustomerIdAsync(Guid salesChannelId, string remoteCustomerId)
     {
+        // Guest orders carry no remote customer id (the connectors deliberately map WooCommerce's
+        // customer_id 0 to an empty string). Matching on it would join every guest of a channel to
+        // whichever customer happens to hold the empty-id link, so treat it as "no match" and let the
+        // caller fall back to email matching / creating a customer.
+        if (string.IsNullOrWhiteSpace(remoteCustomerId))
+        {
+            return null;
+        }
+
         // Tenant isolation via the global query filter.
         return await Context.Customer
             .Where(x => x.CustomerSalesChannels!.Any(y => y.SalesChannelId == salesChannelId && y.RemoteCustomerId == remoteCustomerId))

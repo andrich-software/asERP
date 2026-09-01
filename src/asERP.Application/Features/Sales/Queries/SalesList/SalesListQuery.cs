@@ -10,11 +10,11 @@ public class SalesListQuery : IRequest<PaginatedResult<SalesListDto>>
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public string SearchString { get; set; }
-    public string[] SalesBy { get; set; }
+    public string[] SortBy { get; set; }
     public Guid? SalesChannelId { get; set; }
     public SalesQuickFilter Filter { get; set; }
 
-    public SalesListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string salesBy = "", Guid? salesChannelId = null, SalesQuickFilter filter = SalesQuickFilter.All)
+    public SalesListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string sortBy = "", Guid? salesChannelId = null, SalesQuickFilter filter = SalesQuickFilter.All)
     {
         PageNumber = pageNumber;
         PageSize = pageSize;
@@ -22,10 +22,10 @@ public class SalesListQuery : IRequest<PaginatedResult<SalesListDto>>
         SalesChannelId = salesChannelId;
         Filter = filter;
 
-        if (!string.IsNullOrWhiteSpace(salesBy))
+        if (!string.IsNullOrWhiteSpace(sortBy))
         {
-            SalesBy = salesBy.Split(',');
+            SortBy = sortBy.Split(',');
         }
-        else SalesBy = new string[] { };
+        else SortBy = new string[] { };
     }
 }

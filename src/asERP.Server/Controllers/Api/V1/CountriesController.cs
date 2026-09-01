@@ -34,14 +34,14 @@ public class CountriesController : ControllerBase
         int pageNumber = 0,
         int pageSize = 300,
         string searchString = "",
-        string salesBy = "")
+        string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "Name";
+            sortBy = "Name";
         }
 
-        var response = await _mediator.Send(new CountryListQuery(pageNumber, pageSize, searchString, salesBy));
+        var response = await _mediator.Send(new CountryListQuery(pageNumber, pageSize, searchString, sortBy));
         return response.ToActionResult();
     }
 

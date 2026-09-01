@@ -28,7 +28,7 @@ public class OAuthDisconnectHandler : IRequestHandler<OAuthDisconnectCommand, Re
         var channel = await _salesChannelRepository.GetByIdAsync(request.SalesChannelId);
         if (channel is null)
         {
-            return Result<int>.Fail(ResultStatusCode.NotFound, "SalesChannel not found.");
+            return Result<int>.NotFound(ErrorCodes.SalesChannelOauth.NotFound, "SalesChannel not found.");
         }
 
         channel.AccessToken = null;
@@ -39,6 +39,6 @@ public class OAuthDisconnectHandler : IRequestHandler<OAuthDisconnectCommand, Re
 
         _logger.LogInformation("OAuth disconnect for channel {ChannelId}", channel.Id);
 
-        return new Result<int> { Succeeded = true, Data = 1, StatusCode = ResultStatusCode.NoContent };
+        return new Result<int> { Succeeded = true, Data = 1, Status = ResultStatus.NoContent };
     }
 }

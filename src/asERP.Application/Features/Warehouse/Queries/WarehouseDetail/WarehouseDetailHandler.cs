@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Warehouse;
 using asERP.Domain.Entities;
@@ -30,47 +29,36 @@ public class WarehouseDetailHandler : IRequestHandler<WarehouseDetailQuery, Resu
 
         var result = new Result<WarehouseDetailDto>();
 
-        try
+        var warehouse = await _warehouseRepository.GetByIdAsync(request.Id, true);
+
+        if (warehouse == null)
         {
-            var warehouse = await _warehouseRepository.GetByIdAsync(request.Id, true);
+            result.Fail(ErrorType.NotFound, ErrorCodes.Warehouse.NotFound, $"Warehouse with ID {request.Id} not found");
 
-            if (warehouse == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Warehouse with ID {request.Id} not found");
-
-                _logger.LogWarning("Warehouse with ID {Id} not found", request.Id);
-                return result;
-            }
-
-            // Anzahl der Produkte in diesem Lager ermitteln
-            var productCount = _productStockRepository.Entities
-                .Where(ps => ps.WarehouseId == warehouse.Id)
-                .Select(ps => ps.ProductId)
-                .Distinct()
-                .Count();
-
-            // Manuelles Mapping zur DTO-Entität
-            var data = new WarehouseDetailDto
-            {
-                Id = warehouse.Id,
-                Name = warehouse.Name,
-                ProductCount = productCount
-            };
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = data;
-
-            _logger.LogInformation("Warehouse with ID {Id} retrieved successfully", request.Id);
+            _logger.LogWarning("Warehouse with ID {Id} not found", request.Id);
+            return result;
         }
-        catch (Exception ex)
+
+        // Anzahl der Produkte in diesem Lager ermitteln
+        var productCount = _productStockRepository.Entities
+            .Where(ps => ps.WarehouseId == warehouse.Id)
+            .Select(ps => ps.ProductId)
+            .Distinct()
+            .Count();
+
+        // Manuelles Mapping zur DTO-Entität
+        var data = new WarehouseDetailDto
         {
-            result.FromException(_logger, ex,
-                "An error occurred while retrieving the warehouse.",
-                "Error retrieving warehouse.");
-        }
+            Id = warehouse.Id,
+            Name = warehouse.Name,
+            ProductCount = productCount
+        };
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = data;
+
+        _logger.LogInformation("Warehouse with ID {Id} retrieved successfully", request.Id);
 
         return result;
     }

@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -32,49 +31,22 @@ public class AiPromptCreateHandler : IRequestHandler<AiPromptCreateCommand, Resu
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new AiPromptCreateValidator(_aIPromptRepository, _aiModelRepository, _tenantContext);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        // Manuelles Mapping statt AutoMapper
+        var aIPromptToCreate = new Domain.Entities.AiPrompt
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+            AiModelId = request.AiModelId,
+            Identifier = request.Identifier,
+            PromptText = request.PromptText
+        };
 
-            _logger.LogWarning("Validation errors in create request for {0}: {1}",
-                nameof(AiPromptCreateCommand),
-                string.Join(", ", result.Messages));
+        // add to database
+        await _aIPromptRepository.CreateAsync(aIPromptToCreate);
 
-            return result;
-        }
+        result.Succeeded = true;
+        result.Status = ResultStatus.Created;
+        result.Data = aIPromptToCreate.Id;
 
-        try
-        {
-            // Manuelles Mapping statt AutoMapper
-            var aIPromptToCreate = new Domain.Entities.AiPrompt
-            {
-                AiModelId = request.AiModelId,
-                Identifier = request.Identifier,
-                PromptText = request.PromptText
-            };
-
-            // add to database
-            await _aIPromptRepository.CreateAsync(aIPromptToCreate);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Created;
-            result.Data = aIPromptToCreate.Id;
-
-            _logger.LogInformation("Successfully created AI prompt with ID: {Id}", aIPromptToCreate.Id);
-        }
-        catch (Exception ex)
-        {
-            // Never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while creating the AI prompt.",
-                "Error creating AI prompt.");
-        }
+        _logger.LogInformation("Successfully created AI prompt with ID: {Id}", aIPromptToCreate.Id);
 
         return result;
     }

@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Feed;
 using asERP.Domain.Wrapper;
@@ -46,20 +45,12 @@ public class FeedDetailHandler : IRequestHandler<FeedDetailQuery, Result<FeedDet
             };
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = data;
         }
         catch (NotFoundException)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add($"Feed with ID {request.Id} not found");
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while retrieving the feed.",
-                "Error retrieving feed {Id}.", request.Id);
+            result.Fail(ErrorType.NotFound, ErrorCodes.Feed.NotFound, $"Feed with ID {request.Id} not found");
         }
 
         return result;

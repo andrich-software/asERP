@@ -41,7 +41,7 @@ public class AiModelListHandler : IRequestHandler<AiModelListQuery, PaginatedRes
 
         return await _aiModelRepository.Entities
             .Specify(aiModelFilterSpec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(a => new AiModelListDto
             {
                 Id = a.Id,

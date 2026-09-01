@@ -30,14 +30,14 @@ public class TaxClassesController : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<PaginatedResult<TaxClassListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<TaxClassListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "Id Ascending";
+            sortBy = "Id Ascending";
         }
 
-        var response = await _mediator.Send(new TaxClassListQuery(pageNumber, pageSize, searchString, salesBy));
+        var response = await _mediator.Send(new TaxClassListQuery(pageNumber, pageSize, searchString, sortBy));
         return response.ToActionResult();
     }
 

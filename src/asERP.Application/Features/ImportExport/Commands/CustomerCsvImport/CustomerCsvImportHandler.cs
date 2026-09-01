@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Text;
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
@@ -13,7 +12,7 @@ namespace asERP.Application.Features.ImportExport.Commands.CustomerCsvImport;
 
 /// <summary>
 /// Handler for processing customer CSV import commands.
-/// Implements IRequestHandler from MediatR to handle CustomerCsvImportCommand requests
+/// Implements IRequestHandler from the custom mediator to handle CustomerCsvImportCommand requests
 /// and return import statistics wrapped in a Result.
 /// </summary>
 public class CustomerCsvImportHandler : IRequestHandler<CustomerCsvImportCommand, Result<CustomerCsvImportResult>>
@@ -36,140 +35,117 @@ public class CustomerCsvImportHandler : IRequestHandler<CustomerCsvImportCommand
         var result = new Result<CustomerCsvImportResult>();
         var importResult = new CustomerCsvImportResult();
 
+        // Read and process CSV file
+        using var stream = request.CsvFile.OpenReadStream();
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HasHeaderRecord = true,
+            MissingFieldFound = null,
+            HeaderValidated = null,
+            TrimOptions = TrimOptions.Trim
+        };
+
+        using var csv = new CsvReader(reader, config);
+
+        var customers = new List<CustomerCsvRecord>();
+        var rowNumber = 1; // Start at 1 (header is row 0)
+
         try
         {
-            // Validate the CSV file
-            var validator = new CustomerCsvImportValidator();
-            var validationResult = await validator.ValidateAsync(request, cancellationToken);
+            await csv.ReadAsync();
+            csv.ReadHeader();
 
-            if (!validationResult.IsValid)
+            while (await csv.ReadAsync())
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-                return result;
-            }
-
-            // Read and process CSV file
-            using var stream = request.CsvFile.OpenReadStream();
-            using var reader = new StreamReader(stream, Encoding.UTF8);
-
-            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                HasHeaderRecord = true,
-                MissingFieldFound = null,
-                HeaderValidated = null,
-                TrimOptions = TrimOptions.Trim
-            };
-
-            using var csv = new CsvReader(reader, config);
-
-            var customers = new List<CustomerCsvRecord>();
-            var rowNumber = 1; // Start at 1 (header is row 0)
-
-            try
-            {
-                await csv.ReadAsync();
-                csv.ReadHeader();
-
-                while (await csv.ReadAsync())
-                {
-                    rowNumber++;
-                    try
-                    {
-                        var record = csv.GetRecord<CustomerCsvRecord>();
-                        if (record != null)
-                        {
-                            record.RowNumber = rowNumber;
-                            customers.Add(record);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        importResult.Errors.Add($"Row {rowNumber}: Error parsing CSV data");
-                        importResult.SkippedCount++;
-                        _logger.LogError(ex, "Error parsing CSV data on row {RowNumber}", rowNumber);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("Error reading CSV file.");
-                _logger.LogError(ex, "Error reading CSV file during customer import");
-                return result;
-            }
-
-            importResult.TotalRows = customers.Count;
-            _logger.LogInformation("Parsed {Count} customer records from CSV", customers.Count);
-
-            // Process each customer record
-            foreach (var csvRecord in customers)
-            {
+                rowNumber++;
                 try
                 {
-                    // Validate required fields
-                    if (string.IsNullOrWhiteSpace(csvRecord.Firstname) || string.IsNullOrWhiteSpace(csvRecord.Lastname))
+                    var record = csv.GetRecord<CustomerCsvRecord>();
+                    if (record != null)
                     {
-                        importResult.Errors.Add($"Row {csvRecord.RowNumber}: Firstname and Lastname are required");
-                        importResult.SkippedCount++;
-                        continue;
-                    }
-
-                    // Check if customer already exists by email
-                    Domain.Entities.Customer? existingCustomer = null;
-                    if (!string.IsNullOrWhiteSpace(csvRecord.Email))
-                    {
-                        existingCustomer = await _customerRepository.GetCustomerByEmailAsync(csvRecord.Email);
-                    }
-
-                    if (existingCustomer != null && !request.UpdateExisting)
-                    {
-                        importResult.Errors.Add($"Row {csvRecord.RowNumber}: Customer with email '{csvRecord.Email}' already exists");
-                        importResult.SkippedCount++;
-                        continue;
-                    }
-
-                    // Map CSV record to Customer entity
-                    var customer = MapCsvRecordToCustomer(csvRecord, existingCustomer);
-
-                    if (existingCustomer != null)
-                    {
-                        // Update existing customer
-                        await _customerRepository.UpdateAsync(customer);
-                        importResult.UpdatedCount++;
-                        _logger.LogInformation("Updated existing customer: {Email}", customer.Email);
-                    }
-                    else
-                    {
-                        // Create new customer
-                        await _customerRepository.CreateAsync(customer);
-                        importResult.ImportedCount++;
-                        _logger.LogInformation("Created new customer: {Email}", customer.Email);
+                        record.RowNumber = rowNumber;
+                        customers.Add(record);
                     }
                 }
                 catch (Exception ex)
                 {
-                    importResult.Errors.Add($"Row {csvRecord.RowNumber}: Error processing customer");
+                    importResult.Errors.Add($"Row {rowNumber}: Error parsing CSV data");
                     importResult.SkippedCount++;
-                    _logger.LogError(ex, "Error processing customer row {RowNumber}", csvRecord.RowNumber);
+                    _logger.LogError(ex, "Error parsing CSV data on row {RowNumber}", rowNumber);
                 }
             }
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = importResult;
-
-            _logger.LogInformation("CSV import completed. Imported: {Imported}, Updated: {Updated}, Skipped: {Skipped}",
-                importResult.ImportedCount, importResult.UpdatedCount, importResult.SkippedCount);
         }
         catch (Exception ex)
         {
-            result.FromException(_logger, ex,
-                "An error occurred during CSV import.",
-                "Error during CSV import.");
+            result.Fail(ErrorType.Validation, ErrorCodes.ImportExport.Invalid, "Error reading CSV file.");
+            _logger.LogError(ex, "Error reading CSV file during customer import");
+            return result;
         }
+
+        importResult.TotalRows = customers.Count;
+        _logger.LogInformation("Parsed {Count} customer records from CSV", customers.Count);
+
+        // Process each customer record
+        foreach (var csvRecord in customers)
+        {
+            try
+            {
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(csvRecord.Firstname) || string.IsNullOrWhiteSpace(csvRecord.Lastname))
+                {
+                    importResult.Errors.Add($"Row {csvRecord.RowNumber}: Firstname and Lastname are required");
+                    importResult.SkippedCount++;
+                    continue;
+                }
+
+                // Check if customer already exists by email
+                Domain.Entities.Customer? existingCustomer = null;
+                if (!string.IsNullOrWhiteSpace(csvRecord.Email))
+                {
+                    existingCustomer = await _customerRepository.GetCustomerByEmailAsync(csvRecord.Email);
+                }
+
+                if (existingCustomer != null && !request.UpdateExisting)
+                {
+                    importResult.Errors.Add($"Row {csvRecord.RowNumber}: Customer with email '{csvRecord.Email}' already exists");
+                    importResult.SkippedCount++;
+                    continue;
+                }
+
+                // Map CSV record to Customer entity
+                var customer = MapCsvRecordToCustomer(csvRecord, existingCustomer);
+
+                if (existingCustomer != null)
+                {
+                    // Update existing customer
+                    await _customerRepository.UpdateAsync(customer);
+                    importResult.UpdatedCount++;
+                    _logger.LogInformation("Updated existing customer: {Email}", customer.Email);
+                }
+                else
+                {
+                    // Create new customer
+                    await _customerRepository.CreateAsync(customer);
+                    importResult.ImportedCount++;
+                    _logger.LogInformation("Created new customer: {Email}", customer.Email);
+                }
+            }
+            catch (Exception ex)
+            {
+                importResult.Errors.Add($"Row {csvRecord.RowNumber}: Error processing customer");
+                importResult.SkippedCount++;
+                _logger.LogError(ex, "Error processing customer row {RowNumber}", csvRecord.RowNumber);
+            }
+        }
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = importResult;
+
+        _logger.LogInformation("CSV import completed. Imported: {Imported}, Updated: {Updated}, Skipped: {Skipped}",
+            importResult.ImportedCount, importResult.UpdatedCount, importResult.SkippedCount);
 
         return result;
     }

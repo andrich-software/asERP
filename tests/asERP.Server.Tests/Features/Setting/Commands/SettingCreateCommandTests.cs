@@ -102,7 +102,7 @@ public class SettingCreateCommandTests : GlobalTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result!.Succeeded);
-        TestAssertions.AssertNotEmpty(result!.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -264,7 +264,7 @@ public class SettingCreateCommandTests : GlobalTestBase
         TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertFalse(result!.Succeeded);
-        TestAssertions.AssertNotEmpty(result!.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -281,7 +281,7 @@ public class SettingCreateCommandTests : GlobalTestBase
         TestAssertions.AssertTrue(result!.Succeeded);
         TestAssertions.AssertNotNull(result.Messages);
         TestAssertions.AssertNotEqual(Guid.Empty, result!.Data);
-        TestAssertions.AssertEqual(ResultStatusCode.Created, result!.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Created, result.Status);
     }
 
     [Fact(Skip = "Settings are now global entities, no tenant header validation")]

@@ -6,7 +6,7 @@ namespace asERP.Application.Features.AiModel.Queries.AiModelDetail;
 
 /// <summary>
 /// Query for retrieving detailed information about a specific AI model.
-/// Implements IRequest to work with MediatR, returning AI model details wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning AI model details wrapped in a Result.
 /// </summary>
 public class AiModelDetailQuery : IRequest<Result<AiModelDetailDto>>
 {

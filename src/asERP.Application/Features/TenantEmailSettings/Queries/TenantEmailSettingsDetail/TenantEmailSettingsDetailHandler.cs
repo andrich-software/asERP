@@ -30,23 +30,19 @@ public class TenantEmailSettingsDetailHandler : IRequestHandler<TenantEmailSetti
         var tenantId = _tenantContext.GetCurrentTenantId();
         if (!tenantId.HasValue)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.Add("No active tenant in context.");
+            result.Fail(ErrorType.Validation, ErrorCodes.TenantEmailSettings.Invalid, "No active tenant in context.");
             return result;
         }
 
         var entity = await _repository.GetByTenantIdAsync(tenantId.Value);
         if (entity == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add("No tenant-level email configuration found. Server defaults apply.");
+            result.Fail(ErrorType.NotFound, ErrorCodes.TenantEmailSettings.NotFound, "No tenant-level email configuration found. Server defaults apply.");
             return result;
         }
 
         result.Succeeded = true;
-        result.StatusCode = ResultStatusCode.Ok;
+        result.Status = ResultStatus.Ok;
         result.Data = new TenantEmailSettingsDetailDto
         {
             Id = entity.Id,

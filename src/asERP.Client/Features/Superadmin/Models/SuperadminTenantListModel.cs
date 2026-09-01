@@ -68,14 +68,14 @@ public partial record SuperadminTenantListModel
         .Combine(SearchQuery, CurrentPage, PageSize, SortSales)
         .SelectAsync(async (combined, ct) =>
         {
-            var (query, page, size, salesBy) = combined;
+            var (query, page, size, sortBy) = combined;
 
             var parameters = new QueryParameters
             {
                 PageNumber = page,
                 PageSize = size,
                 SearchString = string.IsNullOrWhiteSpace(query) ? null : query,
-                SalesBy = salesBy
+                SortBy = sortBy
             };
 
             var response = await _tenantService.GetTenantsAsync(parameters, ct);
@@ -133,9 +133,9 @@ public partial record SuperadminTenantListModel
     /// <summary>
     /// Change the sort sales.
     /// </summary>
-    public async ValueTask SetSortSales(string salesBy, CancellationToken ct = default)
+    public async ValueTask SetSortSales(string sortBy, CancellationToken ct = default)
     {
-        await SortSales.UpdateAsync(_ => salesBy, ct);
+        await SortSales.UpdateAsync(_ => sortBy, ct);
         await CurrentPage.UpdateAsync(_ => 0, ct); // Reset to first page when sorting changes
     }
 

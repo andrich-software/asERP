@@ -153,6 +153,31 @@ public class CustomerImportRepositoryTests
         Assert.Equal(new DateTimeOffset(earlier.DateEnrollment), customer.DateEnrollment);
     }
 
+    [Fact]
+    public async Task GuestImports_WithoutRemoteId_StaySeparateCustomers()
+    {
+        var options = NewOptions();
+        var tenant = new TestTenantContext();
+        await using var ctx = new ApplicationDbContext(options, tenant);
+
+        var channel = NewChannel();
+        ctx.SalesChannel.Add(channel);
+        await ctx.SaveChangesAsync();
+
+        var repo = BuildRepository(ctx, tenant);
+        // Guest checkouts arrive with an empty remote id (WooCommerce customer_id 0). Resolving on it
+        // would join every later guest to the first one's customer record.
+        await repo.ImportOrUpdateFromSalesChannel(channel, NewImport(string.Empty, "guest-a@example.de"));
+        await repo.ImportOrUpdateFromSalesChannel(channel, NewImport(string.Empty, "guest-b@example.de"));
+
+        var customers = await ctx.Customer.IgnoreQueryFilters().ToListAsync();
+        Assert.Equal(2, customers.Count);
+
+        // An empty remote id maps nothing back to the shop, so no link row is written for it.
+        var links = await ctx.CustomerSalesChannel.IgnoreQueryFilters().ToListAsync();
+        Assert.Empty(links);
+    }
+
     private static SalesChannel NewChannel() => new()
     {
         Id = Guid.NewGuid(),

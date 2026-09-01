@@ -407,12 +407,12 @@ public class SalesCustomerListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessByCustomer_WithSalesByTotal_ShouldReturnSalesedResults()
+    public async Task GetSalessByCustomer_WithSortByTotal_ShouldReturnSalesedResults()
     {
         await SeedSalesCustomerTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync($"/api/v1/Saless/customer/{Customer1Id}?salesBy=Total");
+        var response = await Client.GetAsync($"/api/v1/Saless/customer/{Customer1Id}?sortBy=Total");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);
@@ -427,12 +427,12 @@ public class SalesCustomerListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessByCustomer_WithSalesByTotalDescending_ShouldReturnDescSalesedResults()
+    public async Task GetSalessByCustomer_WithSortByTotalDescending_ShouldReturnDescSalesedResults()
     {
         await SeedSalesCustomerTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync($"/api/v1/Saless/customer/{Customer1Id}?salesBy=Total desc");
+        var response = await Client.GetAsync($"/api/v1/Saless/customer/{Customer1Id}?sortBy=Total desc");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);
@@ -599,12 +599,12 @@ public class SalesCustomerListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessByCustomer_WithSalesByDateSalesed_ShouldReturnDateSalesedResults()
+    public async Task GetSalessByCustomer_WithSortByDateSalesed_ShouldReturnDateSalesedResults()
     {
         await SeedSalesCustomerTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync($"/api/v1/Saless/customer/{Customer1Id}?salesBy=DateSalesed");
+        var response = await Client.GetAsync($"/api/v1/Saless/customer/{Customer1Id}?sortBy=DateSalesed");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);
