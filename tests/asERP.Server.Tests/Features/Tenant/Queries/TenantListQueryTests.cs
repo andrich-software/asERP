@@ -149,12 +149,12 @@ public class TenantListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetTenants_WithSalesBy_ShouldReturnSalesedResults()
+    public async Task GetTenants_WithSortBy_ShouldReturnSalesedResults()
     {
         await SeedUserTenantsAsync();
         SimulateAuthenticatedRequest(AdminUserId);
 
-        var response = await Client.GetAsync("/api/v1/tenants?pageNumber=0&pageSize=10&salesBy=Name desc");
+        var response = await Client.GetAsync("/api/v1/tenants?pageNumber=0&pageSize=10&sortBy=Name desc");
 
         TestAssertions.AssertEqual(HttpStatusCode.OK, response.StatusCode);
         var result = await ReadResponseAsync<PaginatedResult<TenantListDto>>(response);

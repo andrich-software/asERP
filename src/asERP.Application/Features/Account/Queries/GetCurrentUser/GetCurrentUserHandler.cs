@@ -31,42 +31,28 @@ public class GetCurrentUserHandler : IRequestHandler<GetCurrentUserQuery, Result
         var userId = _httpContextAccessor.HttpContext.GetUserId();
         if (string.IsNullOrWhiteSpace(userId))
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.Unauthorized;
-            result.Messages.Add("Authenticated user context is required.");
+            result.Fail(ErrorType.Unauthorized, ErrorCodes.Account.Unauthorized, "Authenticated user context is required.");
             return result;
         }
 
-        try
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
         {
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("Current user not found.");
-                _logger.LogWarning("Authenticated user {UserId} not found in database", userId);
-                return result;
-            }
+            result.Fail(ErrorType.NotFound, ErrorCodes.Account.NotFound, "Current user not found.");
+            _logger.LogWarning("Authenticated user {UserId} not found in database", userId);
+            return result;
+        }
 
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = new CurrentUserProfileDto
-            {
-                Id = user.Id,
-                Email = user.Email ?? string.Empty,
-                Firstname = user.Firstname,
-                Lastname = user.Lastname,
-                PhoneNumber = user.PhoneNumber ?? string.Empty
-            };
-        }
-        catch (Exception ex)
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = new CurrentUserProfileDto
         {
-            // Never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while retrieving the current user.",
-                "Error retrieving current user.");
-        }
+            Id = user.Id,
+            Email = user.Email ?? string.Empty,
+            Firstname = user.Firstname,
+            Lastname = user.Lastname,
+            PhoneNumber = user.PhoneNumber ?? string.Empty
+        };
 
         return result;
     }

@@ -111,14 +111,14 @@ public class WarehouseListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetWarehouseList_WithSalesBy_ShouldReturnSalesedResults()
+    public async Task GetWarehouseList_WithSortBy_ShouldReturnSalesedResults()
     {
         // Arrange
         await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
         // Act
-        var response = await Client.GetAsync("/api/v1/Warehouses?salesBy=Name");
+        var response = await Client.GetAsync("/api/v1/Warehouses?sortBy=Name");
 
         // Assert
         TestAssertions.AssertHttpSuccess(response);
@@ -319,14 +319,14 @@ public class WarehouseListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetWarehouseList_WithMultipleSalesByFields_ShouldHandleCorrectly()
+    public async Task GetWarehouseList_WithMultipleSortByFields_ShouldHandleCorrectly()
     {
         // Arrange
         await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
         // Act
-        var response = await Client.GetAsync("/api/v1/Warehouses?salesBy=Name,Id");
+        var response = await Client.GetAsync("/api/v1/Warehouses?sortBy=Name,Id");
 
         // Assert
         TestAssertions.AssertHttpSuccess(response);

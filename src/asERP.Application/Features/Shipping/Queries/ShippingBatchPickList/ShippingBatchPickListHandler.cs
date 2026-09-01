@@ -29,13 +29,8 @@ public class ShippingBatchPickListHandler : IRequestHandler<ShippingBatchPickLis
         var ids = request.Ids.Where(id => id != Guid.Empty).Distinct().ToArray();
         if (ids.Length == 0)
         {
-            var invalid = new Result<ShippingLabelDto>
-            {
-                Succeeded = false,
-                StatusCode = ResultStatusCode.BadRequest
-            };
-            invalid.Messages.Add("At least one shipping id is required");
-            return invalid;
+            return Result<ShippingLabelDto>.Invalid(
+                ErrorCodes.Shipping.Invalid, "At least one shipping id is required");
         }
 
         _logger.LogInformation("Generating batch pick list for {Count} shipments", ids.Length);

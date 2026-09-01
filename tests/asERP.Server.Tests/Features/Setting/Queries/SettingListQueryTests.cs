@@ -157,11 +157,11 @@ public class SettingListQueryTests : GlobalTestBase
     }
 
     [Fact]
-    public async Task GetSettings_WithSalesByKey_ShouldReturnSalesedResults()
+    public async Task GetSettings_WithSortByKey_ShouldReturnSalesedResults()
     {
         await SeedSettingTestDataAsync();
 
-        var response = await Client.GetAsync("/api/v1/Settings?salesBy=Key");
+        var response = await Client.GetAsync("/api/v1/Settings?sortBy=Key");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SettingListDto>>(response);
@@ -176,11 +176,11 @@ public class SettingListQueryTests : GlobalTestBase
     }
 
     [Fact]
-    public async Task GetSettings_WithSalesByKeyDescending_ShouldReturnDescSalesedResults()
+    public async Task GetSettings_WithSortByKeyDescending_ShouldReturnDescSalesedResults()
     {
         await SeedSettingTestDataAsync();
 
-        var response = await Client.GetAsync("/api/v1/Settings?salesBy=Key desc");
+        var response = await Client.GetAsync("/api/v1/Settings?sortBy=Key desc");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SettingListDto>>(response);
@@ -195,7 +195,7 @@ public class SettingListQueryTests : GlobalTestBase
     }
 
     [Fact]
-    public async Task GetSettings_WithSalesByValue_ShouldIgnoreValueOrdering()
+    public async Task GetSettings_WithSortByValue_ShouldIgnoreValueOrdering()
     {
         await SeedSettingTestDataAsync();
 
@@ -203,7 +203,7 @@ public class SettingListQueryTests : GlobalTestBase
         // ordering by Value would be a probing vector). The request must still succeed and the
         // sort clause must be ignored, i.e. the order matches the unsorted listing.
         var unsortedResponse = await Client.GetAsync("/api/v1/Settings");
-        var response = await Client.GetAsync("/api/v1/Settings?salesBy=Value");
+        var response = await Client.GetAsync("/api/v1/Settings?sortBy=Value");
 
         TestAssertions.AssertHttpSuccess(response);
         var unsortedResult = await ReadResponseAsync<PaginatedResult<SettingListDto>>(unsortedResponse);
@@ -411,11 +411,11 @@ public class SettingListQueryTests : GlobalTestBase
     }
 
     [Fact]
-    public async Task GetSettings_WithMultipleSalesBy_ShouldRespectMultipleSorting()
+    public async Task GetSettings_WithMultipleSortBy_ShouldRespectMultipleSorting()
     {
         await SeedSettingTestDataAsync();
 
-        var response = await Client.GetAsync("/api/v1/Settings?salesBy=Key,Value&pageSize=100");
+        var response = await Client.GetAsync("/api/v1/Settings?sortBy=Key,Value&pageSize=100");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SettingListDto>>(response);
@@ -436,7 +436,7 @@ public class SettingListQueryTests : GlobalTestBase
     {
         await SeedSettingTestDataAsync();
 
-        var response = await Client.GetAsync("/api/v1/Settings?searchString=test.setting&pageSize=1&salesBy=Key");
+        var response = await Client.GetAsync("/api/v1/Settings?searchString=test.setting&pageSize=1&sortBy=Key");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SettingListDto>>(response);

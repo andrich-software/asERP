@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
 using asERP.Domain.Wrapper;
@@ -32,117 +31,87 @@ public class WarehouseDeleteHandler : IRequestHandler<WarehouseDeleteCommand, Re
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new WarehouseDeleteValidator(_warehouseRepository, _salesChannelRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        // Check if warehouse exists
+        var warehouse = await _warehouseRepository.GetByIdAsync(request.Id);
+        if (warehouse == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in delete request for {0}: {1}",
-                nameof(WarehouseDeleteCommand),
-                string.Join(", ", result.Messages));
-
+            result.Fail(ErrorType.NotFound, ErrorCodes.Warehouse.NotFound, $"Warehouse with ID {request.Id} not found");
             return result;
         }
 
-        try
+        // Handle product redistribution if NewWarehouseId is provided
+        if (request.NewWarehouseId.HasValue)
         {
-            // Check if warehouse exists
-            var warehouse = await _warehouseRepository.GetByIdAsync(request.Id);
-            if (warehouse == null)
+            _logger.LogInformation("Redistributing products from warehouse {OldId} to warehouse {NewId}",
+                request.Id, request.NewWarehouseId.Value);
+
+            // Validate that the target warehouse exists
+            var targetWarehouse = await _warehouseRepository.GetByIdAsync(request.NewWarehouseId.Value);
+            if (targetWarehouse == null)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Warehouse with ID {request.Id} not found");
+                result.Fail(ErrorType.Validation, ErrorCodes.Warehouse.Invalid, $"Target warehouse with ID {request.NewWarehouseId.Value} not found");
                 return result;
             }
 
-            // Handle product redistribution if NewWarehouseId is provided
-            if (request.NewWarehouseId.HasValue)
+            // Get all product stocks for the warehouse to be deleted
+            var productStocks = _productStockRepository.Entities
+                .Where(ps => ps.WarehouseId == request.Id)
+                .ToList();
+
+            foreach (var productStock in productStocks)
             {
-                _logger.LogInformation("Redistributing products from warehouse {OldId} to warehouse {NewId}",
-                    request.Id, request.NewWarehouseId.Value);
+                // Check if there's already a stock entry for this product in the target warehouse
+                var existingStock = _productStockRepository.Entities
+                    .FirstOrDefault(ps => ps.ProductId == productStock.ProductId &&
+                                        ps.WarehouseId == request.NewWarehouseId.Value);
 
-                // Validate that the target warehouse exists
-                var targetWarehouse = await _warehouseRepository.GetByIdAsync(request.NewWarehouseId.Value);
-                if (targetWarehouse == null)
+                if (existingStock != null)
                 {
-                    result.Succeeded = false;
-                    result.StatusCode = ResultStatusCode.BadRequest;
-                    result.Messages.Add($"Target warehouse with ID {request.NewWarehouseId.Value} not found");
-                    return result;
+                    // Add to existing stock
+                    existingStock.Stock += productStock.Stock;
+                    await _productStockRepository.UpdateAsync(existingStock);
                 }
-
-                // Get all product stocks for the warehouse to be deleted
-                var productStocks = _productStockRepository.Entities
-                    .Where(ps => ps.WarehouseId == request.Id)
-                    .ToList();
-
-                foreach (var productStock in productStocks)
+                else
                 {
-                    // Check if there's already a stock entry for this product in the target warehouse
-                    var existingStock = _productStockRepository.Entities
-                        .FirstOrDefault(ps => ps.ProductId == productStock.ProductId &&
-                                            ps.WarehouseId == request.NewWarehouseId.Value);
-
-                    if (existingStock != null)
+                    // Create new stock entry in target warehouse
+                    var newStock = new ProductStock
                     {
-                        // Add to existing stock
-                        existingStock.Stock += productStock.Stock;
-                        await _productStockRepository.UpdateAsync(existingStock);
-                    }
-                    else
-                    {
-                        // Create new stock entry in target warehouse
-                        var newStock = new ProductStock
-                        {
-                            ProductId = productStock.ProductId,
-                            WarehouseId = request.NewWarehouseId.Value,
-                            Stock = productStock.Stock
-                        };
-                        await _productStockRepository.CreateAsync(newStock);
-                    }
-
-                    // Delete the old stock entry
-                    await _productStockRepository.DeleteAsync(productStock);
+                        ProductId = productStock.ProductId,
+                        WarehouseId = request.NewWarehouseId.Value,
+                        Stock = productStock.Stock
+                    };
+                    await _productStockRepository.CreateAsync(newStock);
                 }
 
-                _logger.LogInformation("Successfully redistributed {Count} product stocks", productStocks.Count);
-            }
-            else
-            {
-                // If no target warehouse specified, delete all product stocks for this warehouse
-                var productStocks = _productStockRepository.Entities
-                    .Where(ps => ps.WarehouseId == request.Id)
-                    .ToList();
-
-                foreach (var productStock in productStocks)
-                {
-                    await _productStockRepository.DeleteAsync(productStock);
-                }
-
-                _logger.LogInformation("Deleted {Count} product stock entries", productStocks.Count);
+                // Delete the old stock entry
+                await _productStockRepository.DeleteAsync(productStock);
             }
 
-            // Delete from database using the existing entity
-            await _warehouseRepository.DeleteAsync(warehouse);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = warehouse.Id;
-
-            _logger.LogInformation("Successfully deleted warehouse with ID: {Id}", warehouse.Id);
+            _logger.LogInformation("Successfully redistributed {Count} product stocks", productStocks.Count);
         }
-        catch (Exception ex)
+        else
         {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the warehouse.",
-                "Error deleting warehouse.");
+            // If no target warehouse specified, delete all product stocks for this warehouse
+            var productStocks = _productStockRepository.Entities
+                .Where(ps => ps.WarehouseId == request.Id)
+                .ToList();
+
+            foreach (var productStock in productStocks)
+            {
+                await _productStockRepository.DeleteAsync(productStock);
+            }
+
+            _logger.LogInformation("Deleted {Count} product stock entries", productStocks.Count);
         }
+
+        // Delete from database using the existing entity
+        await _warehouseRepository.DeleteAsync(warehouse);
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = warehouse.Id;
+
+        _logger.LogInformation("Successfully deleted warehouse with ID: {Id}", warehouse.Id);
 
         return result;
     }

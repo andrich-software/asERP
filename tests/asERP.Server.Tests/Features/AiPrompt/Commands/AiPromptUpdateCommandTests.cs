@@ -137,7 +137,7 @@ public class AiPromptUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -157,7 +157,7 @@ public class AiPromptUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class AiPromptUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -197,7 +197,7 @@ public class AiPromptUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public class AiPromptUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -239,7 +239,7 @@ public class AiPromptUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -317,7 +317,7 @@ public class AiPromptUpdateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertTrue(result.Succeeded);
         TestAssertions.AssertEqual(promptId, result.Data);
-        TestAssertions.AssertEqual(ResultStatusCode.Ok, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Ok, result.Status);
         TestAssertions.AssertNotNull(result.Messages);
     }
 

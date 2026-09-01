@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
 using asERP.Domain.Wrapper;
@@ -32,17 +31,14 @@ public class CustomerUpdateHandler : IRequestHandler<CustomerUpdateCommand, Resu
 
         if (!validationResult.IsValid)
         {
-            result.Succeeded = false;
+            // The validator carries an existence rule, so a missing customer arrives here as a
+            // validation failure and has to be reported as such (see ISkipPipelineValidation on the
+            // command; moving the rule into the handler is REFACTOR.md R5's remaining work).
+            var customerMissing = validationResult.Errors.Any(e => e.ErrorMessage.Contains("Customer not found"));
 
-            // Check if the validation error is about customer not found
-            if (validationResult.Errors.Any(e => e.ErrorMessage.Contains("Customer not found")))
-            {
-                result.StatusCode = ResultStatusCode.NotFound;
-            }
-            else
-            {
-                result.StatusCode = ResultStatusCode.BadRequest;
-            }
+            result.Fail(
+                customerMissing ? ErrorType.NotFound : ErrorType.Validation,
+                customerMissing ? ErrorCodes.Customer.NotFound : ErrorCodes.Customer.Invalid);
 
             result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
 
@@ -53,97 +49,85 @@ public class CustomerUpdateHandler : IRequestHandler<CustomerUpdateCommand, Resu
             return result;
         }
 
-        try
+        // Get the customer for tracking (required for update)
+        var customerToUpdate = await _customerRepository.GetByIdAsync(request.Id);
+
+        if (customerToUpdate == null)
         {
-            // Get the customer for tracking (required for update)
-            var customerToUpdate = await _customerRepository.GetByIdAsync(request.Id);
+            result.Fail(ErrorType.NotFound, ErrorCodes.Customer.NotFound, "Customer not found or access denied due to tenant isolation.");
 
-            if (customerToUpdate == null)
+            _logger.LogWarning("Customer with ID {Id} not found or access denied due to tenant isolation", request.Id);
+            return result;
+        }
+
+        // Manual assignment of properties
+        customerToUpdate.Firstname = request.Firstname;
+        customerToUpdate.Lastname = request.Lastname;
+        customerToUpdate.CompanyName = request.CompanyName;
+        customerToUpdate.Email = request.Email;
+        customerToUpdate.Phone = request.Phone;
+        customerToUpdate.Website = request.Website;
+        customerToUpdate.VatNumber = request.VatNumber;
+        customerToUpdate.Note = request.Note;
+        customerToUpdate.CustomerStatus = request.CustomerStatus;
+        customerToUpdate.DateEnrollment = request.DateEnrollment;
+
+        // Update CustomerAddresses if available
+        if (request.CustomerAddresses.Any())
+        {
+            // Load existing addresses
+            var existingAddresses = await _customerRepository.GetCustomerAddressByCustomerIdAsync(request.Id);
+
+            foreach (var addressDto in request.CustomerAddresses)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("Customer not found or access denied due to tenant isolation.");
+                // Search for existing address
+                var existingAddress = existingAddresses.FirstOrDefault(a => a.Id == addressDto.Id);
 
-                _logger.LogWarning("Customer with ID {Id} not found or access denied due to tenant isolation", request.Id);
-                return result;
-            }
-
-            // Manual assignment of properties
-            customerToUpdate.Firstname = request.Firstname;
-            customerToUpdate.Lastname = request.Lastname;
-            customerToUpdate.CompanyName = request.CompanyName;
-            customerToUpdate.Email = request.Email;
-            customerToUpdate.Phone = request.Phone;
-            customerToUpdate.Website = request.Website;
-            customerToUpdate.VatNumber = request.VatNumber;
-            customerToUpdate.Note = request.Note;
-            customerToUpdate.CustomerStatus = request.CustomerStatus;
-            customerToUpdate.DateEnrollment = request.DateEnrollment;
-
-            // Update CustomerAddresses if available
-            if (request.CustomerAddresses.Any())
-            {
-                // Load existing addresses
-                var existingAddresses = await _customerRepository.GetCustomerAddressByCustomerIdAsync(request.Id);
-
-                foreach (var addressDto in request.CustomerAddresses)
+                if (existingAddress != null)
                 {
-                    // Search for existing address
-                    var existingAddress = existingAddresses.FirstOrDefault(a => a.Id == addressDto.Id);
-
-                    if (existingAddress != null)
+                    // Update existing address
+                    existingAddress.Firstname = addressDto.Firstname;
+                    existingAddress.Lastname = addressDto.Lastname;
+                    existingAddress.CompanyName = addressDto.CompanyName;
+                    existingAddress.Street = addressDto.Street;
+                    existingAddress.HouseNr = addressDto.HouseNr;
+                    existingAddress.Zip = addressDto.Zip;
+                    existingAddress.City = addressDto.City;
+                    existingAddress.DefaultDeliveryAddress = addressDto.DefaultDeliveryAddress;
+                    existingAddress.DefaultInvoiceAddress = addressDto.DefaultInvoiceAddress;
+                    existingAddress.CountryId = addressDto.CountryId;
+                }
+                else if (addressDto.Id == Guid.Empty)
+                {
+                    // Add new address
+                    var newAddress = new CustomerAddress
                     {
-                        // Update existing address
-                        existingAddress.Firstname = addressDto.Firstname;
-                        existingAddress.Lastname = addressDto.Lastname;
-                        existingAddress.CompanyName = addressDto.CompanyName;
-                        existingAddress.Street = addressDto.Street;
-                        existingAddress.HouseNr = addressDto.HouseNr;
-                        existingAddress.Zip = addressDto.Zip;
-                        existingAddress.City = addressDto.City;
-                        existingAddress.DefaultDeliveryAddress = addressDto.DefaultDeliveryAddress;
-                        existingAddress.DefaultInvoiceAddress = addressDto.DefaultInvoiceAddress;
-                        existingAddress.CountryId = addressDto.CountryId;
-                    }
-                    else if (addressDto.Id == Guid.Empty)
-                    {
-                        // Add new address
-                        var newAddress = new CustomerAddress
-                        {
-                            CustomerId = request.Id,
-                            Firstname = addressDto.Firstname,
-                            Lastname = addressDto.Lastname,
-                            CompanyName = addressDto.CompanyName,
-                            Street = addressDto.Street,
-                            HouseNr = addressDto.HouseNr,
-                            Zip = addressDto.Zip,
-                            City = addressDto.City,
-                            DefaultDeliveryAddress = addressDto.DefaultDeliveryAddress,
-                            DefaultInvoiceAddress = addressDto.DefaultInvoiceAddress,
-                            CountryId = addressDto.CountryId
-                        };
+                        CustomerId = request.Id,
+                        Firstname = addressDto.Firstname,
+                        Lastname = addressDto.Lastname,
+                        CompanyName = addressDto.CompanyName,
+                        Street = addressDto.Street,
+                        HouseNr = addressDto.HouseNr,
+                        Zip = addressDto.Zip,
+                        City = addressDto.City,
+                        DefaultDeliveryAddress = addressDto.DefaultDeliveryAddress,
+                        DefaultInvoiceAddress = addressDto.DefaultInvoiceAddress,
+                        CountryId = addressDto.CountryId
+                    };
 
-                        await _customerRepository.AddCustomerAddressAsync(newAddress);
-                    }
+                    await _customerRepository.AddCustomerAddressAsync(newAddress);
                 }
             }
-
-            // Update in database
-            await _customerRepository.UpdateAsync(customerToUpdate);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
-            result.Data = customerToUpdate.Id;
-
-            _logger.LogInformation("Successfully updated customer with ID: {Id}", customerToUpdate.Id);
         }
-        catch (Exception ex)
-        {
-            // Never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while updating the customer.",
-                "Error updating customer.");
-        }
+
+        // Update in database
+        await _customerRepository.UpdateAsync(customerToUpdate);
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.NoContent;
+        result.Data = customerToUpdate.Id;
+
+        _logger.LogInformation("Successfully updated customer with ID: {Id}", customerToUpdate.Id);
 
         return result;
     }

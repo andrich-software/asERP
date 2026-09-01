@@ -28,11 +28,11 @@ public class ReturnsController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PaginatedResult<ReturnShipmentListItemDto>>> GetAll(
-        int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "",
+        int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "",
         [FromQuery] ReturnShipmentStatus? status = null, [FromQuery] Guid? salesId = null)
     {
         var response = await mediator.Send(new ReturnListQuery(
-            pageNumber, pageSize, searchString, salesBy, status, salesId));
+            pageNumber, pageSize, searchString, sortBy, status, salesId));
         return response.ToActionResult();
     }
 

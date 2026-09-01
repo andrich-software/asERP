@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
-using asERP.Application.Extensions;
 using asERP.Application.Feeds.Rendering;
 using asERP.Application.Mediator;
 using asERP.Domain.Entities;
@@ -74,19 +73,11 @@ public class FeedRenderHandler : IRequestHandler<FeedRenderQuery, Result<FeedRen
                 FileName = $"{BuildSlug(feed.Name, feed.Template)}.{renderer.FileNameSuffix}"
             };
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
         }
         catch (NotFoundException)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add($"Feed with ID {request.FeedId} not found");
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while rendering the feed.",
-                "Error rendering feed {Id}.", request.FeedId);
+            result.Fail(ErrorType.NotFound, ErrorCodes.Feed.NotFound, $"Feed with ID {request.FeedId} not found");
         }
 
         return result;

@@ -27,19 +27,31 @@ public static class HttpResponseExtensions
             return;
         }
 
-        var messages = await ExtractErrorMessagesAsync(response, ct);
-        throw new ApiException(response.StatusCode, messages);
+        var (messages, errors, error) = await ExtractErrorsAsync(response, ct);
+
+        throw new ApiException(response.StatusCode, messages, errors)
+        {
+            Code = error?.Code,
+            ErrorType = error is null ? null : error.Type
+        };
     }
 
     /// <summary>
-    /// Extracts error messages from an HTTP response.
-    /// Tries to parse the response body as JSON and extract Messages array.
+    /// Extracts error information from a failed HTTP response. The server sends two shapes: the
+    /// <c>Result</c> envelope (<c>Messages</c>) for business failures and RFC 9457 problem details
+    /// for validation failures and unhandled exceptions — both are parsed here.
     /// </summary>
-    private static async Task<List<string>> ExtractErrorMessagesAsync(
+    /// <returns>
+    /// Flat messages for display, the per-field validation dictionary when the response carried
+    /// one, and the semantic error (kind + stable code) when the server sent one.
+    /// </returns>
+    private static async Task<(List<string> Messages, IReadOnlyDictionary<string, string[]>? Errors, ApiError? Error)> ExtractErrorsAsync(
         HttpResponseMessage response,
         CancellationToken ct)
     {
         var messages = new List<string>();
+        IReadOnlyDictionary<string, string[]>? fieldErrors = null;
+        ApiError? semanticError = null;
 
         // Infrastructure-level failures: the reverse proxy / gateway is up but the backend
         // (e.g. the cloud server) is down, restarting or unreachable. These responses carry a
@@ -48,7 +60,7 @@ public static class HttpResponseExtensions
         if (IsServerUnavailable(response.StatusCode))
         {
             messages.Add("The server is currently unavailable. Please try again in a few moments.");
-            return messages;
+            return (messages, null, null);
         }
 
         try
@@ -57,30 +69,32 @@ public static class HttpResponseExtensions
             if (string.IsNullOrWhiteSpace(content))
             {
                 messages.Add($"Request failed with status code {(int)response.StatusCode} ({response.StatusCode})");
-                return messages;
+                return (messages, null, null);
             }
 
             // Try to parse as standard API error response
             var errorResponse = JsonSerializer.Deserialize(content, AppJsonSerializerContext.Default.ApiErrorResponse);
+            semanticError = errorResponse?.Error;
 
             if (errorResponse?.Messages is { Count: > 0 })
             {
                 messages.AddRange(errorResponse.Messages);
             }
+            else if (errorResponse?.Errors is { Count: > 0 })
+            {
+                // RFC 9457 validation problem details. The field names are kept so a form can put
+                // each message on its own control; the generic "One or more validation errors
+                // occurred." title is dropped because the field messages already say what is wrong.
+                fieldErrors = errorResponse.Errors;
+                foreach (var error in errorResponse.Errors)
+                {
+                    messages.AddRange(error.Value);
+                }
+            }
             else if (!string.IsNullOrWhiteSpace(errorResponse?.Title))
             {
-                // RFC 7807 ProblemDetails format
+                // RFC 9457 problem details without a field dictionary.
                 messages.Add(errorResponse.Title);
-                if (errorResponse.Errors is { Count: > 0 })
-                {
-                    foreach (var error in errorResponse.Errors)
-                    {
-                        foreach (var errorMessage in error.Value)
-                        {
-                            messages.Add(errorMessage);
-                        }
-                    }
-                }
             }
             else
             {
@@ -100,8 +114,8 @@ public static class HttpResponseExtensions
         }
 
         return messages.Count > 0
-            ? messages
-            : new List<string> { $"Request failed with status code {(int)response.StatusCode} ({response.StatusCode})" };
+            ? (messages, fieldErrors, semanticError)
+            : (new List<string> { $"Request failed with status code {(int)response.StatusCode} ({response.StatusCode})" }, fieldErrors, semanticError);
     }
 
     /// <summary>

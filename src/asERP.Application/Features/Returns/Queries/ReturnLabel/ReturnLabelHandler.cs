@@ -33,7 +33,7 @@ public class ReturnLabelHandler : IRequestHandler<ReturnLabelQuery, Result<Shipp
 
         if (returnShipment.LabelData is not { Length: > 0 })
         {
-            return Result<ShippingLabelDto>.Fail(ResultStatusCode.NotFound, "No label has been created for this return yet.");
+            return Result<ShippingLabelDto>.NotFound(ErrorCodes.Returns.NotFound, "No label has been created for this return yet.");
         }
 
         var extension = returnShipment.LabelFormat switch

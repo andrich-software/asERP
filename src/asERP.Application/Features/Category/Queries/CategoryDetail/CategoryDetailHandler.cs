@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Category;
 using asERP.Domain.Wrapper;
@@ -27,47 +26,36 @@ public class CategoryDetailHandler : IRequestHandler<CategoryDetailQuery, Result
 
         var result = new Result<CategoryDetailDto>();
 
-        try
-        {
-            var data = await _categoryRepository.Entities
-                .Where(c => c.Id == request.Id)
-                .Select(c => new CategoryDetailDto
-                {
-                    Id = c.Id,
-                    Name = c.Name,
-                    Slug = c.Slug,
-                    Description = c.Description,
-                    ParentCategoryId = c.ParentCategoryId,
-                    SortOrder = c.SortOrder,
-                    ProductCount = c.ProductCategories.Count,
-                    Channels = c.SalesChannels
-                        .Select(l => new CategoryChannelStateDto
-                        {
-                            SalesChannelId = l.SalesChannelId,
-                            IsActive = l.IsActive
-                        })
-                        .ToList()
-                })
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (data == null)
+        var data = await _categoryRepository.Entities
+            .Where(c => c.Id == request.Id)
+            .Select(c => new CategoryDetailDto
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Category with ID {request.Id} not found");
-                return result;
-            }
+                Id = c.Id,
+                Name = c.Name,
+                Slug = c.Slug,
+                Description = c.Description,
+                ParentCategoryId = c.ParentCategoryId,
+                SortOrder = c.SortOrder,
+                ProductCount = c.ProductCategories.Count,
+                Channels = c.SalesChannels
+                    .Select(l => new CategoryChannelStateDto
+                    {
+                        SalesChannelId = l.SalesChannelId,
+                        IsActive = l.IsActive
+                    })
+                    .ToList()
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = data;
-        }
-        catch (Exception ex)
+        if (data == null)
         {
-            result.FromException(_logger, ex,
-                "An error occurred while retrieving the category.",
-                "Error retrieving category {Id}.", request.Id);
+            result.Fail(ErrorType.NotFound, ErrorCodes.Category.NotFound, $"Category with ID {request.Id} not found");
+            return result;
         }
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = data;
 
         return result;
     }

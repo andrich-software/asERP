@@ -2,7 +2,6 @@ using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
 using asERP.Application.Exceptions;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Enums;
 using asERP.Domain.Wrapper;
@@ -57,9 +56,7 @@ public class ShippingDeleteHandler : IRequestHandler<ShippingDeleteCommand, Resu
 
             if (!DeletableStatuses.Contains(shipping.Status))
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add($"A shipment in status {shipping.Status} cannot be deleted. Cancel it instead.");
+                result.Fail(ErrorType.Validation, ErrorCodes.Shipping.Invalid, $"A shipment in status {shipping.Status} cannot be deleted. Cancel it instead.");
                 return result;
             }
 
@@ -75,7 +72,7 @@ public class ShippingDeleteHandler : IRequestHandler<ShippingDeleteCommand, Resu
             await _salesShippingStatusService.RecomputeAsync(shipping.SalesId, cancellationToken);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
+            result.Status = ResultStatus.NoContent;
             result.Data = request.Id;
 
             _logger.LogInformation("Successfully deleted shipment with ID: {Id}", request.Id);
@@ -83,12 +80,6 @@ public class ShippingDeleteHandler : IRequestHandler<ShippingDeleteCommand, Resu
         catch (NotFoundException)
         {
             throw;
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the shipment.",
-                "Error deleting shipment {Id}.", request.Id);
         }
 
         return result;

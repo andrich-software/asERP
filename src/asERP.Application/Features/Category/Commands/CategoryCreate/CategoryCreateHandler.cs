@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Services;
 using asERP.Domain.Wrapper;
@@ -26,50 +25,23 @@ public class CategoryCreateHandler : IRequestHandler<CategoryCreateCommand, Resu
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new CategoryCreateValidator(_categoryRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        // Manual mapping to domain entity
+        var categoryToCreate = new Domain.Entities.Category
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+            Name = request.Name,
+            Slug = ResolveSlug(request.Slug, request.Name),
+            Description = request.Description,
+            ParentCategoryId = request.ParentCategoryId,
+            SortOrder = request.SortOrder
+        };
 
-            _logger.LogWarning("Validation errors in create request for {0}: {1}",
-                nameof(CategoryCreateCommand),
-                string.Join(", ", result.Messages));
+        await _categoryRepository.CreateAsync(categoryToCreate);
 
-            return result;
-        }
+        result.Succeeded = true;
+        result.Status = ResultStatus.Created;
+        result.Data = categoryToCreate.Id;
 
-        try
-        {
-            // Manual mapping to domain entity
-            var categoryToCreate = new Domain.Entities.Category
-            {
-                Name = request.Name,
-                Slug = ResolveSlug(request.Slug, request.Name),
-                Description = request.Description,
-                ParentCategoryId = request.ParentCategoryId,
-                SortOrder = request.SortOrder
-            };
-
-            await _categoryRepository.CreateAsync(categoryToCreate);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Created;
-            result.Data = categoryToCreate.Id;
-
-            _logger.LogInformation("Successfully created category with ID: {Id}", categoryToCreate.Id);
-        }
-        catch (Exception ex)
-        {
-            // Never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while creating the category.",
-                "Error creating category.");
-        }
+        _logger.LogInformation("Successfully created category with ID: {Id}", categoryToCreate.Id);
 
         return result;
     }

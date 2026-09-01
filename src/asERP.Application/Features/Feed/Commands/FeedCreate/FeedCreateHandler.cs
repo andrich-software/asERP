@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -28,33 +27,14 @@ public class FeedCreateHandler : IRequestHandler<FeedCreateCommand, Result<Guid>
 
         var result = new Result<Guid>();
 
-        var validator = new FeedCreateValidator(_salesChannelRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-            return result;
-        }
+        var feed = MapToEntity(request);
+        await _feedRepository.CreateAsync(feed);
 
-        try
-        {
-            var feed = MapToEntity(request);
-            await _feedRepository.CreateAsync(feed);
+        result.Succeeded = true;
+        result.Status = ResultStatus.Created;
+        result.Data = feed.Id;
 
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Created;
-            result.Data = feed.Id;
-
-            _logger.LogInformation("Successfully created feed with ID: {Id}", feed.Id);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while creating the feed.",
-                "Error creating feed {Name}.", request.Name);
-        }
+        _logger.LogInformation("Successfully created feed with ID: {Id}", feed.Id);
 
         return result;
     }

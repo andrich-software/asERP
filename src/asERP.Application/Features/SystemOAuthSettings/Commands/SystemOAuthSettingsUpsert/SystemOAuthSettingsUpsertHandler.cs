@@ -25,7 +25,7 @@ public class SystemOAuthSettingsUpsertHandler
     {
         if (request.Provider is not (SalesChannelType.eBay or SalesChannelType.Amazon))
         {
-            return Result<int>.Fail(ResultStatusCode.BadRequest,
+            return Result<int>.Invalid(ErrorCodes.SystemOAuthSettings.Invalid,
                 $"OAuth provider {request.Provider} is not supported.");
         }
 
@@ -49,6 +49,6 @@ public class SystemOAuthSettingsUpsertHandler
         }
 
         _logger.LogInformation("Upserted system OAuth settings for provider {Provider}", request.Provider);
-        return new Result<int> { Succeeded = true, Data = 1, StatusCode = ResultStatusCode.NoContent };
+        return new Result<int> { Succeeded = true, Data = 1, Status = ResultStatus.NoContent };
     }
 }

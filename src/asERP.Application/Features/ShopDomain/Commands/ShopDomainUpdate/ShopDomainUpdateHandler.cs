@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Application.Notifications;
 using asERP.Domain.Services;
@@ -31,93 +30,62 @@ public class ShopDomainUpdateHandler : IRequestHandler<ShopDomainUpdateCommand, 
 
         var result = new Result<Guid>();
 
-        var validator = new ShopDomainUpdateValidator(_shopDomainRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        var existingShopDomain = await _shopDomainRepository.GetByIdAsync(request.Id);
+        if (existingShopDomain == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(ShopDomainUpdateCommand),
-                string.Join(", ", result.Messages));
-
+            result.Fail(ErrorType.NotFound, ErrorCodes.ShopDomain.NotFound, $"Shop domain with ID {request.Id} not found");
             return result;
         }
 
-        try
+        // A binding never moves between channels — delete and recreate instead.
+        if (existingShopDomain.SalesChannelId != request.SalesChannelId)
         {
-            var existingShopDomain = await _shopDomainRepository.GetByIdAsync(request.Id);
-            if (existingShopDomain == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Shop domain with ID {request.Id} not found");
-                return result;
-            }
-
-            // A binding never moves between channels — delete and recreate instead.
-            if (existingShopDomain.SalesChannelId != request.SalesChannelId)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("A shop domain cannot be moved to another sales channel.");
-                return result;
-            }
-
-            // Validator guarantees the host is normalizable.
-            ShopHostNormalizer.TryNormalize(request.Host, out var normalizedHost);
-
-            var siblings = await _shopDomainRepository.Entities
-                .Where(d => d.SalesChannelId == existingShopDomain.SalesChannelId && d.Id != existingShopDomain.Id)
-                .ToListAsync(cancellationToken);
-
-            // Exactly one primary per channel: unmarking the current primary directly would leave
-            // the channel without a redirect target — the primary moves by marking another row.
-            if (!request.IsPrimary && existingShopDomain.IsPrimary && siblings.Count > 0)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("Mark another domain as primary instead of unmarking the current one.");
-                return result;
-            }
-
-            if (request.IsPrimary && !existingShopDomain.IsPrimary)
-            {
-                foreach (var sibling in siblings.Where(s => s.IsPrimary))
-                {
-                    sibling.IsPrimary = false;
-                    await _shopDomainRepository.UpdateAsync(sibling);
-                }
-            }
-
-            existingShopDomain.Host = normalizedHost;
-            existingShopDomain.Port = request.Port;
-            // A channel's only binding stays primary regardless of the submitted flag.
-            existingShopDomain.IsPrimary = request.IsPrimary || siblings.Count == 0;
-            existingShopDomain.RedirectToPrimary = request.RedirectToPrimary;
-
-            await _shopDomainRepository.UpdateAsync(existingShopDomain);
-
-            // Let the storefront host resolver drop its cached host map immediately.
-            await _mediator.Publish(
-                new ShopDomainChangedNotification(existingShopDomain.SalesChannelId, existingShopDomain.TenantId),
-                cancellationToken);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = existingShopDomain.Id;
-
-            _logger.LogInformation("Successfully updated shop domain with ID: {Id}", existingShopDomain.Id);
+            result.Fail(ErrorType.Validation, ErrorCodes.ShopDomain.Invalid, "A shop domain cannot be moved to another sales channel.");
+            return result;
         }
-        catch (Exception ex)
+
+        // Validator guarantees the host is normalizable.
+        ShopHostNormalizer.TryNormalize(request.Host, out var normalizedHost);
+
+        var siblings = await _shopDomainRepository.Entities
+            .Where(d => d.SalesChannelId == existingShopDomain.SalesChannelId && d.Id != existingShopDomain.Id)
+            .ToListAsync(cancellationToken);
+
+        // Exactly one primary per channel: unmarking the current primary directly would leave
+        // the channel without a redirect target — the primary moves by marking another row.
+        if (!request.IsPrimary && existingShopDomain.IsPrimary && siblings.Count > 0)
         {
-            result.FromException(_logger, ex,
-                "An error occurred while updating the shop domain.",
-                "Error updating shop domain {Id}.", request.Id);
+            result.Fail(ErrorType.Validation, ErrorCodes.ShopDomain.Invalid, "Mark another domain as primary instead of unmarking the current one.");
+            return result;
         }
+
+        if (request.IsPrimary && !existingShopDomain.IsPrimary)
+        {
+            foreach (var sibling in siblings.Where(s => s.IsPrimary))
+            {
+                sibling.IsPrimary = false;
+                await _shopDomainRepository.UpdateAsync(sibling);
+            }
+        }
+
+        existingShopDomain.Host = normalizedHost;
+        existingShopDomain.Port = request.Port;
+        // A channel's only binding stays primary regardless of the submitted flag.
+        existingShopDomain.IsPrimary = request.IsPrimary || siblings.Count == 0;
+        existingShopDomain.RedirectToPrimary = request.RedirectToPrimary;
+
+        await _shopDomainRepository.UpdateAsync(existingShopDomain);
+
+        // Let the storefront host resolver drop its cached host map immediately.
+        await _mediator.Publish(
+            new ShopDomainChangedNotification(existingShopDomain.SalesChannelId, existingShopDomain.TenantId),
+            cancellationToken);
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = existingShopDomain.Id;
+
+        _logger.LogInformation("Successfully updated shop domain with ID: {Id}", existingShopDomain.Id);
 
         return result;
     }

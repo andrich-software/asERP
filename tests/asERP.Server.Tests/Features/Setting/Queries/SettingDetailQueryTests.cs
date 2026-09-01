@@ -100,7 +100,7 @@ public class SettingDetailQueryTests : GlobalTestBase
         TestAssertions.AssertTrue(result!.Succeeded);
         TestAssertions.AssertNotNull(result.Messages);
         TestAssertions.AssertNotNull(result.Data);
-        TestAssertions.AssertEqual(ResultStatusCode.Ok, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Ok, result.Status);
 
         // Verify all required fields are present
         TestAssertions.AssertNotEqual(Guid.Empty, result.Data!.Id);

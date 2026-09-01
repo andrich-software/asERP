@@ -47,9 +47,7 @@ public class ReturnCompleteHandler : IRequestHandler<ReturnCompleteCommand, Resu
 
         if (returnShipment.Status != ReturnShipmentStatus.Received)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.Add($"Only a received return can be closed; this one is {returnShipment.Status}.");
+            result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"Only a received return can be closed; this one is {returnShipment.Status}.");
             return result;
         }
 
@@ -57,7 +55,7 @@ public class ReturnCompleteHandler : IRequestHandler<ReturnCompleteCommand, Resu
             returnShipment.Id, targetStatus, cancellationToken: cancellationToken);
 
         result.Succeeded = statusResult.Succeeded;
-        result.StatusCode = statusResult.Succeeded ? ResultStatusCode.Ok : statusResult.StatusCode;
+        result.Error = statusResult.Error;
         result.Messages.AddRange(statusResult.Messages);
         result.Data = request.Id;
 

@@ -10,6 +10,7 @@ using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Tenant;
 using asERP.Domain.Dtos.User;
 using asERP.Domain.Wrapper;
+using asERP.Server.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,7 +29,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
     /// <param name="pageNumber">Page number (default: 0, zero-based)</param>
     /// <param name="pageSize">Page size (default: 10, max: 100)</param>
     /// <param name="searchString">Search string to filter tenants</param>
-    /// <param name="salesBy">Sales by fields (comma-separated)</param>
+    /// <param name="sortBy">Sort fields (comma-separated)</param>
     /// <returns>Paginated list of tenants</returns>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -38,7 +39,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
         [FromQuery] int pageNumber = 0,
         [FromQuery] int pageSize = 10,
         [FromQuery] string searchString = "",
-        [FromQuery] string salesBy = "")
+        [FromQuery] string sortBy = "")
     {
         // Get the current user's ID from the authenticated claims
         // Try "uid" claim first (JWT), then fall back to NameIdentifier (Test/Standard)
@@ -49,15 +50,15 @@ public class TenantsController(IMediator mediator) : ControllerBase
             return Unauthorized(new PaginatedResult<TenantListDto>(new List<TenantListDto>())
             {
                 Succeeded = false,
-                StatusCode = ResultStatusCode.Unauthorized,
+                Error = new Error(ErrorType.Unauthorized, ErrorCodes.Auth.Unauthorized, "User ID not found in token"),
                 Messages = new List<string> { "User ID not found in token" }
             });
         }
 
-        var query = new TenantListQuery(userId, pageNumber, pageSize, searchString, salesBy);
+        var query = new TenantListQuery(userId, pageNumber, pageSize, searchString, sortBy);
         var response = await mediator.Send(query);
 
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -81,7 +82,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
             return Unauthorized(new Result<TenantDetailDto>
             {
                 Succeeded = false,
-                StatusCode = ResultStatusCode.Unauthorized,
+                Error = new Error(ErrorType.Unauthorized, ErrorCodes.Auth.Unauthorized, "User ID not found in token"),
                 Messages = new List<string> { "User ID not found in token" }
             });
         }
@@ -89,7 +90,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
         var query = new TenantDetailQuery { Id = id, UserId = userId };
         var response = await mediator.Send(query);
 
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -112,7 +113,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
             return Unauthorized(new Result<Guid>
             {
                 Succeeded = false,
-                StatusCode = ResultStatusCode.Unauthorized,
+                Error = new Error(ErrorType.Unauthorized, ErrorCodes.Auth.Unauthorized, "User ID not found in token"),
                 Messages = new List<string> { "User ID not found in token" }
             });
         }
@@ -121,7 +122,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
         command.UserId = userId;
 
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -147,7 +148,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
             return Unauthorized(new Result<Guid>
             {
                 Succeeded = false,
-                StatusCode = ResultStatusCode.Unauthorized,
+                Error = new Error(ErrorType.Unauthorized, ErrorCodes.Auth.Unauthorized, "User ID not found in token"),
                 Messages = new List<string> { "User ID not found in token" }
             });
         }
@@ -157,7 +158,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
         command.TenantId = id;
 
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -182,7 +183,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
             return Unauthorized(new Result<Guid>
             {
                 Succeeded = false,
-                StatusCode = ResultStatusCode.Unauthorized,
+                Error = new Error(ErrorType.Unauthorized, ErrorCodes.Auth.Unauthorized, "User ID not found in token"),
                 Messages = new List<string> { "User ID not found in token" }
             });
         }
@@ -194,7 +195,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
         };
 
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -219,7 +220,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
             return Unauthorized(new Result<UserListDto?>
             {
                 Succeeded = false,
-                StatusCode = ResultStatusCode.Unauthorized,
+                Error = new Error(ErrorType.Unauthorized, ErrorCodes.Auth.Unauthorized, "User ID not found in token"),
                 Messages = new List<string> { "User ID not found in token" }
             });
         }
@@ -232,7 +233,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
         };
 
         var response = await mediator.Send(query);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -257,7 +258,7 @@ public class TenantsController(IMediator mediator) : ControllerBase
             return Unauthorized(new Result<bool>
             {
                 Succeeded = false,
-                StatusCode = ResultStatusCode.Unauthorized,
+                Error = new Error(ErrorType.Unauthorized, ErrorCodes.Auth.Unauthorized, "User ID not found in token"),
                 Messages = new List<string> { "User ID not found in token" }
             });
         }
@@ -266,6 +267,6 @@ public class TenantsController(IMediator mediator) : ControllerBase
         command.TenantId = id;
 
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 }

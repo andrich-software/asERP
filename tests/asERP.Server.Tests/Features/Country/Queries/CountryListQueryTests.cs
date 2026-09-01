@@ -147,7 +147,7 @@ public class CountryListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetCountryList_WithSalesBy_ShouldReturnSalesedResults()
+    public async Task GetCountryList_WithSortBy_ShouldReturnSalesedResults()
     {
         // Arrange
         await SeedTestDataAsync();
@@ -157,7 +157,7 @@ public class CountryListQueryTests : TenantIsolatedTestBase
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
         // Act
-        var response = await Client.GetAsync("/api/v1/Countries?salesBy=Name");
+        var response = await Client.GetAsync("/api/v1/Countries?sortBy=Name");
 
         // Assert
         TestAssertions.AssertHttpSuccess(response);
@@ -384,14 +384,14 @@ public class CountryListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetCountryList_WithMultipleSalesByFields_ShouldHandleCorrectly()
+    public async Task GetCountryList_WithMultipleSortByFields_ShouldHandleCorrectly()
     {
         // Arrange
         await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
         // Act
-        var response = await Client.GetAsync("/api/v1/Countries?salesBy=Name,CountryCode");
+        var response = await Client.GetAsync("/api/v1/Countries?sortBy=Name,CountryCode");
 
         // Assert
         TestAssertions.AssertHttpSuccess(response);
@@ -561,7 +561,7 @@ public class CountryListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetCountryList_SalesByCountryCode_ShouldReturnSalesedResults()
+    public async Task GetCountryList_SortByCountryCode_ShouldReturnSalesedResults()
     {
         // Arrange
         await SeedTestDataAsync();
@@ -571,7 +571,7 @@ public class CountryListQueryTests : TenantIsolatedTestBase
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
         // Act
-        var response = await Client.GetAsync("/api/v1/Countries?salesBy=CountryCode");
+        var response = await Client.GetAsync("/api/v1/Countries?sortBy=CountryCode");
 
         // Assert
         TestAssertions.AssertHttpSuccess(response);

@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Application.Notifications;
 using asERP.Domain.Wrapper;
@@ -30,68 +29,41 @@ public class ShopDomainDeleteHandler : IRequestHandler<ShopDomainDeleteCommand, 
 
         var result = new Result<Guid>();
 
-        var validator = new ShopDomainDeleteValidator();
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        var shopDomain = await _shopDomainRepository.GetByIdAsync(request.Id);
+        if (shopDomain == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in delete request for {0}: {1}",
-                nameof(ShopDomainDeleteCommand),
-                string.Join(", ", result.Messages));
-
+            result.Fail(ErrorType.NotFound, ErrorCodes.ShopDomain.NotFound, $"Shop domain with ID {request.Id} not found");
             return result;
         }
 
-        try
+        await _shopDomainRepository.DeleteAsync(shopDomain);
+
+        // Exactly one primary per channel: deleting the primary promotes the first remaining
+        // binding so redirects always have a target.
+        if (shopDomain.IsPrimary)
         {
-            var shopDomain = await _shopDomainRepository.GetByIdAsync(request.Id);
-            if (shopDomain == null)
+            var successor = await _shopDomainRepository.Entities
+                .Where(d => d.SalesChannelId == shopDomain.SalesChannelId)
+                .OrderBy(d => d.Host).ThenBy(d => d.Port)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (successor != null)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Shop domain with ID {request.Id} not found");
-                return result;
+                successor.IsPrimary = true;
+                await _shopDomainRepository.UpdateAsync(successor);
             }
-
-            await _shopDomainRepository.DeleteAsync(shopDomain);
-
-            // Exactly one primary per channel: deleting the primary promotes the first remaining
-            // binding so redirects always have a target.
-            if (shopDomain.IsPrimary)
-            {
-                var successor = await _shopDomainRepository.Entities
-                    .Where(d => d.SalesChannelId == shopDomain.SalesChannelId)
-                    .OrderBy(d => d.Host).ThenBy(d => d.Port)
-                    .FirstOrDefaultAsync(cancellationToken);
-
-                if (successor != null)
-                {
-                    successor.IsPrimary = true;
-                    await _shopDomainRepository.UpdateAsync(successor);
-                }
-            }
-
-            // Let the storefront host resolver drop its cached host map immediately.
-            await _mediator.Publish(
-                new ShopDomainChangedNotification(shopDomain.SalesChannelId, shopDomain.TenantId),
-                cancellationToken);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
-            result.Data = shopDomain.Id;
-
-            _logger.LogInformation("Successfully deleted shop domain with ID: {Id}", shopDomain.Id);
         }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the shop domain.",
-                "Error deleting shop domain {Id}.", request.Id);
-        }
+
+        // Let the storefront host resolver drop its cached host map immediately.
+        await _mediator.Publish(
+            new ShopDomainChangedNotification(shopDomain.SalesChannelId, shopDomain.TenantId),
+            cancellationToken);
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.NoContent;
+        result.Data = shopDomain.Id;
+
+        _logger.LogInformation("Successfully deleted shop domain with ID: {Id}", shopDomain.Id);
 
         return result;
     }

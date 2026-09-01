@@ -63,7 +63,7 @@ public class ProductListHandler : IRequestHandler<ProductListQuery, PaginatedRes
         }
 
         return await query
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .AsSingleQuery() // Projection reads two collections (Variants, Images); keep one query and silence the multi-collection warning
             .Select(p => MapToProductListDto(p))
             .AsNoTracking() // Ensure no EF caching

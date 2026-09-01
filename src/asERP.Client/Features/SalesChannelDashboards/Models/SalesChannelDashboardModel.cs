@@ -338,7 +338,7 @@ public partial record SalesChannelDashboardModel
                 PageNumber = page,
                 PageSize = size,
                 SalesChannelId = _salesChannelId,
-                SalesBy = "DateSalesed Descending"
+                SortBy = "DateSalesed Descending"
             };
 
             var response = await _salesService.GetSalessAsync(parameters, ct: ct);

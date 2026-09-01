@@ -409,7 +409,7 @@ public class InvoiceDeleteCommandTests : IDisposable
         TestAssertions.AssertTrue(result.Succeeded);
         TestAssertions.AssertEqual(Invoice1Id, result.Data);
         TestAssertions.AssertNotNull(result.Messages);
-        TestAssertions.AssertEqual(ResultStatusCode.Ok, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Ok, result.Status);
     }
 
     [Fact]
@@ -428,7 +428,7 @@ public class InvoiceDeleteCommandTests : IDisposable
         Assert.False(result.Data.HasValue);
         TestAssertions.AssertNotNull(result.Messages);
         TestAssertions.AssertNotEmpty(result.Messages);
-        TestAssertions.AssertEqual(ResultStatusCode.NotFound, result.StatusCode);
+        TestAssertions.AssertEqual(ErrorType.NotFound, result.Error!.Type);
     }
 
     [Fact]
@@ -446,7 +446,7 @@ public class InvoiceDeleteCommandTests : IDisposable
         var result = await ReadResponseAsync<Result<Guid?>>(secondDeleteResponse);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertEqual(ResultStatusCode.NotFound, result.StatusCode);
+        TestAssertions.AssertEqual(ErrorType.NotFound, result.Error!.Type);
     }
 
     [Fact]

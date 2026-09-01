@@ -9,11 +9,81 @@ namespace asERP.Domain.Wrapper;
 /// </summary>
 public class Result : IResult
 {
-    public ResultStatusCode StatusCode { get; set; } = ResultStatusCode.Ok;
-
     public List<string> Messages { get; set; } = [];
 
     public bool Succeeded { get; set; }
+
+    /// <summary>
+    /// Outcome of a successful operation. Failures leave this at <see cref="ResultStatus.Ok"/> and
+    /// describe themselves through <see cref="Error"/>.
+    /// </summary>
+    public ResultStatus Status { get; set; } = ResultStatus.Ok;
+
+    /// <summary>
+    /// What went wrong, for results produced through the semantic factories. Null on success.
+    /// </summary>
+    public Error? Error { get; set; }
+
+    /// <summary>
+    /// Marks this result as failed with a semantic error. Replaces the three-line
+    /// <c>Succeeded</c>/<c>StatusCode</c>/<c>Messages.Add</c> dance so handlers never name an HTTP
+    /// status.
+    /// </summary>
+    /// <param name="type">Kind of failure — the Server turns this into an HTTP status.</param>
+    /// <param name="code">Stable code from <see cref="ErrorCodes"/>.</param>
+    /// <param name="message">Developer-facing English fallback text.</param>
+    public void Fail(ErrorType type, string code, string message)
+    {
+        Succeeded = false;
+        Error = new Error(type, code, message);
+        Messages.Add(message);
+    }
+
+    /// <summary>
+    /// Marks this result as failed without adding a message — for the cases where the detail is a
+    /// list the caller appends itself (Identity errors, per-row import failures). The code still
+    /// tells a client what kind of failure this is.
+    /// </summary>
+    public void Fail(ErrorType type, string code)
+    {
+        Succeeded = false;
+        Error = new Error(type, code, string.Empty);
+    }
+
+    // ---- semantic results (preferred) --------------------------------------------------
+
+    public static Result Failure(Error error) => new()
+    {
+        Succeeded = false,
+        Error = error,
+        Messages = [error.Message]
+    };
+
+    public static Result Invalid(string code, string message) =>
+        Failure(new Error(ErrorType.Validation, code, message));
+
+    public static Result NotFound(string code, string message) =>
+        Failure(new Error(ErrorType.NotFound, code, message));
+
+    public static Result Conflict(string code, string message) =>
+        Failure(new Error(ErrorType.Conflict, code, message));
+
+    public static Result Unauthorized(string code, string message) =>
+        Failure(new Error(ErrorType.Unauthorized, code, message));
+
+    public static Result Forbidden(string code, string message) =>
+        Failure(new Error(ErrorType.Forbidden, code, message));
+
+    public static Result Unexpected(string code, string message) =>
+        Failure(new Error(ErrorType.Unexpected, code, message));
+
+    public static Result Ok() => new() { Succeeded = true, Status = ResultStatus.Ok };
+
+    public static Result NoContent() => new()
+    {
+        Succeeded = true,
+        Status = ResultStatus.NoContent
+    };
 
     public static IResult Fail()
     {
@@ -71,6 +141,54 @@ public class Result<T> : Result, IResult<T>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T Data { get; set; }
 
+    // ---- semantic results (preferred) --------------------------------------------------
+    // Handlers describe *what* happened; the Server decides which HTTP status that becomes.
+
+    public new static Result<T> Failure(Error error) => new()
+    {
+        Succeeded = false,
+        Error = error,
+        Messages = [error.Message]
+    };
+
+    public new static Result<T> Invalid(string code, string message) =>
+        Failure(new Error(ErrorType.Validation, code, message));
+
+    public new static Result<T> NotFound(string code, string message) =>
+        Failure(new Error(ErrorType.NotFound, code, message));
+
+    public new static Result<T> Conflict(string code, string message) =>
+        Failure(new Error(ErrorType.Conflict, code, message));
+
+    public new static Result<T> Unauthorized(string code, string message) =>
+        Failure(new Error(ErrorType.Unauthorized, code, message));
+
+    public new static Result<T> Forbidden(string code, string message) =>
+        Failure(new Error(ErrorType.Forbidden, code, message));
+
+    public new static Result<T> Unexpected(string code, string message) =>
+        Failure(new Error(ErrorType.Unexpected, code, message));
+
+    public static Result<T> Ok(T data) => new()
+    {
+        Succeeded = true,
+        Data = data,
+        Status = ResultStatus.Ok
+    };
+
+    public static Result<T> Created(T data) => new()
+    {
+        Succeeded = true,
+        Data = data,
+        Status = ResultStatus.Created
+    };
+
+    public new static Result<T> NoContent() => new()
+    {
+        Succeeded = true,
+        Status = ResultStatus.NoContent
+    };
+
     public new static Result<T> Fail()
     {
         return new Result<T> { Succeeded = false };
@@ -79,16 +197,6 @@ public class Result<T> : Result, IResult<T>
     public new static Result<T> Fail(string message)
     {
         return new Result<T> { Succeeded = false, Messages = new List<string> { message } };
-    }
-
-    public static Result<T> Fail(ResultStatusCode status, string message)
-    {
-        return new Result<T> { StatusCode = status, Succeeded = false, Messages = new List<string> { message } };
-    }
-
-    public static Result<T> Fail(ResultStatusCode status, List<string> messages)
-    {
-        return new Result<T> { StatusCode = status, Succeeded = false, Messages = messages };
     }
 
     public new static Result<T> Fail(List<string> messages)
@@ -106,17 +214,6 @@ public class Result<T> : Result, IResult<T>
     public new static Task<Result<T>> FailAsync(string message)
     {
         return Task.FromResult(Fail(message));
-    }
-
-    // ReSharper disable once UnusedMember.Global
-    public static Task<Result<T>> FailAsync(ResultStatusCode status, string message)
-    {
-        return Task.FromResult(Fail(status, message));
-    }
-
-    public static Task<Result<T>> FailAsync(ResultStatusCode status, List<string> messages)
-    {
-        return Task.FromResult(Fail(status, messages));
     }
 
     public new static Task<Result<T>> FailAsync(List<string> messages)

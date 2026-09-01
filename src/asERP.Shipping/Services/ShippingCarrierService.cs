@@ -65,7 +65,7 @@ public sealed class ShippingCarrierService : IShippingCarrierService
 
         if (core.Result.IsPermanentFailure || core.Shipping is null)
         {
-            return Result<ShipmentLabelResult>.Fail(ResultStatusCode.BadRequest,
+            return Result<ShipmentLabelResult>.Invalid(ErrorCodes.ShippingCarrier.Invalid,
                 core.Result.ErrorMessage ?? "Label creation failed.");
         }
 
@@ -161,12 +161,12 @@ public sealed class ShippingCarrierService : IShippingCarrierService
         var (shipping, provider, connector, error) = await LoadForCarrierCallAsync(shippingId, cancellationToken);
         if (error != null || shipping is null || provider is null || connector is null)
         {
-            return new Result { Succeeded = false, StatusCode = ResultStatusCode.BadRequest, Messages = [error ?? "Carrier call not possible."] };
+            return Result.Invalid(ErrorCodes.ShippingCarrier.Invalid, error ?? "Carrier call not possible.");
         }
 
         if (string.IsNullOrEmpty(shipping.CarrierShipmentId))
         {
-            return new Result { Succeeded = true, StatusCode = ResultStatusCode.Ok };
+            return Result.Ok();
         }
 
         var carrierContext = _contextFactory.Create(provider, cancellationToken);
@@ -174,15 +174,11 @@ public sealed class ShippingCarrierService : IShippingCarrierService
 
         if (!result.Success)
         {
-            return new Result
-            {
-                Succeeded = false,
-                StatusCode = ResultStatusCode.BadRequest,
-                Messages = [$"Carrier-side cancellation failed: {result.ErrorMessage}"]
-            };
+            return Result.Invalid(ErrorCodes.ShippingCarrier.Invalid,
+                $"Carrier-side cancellation failed: {result.ErrorMessage}");
         }
 
-        return new Result { Succeeded = true, StatusCode = ResultStatusCode.Ok };
+        return Result.Ok();
     }
 
     public async Task<Result<ShipmentTrackingResult>> GetTrackingStatusAsync(Guid shippingId, CancellationToken cancellationToken = default)
@@ -190,12 +186,12 @@ public sealed class ShippingCarrierService : IShippingCarrierService
         var (shipping, provider, connector, error) = await LoadForCarrierCallAsync(shippingId, cancellationToken);
         if (error != null || shipping is null || provider is null || connector is null)
         {
-            return Result<ShipmentTrackingResult>.Fail(ResultStatusCode.BadRequest, error ?? "Carrier call not possible.");
+            return Result<ShipmentTrackingResult>.Invalid(ErrorCodes.ShippingCarrier.Invalid, error ?? "Carrier call not possible.");
         }
 
         if (string.IsNullOrEmpty(shipping.TrackingNumber))
         {
-            return Result<ShipmentTrackingResult>.Fail(ResultStatusCode.BadRequest, "The shipment has no tracking number yet.");
+            return Result<ShipmentTrackingResult>.Invalid(ErrorCodes.ShippingCarrier.Invalid, "The shipment has no tracking number yet.");
         }
 
         var carrierContext = _contextFactory.Create(provider, cancellationToken);
@@ -203,7 +199,7 @@ public sealed class ShippingCarrierService : IShippingCarrierService
 
         if (!result.Success)
         {
-            return Result<ShipmentTrackingResult>.Fail(ResultStatusCode.BadRequest,
+            return Result<ShipmentTrackingResult>.Invalid(ErrorCodes.ShippingCarrier.Invalid,
                 result.ErrorMessage ?? "Tracking request failed.");
         }
 

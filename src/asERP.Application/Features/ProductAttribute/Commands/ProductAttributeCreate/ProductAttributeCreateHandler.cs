@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -25,52 +24,25 @@ public class ProductAttributeCreateHandler : IRequestHandler<ProductAttributeCre
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new ProductAttributeCreateValidator(_productAttributeRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        // Manual mapping to domain entity
+        var attributeToCreate = new Domain.Entities.ProductAttribute
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in create request for {0}: {1}",
-                nameof(ProductAttributeCreateCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
-        try
-        {
-            // Manual mapping to domain entity
-            var attributeToCreate = new Domain.Entities.ProductAttribute
+            Name = request.Name,
+            SortOrder = request.SortOrder,
+            Values = request.Values.Select(v => new Domain.Entities.ProductAttributeValue
             {
-                Name = request.Name,
-                SortOrder = request.SortOrder,
-                Values = request.Values.Select(v => new Domain.Entities.ProductAttributeValue
-                {
-                    Value = v.Value,
-                    SortOrder = v.SortOrder
-                }).ToList()
-            };
+                Value = v.Value,
+                SortOrder = v.SortOrder
+            }).ToList()
+        };
 
-            await _productAttributeRepository.CreateAsync(attributeToCreate);
+        await _productAttributeRepository.CreateAsync(attributeToCreate);
 
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Created;
-            result.Data = attributeToCreate.Id;
+        result.Succeeded = true;
+        result.Status = ResultStatus.Created;
+        result.Data = attributeToCreate.Id;
 
-            _logger.LogInformation("Successfully created product attribute with ID: {Id}", attributeToCreate.Id);
-        }
-        catch (Exception ex)
-        {
-            // Never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while creating the product attribute.",
-                "Error creating product attribute.");
-        }
+        _logger.LogInformation("Successfully created product attribute with ID: {Id}", attributeToCreate.Id);
 
         return result;
     }

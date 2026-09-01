@@ -6,7 +6,7 @@ namespace asERP.Application.Features.Superadmin.Users.Commands.UserCreate;
 
 /// <summary>
 /// Command for creating a new user in the system.
-/// Implements IRequest to work with MediatR, returning the ID of the newly created user wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning the ID of the newly created user wrapped in a Result.
 /// </summary>
 public class UserCreateCommand : IRequest<Result<string>>
 {

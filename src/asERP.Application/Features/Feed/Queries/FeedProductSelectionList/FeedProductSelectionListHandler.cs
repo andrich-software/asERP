@@ -44,7 +44,7 @@ public class FeedProductSelectionListHandler : IRequestHandler<FeedProductSelect
         }
 
         return await query
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(p => new FeedProductSelectionDto
             {
                 ProductId = p.Id,

@@ -75,18 +75,14 @@ public class SalesCancelHandler : IRequestHandler<SalesCancelCommand, Result<Gui
 
             if (NonCancellableStatuses.Contains(sales.Status))
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add($"An order in status {sales.Status} cannot be cancelled.");
+                result.Fail(ErrorType.Validation, ErrorCodes.Sales.Invalid, $"An order in status {sales.Status} cannot be cancelled.");
                 return result;
             }
 
             var shippings = await _shippingRepository.GetBySalesIdAsync(request.Id);
             if (shippings.Any(s => s.ShippedAt != null || ShippedStatuses.Contains(s.Status)))
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("The order has shipped parcels and cannot be cancelled anymore.");
+                result.Fail(ErrorType.Validation, ErrorCodes.Sales.Invalid, "The order has shipped parcels and cannot be cancelled anymore.");
                 return result;
             }
 
@@ -138,7 +134,7 @@ public class SalesCancelHandler : IRequestHandler<SalesCancelCommand, Result<Gui
             await transaction.CommitAsync(cancellationToken);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = sales.Id;
 
             _logger.LogInformation("Successfully cancelled sales order with ID: {Id}", sales.Id);
@@ -146,14 +142,6 @@ public class SalesCancelHandler : IRequestHandler<SalesCancelCommand, Result<Gui
         catch (NotFoundException)
         {
             throw;
-        }
-        catch (Exception ex)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add("An error occurred while cancelling the sales order.");
-
-            _logger.LogError(ex, "Error cancelling sales order with ID: {Id}", request.Id);
         }
 
         return result;

@@ -4,47 +4,50 @@ using Microsoft.AspNetCore.Mvc;
 namespace asERP.Server.Extensions;
 
 /// <summary>
-/// Extension methods for converting Result objects to ActionResult responses.
-/// Provides consistent mapping from Result patterns to HTTP responses.
+/// Turns a <see cref="Result"/> into an HTTP response. This is the **only** place where the
+/// semantic outcome of a handler becomes a status code — nothing below <c>asERP.Server</c> knows
+/// about HTTP.
 /// </summary>
 public static class ResultExtensions
 {
-    /// <summary>
-    /// Converts a generic Result to an ActionResult with proper HTTP status code mapping.
-    /// </summary>
-    /// <typeparam name="T">The type of data contained in the result</typeparam>
-    /// <param name="result">The result to convert</param>
-    /// <returns>An ActionResult with appropriate HTTP status code and response body</returns>
-    public static ActionResult ToActionResult<T>(this Result<T> result)
-    {
-        // For NoContent responses, return empty content
-        if (result.StatusCode == ResultStatusCode.NoContent)
-        {
-            return new StatusCodeResult((int)result.StatusCode);
-        }
+    public static ActionResult ToActionResult<T>(this Result<T> result) => ToResponse(result, result);
 
-        return new ObjectResult(result)
-        {
-            StatusCode = (int)result.StatusCode
-        };
+    public static ActionResult ToActionResult(this Domain.Wrapper.IResult result) => ToResponse(result, result);
+
+    private static ActionResult ToResponse(Domain.Wrapper.IResult result, object payload)
+    {
+        var statusCode = ToHttpStatusCode(result);
+
+        return statusCode == StatusCodes.Status204NoContent
+            ? new StatusCodeResult(statusCode)
+            : new ObjectResult(payload) { StatusCode = statusCode };
     }
 
     /// <summary>
-    /// Converts a non-generic Result to an ActionResult with proper HTTP status code mapping.
+    /// The single ErrorType/ResultStatus to HTTP mapping. Public for the few endpoints that answer
+    /// with a hand-built body but still take their status from the handler's result.
     /// </summary>
-    /// <param name="result">The result to convert</param>
-    /// <returns>An ActionResult with appropriate HTTP status code and response body</returns>
-    public static ActionResult ToActionResult(this Domain.Wrapper.IResult result)
+    public static int ToHttpStatusCode(this Domain.Wrapper.IResult result)
     {
-        // For NoContent responses, return empty content
-        if (result.StatusCode == ResultStatusCode.NoContent)
+        if (result.Succeeded)
         {
-            return new StatusCodeResult((int)result.StatusCode);
+            return result.Status switch
+            {
+                ResultStatus.Created => StatusCodes.Status201Created,
+                ResultStatus.NoContent => StatusCodes.Status204NoContent,
+                _ => StatusCodes.Status200OK
+            };
         }
 
-        return new ObjectResult(result)
+        return result.Error?.Type switch
         {
-            StatusCode = (int)result.StatusCode
+            ErrorType.NotFound => StatusCodes.Status404NotFound,
+            ErrorType.Conflict => StatusCodes.Status409Conflict,
+            ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+            ErrorType.Forbidden => StatusCodes.Status403Forbidden,
+            ErrorType.Unexpected => StatusCodes.Status500InternalServerError,
+            // Validation, and any failure that forgot to attach an error object
+            _ => StatusCodes.Status400BadRequest
         };
     }
 
@@ -60,7 +63,7 @@ public static class ResultExtensions
             Type = result.Type,
             Title = result.Title,
             Detail = result.Detail,
-            Status = (int)result.StatusCode,
+            Status = ToHttpStatusCode(result),
             Instance = result.Instance
         };
 
@@ -75,7 +78,7 @@ public static class ResultExtensions
 
         return new ObjectResult(problemDetails)
         {
-            StatusCode = (int)result.StatusCode,
+            StatusCode = ToHttpStatusCode(result),
             ContentTypes = { "application/problem+json" }
         };
     }
@@ -93,7 +96,7 @@ public static class ResultExtensions
             Type = result.Type,
             Title = result.Title,
             Detail = result.Detail,
-            Status = (int)result.StatusCode,
+            Status = ToHttpStatusCode(result),
             Instance = result.Instance
         };
 
@@ -114,7 +117,7 @@ public static class ResultExtensions
 
         return new ObjectResult(problemDetails)
         {
-            StatusCode = (int)result.StatusCode,
+            StatusCode = ToHttpStatusCode(result),
             ContentTypes = { "application/problem+json" }
         };
     }

@@ -11,7 +11,7 @@ namespace asERP.Application.Features.Invoice.Queries.InvoiceList;
 
 /// <summary>
 /// Handler for processing invoice list queries.
-/// Implements IRequestHandler from MediatR to handle InvoiceListQuery requests
+/// Implements IRequestHandler from the custom mediator to handle InvoiceListQuery requests
 /// and return a paginated list of invoice DTOs.
 /// </summary>
 public class InvoiceListHandler : IRequestHandler<InvoiceListQuery, PaginatedResult<InvoiceListDto>>
@@ -35,12 +35,6 @@ public class InvoiceListHandler : IRequestHandler<InvoiceListQuery, PaginatedRes
     private readonly IInvoiceRepository _invoiceRepository;
     private readonly ICustomerRepository _customerRepository;
 
-    /// <summary>
-    /// Constructor that initializes the handler with required dependencies
-    /// </summary>
-    /// <param name="logger">Logger for recording operations</param>
-    /// <param name="invoiceRepository">Repository for invoice data access</param>
-    /// <param name="customerRepository">Repository for customer data access</param>
     public InvoiceListHandler(
         IAppLogger<InvoiceListHandler> logger,
         IInvoiceRepository invoiceRepository,
@@ -51,12 +45,6 @@ public class InvoiceListHandler : IRequestHandler<InvoiceListQuery, PaginatedRes
         _customerRepository = customerRepository ?? throw new ArgumentNullException(nameof(customerRepository));
     }
 
-    /// <summary>
-    /// Handles the invoice list query request
-    /// </summary>
-    /// <param name="request">The query with pagination and filtering parameters</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>A paginated result containing invoice list DTOs</returns>
     public async Task<PaginatedResult<InvoiceListDto>> Handle(InvoiceListQuery request, CancellationToken cancellationToken)
     {
         var invoiceFilterSpec = new InvoiceFilterSpecification(request.SearchString);
@@ -68,7 +56,7 @@ public class InvoiceListHandler : IRequestHandler<InvoiceListQuery, PaginatedRes
 
         return await _invoiceRepository.Entities
             .Specify(invoiceFilterSpec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(i => new InvoiceListDto
             {
                 Id = i.Id,

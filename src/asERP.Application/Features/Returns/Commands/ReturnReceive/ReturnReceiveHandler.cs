@@ -71,9 +71,7 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
 
             if (!ReceivableStatuses.Contains(returnShipment.Status))
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add($"A return in status {returnShipment.Status} cannot be received.");
+                result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"A return in status {returnShipment.Status} cannot be received.");
                 return result;
             }
 
@@ -86,9 +84,7 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
                 var item = returnShipment.Items.FirstOrDefault(i => i.Id == receiveItem.ReturnShipmentItemId);
                 if (item == null)
                 {
-                    result.Succeeded = false;
-                    result.StatusCode = ResultStatusCode.BadRequest;
-                    result.Messages.Add($"Return item {receiveItem.ReturnShipmentItemId} does not belong to this return.");
+                    result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"Return item {receiveItem.ReturnShipmentItemId} does not belong to this return.");
                     return result;
                 }
 
@@ -100,9 +96,7 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
 
                 if (serials.Count > item.Quantity + SalesItemAssignment.QuantityTolerance)
                 {
-                    result.Succeeded = false;
-                    result.StatusCode = ResultStatusCode.BadRequest;
-                    result.Messages.Add($"More serial numbers ({serials.Count}) than returned quantity ({item.Quantity}) for return item {item.Id}.");
+                    result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"More serial numbers ({serials.Count}) than returned quantity ({item.Quantity}) for return item {item.Id}.");
                     return result;
                 }
 
@@ -113,9 +107,7 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
                 var unknown = serials.FirstOrDefault(s => !knownSerials.Contains(s));
                 if (unknown != null)
                 {
-                    result.Succeeded = false;
-                    result.StatusCode = ResultStatusCode.BadRequest;
-                    result.Messages.Add($"Serial number '{unknown}' does not belong to the returned order line.");
+                    result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"Serial number '{unknown}' does not belong to the returned order line.");
                     return result;
                 }
 
@@ -157,7 +149,7 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
             if (!statusResult.Succeeded)
             {
                 result.Succeeded = false;
-                result.StatusCode = statusResult.StatusCode;
+                result.Error = statusResult.Error;
                 result.Messages.AddRange(statusResult.Messages);
                 return result;
             }
@@ -167,7 +159,7 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
             await transaction.CommitAsync(cancellationToken);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = returnShipment.Id;
 
             _logger.LogInformation("Successfully received return {Id}", returnShipment.Id);
@@ -175,14 +167,6 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
         catch (NotFoundException)
         {
             throw;
-        }
-        catch (Exception ex)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.InternalServerError;
-            result.Messages.Add("An error occurred while receiving the return.");
-
-            _logger.LogError(ex, "Error receiving return {Id}", request.Id);
         }
 
         return result;

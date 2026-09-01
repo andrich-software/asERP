@@ -38,12 +38,11 @@ public class SettingDeleteHandler : IRequestHandler<SettingDeleteCommand, Result
 
             if (settingNotFoundError != null)
             {
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("Setting not found.");
+                result.Fail(ErrorType.NotFound, ErrorCodes.Setting.NotFound, "Setting not found.");
             }
             else
             {
-                result.StatusCode = ResultStatusCode.BadRequest;
+                result.Fail(ErrorType.Validation, ErrorCodes.Setting.Invalid);
                 result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
             }
 
@@ -54,50 +53,20 @@ public class SettingDeleteHandler : IRequestHandler<SettingDeleteCommand, Result
             return result;
         }
 
-        try
+        // Create entity to delete
+        var settingToDelete = new Domain.Entities.Setting()
         {
-            // Create entity to delete
-            var settingToDelete = new Domain.Entities.Setting()
-            {
-                Id = request.Id
-            };
+            Id = request.Id
+        };
 
-            // Delete from database
-            await _settingRepository.DeleteAsync(settingToDelete);
+        // Delete from database
+        await _settingRepository.DeleteAsync(settingToDelete);
 
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
-            result.Data = settingToDelete.Id;
+        result.Succeeded = true;
+        result.Status = ResultStatus.NoContent;
+        result.Data = settingToDelete.Id;
 
-            _logger.LogInformation("Successfully deleted setting with ID: {Id}", settingToDelete.Id);
-        }
-        catch (Exception ex)
-        {
-            result.Succeeded = false;
-
-            var exceptionMessage = ex.Message ?? string.Empty;
-
-            // Treat missing entity scenarios (including concurrent deletes) as NotFound
-            if (ex is asERP.Application.Exceptions.NotFoundException ||
-                ex is InvalidOperationException && exceptionMessage.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
-                exceptionMessage.Contains("does not exist in the store", StringComparison.OrdinalIgnoreCase) ||
-                exceptionMessage.Contains("entity that does not exist", StringComparison.OrdinalIgnoreCase) ||
-                exceptionMessage.Contains("not found", StringComparison.OrdinalIgnoreCase))
-            {
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("Setting not found.");
-                _logger.LogWarning(
-                    "Setting with ID: {Id} not found for deletion. Reason: {Reason}",
-                    request.Id,
-                    exceptionMessage);
-            }
-            else
-            {
-                result.StatusCode = ResultStatusCode.InternalServerError;
-                result.Messages.Add($"An error occurred while deleting the setting: {exceptionMessage}");
-                _logger.LogError("Error deleting setting: {Message}", exceptionMessage);
-            }
-        }
+        _logger.LogInformation("Successfully deleted setting with ID: {Id}", settingToDelete.Id);
 
         return result;
     }

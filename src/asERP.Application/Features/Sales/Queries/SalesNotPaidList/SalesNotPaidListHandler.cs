@@ -42,7 +42,7 @@ public class SalesNotPaidListHandler : IRequestHandler<SalesNotPaidListQuery, Pa
 
         return await _salesRepository.Entities
             .Where(SalesQuickFilterPredicates.NotPaid())
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(o => new SalesListDto
             {
                 Id = o.Id,

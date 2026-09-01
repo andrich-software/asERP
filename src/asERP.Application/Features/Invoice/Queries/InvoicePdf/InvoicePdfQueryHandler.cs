@@ -28,41 +28,33 @@ public class InvoicePdfQueryHandler : IRequestHandler<InvoicePdfQuery, Result<by
 
     public async Task<Result<byte[]>> Handle(InvoicePdfQuery request, CancellationToken cancellationToken)
     {
-        try
+        // Rechnung mit allen Details abrufen
+        var invoice = await _invoiceRepository.GetInvoiceWithDetailsAsync(request.Id);
+        if (invoice == null)
         {
-            // Rechnung mit allen Details abrufen
-            var invoice = await _invoiceRepository.GetInvoiceWithDetailsAsync(request.Id);
-            if (invoice == null)
-            {
-                return await Result<byte[]>.FailAsync(ResultStatusCode.NotFound, "Rechnung nicht gefunden");
-            }
-
-            // Firmendaten (Absender) stammen aus dem Mandanten, nicht mehr aus globalen Einstellungen.
-            if (!invoice.TenantId.HasValue)
-            {
-                return await Result<byte[]>.FailAsync(ResultStatusCode.InternalServerError, "Rechnung ist keinem Mandanten zugeordnet");
-            }
-
-            var tenant = await _tenantRepository.GetByIdAsync(invoice.TenantId.Value, asNoTracking: true);
-            if (tenant == null)
-            {
-                return await Result<byte[]>.FailAsync(ResultStatusCode.NotFound, "Mandant der Rechnung nicht gefunden");
-            }
-
-            // PDF generieren
-            var pdfBytes = _pdfService.GenerateInvoice(invoice, tenant.ToCompanySenderInfo());
-            if (pdfBytes == null || pdfBytes.Length == 0)
-            {
-                return await Result<byte[]>.FailAsync(ResultStatusCode.InternalServerError, "PDF konnte nicht generiert werden");
-            }
-
-            return await Result<byte[]>.SuccessAsync(pdfBytes);
+            return Result<byte[]>.NotFound(ErrorCodes.Invoice.NotFound, "Rechnung nicht gefunden");
         }
-        catch (Exception ex)
+
+        // Firmendaten (Absender) stammen aus dem Mandanten, nicht mehr aus globalen Einstellungen.
+        if (!invoice.TenantId.HasValue)
         {
-            _logger.LogError(ex, "Fehler beim Generieren der Rechnungs-PDF für ID {InvoiceId}", request.Id);
-            return await Result<byte[]>.FailAsync(ResultStatusCode.InternalServerError, "Fehler beim Generieren der PDF.");
+            return Result<byte[]>.Unexpected(ErrorCodes.Invoice.Unexpected, "Rechnung ist keinem Mandanten zugeordnet");
         }
+
+        var tenant = await _tenantRepository.GetByIdAsync(invoice.TenantId.Value, asNoTracking: true);
+        if (tenant == null)
+        {
+            return Result<byte[]>.NotFound(ErrorCodes.Invoice.NotFound, "Mandant der Rechnung nicht gefunden");
+        }
+
+        // PDF generieren
+        var pdfBytes = _pdfService.GenerateInvoice(invoice, tenant.ToCompanySenderInfo());
+        if (pdfBytes == null || pdfBytes.Length == 0)
+        {
+            return Result<byte[]>.Unexpected(ErrorCodes.Invoice.Unexpected, "PDF konnte nicht generiert werden");
+        }
+
+        return await Result<byte[]>.SuccessAsync(pdfBytes);
     }
 
 }

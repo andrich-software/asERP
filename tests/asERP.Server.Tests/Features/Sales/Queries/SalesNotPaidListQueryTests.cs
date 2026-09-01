@@ -326,12 +326,12 @@ public class SalesNotPaidListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessNotPaid_WithSalesByTotal_ShouldReturnSalesedResults()
+    public async Task GetSalessNotPaid_WithSortByTotal_ShouldReturnSalesedResults()
     {
         await SeedSalesNotPaidTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/Saless/not-paid?salesBy=Total");
+        var response = await Client.GetAsync("/api/v1/Saless/not-paid?sortBy=Total");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);
@@ -346,12 +346,12 @@ public class SalesNotPaidListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessNotPaid_WithSalesByTotalDescending_ShouldReturnDescSalesedResults()
+    public async Task GetSalessNotPaid_WithSortByTotalDescending_ShouldReturnDescSalesedResults()
     {
         await SeedSalesNotPaidTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/Saless/not-paid?salesBy=Total desc");
+        var response = await Client.GetAsync("/api/v1/Saless/not-paid?sortBy=Total desc");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);
@@ -494,12 +494,12 @@ public class SalesNotPaidListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessNotPaid_WithSalesByDateSalesed_ShouldReturnDateSalesedResults()
+    public async Task GetSalessNotPaid_WithSortByDateSalesed_ShouldReturnDateSalesedResults()
     {
         await SeedSalesNotPaidTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/Saless/not-paid?salesBy=DateSalesed");
+        var response = await Client.GetAsync("/api/v1/Saless/not-paid?sortBy=DateSalesed");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);

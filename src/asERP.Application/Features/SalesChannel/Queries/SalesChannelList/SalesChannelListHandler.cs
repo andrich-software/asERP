@@ -51,7 +51,7 @@ public class SalesChannelListHandler : IRequestHandler<SalesChannelListQuery, Pa
 
         return await _salesChannelRepository.Entities
             .Specify(salesChannelFilterSpec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(entity => new SalesChannelListDto
             {
                 Id = entity.Id,

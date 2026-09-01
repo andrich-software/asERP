@@ -31,7 +31,7 @@ public class ProductImageListHandler : IRequestHandler<ProductImageListQuery, Re
         var product = await _productRepository.GetByIdAsync(request.ProductId, asNoTracking: true);
         if (product == null)
         {
-            return Result<List<ProductImageDto>>.Fail(ResultStatusCode.NotFound, "Product not found");
+            return Result<List<ProductImageDto>>.NotFound(ErrorCodes.ProductImage.NotFound, "Product not found");
         }
 
         var images = await _productImageRepository.GetByProductIdAsync(request.ProductId);

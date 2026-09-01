@@ -143,7 +143,7 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -196,7 +196,7 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -213,7 +213,7 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -469,7 +469,7 @@ public class SalesChannelCreateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]

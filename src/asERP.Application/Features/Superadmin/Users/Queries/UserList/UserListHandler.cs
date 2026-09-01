@@ -12,14 +12,11 @@ namespace asERP.Application.Features.Superadmin.Users.Queries.UserList;
 
 /// <summary>
 /// Handler for processing user list queries.
-/// Implements IRequestHandler from MediatR to handle UserListQuery requests
+/// Implements IRequestHandler from the custom mediator to handle UserListQuery requests
 /// and return a paginated list of users wrapped in a PaginatedResult.
 /// </summary>
 public class UserListHandler : IRequestHandler<UserListQuery, PaginatedResult<UserListDto>>
 {
-    /// <summary>
-    /// Logger for recording handler operations
-    /// </summary>
     private readonly IAppLogger<UserListHandler> _logger;
 
     // Ordering runs on the projected UserListDto; restrict to display columns so clients cannot sort by
@@ -33,16 +30,8 @@ public class UserListHandler : IRequestHandler<UserListQuery, PaginatedResult<Us
         nameof(UserListDto.DateCreated)
     };
 
-    /// <summary>
-    /// ASP.NET Identity UserManager for user data operations
-    /// </summary>
     private readonly UserManager<ApplicationUser> _userManager;
 
-    /// <summary>
-    /// Constructor that initializes the handler with required dependencies
-    /// </summary>
-    /// <param name="logger">Logger for recording operations</param>
-    /// <param name="userManager">ASP.NET Identity UserManager for user data access</param>
     public UserListHandler(
         IAppLogger<UserListHandler> logger,
         UserManager<ApplicationUser> userManager)
@@ -51,12 +40,6 @@ public class UserListHandler : IRequestHandler<UserListQuery, PaginatedResult<Us
         _userManager = userManager;
     }
 
-    /// <summary>
-    /// Handles the user list query request
-    /// </summary>
-    /// <param name="request">The query containing pagination, search, and salesing parameters</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>PaginatedResult containing a list of users based on the query parameters</returns>
     public async Task<PaginatedResult<UserListDto>> Handle(UserListQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Handle UserListQuery: {Request}", request);
@@ -77,7 +60,7 @@ public class UserListHandler : IRequestHandler<UserListQuery, PaginatedResult<Us
                 DateCreated = u.DateCreated
             });
 
-        query = query.ApplySafeOrdering(request.SalesBy, AllowedSortFields);
+        query = query.ApplySafeOrdering(request.SortBy, AllowedSortFields);
 
         var result = await query.ToPaginatedListAsync(pageIndex, sanitizedPageSize);
         result.CurrentPage = sanitizedPage;

@@ -37,7 +37,7 @@ public class SuperadminDetailHandler : IRequestHandler<SuperadminDetailQuery, Re
         if (tenant == null)
         {
             _logger.LogWarning($"SuperadminDetailHandler.Handle: Tenant with ID {request.Id} not found.");
-            return Result<SuperadminTenantDetailDto>.Fail(ResultStatusCode.NotFound, "Tenant not found.");
+            return Result<SuperadminTenantDetailDto>.NotFound(ErrorCodes.Superadmin.NotFound, "Tenant not found.");
         }
 
         var users = tenant.UserTenants?

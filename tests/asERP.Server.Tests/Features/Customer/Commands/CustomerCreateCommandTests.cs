@@ -166,7 +166,7 @@ public class CustomerCreateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public class CustomerCreateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class CustomerCreateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -255,7 +255,7 @@ public class CustomerCreateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -414,7 +414,7 @@ public class CustomerCreateCommandTests : TenantIsolatedTestBase
         TestAssertions.AssertFalse(result.Succeeded);
         TestAssertions.AssertEqual(Guid.Empty, result.Data);
         TestAssertions.AssertNotNull(result.Messages);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]

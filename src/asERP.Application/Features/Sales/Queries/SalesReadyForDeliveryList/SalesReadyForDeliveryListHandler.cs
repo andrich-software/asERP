@@ -42,7 +42,7 @@ public class SalesReadyForDeliveryListHandler : IRequestHandler<SalesReadyForDel
 
         return await _salesRepository.Entities
             .Where(o => o.Status == SalesStatus.ReadyForDelivery && o.PaymentStatus == PaymentStatus.CompletelyPaid)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(o => new SalesListDto
             {
                 Id = o.Id,

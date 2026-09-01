@@ -31,7 +31,7 @@ public class SystemOAuthSettingsDetailHandler
     {
         if (request.Provider is not (SalesChannelType.eBay or SalesChannelType.Amazon))
         {
-            return Result<SystemOAuthSettingsDto>.Fail(ResultStatusCode.BadRequest,
+            return Result<SystemOAuthSettingsDto>.Invalid(ErrorCodes.SystemOAuthSettings.Invalid,
                 $"OAuth provider {request.Provider} is not supported.");
         }
 

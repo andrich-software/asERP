@@ -6,7 +6,7 @@ namespace asERP.Application.Features.Manufacturer.Queries.ManufacturerDetail;
 
 /// <summary>
 /// Query for retrieving detailed information about a specific manufacturer.
-/// Implements IRequest to work with MediatR, returning manufacturer details wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning manufacturer details wrapped in a Result.
 /// </summary>
 public class ManufacturerDetailQuery : IRequest<Result<ManufacturerDetailDto>>
 {

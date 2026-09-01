@@ -7,7 +7,7 @@ namespace asERP.Application.Features.ProductAttribute.Commands.ProductAttributeC
 /// <summary>
 /// Command for creating a new product attribute (incl. its values) in the system.
 /// Inherits from ProductAttributeInputDto to get all attribute properties and implements IRequest
-/// to work with MediatR, returning the ID of the newly created attribute wrapped in a Result.
+/// to work with the custom mediator, returning the ID of the newly created attribute wrapped in a Result.
 /// </summary>
 public class ProductAttributeCreateCommand : ProductAttributeInputDto, IRequest<Result<Guid>>
 {

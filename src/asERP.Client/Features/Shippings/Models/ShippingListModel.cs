@@ -82,7 +82,7 @@ public partial record ShippingListModel
         .Combine(Filter, CurrentPage, PageSize, SortSales)
         .SelectAsync(async (combined, ct) =>
         {
-            var (filter, page, size, salesBy) = combined;
+            var (filter, page, size, sortBy) = combined;
             filter ??= new ShippingListFilter();
 
             var parameters = new QueryParameters
@@ -90,7 +90,7 @@ public partial record ShippingListModel
                 PageNumber = page,
                 PageSize = size,
                 SearchString = string.IsNullOrWhiteSpace(filter.SearchQuery) ? null : filter.SearchQuery,
-                SalesBy = salesBy
+                SortBy = sortBy
             };
 
             var response = await _shippingService.GetShippingsAsync(
@@ -183,9 +183,9 @@ public partial record ShippingListModel
     /// <summary>
     /// Change the sort clause.
     /// </summary>
-    public async ValueTask SetSortSales(string salesBy, CancellationToken ct = default)
+    public async ValueTask SetSortSales(string sortBy, CancellationToken ct = default)
     {
-        await SortSales.UpdateAsync(_ => salesBy, ct);
+        await SortSales.UpdateAsync(_ => sortBy, ct);
         await CurrentPage.UpdateAsync(_ => 0, ct); // Reset to first page when sorting changes
     }
 

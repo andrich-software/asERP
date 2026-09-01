@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -25,32 +24,13 @@ public class ProductAttributeDeleteHandler : IRequestHandler<ProductAttributeDel
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new ProductAttributeDeleteValidator();
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in delete request for {0}: {1}",
-                nameof(ProductAttributeDeleteCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
         try
         {
             var attributeToDelete = await _productAttributeRepository.GetWithValuesAsync(request.Id);
 
             if (attributeToDelete == null)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("ProductAttribute not found");
+                result.Fail(ErrorType.NotFound, ErrorCodes.ProductAttribute.NotFound, "ProductAttribute not found");
 
                 _logger.LogWarning("ProductAttribute with ID: {Id} not found for deletion", request.Id);
                 return result;
@@ -58,9 +38,7 @@ public class ProductAttributeDeleteHandler : IRequestHandler<ProductAttributeDel
 
             if (await _productAttributeRepository.IsInUseAsync(request.Id))
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("ProductAttribute is in use by variant products and cannot be deleted.");
+                result.Fail(ErrorType.Validation, ErrorCodes.ProductAttribute.Invalid, "ProductAttribute is in use by variant products and cannot be deleted.");
 
                 _logger.LogWarning("ProductAttribute with ID: {Id} is in use and cannot be deleted", request.Id);
                 return result;
@@ -71,24 +49,16 @@ public class ProductAttributeDeleteHandler : IRequestHandler<ProductAttributeDel
             await _productAttributeRepository.DeleteWithValuesAsync(attributeToDelete);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = attributeToDelete.Id;
 
             _logger.LogInformation("Successfully deleted product attribute with ID: {Id}", attributeToDelete.Id);
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add("ProductAttribute not found");
+            result.Fail(ErrorType.NotFound, ErrorCodes.ProductAttribute.NotFound, "ProductAttribute not found");
 
             _logger.LogWarning("ProductAttribute with ID: {Id} was deleted by another request: {Message}", request.Id, ex.Message);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the product attribute.",
-                "Error deleting product attribute.");
         }
 
         return result;

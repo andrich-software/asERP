@@ -38,9 +38,9 @@ public class ProductAttributeListHandler : IRequestHandler<ProductAttributeListQ
 
         var query = _productAttributeRepository.Entities.Specify(filterSpec);
 
-        if (request.SalesBy.Any())
+        if (request.SortBy.Any())
         {
-            query = query.ApplySafeOrdering(request.SalesBy, AllowedSortFields);
+            query = query.ApplySafeOrdering(request.SortBy, AllowedSortFields);
         }
         else
         {

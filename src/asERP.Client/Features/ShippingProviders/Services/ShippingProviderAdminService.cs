@@ -40,7 +40,7 @@ public class ShippingProviderAdminService : IShippingProviderAdminService
     {
         var baseUrl = await GetBaseUrlAsync();
         // A tenant has a handful of carriers at most — fetch them all in one page.
-        var url = $"{baseUrl}{ApiEndpoints.ShippingProviders.Base}?pageNumber=0&pageSize=200&salesBy=Name";
+        var url = $"{baseUrl}{ApiEndpoints.ShippingProviders.Base}?pageNumber=0&pageSize=200&sortBy=Name";
 
         var response = await _httpClient.GetFromJsonAsync(
             url, AppJsonSerializerContext.Default.PaginatedResponseShippingProviderListDto, ct);

@@ -8,7 +8,7 @@ namespace asERP.Application.Features.Superadmin.Users.Queries.UserList;
 
 /// <summary>
 /// Query for retrieving a paginated list of users with optional filtering and sorting.
-/// Implements IRequest to work with MediatR, returning a paginated list of users wrapped in a PaginatedResult.
+/// Implements IRequest to work with the custom mediator, returning a paginated list of users wrapped in a PaginatedResult.
 /// </summary>
 public class UserListQuery : IRequest<PaginatedResult<UserListDto>>
 {
@@ -30,7 +30,7 @@ public class UserListQuery : IRequest<PaginatedResult<UserListDto>>
     /// <summary>
     /// Optional array of properties to sales the results by
     /// </summary>
-    public string[] SalesBy { get; set; }
+    public string[] SortBy { get; set; }
 
     /// <summary>
     /// Constructor that initializes the query with pagination, search, and salesing parameters
@@ -38,17 +38,17 @@ public class UserListQuery : IRequest<PaginatedResult<UserListDto>>
     /// <param name="pageNumber">The page number to retrieve (default: 1)</param>
     /// <param name="pageSize">The number of items per page (default: 10)</param>
     /// <param name="searchString">Optional search string to filter users (default: empty string)</param>
-    /// <param name="salesBy">Optional comma-separated list of properties to sales by (default: empty string)</param>
-    public UserListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string salesBy = "")
+    /// <param name="sortBy">Optional comma-separated list of properties to sales by (default: empty string)</param>
+    public UserListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string sortBy = "")
     {
         PageNumber = pageNumber;
         PageSize = pageSize;
         SearchString = searchString;
 
-        // Parse the salesBy string into an array of property names
-        if (!string.IsNullOrWhiteSpace(salesBy))
+        // Parse the sortBy string into an array of property names
+        if (!string.IsNullOrWhiteSpace(sortBy))
         {
-            SalesBy = salesBy
+            SortBy = sortBy
                 .Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(value => value.Trim())
                 .Where(value => !string.IsNullOrWhiteSpace(value))
@@ -56,7 +56,7 @@ public class UserListQuery : IRequest<PaginatedResult<UserListDto>>
         }
         else
         {
-            SalesBy = Array.Empty<string>();
+            SortBy = Array.Empty<string>();
         }
     }
 }

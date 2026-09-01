@@ -6,6 +6,7 @@ using asERP.Application.Features.Setting.Queries.SettingList;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Setting;
 using asERP.Domain.Wrapper;
+using asERP.Server.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,15 +24,15 @@ public class SettingsController(IMediator mediator) : ControllerBase
 {
     // GET: api/v1/<SettingsController>
     [HttpGet]
-    public async Task<ActionResult<PaginatedResult<SettingListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<SettingListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateCreated Descending";
+            sortBy = "DateCreated Descending";
         }
 
-        var response = await mediator.Send(new SettingListQuery(pageNumber, pageSize, searchString, salesBy));
-        return StatusCode((int)response.StatusCode, response);
+        var response = await mediator.Send(new SettingListQuery(pageNumber, pageSize, searchString, sortBy));
+        return response.ToActionResult();
     }
 
     // GET: api/v1/<SettingsController>/5
@@ -43,11 +44,11 @@ public class SettingsController(IMediator mediator) : ControllerBase
     {
         if (!Guid.TryParse(id, out var guidId))
         {
-            return BadRequest(Result<SettingDetailDto>.Fail(ResultStatusCode.BadRequest, "Invalid GUID format"));
+            return BadRequest(Result<SettingDetailDto>.Invalid(ErrorCodes.Setting.Invalid, "Invalid GUID format"));
         }
 
         var response = await mediator.Send(new SettingDetailQuery { Id = guidId });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // POST: api/v1/<SettingsController>
@@ -57,7 +58,7 @@ public class SettingsController(IMediator mediator) : ControllerBase
     public async Task<ActionResult> Create(SettingCreateCommand settingCreateCommand)
     {
         var response = await mediator.Send(settingCreateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // PUT: api/v1/<SettingsController>/5
@@ -70,18 +71,18 @@ public class SettingsController(IMediator mediator) : ControllerBase
     {
         if (!Guid.TryParse(id, out var guidId))
         {
-            return BadRequest(Result<Guid>.Fail(ResultStatusCode.BadRequest, "Invalid GUID format"));
+            return BadRequest(Result<Guid>.Invalid(ErrorCodes.Setting.Invalid, "Invalid GUID format"));
         }
 
         // Validate that URL ID matches the ID in the request body (if provided)
         if (settingUpdateCommand.Id != Guid.Empty && settingUpdateCommand.Id != guidId)
         {
-            return BadRequest(Result<Guid>.Fail(ResultStatusCode.BadRequest, "ID in URL does not match ID in request body"));
+            return BadRequest(Result<Guid>.Invalid(ErrorCodes.Setting.Invalid, "ID in URL does not match ID in request body"));
         }
 
         settingUpdateCommand.Id = guidId;
         var response = await mediator.Send(settingUpdateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // DELETE: api/v1/<SettingsController>/5
@@ -100,12 +101,6 @@ public class SettingsController(IMediator mediator) : ControllerBase
         var command = new SettingDeleteCommand { Id = guidId };
         var result = await mediator.Send(command);
 
-        // For successful deletes, return NoContent without body
-        if (result.Succeeded && result.StatusCode == ResultStatusCode.NoContent)
-        {
-            return NoContent();
-        }
-
-        return StatusCode((int)result.StatusCode, result);
+        return result.ToActionResult();
     }
 }

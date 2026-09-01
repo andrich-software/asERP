@@ -40,7 +40,7 @@ public class SettingListHandler : IRequestHandler<SettingListQuery, PaginatedRes
 
         IQueryable<Domain.Entities.Setting> query = _SettingRepository.Entities
             .Specify(settingFilterSpec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields);
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields);
 
         // Use the standard pagination extension which handles zero-based pagination correctly
         var paginatedEntities = await query.ToPaginatedListAsync(request.PageNumber, request.PageSize);

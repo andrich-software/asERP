@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Exceptions;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -26,22 +25,6 @@ public class ShippingProviderUpdateHandler : IRequestHandler<ShippingProviderUpd
 
         var result = new Result<Guid>();
 
-        var validator = new ShippingProviderUpdateValidator(_shippingProviderRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(ShippingProviderUpdateCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
         try
         {
             var existsGlobally = await _shippingProviderRepository.ExistsGloballyAsync(request.Id);
@@ -62,9 +45,7 @@ public class ShippingProviderUpdateHandler : IRequestHandler<ShippingProviderUpd
             // against it. A different carrier means a new provider.
             if (providerToUpdate.Type != request.Type)
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("The provider type cannot be changed. Create a new shipping provider instead.");
+                result.Fail(ErrorType.Validation, ErrorCodes.ShippingProvider.Invalid, "The provider type cannot be changed. Create a new shipping provider instead.");
                 return result;
             }
 
@@ -95,7 +76,7 @@ public class ShippingProviderUpdateHandler : IRequestHandler<ShippingProviderUpd
             await _shippingProviderRepository.UpdateAsync(providerToUpdate);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
+            result.Status = ResultStatus.Ok;
             result.Data = providerToUpdate.Id;
 
             _logger.LogInformation("Successfully updated shipping provider with ID: {Id}", providerToUpdate.Id);
@@ -103,12 +84,6 @@ public class ShippingProviderUpdateHandler : IRequestHandler<ShippingProviderUpd
         catch (NotFoundException)
         {
             throw;
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while updating the shipping provider.",
-                "Error updating shipping provider {Id}.", request.Id);
         }
 
         return result;

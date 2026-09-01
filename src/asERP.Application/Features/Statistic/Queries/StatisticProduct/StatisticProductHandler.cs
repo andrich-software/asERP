@@ -21,28 +21,20 @@ public class StatisticProductHandler : IRequestHandler<StatisticProductQuery, Re
 
     public async Task<Result<StatisticProductDto>> Handle(StatisticProductQuery request, CancellationToken cancellationToken)
     {
-        try
-        {
-            _logger.LogInformation("Handle StatisticProductQuery: {0}", request);
+        _logger.LogInformation("Handle StatisticProductQuery: {0}", request);
 
-            var statisticDto = new StatisticProductDto();
+        var statisticDto = new StatisticProductDto();
 
-            statisticDto.ProductTotal = await _productRepository.Entities.CountAsync();
+        statisticDto.ProductTotal = await _productRepository.Entities.CountAsync();
 
-            statisticDto.ProductInStock = await _productRepository.Entities
-                .Where(p => p.ProductStocks.Any(w => w.Stock > 0))
-                .CountAsync();
+        statisticDto.ProductInStock = await _productRepository.Entities
+            .Where(p => p.ProductStocks.Any(w => w.Stock > 0))
+            .CountAsync();
 
-            statisticDto.ProductInWarehouse = await _productRepository.Entities
-                .Where(p => p.ProductStocks.Any(w => w.Stock > 0))
-                .SumAsync(p => p.ProductStocks.Sum(w => w.Stock));
+        statisticDto.ProductInWarehouse = await _productRepository.Entities
+            .Where(p => p.ProductStocks.Any(w => w.Stock > 0))
+            .SumAsync(p => p.ProductStocks.Sum(w => w.Stock));
 
-            return Result<StatisticProductDto>.Success(statisticDto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Fehler beim Ermitteln der Produktstatistik: {0}", ex.Message);
-            return Result<StatisticProductDto>.Fail(ResultStatusCode.InternalServerError, "Fehler beim Ermitteln der Produktstatistik");
-        }
+        return Result<StatisticProductDto>.Success(statisticDto);
     }
 }

@@ -12,7 +12,7 @@ Refer to the root `/CLAUDE.md` for cross-cutting rules. `TreatWarningsAsErrors=t
 | `Features/{Area}/` | Vertical slices: `Commands/{Name}/`, `Queries/{Name}/`, optional `Shared/`, `Services/`, `NotificationHandlers/` |
 | `Contracts/Persistence/` | `IGenericRepository<T>` + ~25 entity-specific repo interfaces |
 | `Contracts/Infrastructure/`, `Contracts/Services/`, `Contracts/Identity/`, `Contracts/Logging/` | Interfaces implemented by Infrastructure/Identity/Persistence/Analytics/Shipping |
-| `Extensions/` | `QueryableExtensions` (pagination/sorting), `ResultExtensions`, mapping extensions |
+| `Extensions/` | `QueryableExtensions` (pagination/sorting), mapping extensions |
 | `Specifications/` | Filter specs (`FilterSpecification<T>` base + per-entity specs) |
 | `Notifications/` | `INotification` messages (`ProductChangedNotification`, ...) |
 | `Models/` | Settings/POCOs (Identity, Email, Analytics, Storage, ...) |
@@ -23,7 +23,13 @@ Refer to the root `/CLAUDE.md` for cross-cutting rules. `TreatWarningsAsErrors=t
 
 - Namespace `asERP.Application.Mediator`. Handler method is `Handle` (not `HandleAsync`). Doc comments mentioning "MediatR" mean this in-house implementation — do **not** add the MediatR package.
 - **Handlers are auto-discovered by assembly scan** (`ApplicationServiceRegistration.RegisterHandlersFromAssembly`) — creating the class is enough, no manual registration. **But only within this assembly**: a handler in another project only runs if that project calls `RegisterHandlersFromAssembly` in its own registration (SalesChannels does).
-- **No pipeline behaviors.** Validation, logging, and transactions happen inline in each handler.
+- **Validation runs in the mediator, before the handler.** `CustomMediator.Send` resolves every
+  `IValidator<TRequest>` from DI and runs it; on failure it throws
+  `asERP.Application.Exceptions.ValidationException` and the handler is never invoked. Handlers must
+  **not** validate inline — writing a `{Name}Validator.cs` is enough, `AddValidatorsFromAssembly`
+  registers it. Opt out with `ISkipPipelineValidation` on the request only when the rules need
+  runtime state the validator cannot see (three requests do — see below).
+- No other pipeline behaviors: logging and transactions still happen inline in each handler.
 - `Publish` runs notification handlers **sequentially** and rethrows (single or `AggregateException`). Best-effort handlers (e.g. email notifications) must swallow their own exceptions.
 
 ## Canonical Slice Pattern
@@ -31,12 +37,42 @@ Refer to the root `/CLAUDE.md` for cross-cutting rules. `TreatWarningsAsErrors=t
 One folder per request — copy `Features/Customer/Commands/CustomerCreate/` or `Features/Customer/Queries/CustomerList/`:
 
 - `{Name}Command.cs` / `{Name}Query.cs` — often inherits the Domain `{X}InputDto` and adds `IRequest<Result<Guid>>`.
-- `{Name}Handler.cs` — ctor-injects `IAppLogger<T>` + repos (with `?? throw new ArgumentNullException`). **Validators are `new`ed inside the handler** (`new CustomerCreateValidator(_repo)`), not resolved from DI — mirror that. Validation failure → `Result<T>.Fail(ResultStatusCode.BadRequest, messages)`, no exception.
-- `{Name}Validator.cs` — FluentValidation, usually extends the Domain base validator and adds DB-aware rules.
+- `{Name}Handler.cs` — ctor-injects `IAppLogger<T>` + repos (with `?? throw new ArgumentNullException`). **No validation code**: the mediator has already validated the request by the time `Handle` runs.
+- `{Name}Validator.cs` — FluentValidation, usually extends the Domain base validator and adds DB-aware rules. Constructor-inject the repos it needs; DI resolves it.
+
+**Validators must stay purely about "is this request well-formed".** Anything else fights the
+pipeline, which reports every failure as a 400 *before* the handler runs. Six requests carry
+`ISkipPipelineValidation` today — don't add a seventh without the same kind of reason:
+
+| Request | Why it opts out |
+|---|---|
+| `CustomerUpdateCommand`, `ProductUpdateCommand`, `SettingDeleteCommand` | validator carries a "… not found" rule the handler maps to **404**, which a uniform 400 cannot express (REFACTOR.md R5) |
+| `AiModelDeleteCommand`, `DeleteSalesCommand` | their controllers discard the result and always answer **204**; a throwing validator would turn a deliberately idempotent DELETE into a 400 |
+| `SetupInitializeCommand` | the anonymous setup endpoint must answer 403 for every payload once setup is done — validating first would let the email-uniqueness rule reveal which accounts exist |
 
 Return types: mutations `Result<Guid>`/`Result<int>`, detail queries `Result<TDto>`, lists `PaginatedResult<TDto>` (all from `asERP.Domain.Wrapper`).
 
-Error handling: catch broadly, log full detail via `IAppLogger<T>` (never inject `ILogger<T>` directly), return generic `InternalServerError` — **never leak exception text to clients** (`ResultExtensions.FromException`).
+**Never name an HTTP status.** A handler reports *what* happened — `Result<T>.NotFound(ErrorCodes.Customer.NotFound, "Customer not found")`, `result.Fail(ErrorType.Validation, ErrorCodes.Product.Invalid, "…")`, `Result<T>.Created(id)` — and the Server maps that to a status code in one place. See `asERP.Domain/CLAUDE.md` for the full vocabulary.
+
+Error handling: **don't wrap the handler body in a broad `try/catch`.** An unexpected exception is
+meant to reach the Server's `GlobalExceptionHandler`, which already logs it in full and answers with
+generic 500 problem details — no exception text ever reaches a client. Handlers return `Result` for
+*expected* outcomes (not found, conflict, state rules) only.
+
+Catch something only when you can do more with it than restate it as a 500:
+
+- a specific exception that maps to a business status (`DbUpdateConcurrencyException` → 404/409),
+- per-item continuation (CSV import collecting row errors),
+- a best-effort side operation that must not fail the request (notification publish, e-mail),
+- compensation before rethrowing (`catch { await CleanUpAsync(); throw; }`),
+- an idempotent endpoint whose contract says "already gone is fine" — `AiModelDelete` /
+  `SalesDelete` catch exactly `InvalidOperationException` and `UnauthorizedAccessException` from
+  `DeleteAsync` for that reason.
+
+Keep such a catch **narrow** (name the exception types) so a real infrastructure failure still
+reaches the 500 path instead of being reported as success.
+
+Where you do log, use `IAppLogger<T>` — never inject `ILogger<T>` directly.
 
 ## Repositories & the Update-Graph Pitfall (critical)
 

@@ -23,21 +23,12 @@ public class CustomerDedupeHandler : IRequestHandler<CustomerDedupeCommand, Resu
     {
         _logger.LogInformation("Customer dedupe started (dryRun={DryRun})", request.DryRun);
 
-        try
-        {
-            var dto = await _dedupeService.RunAsync(request.DryRun, cancellationToken);
+        var dto = await _dedupeService.RunAsync(request.DryRun, cancellationToken);
 
-            _logger.LogInformation(
-                "Customer dedupe finished (dryRun={DryRun}, tenants={Tenants}, groups={Groups}, customersToMerge={CustomersToMerge})",
-                request.DryRun, dto.TenantsAffected, dto.GroupsFound, dto.CustomersToMerge);
+        _logger.LogInformation(
+            "Customer dedupe finished (dryRun={DryRun}, tenants={Tenants}, groups={Groups}, customersToMerge={CustomersToMerge})",
+            request.DryRun, dto.TenantsAffected, dto.GroupsFound, dto.CustomersToMerge);
 
-            return Result<CustomerDedupeResultDto>.Success(dto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Customer dedupe failed.");
-            return Result<CustomerDedupeResultDto>.Fail(ResultStatusCode.InternalServerError,
-                "Customer dedupe failed.");
-        }
+        return Result<CustomerDedupeResultDto>.Success(dto);
     }
 }

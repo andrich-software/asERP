@@ -6,7 +6,7 @@ namespace asERP.Application.Features.SalesChannel.Queries.SalesChannelDetail;
 
 /// <summary>
 /// Query for retrieving detailed information about a specific sales channel.
-/// Implements IRequest to work with MediatR, returning sales channel details wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning sales channel details wrapped in a Result.
 /// </summary>
 public class SalesChannelDetailQuery : IRequest<Result<SalesChannelDetailDto>>
 {

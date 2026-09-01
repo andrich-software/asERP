@@ -28,7 +28,7 @@ public class ProductImageContentHandler : IRequestHandler<ProductImageContentQue
         var image = await _productImageRepository.GetByIdAsync(request.ImageId, asNoTracking: true);
         if (image == null || image.ProductId != request.ProductId)
         {
-            return Result<ProductImageFile>.Fail(ResultStatusCode.NotFound, "Image not found");
+            return Result<ProductImageFile>.NotFound(ErrorCodes.ProductImage.NotFound, "Image not found");
         }
 
         var relativePath = request.Thumbnail ? image.ThumbnailPath : image.RelativePath;
@@ -36,7 +36,7 @@ public class ProductImageContentHandler : IRequestHandler<ProductImageContentQue
         if (stream == null)
         {
             _logger.LogWarning("Image file missing on disk: {Path}", relativePath);
-            return Result<ProductImageFile>.Fail(ResultStatusCode.NotFound, "Image file not found");
+            return Result<ProductImageFile>.NotFound(ErrorCodes.ProductImage.NotFound, "Image file not found");
         }
 
         return Result<ProductImageFile>.Success(

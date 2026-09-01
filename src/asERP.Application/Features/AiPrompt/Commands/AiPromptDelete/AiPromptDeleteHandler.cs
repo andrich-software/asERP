@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -25,23 +24,6 @@ public class AiPromptDeleteHandler : IRequestHandler<AiPromptDeleteCommand, Resu
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new AiPromptDeleteValidator();
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in delete request for {0}: {1}",
-                nameof(AiPromptDeleteCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
         try
         {
             // Get entity from database first
@@ -50,9 +32,7 @@ public class AiPromptDeleteHandler : IRequestHandler<AiPromptDeleteCommand, Resu
             if (aIPromptToDelete == null)
             {
                 _logger.LogWarning("AI prompt with ID: {Id} not found for deletion", request.Id);
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("AI prompt not found");
+                result.Fail(ErrorType.NotFound, ErrorCodes.AiPrompt.NotFound, "AI prompt not found");
                 return result;
             }
 
@@ -60,7 +40,7 @@ public class AiPromptDeleteHandler : IRequestHandler<AiPromptDeleteCommand, Resu
             await _aIPromptRepository.DeleteAsync(aIPromptToDelete);
 
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
+            result.Status = ResultStatus.NoContent;
             result.Data = aIPromptToDelete.Id;
 
             _logger.LogInformation("Successfully deleted AI prompt with ID: {Id}", aIPromptToDelete.Id);
@@ -70,9 +50,7 @@ public class AiPromptDeleteHandler : IRequestHandler<AiPromptDeleteCommand, Resu
             // Handle concurrent deletion - prompt was already deleted by another request
             _logger.LogWarning("AI prompt with ID: {Id} was deleted by another request: {Message}", request.Id, ex.Message);
 
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add("AI prompt not found");
+            result.Fail(ErrorType.NotFound, ErrorCodes.AiPrompt.NotFound, "AI prompt not found");
         }
         catch (InvalidOperationException ex)
         {
@@ -82,15 +60,7 @@ public class AiPromptDeleteHandler : IRequestHandler<AiPromptDeleteCommand, Resu
                 request.Id,
                 ex.Message);
 
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add("AI prompt not found");
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while deleting the AI prompt.",
-                "Error deleting AI prompt.");
+            result.Fail(ErrorType.NotFound, ErrorCodes.AiPrompt.NotFound, "AI prompt not found");
         }
 
         return result;

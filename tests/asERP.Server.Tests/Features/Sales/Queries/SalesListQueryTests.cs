@@ -247,12 +247,12 @@ public class SalesListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSaless_WithSalesByTotal_ShouldReturnSalesedResults()
+    public async Task GetSaless_WithSortByTotal_ShouldReturnSalesedResults()
     {
         await SeedSalesTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/Saless?salesBy=Total");
+        var response = await Client.GetAsync("/api/v1/Saless?sortBy=Total");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);
@@ -267,12 +267,12 @@ public class SalesListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSaless_WithSalesByTotalDescending_ShouldReturnDescSalesedResults()
+    public async Task GetSaless_WithSortByTotalDescending_ShouldReturnDescSalesedResults()
     {
         await SeedSalesTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/Saless?salesBy=Total desc");
+        var response = await Client.GetAsync("/api/v1/Saless?sortBy=Total desc");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);
@@ -287,12 +287,12 @@ public class SalesListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSaless_WithSalesByDateSalesed_ShouldReturnDateSalesedResults()
+    public async Task GetSaless_WithSortByDateSalesed_ShouldReturnDateSalesedResults()
     {
         await SeedSalesTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/Saless?salesBy=DateSalesed");
+        var response = await Client.GetAsync("/api/v1/Saless?sortBy=DateSalesed");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);
@@ -302,12 +302,12 @@ public class SalesListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSaless_WithMultipleSalesBy_ShouldRespectMultipleSorting()
+    public async Task GetSaless_WithMultipleSortBy_ShouldRespectMultipleSorting()
     {
         await SeedSalesTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/Saless?salesBy=Status,Total");
+        var response = await Client.GetAsync("/api/v1/Saless?sortBy=Status,Total");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);

@@ -10,7 +10,7 @@ public class ShippingListQuery : IRequest<PaginatedResult<ShipmentListItemDto>>
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public string SearchString { get; set; }
-    public string[] SalesBy { get; set; }
+    public string[] SortBy { get; set; }
     public ShippingStatus? Status { get; set; }
     public bool ProblemsOnly { get; set; }
     public Guid? SalesId { get; set; }
@@ -19,7 +19,7 @@ public class ShippingListQuery : IRequest<PaginatedResult<ShipmentListItemDto>>
         int pageNumber = 0,
         int pageSize = 10,
         string searchString = "",
-        string salesBy = "",
+        string sortBy = "",
         ShippingStatus? status = null,
         bool problemsOnly = false,
         Guid? salesId = null)
@@ -31,10 +31,10 @@ public class ShippingListQuery : IRequest<PaginatedResult<ShipmentListItemDto>>
         ProblemsOnly = problemsOnly;
         SalesId = salesId;
 
-        if (!string.IsNullOrWhiteSpace(salesBy))
+        if (!string.IsNullOrWhiteSpace(sortBy))
         {
-            SalesBy = salesBy.Split(',');
+            SortBy = sortBy.Split(',');
         }
-        else SalesBy = new string[] { };
+        else SortBy = new string[] { };
     }
 }

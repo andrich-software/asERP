@@ -29,13 +29,13 @@ public class TenantOAuthAppSettingsDeleteHandler
         var tenantId = _tenantContext.GetCurrentTenantId();
         if (!tenantId.HasValue)
         {
-            return Result<int>.Fail(ResultStatusCode.BadRequest, "No active tenant in context.");
+            return Result<int>.Invalid(ErrorCodes.TenantOauthAppSettings.Invalid, "No active tenant in context.");
         }
 
         var existing = await _repository.GetByTenantAndProviderAsync(tenantId.Value, request.Provider);
         if (existing is null)
         {
-            return Result<int>.Fail(ResultStatusCode.NotFound,
+            return Result<int>.NotFound(ErrorCodes.TenantOauthAppSettings.NotFound,
                 $"No tenant OAuth app settings configured for {request.Provider}.");
         }
 
@@ -45,6 +45,6 @@ public class TenantOAuthAppSettingsDeleteHandler
             "Deleted tenant OAuth app settings for tenant {TenantId} provider {Provider}",
             tenantId.Value, request.Provider);
 
-        return new Result<int> { Succeeded = true, Data = 1, StatusCode = ResultStatusCode.NoContent };
+        return new Result<int> { Succeeded = true, Data = 1, Status = ResultStatus.NoContent };
     }
 }

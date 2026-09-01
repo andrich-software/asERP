@@ -45,16 +45,14 @@ public class ShippingLabelRetryHandler : IRequestHandler<ShippingLabelRetryComma
 
         if (shipping.LabelData is { Length: > 0 })
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.Add("The shipment already has a label.");
+            result.Fail(ErrorType.Validation, ErrorCodes.Shipping.Invalid, "The shipment already has a label.");
             return result;
         }
 
         var labelResult = await _shippingCarrierService.CreateLabelAsync(request.Id, cancellationToken);
 
         result.Succeeded = labelResult.Succeeded;
-        result.StatusCode = labelResult.Succeeded ? ResultStatusCode.Ok : labelResult.StatusCode;
+        result.Error = labelResult.Error;
         result.Messages.AddRange(labelResult.Messages);
         result.Data = request.Id;
 

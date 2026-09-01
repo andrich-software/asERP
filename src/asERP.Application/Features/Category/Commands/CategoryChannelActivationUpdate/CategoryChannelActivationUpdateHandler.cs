@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Application.Notifications;
 using asERP.Domain.Services;
@@ -29,49 +28,40 @@ public class CategoryChannelActivationUpdateHandler : IRequestHandler<CategoryCh
     {
         var result = new Result<int>();
 
-        try
+        if (request.Changes.Count == 0)
         {
-            if (request.Changes.Count == 0)
-            {
-                result.Succeeded = true;
-                result.StatusCode = ResultStatusCode.Ok;
-                result.Data = 0;
-                return result;
-            }
-
-            // Re-apply the tree-consistency rule server-side (the client already expands, but the
-            // server cannot trust that): activating a cell activates its ancestors, deactivating
-            // deactivates its descendants.
-            var parentByCategoryId = (await _categoryRepository.Entities
-                    .Select(c => new { c.Id, c.ParentCategoryId })
-                    .ToListAsync(cancellationToken))
-                .ToDictionary(c => c.Id, c => c.ParentCategoryId);
-
-            var expandedChanges = CategoryActivationRules.Expand(request.Changes, parentByCategoryId);
-
-            var affectedRows = await _categoryRepository.ApplyChannelActivationAsync(expandedChanges, cancellationToken);
-
-            // Primary export trigger per flipped cell: active rows are (re-)exported, inactive rows
-            // deleted remotely. The persistence interceptor is only the safety net.
-            foreach (var row in affectedRows)
-            {
-                await _mediator.Publish(
-                    new CategorySalesChannelChangedNotification(row.Id, row.CategoryId, row.SalesChannelId, row.TenantId),
-                    cancellationToken);
-            }
-
             result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = affectedRows.Count;
+            result.Status = ResultStatus.Ok;
+            result.Data = 0;
+            return result;
+        }
 
-            _logger.LogInformation("Applied {Count} category channel activation changes", affectedRows.Count);
-        }
-        catch (Exception ex)
+        // Re-apply the tree-consistency rule server-side (the client already expands, but the
+        // server cannot trust that): activating a cell activates its ancestors, deactivating
+        // deactivates its descendants.
+        var parentByCategoryId = (await _categoryRepository.Entities
+                .Select(c => new { c.Id, c.ParentCategoryId })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(c => c.Id, c => c.ParentCategoryId);
+
+        var expandedChanges = CategoryActivationRules.Expand(request.Changes, parentByCategoryId);
+
+        var affectedRows = await _categoryRepository.ApplyChannelActivationAsync(expandedChanges, cancellationToken);
+
+        // Primary export trigger per flipped cell: active rows are (re-)exported, inactive rows
+        // deleted remotely. The persistence interceptor is only the safety net.
+        foreach (var row in affectedRows)
         {
-            result.FromException(_logger, ex,
-                "An error occurred while updating the category channel activation.",
-                "Error updating category channel activation.");
+            await _mediator.Publish(
+                new CategorySalesChannelChangedNotification(row.Id, row.CategoryId, row.SalesChannelId, row.TenantId),
+                cancellationToken);
         }
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = affectedRows.Count;
+
+        _logger.LogInformation("Applied {Count} category channel activation changes", affectedRows.Count);
 
         return result;
     }

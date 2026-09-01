@@ -6,7 +6,7 @@ namespace asERP.Application.Features.TaxClass.Queries.TaxClassDetail;
 
 /// <summary>
 /// Query for retrieving detailed information about a specific tax class.
-/// Implements IRequest to work with MediatR, returning tax class details wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning tax class details wrapped in a Result.
 /// </summary>
 public class TaxClassDetailQuery : IRequest<Result<TaxClassDetailDto>>
 {

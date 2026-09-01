@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Country;
 using asERP.Domain.Wrapper;
@@ -31,44 +30,32 @@ public class CountryDetailHandler : IRequestHandler<CountryDetailQuery, Result<C
 
         var result = new Result<CountryDetailDto>();
 
-        try
+        // Retrieve country with all related details from the repository
+        var country = await _countryRepository.GetByIdAsync(request.Id, true);
+
+        // If country not found, return a not found result
+        if (country == null)
         {
-            // Retrieve country with all related details from the repository
-            var country = await _countryRepository.GetByIdAsync(request.Id, true);
+            result.Fail(ErrorType.NotFound, ErrorCodes.Country.NotFound, $"Country with ID {request.Id} not found");
 
-            // If country not found, return a not found result
-            if (country == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Country with ID {request.Id} not found");
-
-                _logger.LogWarning("Country with ID {Id} not found", request.Id);
-                return result;
-            }
-
-            // Manual mapping from entity to DTO
-            var data = new CountryDetailDto
-            {
-                Id = country.Id,
-                Name = country.Name,
-                CountryCode = country.CountryCode
-            };
-
-            // Set successful result with the country details
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = data;
-
-            _logger.LogInformation("Country with ID {Id} retrieved successfully", request.Id);
+            _logger.LogWarning("Country with ID {Id} not found", request.Id);
+            return result;
         }
-        catch (Exception ex)
+
+        // Manual mapping from entity to DTO
+        var data = new CountryDetailDto
         {
-            // Handle any exceptions during country retrieval; never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while retrieving the country.",
-                "Error retrieving country.");
-        }
+            Id = country.Id,
+            Name = country.Name,
+            CountryCode = country.CountryCode
+        };
+
+        // Set successful result with the country details
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = data;
+
+        _logger.LogInformation("Country with ID {Id} retrieved successfully", request.Id);
 
         return result;
     }

@@ -75,7 +75,7 @@ public class SalesListHandler : IRequestHandler<SalesListQuery, PaginatedResult<
         baseQuery = ApplyQuickFilter(baseQuery, request.Filter);
 
         return await baseQuery
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(o => new SalesListDto
             {
                 Id = o.Id,

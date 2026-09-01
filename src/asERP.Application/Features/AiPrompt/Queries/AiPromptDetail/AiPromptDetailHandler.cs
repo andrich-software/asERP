@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.AiPrompt;
 using asERP.Domain.Wrapper;
@@ -27,42 +26,30 @@ public class AiPromptDetailHandler : IRequestHandler<AiPromptDetailQuery, Result
 
         var result = new Result<AiPromptDetailDto>();
 
-        try
+        var aiPrompt = await _aiPromptRepository.GetByIdAsync(request.Id, true);
+
+        if (aiPrompt == null)
         {
-            var aiPrompt = await _aiPromptRepository.GetByIdAsync(request.Id, true);
+            result.Fail(ErrorType.NotFound, ErrorCodes.AiPrompt.NotFound, $"AI prompt with ID {request.Id} not found");
 
-            if (aiPrompt == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"AI prompt with ID {request.Id} not found");
-
-                _logger.LogWarning("AI prompt with ID {Id} not found", request.Id);
-                return result;
-            }
-
-            // Manuelles Mapping statt AutoMapper
-            var data = new AiPromptDetailDto
-            {
-                Id = aiPrompt.Id,
-                AiModelId = aiPrompt.AiModelId,
-                Identifier = aiPrompt.Identifier,
-                PromptText = aiPrompt.PromptText
-            };
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = data;
-
-            _logger.LogInformation("AI prompt with ID {Id} retrieved successfully", request.Id);
+            _logger.LogWarning("AI prompt with ID {Id} not found", request.Id);
+            return result;
         }
-        catch (Exception ex)
+
+        // Manuelles Mapping statt AutoMapper
+        var data = new AiPromptDetailDto
         {
-            // Never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while retrieving the AI prompt.",
-                "Error retrieving AI prompt.");
-        }
+            Id = aiPrompt.Id,
+            AiModelId = aiPrompt.AiModelId,
+            Identifier = aiPrompt.Identifier,
+            PromptText = aiPrompt.PromptText
+        };
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = data;
+
+        _logger.LogInformation("AI prompt with ID {Id} retrieved successfully", request.Id);
 
         return result;
     }

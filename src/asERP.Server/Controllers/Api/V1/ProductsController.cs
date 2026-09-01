@@ -26,7 +26,7 @@ public class ProductsController(IMediator mediator) : ControllerBase
     /// <param name="pageNumber">Page number (0-based)</param>
     /// <param name="pageSize">Number of items per page (max 100)</param>
     /// <param name="searchString">Search term to filter products by name or SKU</param>
-    /// <param name="salesBy">Sort sales (e.g., "Name Ascending", "DateCreated Descending")</param>
+    /// <param name="sortBy">Sort sales (e.g., "Name Ascending", "DateCreated Descending")</param>
     /// <param name="includeVariants">Include variant child products in the list (default false)</param>
     /// <param name="lowStockOnly">Only products below their minimum stock in at least one warehouse (default false)</param>
     /// <returns>Paginated list of products</returns>
@@ -35,14 +35,14 @@ public class ProductsController(IMediator mediator) : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(PaginatedResult<ProductListDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Microsoft.AspNetCore.Mvc.ProblemDetails), StatusCodes.Status400BadRequest, "application/problem+json")]
-    public async Task<ActionResult<PaginatedResult<ProductListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "", bool includeVariants = false, bool lowStockOnly = false)
+    public async Task<ActionResult<PaginatedResult<ProductListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "", bool includeVariants = false, bool lowStockOnly = false)
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateCreated Descending";
+            sortBy = "DateCreated Descending";
         }
 
-        var response = await mediator.Send(new ProductListQuery(pageNumber, pageSize, searchString, salesBy, includeVariants, lowStockOnly));
+        var response = await mediator.Send(new ProductListQuery(pageNumber, pageSize, searchString, sortBy, includeVariants, lowStockOnly));
         return response.ToActionResult();
     }
 

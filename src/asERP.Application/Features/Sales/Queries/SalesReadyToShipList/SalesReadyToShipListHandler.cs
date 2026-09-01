@@ -44,7 +44,7 @@ public class SalesReadyToShipListHandler : IRequestHandler<SalesReadyToShipListQ
         var query = _salesRepository.Entities
             .Where(SalesQuickFilterPredicates.ReadyToShip());
 
-        query = query.ApplySafeOrdering(request.SalesBy, AllowedSortFields);
+        query = query.ApplySafeOrdering(request.SortBy, AllowedSortFields);
 
         var page = await query
             .Select(o => new SalesReadyToShipListDto

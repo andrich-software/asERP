@@ -10,19 +10,19 @@ public class SalesCustomerListQuery : IRequest<PaginatedResult<SalesListDto>>
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public string SearchString { get; set; }
-    public string[] SalesBy { get; set; }
+    public string[] SortBy { get; set; }
 
-    public SalesCustomerListQuery(int customerId, int pageNumber = 1, int pageSize = 10, string searchString = "", string salesBy = "")
+    public SalesCustomerListQuery(int customerId, int pageNumber = 1, int pageSize = 10, string searchString = "", string sortBy = "")
     {
         CustomerId = customerId;
         PageNumber = pageNumber;
         PageSize = pageSize;
         SearchString = searchString;
 
-        if (!string.IsNullOrWhiteSpace(salesBy))
+        if (!string.IsNullOrWhiteSpace(sortBy))
         {
-            SalesBy = salesBy.Split(',');
+            SortBy = sortBy.Split(',');
         }
-        else SalesBy = new string[] { };
+        else SortBy = new string[] { };
     }
 }

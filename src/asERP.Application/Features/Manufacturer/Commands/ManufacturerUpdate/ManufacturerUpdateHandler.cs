@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -25,63 +24,35 @@ public class ManufacturerUpdateHandler : IRequestHandler<ManufacturerUpdateComma
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new ManufacturerUpdateValidator(_manufacturerRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        // Load existing manufacturer from database
+        var existingManufacturer = await _manufacturerRepository.GetByIdAsync(request.Id);
 
-        if (!validationResult.IsValid)
+        if (existingManufacturer == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(ManufacturerUpdateCommand),
-                string.Join(", ", result.Messages));
-
+            result.Fail(ErrorType.NotFound, ErrorCodes.Manufacturer.NotFound, $"Manufacturer with ID {request.Id} not found");
             return result;
         }
 
-        try
-        {
-            // Load existing manufacturer from database
-            var existingManufacturer = await _manufacturerRepository.GetByIdAsync(request.Id);
+        // Update only the provided fields, preserving system fields like TenantId, DateCreated, etc.
+        existingManufacturer.Name = request.Name;
+        existingManufacturer.Street = request.Street;
+        existingManufacturer.City = request.City;
+        existingManufacturer.State = request.State;
+        existingManufacturer.Country = request.Country;
+        existingManufacturer.ZipCode = request.ZipCode;
+        existingManufacturer.Phone = request.Phone;
+        existingManufacturer.Email = request.Email;
+        existingManufacturer.Website = request.Website;
+        existingManufacturer.Logo = request.Logo;
 
-            if (existingManufacturer == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Manufacturer with ID {request.Id} not found");
-                return result;
-            }
+        // Update in database
+        await _manufacturerRepository.UpdateAsync(existingManufacturer);
 
-            // Update only the provided fields, preserving system fields like TenantId, DateCreated, etc.
-            existingManufacturer.Name = request.Name;
-            existingManufacturer.Street = request.Street;
-            existingManufacturer.City = request.City;
-            existingManufacturer.State = request.State;
-            existingManufacturer.Country = request.Country;
-            existingManufacturer.ZipCode = request.ZipCode;
-            existingManufacturer.Phone = request.Phone;
-            existingManufacturer.Email = request.Email;
-            existingManufacturer.Website = request.Website;
-            existingManufacturer.Logo = request.Logo;
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = existingManufacturer.Id;
 
-            // Update in database
-            await _manufacturerRepository.UpdateAsync(existingManufacturer);
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = existingManufacturer.Id;
-
-            _logger.LogInformation("Successfully updated manufacturer with ID: {Id}", existingManufacturer.Id);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while updating the manufacturer.",
-                "Error updating manufacturer.");
-        }
+        _logger.LogInformation("Successfully updated manufacturer with ID: {Id}", existingManufacturer.Id);
 
         return result;
     }

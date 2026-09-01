@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -26,54 +25,26 @@ public class WarehouseUpdateHandler : IRequestHandler<WarehouseUpdateCommand, Re
 
         var result = new Result<Guid>();
 
-        // Validate incoming data
-        var validator = new WarehouseUpdateValidator(_warehouseRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
+        // Load the tracked entity and mutate it, so the persistence layer keeps
+        // TenantId/DateCreated intact instead of nulling them on a detached update.
+        var warehouseToUpdate = await _warehouseRepository.GetByIdAsync(request.Id);
+        if (warehouseToUpdate == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(WarehouseUpdateCommand),
-                string.Join(", ", result.Messages));
-
+            result.Fail(ErrorType.NotFound, ErrorCodes.Warehouse.NotFound, "Warehouse not found.");
+            _logger.LogWarning("Warehouse with ID {Id} not found for update", request.Id);
             return result;
         }
 
-        try
-        {
-            // Load the tracked entity and mutate it, so the persistence layer keeps
-            // TenantId/DateCreated intact instead of nulling them on a detached update.
-            var warehouseToUpdate = await _warehouseRepository.GetByIdAsync(request.Id);
-            if (warehouseToUpdate == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add("Warehouse not found.");
-                _logger.LogWarning("Warehouse with ID {Id} not found for update", request.Id);
-                return result;
-            }
+        warehouseToUpdate.Name = request.Name;
 
-            warehouseToUpdate.Name = request.Name;
+        // Save changes (entity is already tracked, so just save)
+        await _warehouseRepository.SaveChangesAsync();
 
-            // Save changes (entity is already tracked, so just save)
-            await _warehouseRepository.SaveChangesAsync();
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = warehouseToUpdate.Id;
 
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = warehouseToUpdate.Id;
-
-            _logger.LogInformation("Successfully updated warehouse with ID: {Id}", warehouseToUpdate.Id);
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "An error occurred while updating the warehouse.",
-                "Error updating warehouse.");
-        }
+        _logger.LogInformation("Successfully updated warehouse with ID: {Id}", warehouseToUpdate.Id);
 
         return result;
     }

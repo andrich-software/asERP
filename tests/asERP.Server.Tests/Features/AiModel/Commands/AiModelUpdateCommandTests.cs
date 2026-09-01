@@ -101,7 +101,7 @@ public class AiModelUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertTrue(result.Messages.Any(m => m.Contains("not found") || m.Contains("AiModel")));
+        TestAssertions.AssertTrue((await ErrorResponse.ReadMessagesAsync(response)).Any(m => m.Contains("not found") || m.Contains("AiModel")));
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public class AiModelUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertTrue(result.Messages.Any(m => m.Contains("Name")));
+        TestAssertions.AssertTrue((await ErrorResponse.ReadMessagesAsync(response)).Any(m => m.Contains("Name")));
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class AiModelUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertTrue(result.Messages.Any(m => m.Contains("50 characters")));
+        TestAssertions.AssertTrue((await ErrorResponse.ReadMessagesAsync(response)).Any(m => m.Contains("50 characters")));
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public class AiModelUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertTrue(result.Messages.Any(m => m.Contains("Ai Model Type")));
+        TestAssertions.AssertTrue((await ErrorResponse.ReadMessagesAsync(response)).Any(m => m.Contains("Ai Model Type")));
     }
 
     [Fact]
@@ -205,7 +205,7 @@ public class AiModelUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertTrue(result.Messages.Any(m => m.Contains("ApiKey") || m.Contains("ApiUsername")));
+        TestAssertions.AssertTrue((await ErrorResponse.ReadMessagesAsync(response)).Any(m => m.Contains("ApiKey") || m.Contains("ApiUsername")));
     }
 
     [Fact]
@@ -231,7 +231,7 @@ public class AiModelUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertTrue(result.Messages.Any(m => m.Contains("Api Key") && m.Contains("10 characters")));
+        TestAssertions.AssertTrue((await ErrorResponse.ReadMessagesAsync(response)).Any(m => m.Contains("Api Key") && m.Contains("10 characters")));
     }
 
     [Fact]
@@ -257,7 +257,7 @@ public class AiModelUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertTrue(result.Messages.Any(m => m.Contains("ApiPassword")));
+        TestAssertions.AssertTrue((await ErrorResponse.ReadMessagesAsync(response)).Any(m => m.Contains("ApiPassword")));
     }
 
     [Fact]
@@ -284,7 +284,7 @@ public class AiModelUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertTrue(result.Messages.Any(m => m.Contains("already exists")));
+        TestAssertions.AssertTrue((await ErrorResponse.ReadMessagesAsync(response)).Any(m => m.Contains("already exists")));
     }
 
     [Fact]
@@ -509,7 +509,7 @@ public class AiModelUpdateCommandTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<Guid>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertTrue(result.Messages.Any(m => m.Contains("not found") || m.Contains("AiModel")));
+        TestAssertions.AssertTrue((await ErrorResponse.ReadMessagesAsync(response)).Any(m => m.Contains("not found") || m.Contains("AiModel")));
     }
 
     [Fact]

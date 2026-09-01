@@ -5,7 +5,7 @@ namespace asERP.Application.Features.Superadmin.Users.Commands.UserDelete;
 
 /// <summary>
 /// Command for deleting an existing user from the system.
-/// Implements IRequest to work with MediatR, returning the ID of the deleted user wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning the ID of the deleted user wrapped in a Result.
 /// </summary>
 public class UserDeleteCommand : IRequest<Result<string>>
 {

@@ -6,7 +6,7 @@ namespace asERP.Application.Features.ImportExport.Commands.CustomerCsvImport;
 
 /// <summary>
 /// Command for importing customers from a CSV file.
-/// Implements IRequest to work with MediatR, returning a Result with import statistics.
+/// Implements IRequest to work with the custom mediator, returning a Result with import statistics.
 /// </summary>
 public class CustomerCsvImportCommand : IRequest<Result<CustomerCsvImportResult>>
 {

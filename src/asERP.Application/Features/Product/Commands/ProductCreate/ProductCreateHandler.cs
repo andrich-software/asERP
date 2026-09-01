@@ -10,54 +10,19 @@ namespace asERP.Application.Features.Product.Commands.ProductCreate;
 
 /// <summary>
 /// Handler for processing product creation commands.
-/// Implements IRequestHandler from MediatR to handle ProductCreateCommand requests
+/// Implements IRequestHandler from the custom mediator to handle ProductCreateCommand requests
 /// and return the ID of the newly created product wrapped in a Result.
 /// </summary>
 public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result<Guid>>
 {
-    /// <summary>
-    /// Logger for recording handler operations
-    /// </summary>
     private readonly IAppLogger<ProductCreateHandler> _logger;
-
-    /// <summary>
-    /// Repository for product data operations
-    /// </summary>
     private readonly IProductRepository _productRepository;
-
-    /// <summary>
-    /// Repository for tax class data operations
-    /// </summary>
     private readonly ITaxClassRepository _taxClassRepository;
-
-    /// <summary>
-    /// Repository for manufacturer data operations
-    /// </summary>
     private readonly IManufacturerRepository _manufacturerRepository;
-
-    /// <summary>
-    /// Repository for product attribute data operations
-    /// </summary>
     private readonly IProductAttributeRepository _productAttributeRepository;
-
-    /// <summary>
-    /// Repository for category data operations
-    /// </summary>
     private readonly ICategoryRepository _categoryRepository;
-
-    /// <summary>
-    /// Tenant context for handling multi-tenancy
-    /// </summary>
     private readonly ITenantContext _tenantContext;
 
-    /// <summary>
-    /// Constructor that initializes the handler with required dependencies
-    /// </summary>
-    /// <param name="logger">Logger for recording operations</param>
-    /// <param name="productRepository">Repository for product data access</param>
-    /// <param name="taxClassRepository">Repository for tax class data access</param>
-    /// <param name="manufacturerRepository">Repository for manufacturer data access</param>
-    /// <param name="tenantContext">Tenant context for multi-tenancy</param>
     public ProductCreateHandler(
         IAppLogger<ProductCreateHandler> logger,
         IProductRepository productRepository,
@@ -76,145 +41,113 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
         _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
     }
 
-    /// <summary>
-    /// Handles the product creation request
-    /// </summary>
-    /// <param name="request">The product creation command with product details</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Result containing the ID of the newly created product if successful</returns>
     public async Task<Result<Guid>> Handle(ProductCreateCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating new product with SKU: {Sku}, Name: {Name}", request.Sku, request.Name);
 
-        // Validate incoming data
-        var validator = new ProductCreateValidator(_productRepository, _taxClassRepository, _manufacturerRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        // If validation fails, return a Problem Details result with validation error messages
-        if (!validationResult.IsValid)
+        // Get current tenant ID for proper data isolation
+        var currentTenantId = _tenantContext.GetCurrentTenantId();
+        if (!currentTenantId.HasValue)
         {
-            var validationErrors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in create request for {0}: {1}",
-                nameof(ProductCreateCommand), validationErrors);
-
-            return Result<Guid>.Fail(ResultStatusCode.BadRequest, validationErrors);
+            _logger.LogError("Attempted to create product without tenant context");
+            return Result<Guid>.Invalid(ErrorCodes.Product.Invalid,
+                "Tenant context is not set. Cannot create product without tenant information.");
         }
 
-        try
+        // Cross-entity variant rules (parent reference, axis coverage, sibling uniqueness)
+        Domain.Entities.Product? parentProduct = null;
+        if (request.ProductType == ProductType.Variant)
         {
-            // Get current tenant ID for proper data isolation
-            var currentTenantId = _tenantContext.GetCurrentTenantId();
-            if (!currentTenantId.HasValue)
+            var (variantError, parent) = await ProductVariantRules.ValidateVariantAsync(request, null, _productRepository);
+            if (variantError != null)
             {
-                _logger.LogError("Attempted to create product without tenant context");
-                return Result<Guid>.Fail(ResultStatusCode.BadRequest,
-                    "Tenant context is not set. Cannot create product without tenant information.");
+                _logger.LogWarning("Variant validation failed in create request: {Error}", variantError);
+                return Result<Guid>.Invalid(ErrorCodes.Product.Invalid, variantError);
             }
 
-            // Cross-entity variant rules (parent reference, axis coverage, sibling uniqueness)
-            Domain.Entities.Product? parentProduct = null;
-            if (request.ProductType == ProductType.Variant)
+            parentProduct = parent;
+        }
+        else if (request.ProductType == ProductType.VariantParent)
+        {
+            var axisError = await ProductVariantRules.ValidateParentAxesAsync(request, _productAttributeRepository);
+            if (axisError != null)
             {
-                var (variantError, parent) = await ProductVariantRules.ValidateVariantAsync(request, null, _productRepository);
-                if (variantError != null)
+                _logger.LogWarning("Variant axis validation failed in create request: {Error}", axisError);
+                return Result<Guid>.Invalid(ErrorCodes.Product.Invalid, axisError);
+            }
+        }
+
+        // Manual mapping instead of using AutoMapper
+        var productToCreate = new Domain.Entities.Product
+        {
+            Sku = request.Sku,
+            Name = request.Name,
+            NameOptimized = request.NameOptimized,
+            Ean = request.Ean,
+            Asin = request.Asin,
+            Description = request.Description,
+            DescriptionOptimized = request.DescriptionOptimized,
+            UseOptimized = request.UseOptimized,
+            Price = request.Price,
+            Msrp = request.Msrp,
+            Weight = request.Weight,
+            Width = request.Width,
+            Height = request.Height,
+            Depth = request.Depth,
+            TaxClassId = request.TaxClassId,
+            ManufacturerId = request.ManufacturerId,
+            ProductType = request.ProductType,
+            ParentProductId = request.ProductType == ProductType.Variant ? parentProduct!.Id : null,
+            VariantSortOrder = request.VariantSortOrder,
+            TenantId = currentTenantId.Value // Explicitly set TenantId for data isolation
+        };
+
+        if (request.ProductType == ProductType.VariantParent)
+        {
+            productToCreate.VariantAxes = request.VariantAxisAttributeIds
+                .Select((attributeId, index) => new Domain.Entities.ProductVariantAxis
                 {
-                    _logger.LogWarning("Variant validation failed in create request: {Error}", variantError);
-                    return Result<Guid>.Fail(ResultStatusCode.BadRequest, variantError);
-                }
-
-                parentProduct = parent;
-            }
-            else if (request.ProductType == ProductType.VariantParent)
-            {
-                var axisError = await ProductVariantRules.ValidateParentAxesAsync(request, _productAttributeRepository);
-                if (axisError != null)
-                {
-                    _logger.LogWarning("Variant axis validation failed in create request: {Error}", axisError);
-                    return Result<Guid>.Fail(ResultStatusCode.BadRequest, axisError);
-                }
-            }
-
-            // Manual mapping instead of using AutoMapper
-            var productToCreate = new Domain.Entities.Product
-            {
-                Sku = request.Sku,
-                Name = request.Name,
-                NameOptimized = request.NameOptimized,
-                Ean = request.Ean,
-                Asin = request.Asin,
-                Description = request.Description,
-                DescriptionOptimized = request.DescriptionOptimized,
-                UseOptimized = request.UseOptimized,
-                Price = request.Price,
-                Msrp = request.Msrp,
-                Weight = request.Weight,
-                Width = request.Width,
-                Height = request.Height,
-                Depth = request.Depth,
-                TaxClassId = request.TaxClassId,
-                ManufacturerId = request.ManufacturerId,
-                ProductType = request.ProductType,
-                ParentProductId = request.ProductType == ProductType.Variant ? parentProduct!.Id : null,
-                VariantSortOrder = request.VariantSortOrder,
-                TenantId = currentTenantId.Value // Explicitly set TenantId for data isolation
-            };
-
-            if (request.ProductType == ProductType.VariantParent)
-            {
-                productToCreate.VariantAxes = request.VariantAxisAttributeIds
-                    .Select((attributeId, index) => new Domain.Entities.ProductVariantAxis
-                    {
-                        ProductAttributeId = attributeId,
-                        SortOrder = index,
-                        TenantId = currentTenantId.Value
-                    }).ToList();
-            }
-            else if (request.ProductType == ProductType.Variant)
-            {
-                productToCreate.VariantOptions = request.VariantOptionValueIds.Distinct()
-                    .Select(valueId => new Domain.Entities.ProductVariantOption
-                    {
-                        ProductAttributeValueId = valueId,
-                        TenantId = currentTenantId.Value
-                    }).ToList();
-            }
-
-            // Category assignments: verify the ids and stage the join rows so they insert together
-            // with the product in one SaveChanges.
-            var categoryIds = request.CategoryIds.Distinct().ToList();
-            foreach (var categoryId in categoryIds)
-            {
-                if (!await _categoryRepository.ExistsAsync(categoryId))
-                {
-                    return Result<Guid>.Fail(ResultStatusCode.BadRequest,
-                        $"The following category IDs do not exist: {categoryId}");
-                }
-
-                _productRepository.AddProductCategory(new Domain.Entities.ProductCategory
-                {
-                    ProductId = productToCreate.Id,
-                    CategoryId = categoryId,
+                    ProductAttributeId = attributeId,
+                    SortOrder = index,
                     TenantId = currentTenantId.Value
-                });
+                }).ToList();
+        }
+        else if (request.ProductType == ProductType.Variant)
+        {
+            productToCreate.VariantOptions = request.VariantOptionValueIds.Distinct()
+                .Select(valueId => new Domain.Entities.ProductVariantOption
+                {
+                    ProductAttributeValueId = valueId,
+                    TenantId = currentTenantId.Value
+                }).ToList();
+        }
+
+        // Category assignments: verify the ids and stage the join rows so they insert together
+        // with the product in one SaveChanges.
+        var categoryIds = request.CategoryIds.Distinct().ToList();
+        foreach (var categoryId in categoryIds)
+        {
+            if (!await _categoryRepository.ExistsAsync(categoryId))
+            {
+                return Result<Guid>.Invalid(ErrorCodes.Product.Invalid,
+                    $"The following category IDs do not exist: {categoryId}");
             }
 
-            // Add the new product to the database
-            await _productRepository.CreateAsync(productToCreate);
-
-            _logger.LogInformation("Successfully created product with ID: {Id}", productToCreate.Id);
-
-            var result = Result<Guid>.Success(productToCreate.Id);
-            result.StatusCode = ResultStatusCode.Created;
-            return result;
+            _productRepository.AddProductCategory(new Domain.Entities.ProductCategory
+            {
+                ProductId = productToCreate.Id,
+                CategoryId = categoryId,
+                TenantId = currentTenantId.Value
+            });
         }
-        catch (Exception ex)
-        {
-            // Handle any exceptions during product creation
-            _logger.LogError(ex, "Error creating product");
 
-            return Result<Guid>.Fail(ResultStatusCode.InternalServerError,
-                "An error occurred while creating the product.");
-        }
+        // Add the new product to the database
+        await _productRepository.CreateAsync(productToCreate);
+
+        _logger.LogInformation("Successfully created product with ID: {Id}", productToCreate.Id);
+
+        var result = Result<Guid>.Success(productToCreate.Id);
+        result.Status = ResultStatus.Created;
+        return result;
     }
 }

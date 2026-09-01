@@ -320,7 +320,7 @@ public class SalesChannelDetailQueryTests : TenantIsolatedTestBase
         TestAssertions.AssertTrue(result.Succeeded);
         TestAssertions.AssertNotNull(result.Data);
         TestAssertions.AssertNotNull(result.Messages);
-        TestAssertions.AssertEqual(ResultStatusCode.Ok, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Ok, result.Status);
     }
 
     [Fact]
@@ -486,7 +486,7 @@ public class SalesChannelDetailQueryTests : TenantIsolatedTestBase
         var result = await ReadResponseAsync<Result<SalesChannelDetailDto>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertEqual(ResultStatusCode.NotFound, result.StatusCode);
+        TestAssertions.AssertEqual(ErrorType.NotFound, result.Error!.Type);
         TestAssertions.AssertNotEmpty(result.Messages);
         TestAssertions.AssertNotEmpty(result.Messages);
     }

@@ -29,20 +29,6 @@ public class ProductDeleteHandler : IRequestHandler<ProductDeleteCommand, Result
     {
         _logger.LogInformation("Deleting product with ID: {Id}", request.Id);
 
-        // Validate incoming data
-        var validator = new ProductDeleteValidator(_productRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            var validationErrors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in delete request for {0}: {1}",
-                nameof(ProductDeleteCommand), validationErrors);
-
-            return Result<Guid>.Fail(ResultStatusCode.BadRequest, validationErrors);
-        }
-
         try
         {
             // Get entity from database first
@@ -51,7 +37,7 @@ public class ProductDeleteHandler : IRequestHandler<ProductDeleteCommand, Result
             if (productToDelete == null)
             {
                 _logger.LogWarning("Product with ID: {Id} not found for deletion", request.Id);
-                return Result<Guid>.Fail(ResultStatusCode.NotFound, "Product not found");
+                return Result<Guid>.NotFound(ErrorCodes.Product.NotFound, "Product not found");
             }
 
             // Collect image file paths (this product plus any variant children) before the DB
@@ -83,7 +69,7 @@ public class ProductDeleteHandler : IRequestHandler<ProductDeleteCommand, Result
             _logger.LogInformation("Successfully deleted product with ID: {Id}", productToDelete.Id);
 
             var result = Result<Guid>.Success(productToDelete.Id);
-            result.StatusCode = ResultStatusCode.NoContent;
+            result.Status = ResultStatus.NoContent;
             return result;
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
@@ -91,14 +77,7 @@ public class ProductDeleteHandler : IRequestHandler<ProductDeleteCommand, Result
             // Handle concurrent deletion - product was already deleted by another request
             _logger.LogWarning("Product with ID: {Id} was deleted by another request: {Message}", request.Id, ex.Message);
 
-            return Result<Guid>.Fail(ResultStatusCode.NotFound, "Product not found");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting product");
-
-            return Result<Guid>.Fail(ResultStatusCode.InternalServerError,
-                "An error occurred while deleting the product.");
+            return Result<Guid>.NotFound(ErrorCodes.Product.NotFound, "Product not found");
         }
     }
 }

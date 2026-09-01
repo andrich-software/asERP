@@ -23,14 +23,14 @@ public class ProductAttributesController(IMediator mediator) : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<PaginatedResult<ProductAttributeListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<ProductAttributeListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "SortOrder Ascending";
+            sortBy = "SortOrder Ascending";
         }
 
-        var response = await mediator.Send(new ProductAttributeListQuery(pageNumber, pageSize, searchString, salesBy));
+        var response = await mediator.Send(new ProductAttributeListQuery(pageNumber, pageSize, searchString, sortBy));
         return response.ToActionResult();
     }
 

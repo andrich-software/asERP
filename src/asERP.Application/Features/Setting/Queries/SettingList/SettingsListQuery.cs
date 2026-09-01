@@ -9,18 +9,18 @@ public class SettingListQuery : IRequest<PaginatedResult<SettingListDto>>
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public string SearchString { get; set; }
-    public string[] SalesBy { get; set; }
+    public string[] SortBy { get; set; }
 
-    public SettingListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string salesBy = "")
+    public SettingListQuery(int pageNumber = 1, int pageSize = 10, string searchString = "", string sortBy = "")
     {
         PageNumber = pageNumber;
         PageSize = pageSize;
         SearchString = searchString;
 
-        if (!string.IsNullOrWhiteSpace(salesBy))
+        if (!string.IsNullOrWhiteSpace(sortBy))
         {
-            SalesBy = salesBy.Split(',');
+            SortBy = sortBy.Split(',');
         }
-        else SalesBy = new string[] { };
+        else SortBy = new string[] { };
     }
 }

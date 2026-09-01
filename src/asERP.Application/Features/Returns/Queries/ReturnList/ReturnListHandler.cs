@@ -76,8 +76,8 @@ public class ReturnListHandler : IRequestHandler<ReturnListQuery, PaginatedResul
             DateCreated = r.DateCreated
         });
 
-        projected = request.SalesBy.Any()
-            ? projected.ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+        projected = request.SortBy.Any()
+            ? projected.ApplySafeOrdering(request.SortBy, AllowedSortFields)
             : projected.OrderBy(DefaultSort);
 
         return await projected.ToPaginatedListAsync(request.PageNumber, request.PageSize);

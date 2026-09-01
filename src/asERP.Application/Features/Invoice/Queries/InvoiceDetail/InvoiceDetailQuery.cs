@@ -6,7 +6,7 @@ namespace asERP.Application.Features.Invoice.Queries.InvoiceDetail;
 
 /// <summary>
 /// Query for retrieving detailed information about a specific invoice.
-/// Implements IRequest to work with MediatR, returning invoice details wrapped in a Result.
+/// Implements IRequest to work with the custom mediator, returning invoice details wrapped in a Result.
 /// </summary>
 public class InvoiceDetailQuery : IRequest<Result<InvoiceDetailDto>>
 {

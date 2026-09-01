@@ -15,7 +15,7 @@ Refer to the root `/CLAUDE.md` for cross-cutting rules.
 | `Enums/` | Domain enums (explicit numeric values) |
 | `Interfaces/` | `I{Feature}InputModel` abstractions shared by DTOs + validators |
 | `Validators/` | FluentValidation **base** validators — field-level only, no DB access |
-| `Wrapper/` | `Result<T>`, `PaginatedResult<T>`, `ProblemDetailsResult`, `ResultStatusCode` |
+| `Wrapper/` | `Result<T>`, `PaginatedResult<T>`, `ProblemDetailsResult`, `Error`/`ErrorType`/`ErrorCodes`, `ResultStatus` |
 | `Constants/` | `TenantConstants` (shared tenant GUIDs) |
 | `Services/` | Pure static helpers (no I/O), e.g. `TrackingTokenHasher` |
 
@@ -44,10 +44,17 @@ Refer to the root `/CLAUDE.md` for cross-cutting rules.
 
 ## Wrappers (`Wrapper/`)
 
-- `Result` / `Result<T>` — `Succeeded` + `ResultStatusCode` + `Messages`; static factories `Success(...)`, `Fail(...)` (+ `...Async` variants). Standard return envelope for handlers/services.
+**There is no HTTP in this project.** A result says *what* happened; `asERP.Server`'s `ToActionResult()` is the only place that turns that into a status code.
+
+- `Result` / `Result<T>` — `Succeeded`, `Status` (`ResultStatus`: `Ok`/`Created`/`NoContent`), `Error?`, `Messages`.
+- `Error` — `record (ErrorType Type, string Code, string Message)`. `ErrorType` is the transport-free failure kind (`Validation`, `NotFound`, `Conflict`, `Unauthorized`, `Forbidden`, `Unexpected`).
+- `ErrorCodes` — stable `{entity}.{kind}` constants (`customer.not_found`). Clients branch or look up translations on these; `Error.Message` is a developer-facing fallback in English. The Client references this project, so use the constants there too instead of literals.
+- Reporting a failure: `result.Fail(ErrorType.NotFound, ErrorCodes.Customer.NotFound, "Customer not found")` on an existing result, or the static factories `Result<T>.NotFound(code, message)` / `.Invalid` / `.Forbidden` / `.Unauthorized` / `.Conflict` / `.Unexpected`. Success: `Result<T>.Ok(data)` / `.Created(data)` / `.NoContent()`.
+  - The overload `Fail(type, code)` skips the message — for failures whose detail is a list the caller appends itself.
 - `PaginatedResult<T> : Result` — **zero-based paging** (page 0 is the first page; `HasNextPage => CurrentPage < TotalPages - 1`). Factory: `Success(data, count, page, pageSize)`.
-- `ResultStatusCode` maps 1:1 to HTTP status codes (`Ok=200` … `InternalServerError=500`).
-- `ProblemDetailsResult` — RFC 7807 envelope with `BadRequest/NotFound/...` factories and fluent `WithExtension`/`WithInstance`.
+- `ProblemDetailsResult` — RFC 9457 envelope with `BadRequest/NotFound/...` factories and fluent `WithExtension`/`WithInstance`. Used only by `asERP.Server`; it too carries an `Error` rather than a status code.
+
+Adding a new code: add the constant to `ErrorCodes` under the entity it belongs to, keeping the kind aligned with the `ErrorType` you pass. `ErrorContractTests` enforces the `{entity}.{kind}` shape.
 
 ## Enums
 

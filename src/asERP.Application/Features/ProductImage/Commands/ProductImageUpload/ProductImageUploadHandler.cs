@@ -40,27 +40,18 @@ public class ProductImageUploadHandler : IRequestHandler<ProductImageUploadComma
     {
         _logger.LogInformation("Uploading image for product ID: {ProductId}", request.ProductId);
 
-        var validator = new ProductImageUploadValidator();
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-        if (!validationResult.IsValid)
-        {
-            var validationErrors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-            _logger.LogWarning("Validation errors in upload request: {Errors}", validationErrors);
-            return Result<ProductImageDto>.Fail(ResultStatusCode.BadRequest, validationErrors);
-        }
-
         // Content type guard. Storage re-encodes to PNG, but we only accept image formats we expect.
         var contentType = request.File.ContentType?.Split(';')[0].Trim().ToLowerInvariant() ?? string.Empty;
         if (!_options.AllowedContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
         {
-            return Result<ProductImageDto>.Fail(ResultStatusCode.BadRequest,
+            return Result<ProductImageDto>.Invalid(ErrorCodes.ProductImage.Invalid,
                 $"Unsupported content type '{request.File.ContentType}'. Allowed: {string.Join(", ", _options.AllowedContentTypes)}");
         }
 
         var currentTenantId = _tenantContext.GetCurrentTenantId();
         if (!currentTenantId.HasValue)
         {
-            return Result<ProductImageDto>.Fail(ResultStatusCode.BadRequest,
+            return Result<ProductImageDto>.Invalid(ErrorCodes.ProductImage.Invalid,
                 "Tenant context is not set. Cannot upload image without tenant information.");
         }
 
@@ -69,46 +60,37 @@ public class ProductImageUploadHandler : IRequestHandler<ProductImageUploadComma
         if (product == null)
         {
             _logger.LogWarning("Product with ID {ProductId} not found for image upload", request.ProductId);
-            return Result<ProductImageDto>.Fail(ResultStatusCode.NotFound, "Product not found");
+            return Result<ProductImageDto>.NotFound(ErrorCodes.ProductImage.NotFound, "Product not found");
         }
 
-        try
+        StoredImage stored;
+        await using (var stream = request.File.OpenReadStream())
         {
-            StoredImage stored;
-            await using (var stream = request.File.OpenReadStream())
-            {
-                stored = await _productImageStorage.SaveAsync(stream, cancellationToken);
-            }
-
-            var nextSortOrder = await _productImageRepository.GetMaxSortOrderAsync(request.ProductId) + 1;
-
-            var image = new Domain.Entities.ProductImage
-            {
-                ProductId = request.ProductId,
-                FileName = stored.FileName,
-                RelativePath = stored.RelativePath,
-                ThumbnailPath = stored.ThumbnailPath,
-                OriginalFileName = request.File.FileName,
-                Width = stored.Width,
-                Height = stored.Height,
-                FileSizeBytes = stored.FileSizeBytes,
-                SortOrder = nextSortOrder,
-                TenantId = currentTenantId.Value
-            };
-
-            await _productImageRepository.CreateAsync(image);
-
-            _logger.LogInformation("Created image {ImageId} for product {ProductId}", image.Id, request.ProductId);
-
-            var result = Result<ProductImageDto>.Success(ProductImageMapping.ToDto(image));
-            result.StatusCode = ResultStatusCode.Created;
-            return result;
+            stored = await _productImageStorage.SaveAsync(stream, cancellationToken);
         }
-        catch (Exception ex)
+
+        var nextSortOrder = await _productImageRepository.GetMaxSortOrderAsync(request.ProductId) + 1;
+
+        var image = new Domain.Entities.ProductImage
         {
-            _logger.LogError(ex, "Error uploading product image");
-            return Result<ProductImageDto>.Fail(ResultStatusCode.InternalServerError,
-                "An error occurred while uploading the image.");
-        }
+            ProductId = request.ProductId,
+            FileName = stored.FileName,
+            RelativePath = stored.RelativePath,
+            ThumbnailPath = stored.ThumbnailPath,
+            OriginalFileName = request.File.FileName,
+            Width = stored.Width,
+            Height = stored.Height,
+            FileSizeBytes = stored.FileSizeBytes,
+            SortOrder = nextSortOrder,
+            TenantId = currentTenantId.Value
+        };
+
+        await _productImageRepository.CreateAsync(image);
+
+        _logger.LogInformation("Created image {ImageId} for product {ProductId}", image.Id, request.ProductId);
+
+        var result = Result<ProductImageDto>.Success(ProductImageMapping.ToDto(image));
+        result.Status = ResultStatus.Created;
+        return result;
     }
 }

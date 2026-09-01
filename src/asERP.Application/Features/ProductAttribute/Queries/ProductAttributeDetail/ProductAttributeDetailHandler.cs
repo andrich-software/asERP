@@ -1,6 +1,5 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.ProductAttribute;
 using asERP.Domain.Wrapper;
@@ -26,47 +25,35 @@ public class ProductAttributeDetailHandler : IRequestHandler<ProductAttributeDet
 
         var result = new Result<ProductAttributeDetailDto>();
 
-        try
+        var attribute = await _productAttributeRepository.GetWithValuesAsync(request.Id);
+
+        if (attribute == null)
         {
-            var attribute = await _productAttributeRepository.GetWithValuesAsync(request.Id);
+            result.Fail(ErrorType.NotFound, ErrorCodes.ProductAttribute.NotFound, $"Product attribute with ID {request.Id} not found");
 
-            if (attribute == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"Product attribute with ID {request.Id} not found");
-
-                _logger.LogWarning("Product attribute with ID {Id} not found", request.Id);
-                return result;
-            }
-
-            // Manual mapping from entity to DTO
-            var data = new ProductAttributeDetailDto
-            {
-                Id = attribute.Id,
-                Name = attribute.Name,
-                SortOrder = attribute.SortOrder,
-                Values = attribute.Values.Select(v => new ProductAttributeValueDto
-                {
-                    Id = v.Id,
-                    Value = v.Value,
-                    SortOrder = v.SortOrder
-                }).ToList()
-            };
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = data;
-
-            _logger.LogInformation("Product attribute with ID {Id} retrieved successfully", request.Id);
+            _logger.LogWarning("Product attribute with ID {Id} not found", request.Id);
+            return result;
         }
-        catch (Exception ex)
+
+        // Manual mapping from entity to DTO
+        var data = new ProductAttributeDetailDto
         {
-            // Never leak the raw exception text.
-            result.FromException(_logger, ex,
-                "An error occurred while retrieving the product attribute.",
-                "Error retrieving product attribute.");
-        }
+            Id = attribute.Id,
+            Name = attribute.Name,
+            SortOrder = attribute.SortOrder,
+            Values = attribute.Values.Select(v => new ProductAttributeValueDto
+            {
+                Id = v.Id,
+                Value = v.Value,
+                SortOrder = v.SortOrder
+            }).ToList()
+        };
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = data;
+
+        _logger.LogInformation("Product attribute with ID {Id} retrieved successfully", request.Id);
 
         return result;
     }

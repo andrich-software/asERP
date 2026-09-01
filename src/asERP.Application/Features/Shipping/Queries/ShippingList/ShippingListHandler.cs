@@ -103,8 +103,8 @@ public class ShippingListHandler : IRequestHandler<ShippingListQuery, PaginatedR
 
         // Sorting happens after the projection so computed columns (IsProblem, RecipientName)
         // are sortable too.
-        projected = request.SalesBy.Any()
-            ? projected.ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+        projected = request.SortBy.Any()
+            ? projected.ApplySafeOrdering(request.SortBy, AllowedSortFields)
             : projected.OrderBy(DefaultSort);
 
         return await projected.ToPaginatedListAsync(request.PageNumber, request.PageSize);

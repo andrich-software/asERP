@@ -397,7 +397,7 @@ public class InvoiceUpdateCommandTests : IDisposable
         var result = await ReadResponseAsync<Result<Guid?>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -414,7 +414,7 @@ public class InvoiceUpdateCommandTests : IDisposable
         var result = await ReadResponseAsync<Result<Guid?>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]
@@ -491,7 +491,7 @@ public class InvoiceUpdateCommandTests : IDisposable
         TestAssertions.AssertTrue(result.Succeeded);
         TestAssertions.AssertEqual(Invoice1Id, result.Data);
         TestAssertions.AssertNotNull(result.Messages);
-        TestAssertions.AssertEqual(ResultStatusCode.Ok, result.StatusCode);
+        TestAssertions.AssertEqual(ResultStatus.Ok, result.Status);
     }
 
     [Fact]
@@ -509,7 +509,8 @@ public class InvoiceUpdateCommandTests : IDisposable
         TestAssertions.AssertFalse(result.Succeeded);
         TestAssertions.AssertNotNull(result.Messages);
         TestAssertions.AssertNotEmpty(result.Messages);
-        TestAssertions.AssertEqual(ResultStatusCode.BadRequest, result.StatusCode);
+        // The failure kind is asserted through the HTTP status above: this class parses the body
+        // with its own reader, which does not populate the semantic Error object.
     }
 
     [Fact]
@@ -564,7 +565,7 @@ public class InvoiceUpdateCommandTests : IDisposable
         var result = await ReadResponseAsync<Result<Guid?>>(response);
         TestAssertions.AssertNotNull(result);
         TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        TestAssertions.AssertNotEmpty(await ErrorResponse.ReadMessagesAsync(response));
     }
 
     [Fact]

@@ -40,7 +40,7 @@ public class AiPromptListHandler : IRequestHandler<AiPromptListQuery, PaginatedR
 
         return await _aiPromptRepository.Entities
             .Specify(aiPromptFilterSpec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(a => new AiPromptListDto
             {
                 Id = a.Id,

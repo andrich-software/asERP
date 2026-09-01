@@ -66,7 +66,7 @@ public partial record SalesChannelOverviewModel
                 {
                     PageNumber = 0,
                     PageSize = 200,
-                    SalesBy = "Name Ascending"
+                    SortBy = "Name Ascending"
                 },
                 ct);
 

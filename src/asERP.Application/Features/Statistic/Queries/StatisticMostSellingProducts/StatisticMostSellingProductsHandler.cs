@@ -25,33 +25,23 @@ public class StatisticMostSellingProductsHandler : IRequestHandler<StatisticMost
 
     public async Task<Result<StatisticMostSellingProductsDto>> Handle(StatisticMostSellingProductsQuery request, CancellationToken cancellationToken)
     {
-        try
-        {
-            _logger.LogInformation("Handle StatisticMostSellingProductsQuery: {0}", request);
+        _logger.LogInformation("Handle StatisticMostSellingProductsQuery: {0}", request);
 
-            var statisticDto = new StatisticMostSellingProductsDto();
+        var statisticDto = new StatisticMostSellingProductsDto();
 
-            // Define the reporting time ranges.
-            var today = DateTime.UtcNow.Date;
-            var sevenDaysAgo = today.AddDays(-7);
-            var firstDayOfMonth = new DateTime(today.Year, today.Month, 1);
-            var firstDayOfYear = new DateTime(today.Year, 1, 1);
+        // Define the reporting time ranges.
+        var today = DateTime.UtcNow.Date;
+        var sevenDaysAgo = today.AddDays(-7);
+        var firstDayOfMonth = new DateTime(today.Year, today.Month, 1);
+        var firstDayOfYear = new DateTime(today.Year, 1, 1);
 
-            statisticDto.TopProductsToday = await GetTopSellingProducts(today, today.AddDays(1), cancellationToken);
-            statisticDto.TopProductsLastSevenDays = await GetTopSellingProducts(sevenDaysAgo, today.AddDays(1), cancellationToken);
-            statisticDto.TopProductsThisMonth = await GetTopSellingProducts(firstDayOfMonth, today.AddDays(1), cancellationToken);
-            statisticDto.TopProductsThisYear = await GetTopSellingProducts(firstDayOfYear, today.AddDays(1), cancellationToken);
-            statisticDto.TopProductsAllTime = await GetTopSellingProducts(null, null, cancellationToken);
+        statisticDto.TopProductsToday = await GetTopSellingProducts(today, today.AddDays(1), cancellationToken);
+        statisticDto.TopProductsLastSevenDays = await GetTopSellingProducts(sevenDaysAgo, today.AddDays(1), cancellationToken);
+        statisticDto.TopProductsThisMonth = await GetTopSellingProducts(firstDayOfMonth, today.AddDays(1), cancellationToken);
+        statisticDto.TopProductsThisYear = await GetTopSellingProducts(firstDayOfYear, today.AddDays(1), cancellationToken);
+        statisticDto.TopProductsAllTime = await GetTopSellingProducts(null, null, cancellationToken);
 
-            return Result<StatisticMostSellingProductsDto>.Success(statisticDto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error while determining the most selling products");
-            return Result<StatisticMostSellingProductsDto>.Fail(
-                ResultStatusCode.InternalServerError,
-                "An error occurred while determining the most selling products.");
-        }
+        return Result<StatisticMostSellingProductsDto>.Success(statisticDto);
     }
 
     private async Task<List<MostSellingProductItem>> GetTopSellingProducts(

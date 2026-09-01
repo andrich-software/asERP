@@ -2,6 +2,7 @@ using asERP.Application.Features.ImportExport.Commands.CustomerCsvImport;
 using asERP.Application.Features.ImportExport.Queries.CustomerCsvExport;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
+using asERP.Server.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,7 +36,7 @@ public class ImportExportController(IMediator mediator) : ControllerBase
         };
 
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     /// <summary>
@@ -65,7 +66,7 @@ public class ImportExportController(IMediator mediator) : ControllerBase
 
         if (!response.Succeeded || response.Data == null)
         {
-            return StatusCode((int)response.StatusCode, response);
+            return response.ToActionResult();
         }
 
         return File(

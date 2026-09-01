@@ -2,6 +2,8 @@
 
 Guidance for Claude Code working in this repository. Subdirectories contain their own `CLAUDE.md` with focused conventions — they are loaded automatically when working in those folders. Read this file first, then defer to the nested files for layer-specific rules.
 
+`REFACTOR.md` (repo root) holds the prioritized structural-improvement backlog — consult it when asked to improve, refactor, or clean up the project, and keep its checkboxes current.
+
 ## Project Overview
 
 asERP is an open-source, multi-tenant ERP system. C#, .NET 10, Clean Architecture, cross-platform UI via Uno Platform.

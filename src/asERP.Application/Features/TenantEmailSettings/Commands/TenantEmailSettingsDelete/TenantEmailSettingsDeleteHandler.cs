@@ -1,7 +1,6 @@
 using asERP.Application.Contracts.Logging;
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
-using asERP.Application.Extensions;
 using asERP.Application.Mediator;
 using asERP.Domain.Wrapper;
 
@@ -30,38 +29,24 @@ public class TenantEmailSettingsDeleteHandler : IRequestHandler<TenantEmailSetti
         var tenantId = _tenantContext.GetCurrentTenantId();
         if (!tenantId.HasValue)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.Add("No active tenant in context.");
+            result.Fail(ErrorType.Validation, ErrorCodes.TenantEmailSettings.Invalid, "No active tenant in context.");
             return result;
         }
 
         var existing = await _repository.GetByTenantIdAsync(tenantId.Value);
         if (existing == null)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.NotFound;
-            result.Messages.Add("No tenant-level email configuration to delete.");
+            result.Fail(ErrorType.NotFound, ErrorCodes.TenantEmailSettings.NotFound, "No tenant-level email configuration to delete.");
             return result;
         }
 
-        try
-        {
-            await _repository.DeleteAsync(existing);
+        await _repository.DeleteAsync(existing);
 
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.NoContent;
-            result.Data = existing.Id;
+        result.Succeeded = true;
+        result.Status = ResultStatus.NoContent;
+        result.Data = existing.Id;
 
-            _logger.LogInformation("Deleted tenant email settings for tenant {TenantId}", tenantId.Value);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            result.FromException(_logger, ex,
-                "Error deleting tenant email settings.",
-                "Error deleting tenant email settings for tenant {TenantId}.", tenantId.Value);
-            return result;
-        }
+        _logger.LogInformation("Deleted tenant email settings for tenant {TenantId}", tenantId.Value);
+        return result;
     }
 }

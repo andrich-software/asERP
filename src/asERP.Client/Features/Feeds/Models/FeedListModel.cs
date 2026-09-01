@@ -59,7 +59,7 @@ public partial record FeedListModel
                 PageNumber = page,
                 PageSize = size,
                 SearchString = string.IsNullOrWhiteSpace(query) ? null : query,
-                SalesBy = sortBy
+                SortBy = sortBy
             };
 
             var response = await _feedService.GetFeedsAsync(parameters, ct);

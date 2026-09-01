@@ -6,6 +6,7 @@ using asERP.Application.Features.Warehouse.Queries.WarehouseList;
 using asERP.Application.Mediator;
 using asERP.Domain.Dtos.Warehouse;
 using asERP.Domain.Wrapper;
+using asERP.Server.Extensions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,15 +21,15 @@ public class WarehousesController(IMediator mediator) : ControllerBase
 {
     // GET: api/v1/<WarehousesController>
     [HttpGet]
-    public async Task<ActionResult<PaginatedResult<WarehouseListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+    public async Task<ActionResult<PaginatedResult<WarehouseListDto>>> GetAll(int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
-        if (string.IsNullOrEmpty(salesBy))
+        if (string.IsNullOrEmpty(sortBy))
         {
-            salesBy = "DateCreated Descending";
+            sortBy = "DateCreated Descending";
         }
 
-        var response = await mediator.Send(new WarehouseListQuery(pageNumber, pageSize, searchString, salesBy));
-        return StatusCode((int)response.StatusCode, response);
+        var response = await mediator.Send(new WarehouseListQuery(pageNumber, pageSize, searchString, sortBy));
+        return response.ToActionResult();
     }
 
     // GET: api/v1/<WarehousesController>/5
@@ -38,7 +39,7 @@ public class WarehousesController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<WarehouseDetailDto>> GetDetails(Guid id)
     {
         var response = await mediator.Send(new WarehouseDetailQuery { Id = id });
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // POST: api/v1/<WarehousesController>
@@ -48,7 +49,7 @@ public class WarehousesController(IMediator mediator) : ControllerBase
     public async Task<ActionResult> Create(WarehouseCreateCommand warehouseCreateCommand)
     {
         var response = await mediator.Send(warehouseCreateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // PUT: api/v1/<WarehousesController>/5
@@ -61,7 +62,7 @@ public class WarehousesController(IMediator mediator) : ControllerBase
     {
         warehouseUpdateCommand.Id = id;
         var response = await mediator.Send(warehouseUpdateCommand);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 
     // DELETE: api/v1/<WarehousesController>/5?newWarehouseId=2
@@ -74,6 +75,6 @@ public class WarehousesController(IMediator mediator) : ControllerBase
     {
         var command = new WarehouseDeleteCommand { Id = id, NewWarehouseId = newWarehouseId };
         var response = await mediator.Send(command);
-        return StatusCode((int)response.StatusCode, response);
+        return response.ToActionResult();
     }
 }

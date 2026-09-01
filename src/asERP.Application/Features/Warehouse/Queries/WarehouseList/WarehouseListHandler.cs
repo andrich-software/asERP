@@ -39,7 +39,7 @@ public class WarehouseListHandler : IRequestHandler<WarehouseListQuery, Paginate
         return await _warehouseRepository.Entities
             .AsNoTracking()
             .Specify(warehouseFilterSpec)
-            .ApplySafeOrdering(request.SalesBy, AllowedSortFields)
+            .ApplySafeOrdering(request.SortBy, AllowedSortFields)
             .Select(w => new WarehouseListDto
             {
                 Id = w.Id,

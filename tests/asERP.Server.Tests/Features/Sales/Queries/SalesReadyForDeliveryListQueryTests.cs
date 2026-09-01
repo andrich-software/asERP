@@ -349,12 +349,12 @@ public class SalesReadyForDeliveryListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessReadyForDelivery_WithSalesByTotal_ShouldReturnSalesedResults()
+    public async Task GetSalessReadyForDelivery_WithSortByTotal_ShouldReturnSalesedResults()
     {
         await SeedSalesReadyForDeliveryTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/Saless/ready-for-delivery?salesBy=Total");
+        var response = await Client.GetAsync("/api/v1/Saless/ready-for-delivery?sortBy=Total");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);
@@ -369,12 +369,12 @@ public class SalesReadyForDeliveryListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessReadyForDelivery_WithSalesByTotalDescending_ShouldReturnDescSalesedResults()
+    public async Task GetSalessReadyForDelivery_WithSortByTotalDescending_ShouldReturnDescSalesedResults()
     {
         await SeedSalesReadyForDeliveryTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/Saless/ready-for-delivery?salesBy=Total desc");
+        var response = await Client.GetAsync("/api/v1/Saless/ready-for-delivery?sortBy=Total desc");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);
@@ -513,12 +513,12 @@ public class SalesReadyForDeliveryListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessReadyForDelivery_WithSalesByDateSalesed_ShouldReturnDateSalesedResults()
+    public async Task GetSalessReadyForDelivery_WithSortByDateSalesed_ShouldReturnDateSalesedResults()
     {
         await SeedSalesReadyForDeliveryTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/Saless/ready-for-delivery?salesBy=DateSalesed");
+        var response = await Client.GetAsync("/api/v1/Saless/ready-for-delivery?sortBy=DateSalesed");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);
@@ -528,12 +528,12 @@ public class SalesReadyForDeliveryListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessReadyForDelivery_WithMultipleSalesBy_ShouldRespectMultipleSorting()
+    public async Task GetSalessReadyForDelivery_WithMultipleSortBy_ShouldRespectMultipleSorting()
     {
         await SeedSalesReadyForDeliveryTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
 
-        var response = await Client.GetAsync("/api/v1/Saless/ready-for-delivery?salesBy=InvoiceAddressFirstName,Total");
+        var response = await Client.GetAsync("/api/v1/Saless/ready-for-delivery?sortBy=InvoiceAddressFirstName,Total");
 
         TestAssertions.AssertHttpSuccess(response);
         var result = await ReadResponseAsync<PaginatedResult<SalesListDto>>(response);

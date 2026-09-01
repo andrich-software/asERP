@@ -48,7 +48,7 @@ public class ShippingStatusUpdater : IShippingStatusUpdater
         var shipping = await _shippingRepository.GetByIdAsync(shippingId);
         if (shipping == null)
         {
-            return new Result { Succeeded = false, StatusCode = ResultStatusCode.NotFound, Messages = [$"Shipping {shippingId} not found."] };
+            return Result.NotFound(ErrorCodes.Shipping.NotFound, $"Shipping {shippingId} not found.");
         }
 
         var oldStatus = shipping.Status;
@@ -68,7 +68,7 @@ public class ShippingStatusUpdater : IShippingStatusUpdater
         if (oldStatus == newStatus || (isSystemGenerated && TerminalStatuses.Contains(oldStatus)))
         {
             await _shippingRepository.UpdateAsync(shipping);
-            return new Result { Succeeded = true, StatusCode = ResultStatusCode.Ok };
+            return Result.Ok();
         }
 
         shipping.Status = newStatus;
@@ -144,6 +144,6 @@ public class ShippingStatusUpdater : IShippingStatusUpdater
                 cancellationToken);
         }
 
-        return new Result { Succeeded = true, StatusCode = ResultStatusCode.Ok };
+        return Result.Ok();
     }
 }

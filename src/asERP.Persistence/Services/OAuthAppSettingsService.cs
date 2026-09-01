@@ -35,8 +35,7 @@ public sealed class OAuthAppSettingsService : IOAuthAppSettingsService
     {
         if (!IsSupportedProvider(provider))
         {
-            return Result<OAuthAppCredentials>.Fail(
-                ResultStatusCode.BadRequest,
+            return Result<OAuthAppCredentials>.Invalid(ErrorCodes.OAuthAppSettings.Invalid,
                 $"OAuth flow is not supported for provider {provider}.");
         }
 
@@ -77,8 +76,7 @@ public sealed class OAuthAppSettingsService : IOAuthAppSettingsService
 
         if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
         {
-            return Result<OAuthAppCredentials>.Fail(
-                ResultStatusCode.BadRequest,
+            return Result<OAuthAppCredentials>.Invalid(ErrorCodes.OAuthAppSettings.Invalid,
                 $"OAuth credentials for {provider} are not configured. " +
                 "Set ClientId/ClientSecret either at tenant level (TenantOAuthAppSettings) " +
                 "or system level (Setting rows OAuth.{provider}.ClientId/ClientSecret).");

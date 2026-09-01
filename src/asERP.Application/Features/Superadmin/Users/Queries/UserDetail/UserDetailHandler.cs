@@ -16,30 +16,17 @@ namespace asERP.Application.Features.Superadmin.Users.Queries.UserDetail;
 
 /// <summary>
 /// Handler for processing user detail queries.
-/// Implements IRequestHandler from MediatR to handle UserDetailQuery requests
+/// Implements IRequestHandler from the custom mediator to handle UserDetailQuery requests
 /// and return detailed user information wrapped in a Result.
 /// </summary>
 public class UserDetailHandler : IRequestHandler<UserDetailQuery, Result<UserDetailDto>>
 {
-    /// <summary>
-    /// Logger for recording handler operations
-    /// </summary>
     private readonly IAppLogger<UserDetailHandler> _logger;
-
-    /// <summary>
-    /// Repository for user data operations
-    /// </summary>
     private readonly IUserRepository _userRepository;
-
     private readonly ITenantContext _tenantContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ITenantPermissionService _tenantPermissionService;
 
-    /// <summary>
-    /// Constructor that initializes the handler with required dependencies
-    /// </summary>
-    /// <param name="logger">Logger for recording operations</param>
-    /// <param name="userRepository">Repository for user data access</param>
     public UserDetailHandler(
         IAppLogger<UserDetailHandler> logger,
         IUserRepository userRepository,
@@ -54,137 +41,110 @@ public class UserDetailHandler : IRequestHandler<UserDetailQuery, Result<UserDet
         _tenantPermissionService = tenantPermissionService ?? throw new ArgumentNullException(nameof(tenantPermissionService));
     }
 
-    /// <summary>
-    /// Handles the user detail query request
-    /// </summary>
-    /// <param name="request">The query containing the user ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Result containing detailed user information if successful</returns>
     public async Task<Result<UserDetailDto>> Handle(UserDetailQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Retrieving user details for ID: {Id}", request.Id);
 
         var result = new Result<UserDetailDto>();
 
-        try
+        var httpContext = _httpContextAccessor.HttpContext;
+        var requestedTenantId = GetRequestedTenantId(httpContext);
+        var currentTenantId = ResolveTenantId(_tenantContext.GetCurrentTenantId());
+        if (requestedTenantId.HasValue && requestedTenantId.Value != Guid.Empty)
         {
-            var httpContext = _httpContextAccessor.HttpContext;
-            var requestedTenantId = GetRequestedTenantId(httpContext);
-            var currentTenantId = ResolveTenantId(_tenantContext.GetCurrentTenantId());
-            if (requestedTenantId.HasValue && requestedTenantId.Value != Guid.Empty)
+            currentTenantId = requestedTenantId;
+        }
+
+        var currentUser = httpContext?.User;
+        var isSuperadmin = currentUser?.IsInRole("Superadmin") ?? false;
+        var currentUserId = httpContext.GetUserId() ?? string.Empty;
+        var isSelfRequest = !string.IsNullOrWhiteSpace(currentUserId) && currentUserId == request.Id;
+
+        if (!isSuperadmin)
+        {
+            if (requestedTenantId.HasValue && !IsTenantKnown(httpContext, requestedTenantId.Value) && !_tenantContext.IsAssignedToTenant(requestedTenantId.Value))
             {
-                currentTenantId = requestedTenantId;
-            }
-
-            var currentUser = httpContext?.User;
-            var isSuperadmin = currentUser?.IsInRole("Superadmin") ?? false;
-            var currentUserId = httpContext.GetUserId() ?? string.Empty;
-            var isSelfRequest = !string.IsNullOrWhiteSpace(currentUserId) && currentUserId == request.Id;
-
-            if (!isSuperadmin)
-            {
-                if (requestedTenantId.HasValue && !IsTenantKnown(httpContext, requestedTenantId.Value) && !_tenantContext.IsAssignedToTenant(requestedTenantId.Value))
-                {
-                    result.Succeeded = false;
-                    result.StatusCode = ResultStatusCode.NotFound;
-                    result.Messages.Add("Tenant not found.");
-                    return result;
-                }
-
-                if (!currentTenantId.HasValue || currentTenantId.Value == Guid.Empty)
-                {
-                    result.Succeeded = false;
-                    result.StatusCode = ResultStatusCode.BadRequest;
-                    result.Messages.Add("Tenant context is required to retrieve user details.");
-                    return result;
-                }
-            }
-
-            var user = await _userRepository.GetByIdWithTenantsAsync(request.Id);
-            if (user == null)
-            {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.NotFound;
-                result.Messages.Add($"User with ID {request.Id} not found");
-                _logger.LogWarning("User with ID {Id} not found", request.Id);
+                result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, "Tenant not found.");
                 return result;
             }
 
-            if (!isSuperadmin)
+            if (!currentTenantId.HasValue || currentTenantId.Value == Guid.Empty)
             {
-                if (!isSelfRequest && !string.IsNullOrWhiteSpace(currentUserId))
-                {
-                    var hasPermission = await _tenantPermissionService.CanManageUsersAsync(
-                        currentUserId,
-                        currentTenantId!.Value,
-                        cancellationToken);
+                result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid, "Tenant context is required to retrieve user details.");
+                return result;
+            }
+        }
 
-                    if (!hasPermission)
-                    {
-                        result.Succeeded = false;
-                        result.StatusCode = ResultStatusCode.Forbidden;
-                        result.Messages.Add("You do not have permission to view other users in this tenant.");
-                        return result;
-                    }
-                }
+        var user = await _userRepository.GetByIdWithTenantsAsync(request.Id);
+        if (user == null)
+        {
+            result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, $"User with ID {request.Id} not found");
+            _logger.LogWarning("User with ID {Id} not found", request.Id);
+            return result;
+        }
 
-                if (user.UserTenants == null || !user.UserTenants.Any(ut => ut.TenantId == currentTenantId!.Value))
+        if (!isSuperadmin)
+        {
+            if (!isSelfRequest && !string.IsNullOrWhiteSpace(currentUserId))
+            {
+                var hasPermission = await _tenantPermissionService.CanManageUsersAsync(
+                    currentUserId,
+                    currentTenantId!.Value,
+                    cancellationToken);
+
+                if (!hasPermission)
                 {
-                    result.Succeeded = false;
-                    result.StatusCode = ResultStatusCode.NotFound;
-                    result.Messages.Add("User not found in current tenant.");
+                    result.Fail(ErrorType.Forbidden, ErrorCodes.Superadmin.Forbidden, "You do not have permission to view other users in this tenant.");
                     return result;
                 }
             }
-            else if (!currentTenantId.HasValue || currentTenantId.Value == Guid.Empty)
+
+            if (user.UserTenants == null || !user.UserTenants.Any(ut => ut.TenantId == currentTenantId!.Value))
             {
-                result.Succeeded = false;
-                result.StatusCode = ResultStatusCode.BadRequest;
-                result.Messages.Add("Tenant context is required to retrieve user details.");
+                result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, "User not found in current tenant.");
                 return result;
             }
+        }
+        else if (!currentTenantId.HasValue || currentTenantId.Value == Guid.Empty)
+        {
+            result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid, "Tenant context is required to retrieve user details.");
+            return result;
+        }
 
-            var userTenantAssignments = await _userRepository.GetUserTenantAssignmentsAsync(request.Id);
-            var tenantAssignments = new List<UserTenantAssignmentDto>();
+        var userTenantAssignments = await _userRepository.GetUserTenantAssignmentsAsync(request.Id);
+        var tenantAssignments = new List<UserTenantAssignmentDto>();
 
-            if (userTenantAssignments != null && userTenantAssignments.Any())
+        if (userTenantAssignments != null && userTenantAssignments.Any())
+        {
+            foreach (var assignment in userTenantAssignments)
             {
-                foreach (var assignment in userTenantAssignments)
+                if (assignment.Tenant != null)
                 {
-                    if (assignment.Tenant != null)
+                    tenantAssignments.Add(new UserTenantAssignmentDto
                     {
-                        tenantAssignments.Add(new UserTenantAssignmentDto
-                        {
-                            TenantId = assignment.TenantId,
-                            TenantName = assignment.Tenant.Name,
-                            IsDefault = assignment.IsDefault,
-                            RoleManageUser = assignment.RoleManageUser
-                        });
-                    }
+                        TenantId = assignment.TenantId,
+                        TenantName = assignment.Tenant.Name,
+                        IsDefault = assignment.IsDefault,
+                        RoleManageUser = assignment.RoleManageUser
+                    });
                 }
             }
-
-            var data = new UserDetailDto
-            {
-                Id = user.Id,
-                Email = user.Email ?? string.Empty,
-                Firstname = user.Firstname,
-                Lastname = user.Lastname,
-                TenantAssignments = tenantAssignments
-            };
-
-            result.Succeeded = true;
-            result.StatusCode = ResultStatusCode.Ok;
-            result.Data = data;
-
-            _logger.LogInformation("User with ID {Id} retrieved successfully", request.Id);
         }
-        catch (Exception ex)
+
+        var data = new UserDetailDto
         {
-            result.FromException(_logger, ex,
-                "An error occurred while retrieving the user.",
-                "Error retrieving user {Id}.", request.Id);
-        }
+            Id = user.Id,
+            Email = user.Email ?? string.Empty,
+            Firstname = user.Firstname,
+            Lastname = user.Lastname,
+            TenantAssignments = tenantAssignments
+        };
+
+        result.Succeeded = true;
+        result.Status = ResultStatus.Ok;
+        result.Data = data;
+
+        _logger.LogInformation("User with ID {Id} retrieved successfully", request.Id);
 
         return result;
     }

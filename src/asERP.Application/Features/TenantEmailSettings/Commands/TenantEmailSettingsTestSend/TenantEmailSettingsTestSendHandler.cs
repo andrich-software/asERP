@@ -30,19 +30,7 @@ public class TenantEmailSettingsTestSendHandler : IRequestHandler<TenantEmailSet
         var tenantId = _tenantContext.GetCurrentTenantId();
         if (!tenantId.HasValue)
         {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.Add("No active tenant in context.");
-            return result;
-        }
-
-        var validator = new TenantEmailSettingsTestSendValidator();
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-        if (!validationResult.IsValid)
-        {
-            result.Succeeded = false;
-            result.StatusCode = ResultStatusCode.BadRequest;
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
+            result.Fail(ErrorType.Validation, ErrorCodes.TenantEmailSettings.Invalid, "No active tenant in context.");
             return result;
         }
 
@@ -60,12 +48,12 @@ public class TenantEmailSettingsTestSendHandler : IRequestHandler<TenantEmailSet
         var sent = await _emailService.SendEmailAsync(message, tenantId);
 
         result.Succeeded = sent;
-        result.StatusCode = sent ? ResultStatusCode.Ok : ResultStatusCode.InternalServerError;
         result.Data = sent;
 
         if (!sent)
         {
-            result.Messages.Add("Failed to send the test email. Check the server logs for provider errors.");
+            result.Fail(ErrorType.Unexpected, ErrorCodes.TenantEmailSettings.Unexpected,
+                "Failed to send the test email. Check the server logs for provider errors.");
             _logger.LogWarning("Test send failed for tenant {TenantId}", tenantId.Value);
         }
         else
