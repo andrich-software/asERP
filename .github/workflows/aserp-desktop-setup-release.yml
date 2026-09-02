@@ -9,7 +9,7 @@ name: Release asERP Desktop Setup (Windows)
 # (Partner Center dashboard/win32apps/...), NOT an MSIX/UWP package. That product
 # type is fed with a signed .exe installer hosted at a public HTTPS URL, and is
 # submitted through the Microsoft Store Submission API v2 (via the official
-# microsoft/store-submission action). This workflow therefore:
+# MSStore CLI, microsoft/microsoft-store-apppublisher). This workflow therefore:
 #   1. builds a self-contained desktop client,
 #   2. packages it into an Inno Setup installer (installer/asERP.Client.Setup.iss),
 #   3. (optionally) code-signs the installer,
@@ -179,30 +179,31 @@ jobs:
           installer/output/asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe
         token: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Set up MSStore CLI
+      if: env.STORE_CLIENT_ID != ''
+      uses: microsoft/microsoft-store-apppublisher@cc9910a8d59f2eb55cbb83df0a3800cf3b5300e0 # v1.4
+      with:
+        version: v0.4.1
+
     - name: Configure Store credentials
       if: env.STORE_CLIENT_ID != ''
-      uses: microsoft/store-submission@v1
-      with:
-        command: configure
-        type: win32
-        seller-id: ${{ env.STORE_SELLER_ID }}
-        product-id: ${{ env.STORE_PRODUCT_ID }}
-        tenant-id: ${{ env.STORE_TENANT_ID }}
-        client-id: ${{ env.STORE_CLIENT_ID }}
-        client-secret: ${{ env.STORE_CLIENT_SECRET }}
+      shell: bash
+      run: >-
+        msstore reconfigure
+        --tenantId "$STORE_TENANT_ID"
+        --sellerId "$STORE_SELLER_ID"
+        --clientId "$STORE_CLIENT_ID"
+        --clientSecret "$STORE_CLIENT_SECRET"
 
     - name: Update Store draft submission
       if: env.STORE_CLIENT_ID != ''
-      uses: microsoft/store-submission@v1
-      with:
-        command: update
-        type: win32
-        product-update: >-
+      shell: bash
+      env:
+        PRODUCT_UPDATE: >-
           {"packages":[{"packageUrl":"https://github.com/${{ github.repository }}/releases/download/setup-v${{ steps.version.outputs.VERSION }}/asERP-Desktop-Setup-${{ steps.version.outputs.VERSION }}.exe","languages":["de","en"],"architectures":["X64"],"packageType":"exe","isSilentInstall":true,"installerParameters":"/VERYSILENT /SUPPRESSMSGBOXES /NORESTART"}]}
+      run: msstore submission update "$STORE_PRODUCT_ID" "$PRODUCT_UPDATE"
 
     - name: Publish Store submission
       if: ${{ env.STORE_CLIENT_ID != '' && inputs.auto_publish }}
-      uses: microsoft/store-submission@v1
-      with:
-        command: publish
-        type: win32
+      shell: bash
+      run: msstore submission publish "$STORE_PRODUCT_ID"
