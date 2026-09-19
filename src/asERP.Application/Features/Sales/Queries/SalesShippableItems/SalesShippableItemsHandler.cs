@@ -28,15 +28,11 @@ public class SalesShippableItemsHandler : IRequestHandler<SalesShippableItemsQue
     {
         _logger.LogInformation("Retrieving shippable items for sales {Id}", request.Id);
 
-        var result = new Result<List<ShippableSalesItemDto>>();
-
         var sales = await _salesRepository.GetWithDetailsAsync(request.Id);
         if (sales == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Sales.NotFound, $"Sales with ID {request.Id} not found");
-
             _logger.LogWarning("Sales with ID {Id} not found", request.Id);
-            return result;
+            return Result<List<ShippableSalesItemDto>>.NotFound(ErrorCodes.Sales.NotFound, $"Sales with ID {request.Id} not found");
         }
 
         var openItems = sales.SalesItems
@@ -80,10 +76,6 @@ public class SalesShippableItemsHandler : IRequestHandler<SalesShippableItemsQue
             };
         }).ToList();
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
-        return result;
+        return Result<List<ShippableSalesItemDto>>.Ok(data);
     }
 }

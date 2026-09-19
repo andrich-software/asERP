@@ -147,7 +147,7 @@ public class CountryListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetCountryList_WithSortBy_ShouldReturnSalesedResults()
+    public async Task GetCountryList_WithSortBy_ShouldReturnSortedResults()
     {
         // Arrange
         await SeedTestDataAsync();
@@ -561,7 +561,7 @@ public class CountryListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetCountryList_SortByCountryCode_ShouldReturnSalesedResults()
+    public async Task GetCountryList_SortByCountryCode_ShouldReturnSortedResults()
     {
         // Arrange
         await SeedTestDataAsync();

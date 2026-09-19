@@ -47,8 +47,6 @@ public class SetupInitializeHandler : IRequestHandler<SetupInitializeCommand, Re
     {
         _logger.LogInformation("Initial server setup requested for {Email}", request.Email);
 
-        var result = new Result<Guid>();
-
         await SetupLock.WaitAsync(cancellationToken);
         try
         {
@@ -57,8 +55,7 @@ public class SetupInitializeHandler : IRequestHandler<SetupInitializeCommand, Re
             // let anyone probe which accounts exist.
             if (!await _setupStatusService.IsSetupRequiredAsync())
             {
-                result.Fail(ErrorType.Forbidden, ErrorCodes.Setup.Forbidden, "Die Ersteinrichtung wurde bereits abgeschlossen.");
-                return result;
+                return Result<Guid>.Forbidden(ErrorCodes.Setup.Forbidden, "The initial setup has already been completed.");
             }
 
             // Validated here rather than by the mediator, so it runs strictly after the guard above
@@ -68,9 +65,8 @@ public class SetupInitializeHandler : IRequestHandler<SetupInitializeCommand, Re
 
             if (!validationResult.IsValid)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Setup.Invalid);
-                result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-                return result;
+                return Result<Guid>.Failure(ErrorType.Validation, ErrorCodes.Setup.Invalid,
+                    validationResult.Errors.Select(e => e.ErrorMessage));
             }
 
             var superadmin = new ApplicationUser
@@ -87,9 +83,8 @@ public class SetupInitializeHandler : IRequestHandler<SetupInitializeCommand, Re
             var createErrors = (await _userRepository.CreateSuperadminAsync(superadmin, request.Password)).ToList();
             if (createErrors.Count > 0)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Setup.Invalid);
-                result.Messages.AddRange(createErrors.Select(e => e.Description));
-                return result;
+                return Result<Guid>.Failure(ErrorType.Validation, ErrorCodes.Setup.Invalid,
+                    createErrors.Select(e => e.Description));
             }
 
             Result<Guid> tenantResult;
@@ -114,29 +109,21 @@ public class SetupInitializeHandler : IRequestHandler<SetupInitializeCommand, Re
             if (!tenantResult.Succeeded)
             {
                 await DeleteSuperadminBestEffortAsync(superadmin);
-
-                result.Succeeded = false;
-                result.Error = tenantResult.Error;
-                result.Messages.AddRange(tenantResult.Messages);
-                return result;
+                return Result<Guid>.From(tenantResult, tenantResult.Data);
             }
 
             await _settingsService.SetSettingValueAsync(SettingKeys.SetupCompleted, "True");
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Created;
-            result.Data = tenantResult.Data;
-
             _logger.LogInformation(
                 "Initial server setup completed: Superadmin {UserId} and tenant {TenantId} created",
                 superadmin.Id, tenantResult.Data);
+
+            return Result<Guid>.Created(tenantResult.Data);
         }
         finally
         {
             SetupLock.Release();
         }
-
-        return result;
     }
 
     /// <summary>

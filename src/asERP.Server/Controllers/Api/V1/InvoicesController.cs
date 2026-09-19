@@ -29,16 +29,12 @@ public class InvoicesController(IMediator mediator) : ControllerBase
         // Validate pagination parameters
         if (pageNumber < 0)
         {
-            var errorResult = new Result<PaginatedResult<InvoiceListDto>>();
-            errorResult.Fail(ErrorType.Validation, ErrorCodes.Invoice.Invalid, "PageNumber muss größer oder gleich 0 sein.");
-            return BadRequest(errorResult);
+            return BadRequest(Result<PaginatedResult<InvoiceListDto>>.Invalid(ErrorCodes.Invoice.Invalid, "PageNumber must be 0 or greater."));
         }
 
         if (pageSize < 1)
         {
-            var errorResult = new Result<PaginatedResult<InvoiceListDto>>();
-            errorResult.Fail(ErrorType.Validation, ErrorCodes.Invoice.Invalid, "PageSize muss größer als 0 sein.");
-            return BadRequest(errorResult);
+            return BadRequest(Result<PaginatedResult<InvoiceListDto>>.Invalid(ErrorCodes.Invoice.Invalid, "PageSize must be greater than 0."));
         }
 
         if (string.IsNullOrEmpty(sortBy))
@@ -59,9 +55,7 @@ public class InvoicesController(IMediator mediator) : ControllerBase
     {
         if (!Guid.TryParse(id, out var guidId))
         {
-            var errorResult = new Result<InvoiceDetailDto>();
-            errorResult.Fail(ErrorType.Validation, ErrorCodes.Invoice.Invalid, "Ungültige ID-Format. Eine gültige GUID ist erfsaleslich.");
-            return BadRequest(errorResult);
+            return BadRequest(Result<InvoiceDetailDto>.Invalid(ErrorCodes.Invoice.Invalid, "Invalid id format: a valid GUID is required."));
         }
 
         var response = await mediator.Send(new InvoiceDetailQuery { Id = guidId });
@@ -77,9 +71,7 @@ public class InvoicesController(IMediator mediator) : ControllerBase
     {
         if (!Guid.TryParse(id, out var guidId))
         {
-            var errorResult = new Result<byte[]>();
-            errorResult.Fail(ErrorType.Validation, ErrorCodes.Invoice.Invalid, "Ungültige ID-Format. Eine gültige GUID ist erfsaleslich.");
-            return BadRequest(errorResult);
+            return BadRequest(Result<byte[]>.Invalid(ErrorCodes.Invoice.Invalid, "Invalid id format: a valid GUID is required."));
         }
 
         var response = await mediator.Send(new InvoicePdfQuery { Id = guidId });
@@ -107,14 +99,12 @@ public class InvoicesController(IMediator mediator) : ControllerBase
     {
         if (!Guid.TryParse(id, out var guidId))
         {
-            var errorResult = new Result();
-            errorResult.Fail(ErrorType.Validation, ErrorCodes.Invoice.Invalid, "Ungültige ID-Format. Eine gültige GUID ist erfsaleslich.");
-            return BadRequest(errorResult);
+            return BadRequest(Result.Invalid(ErrorCodes.Invoice.Invalid, "Invalid id format: a valid GUID is required."));
         }
 
         if (invoiceUpdateCommand.Id != Guid.Empty && invoiceUpdateCommand.Id != guidId)
         {
-            var mismatchResult = Result<Guid>.Invalid(ErrorCodes.Invoice.Invalid, "Die in der Anfrage angegebene ID stimmt nicht mit der URL überein.");
+            var mismatchResult = Result<Guid>.Invalid(ErrorCodes.Invoice.Invalid, "The ID in the request body does not match the URL.");
             return BadRequest(mismatchResult);
         }
 
@@ -133,9 +123,7 @@ public class InvoicesController(IMediator mediator) : ControllerBase
     {
         if (!Guid.TryParse(id, out var guidId))
         {
-            var errorResult = new Result();
-            errorResult.Fail(ErrorType.Validation, ErrorCodes.Invoice.Invalid, "Ungültige ID-Format. Eine gültige GUID ist erfsaleslich.");
-            return BadRequest(errorResult);
+            return BadRequest(Result.Invalid(ErrorCodes.Invoice.Invalid, "Invalid id format: a valid GUID is required."));
         }
 
         var command = new InvoiceDeleteCommand { Id = guidId };

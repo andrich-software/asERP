@@ -995,7 +995,6 @@ public sealed class SyncDispatcher
             psc.ProductId, psc.RemoteProductId, parentRemoteProductId, remoteCategoryIds));
     }
 
-
     private async Task<int> ComputeChannelStockAsync(Guid salesChannelId, Guid productId, int stockBuffer, CancellationToken cancellationToken)
     {
         // Sum stock from the warehouses attached to this channel; subtract the per-channel buffer.

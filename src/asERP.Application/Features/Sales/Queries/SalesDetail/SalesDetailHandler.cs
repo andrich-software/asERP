@@ -41,18 +41,14 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
     {
         _logger.LogInformation("Retrieving sales details for ID: {Id}", request.Id);
 
-        var result = new Result<SalesDetailDto>();
-
         // Retrieve sales with all related details from the repository
         var sales = await _salesRepository.GetWithDetailsAsync(request.Id);
 
         // If sales not found, return a not found result
         if (sales == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Sales.NotFound, $"Sales with ID {request.Id} not found");
-
             _logger.LogWarning("Sales with ID {Id} not found", request.Id);
-            return result;
+            return Result<SalesDetailDto>.NotFound(ErrorCodes.Sales.NotFound, $"Sales with ID {request.Id} not found");
         }
 
         // Retrieve the order history.
@@ -153,14 +149,9 @@ public class SalesDetailHandler : IRequestHandler<SalesDetailQuery, Result<Sales
             DateSalesed = sales.DateSalesed
         };
 
-        // Set successful result with the sales details
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
         _logger.LogInformation("Sales with ID {Id} retrieved successfully", request.Id);
 
-        return result;
+        return Result<SalesDetailDto>.Ok(data);
     }
 
     /// <summary>

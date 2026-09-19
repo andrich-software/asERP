@@ -55,21 +55,4 @@ public class SalesCreateValidator : SalesBaseValidator<SalesCreateCommand>
         var customer = await _customerRepository.GetByCustomerIdAsync(customerId);
         return customer != null; // EF Core Global Query Filter ensures tenant isolation
     }
-
-    /// <summary>
-    /// Asynchronously checks if an sales with the same values already exists in the database.
-    /// Currently not used but kept for potential future use.
-    /// </summary>
-    /// <param name="command">The sales creation command to validate</param>
-    /// <returns>True if the sales is unique, false otherwise</returns>
-    // ReSharper disable once UnusedMember.Local
-    private async Task<bool> SalesUniqueAsync(SalesCreateCommand command)
-    {
-        var salesToCreate = new Domain.Entities.Sales
-        {
-            Id = command.Id
-        };
-
-        return await _salesRepository.IsUniqueAsync(salesToCreate);
-    }
 }

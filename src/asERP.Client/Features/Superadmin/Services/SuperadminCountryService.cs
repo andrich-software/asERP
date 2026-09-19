@@ -49,7 +49,7 @@ public class SuperadminCountryService : ISuperadminCountryService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseCountryListDto, ct);
 
             if (response?.Succeeded != true)
@@ -79,7 +79,7 @@ public class SuperadminCountryService : ISuperadminCountryService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Countries.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseCountryDetailDto, ct);
+        var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.ApiResponseCountryDetailDto, ct);
         return apiResponse?.Data;
     }
 

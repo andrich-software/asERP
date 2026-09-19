@@ -1,4 +1,3 @@
-using asERP.Application.Contracts.Persistence;
 using asERP.Domain.Validators;
 using FluentValidation;
 
@@ -9,39 +8,26 @@ namespace asERP.Application.Features.Customer.Commands.CustomerUpdate;
 ///
 /// Erweitert CustomerBaseValidator (aus asERP.Domain) um Server-spezifische Validierungen:
 /// - ID-Validierung (nicht Guid.Empty)
-/// - Existenz-Prüfung (Customer muss vorhanden sein)
 /// - Address-Validierung (CountryId muss gültig sein)
 ///
 /// WICHTIG:
 /// - Basis-Regeln (Feldvalidierungen) sind in CustomerBaseValidator definiert
 /// - Client verwendet CustomerClientValidator (nur synchrone Regeln)
-/// - Server verwendet diesen Validator (mit DB-Zugriff)
+/// - Server verwendet diesen Validator
 /// - Keine Eindeutigkeitsprüfung auf Firstname+Lastname, da Namensgleichheit möglich ist
+/// - Keine Existenzprüfung: ob der Kunde existiert, entscheidet der Handler, damit daraus ein
+///   404 statt einer Validierungsmeldung wird
 /// </summary>
 public class CustomerUpdateValidator : CustomerBaseValidator<CustomerUpdateCommand>
 {
-    private readonly ICustomerRepository _customerRepository;
-
-    public CustomerUpdateValidator(ICustomerRepository customerRepository)
+    public CustomerUpdateValidator()
     {
-        _customerRepository = customerRepository;
-
         // Add ID validation for Zero-GUID first
         RuleFor(c => c.Id)
             .NotEqual(Guid.Empty).WithMessage("Customer ID cannot be empty.");
 
-        // Only check existence if ID is valid
-        RuleFor(c => c)
-            .MustAsync(CustomerExists).WithMessage("Customer not found")
-            .When(c => c.Id != Guid.Empty);
-
         // Validate each address in the collection
         RuleForEach(c => c.CustomerAddresses)
             .SetValidator(new CustomerAddressBaseValidator());
-    }
-
-    private async Task<bool> CustomerExists(CustomerUpdateCommand command, CancellationToken cancellationToken)
-    {
-        return await _customerRepository.ExistsGloballyAsync(command.Id);
     }
 }

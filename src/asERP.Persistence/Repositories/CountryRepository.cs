@@ -22,4 +22,29 @@ public class CountryRepository : GenericRepository<Country>, ICountryRepository
             .ThenBy(c => c.CountryCode)
             .FirstOrDefaultAsync();
     }
+
+    /// <summary>
+    /// A country is unique per tenant by name and by ISO code — the create/update
+    /// validators report either collision with the same message.
+    /// </summary>
+    public async Task<bool> IsUniqueAsync(Country entity, Guid? id = null)
+    {
+        var currentTenantId = TenantContext.GetCurrentTenantId();
+
+        var query = Context.Country.AsQueryable();
+
+        if (currentTenantId.HasValue)
+        {
+            query = query.Where(c => c.TenantId == currentTenantId.Value);
+        }
+
+        query = query.Where(c => c.Name == entity.Name || c.CountryCode == entity.CountryCode);
+
+        if (id.HasValue)
+        {
+            query = query.Where(c => c.Id != id.Value);
+        }
+
+        return !await query.AnyAsync();
+    }
 }

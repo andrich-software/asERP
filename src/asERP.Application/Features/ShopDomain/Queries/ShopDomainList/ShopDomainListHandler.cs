@@ -22,8 +22,6 @@ public class ShopDomainListHandler : IRequestHandler<ShopDomainListQuery, Result
 
     public async Task<Result<List<ShopDomainListDto>>> Handle(ShopDomainListQuery request, CancellationToken cancellationToken)
     {
-        var result = new Result<List<ShopDomainListDto>>();
-
         // Tenant isolation via the global query filter.
         var shopDomains = await _shopDomainRepository.Entities
             .Where(d => d.SalesChannelId == request.SalesChannelId)
@@ -41,10 +39,6 @@ public class ShopDomainListHandler : IRequestHandler<ShopDomainListQuery, Result
             })
             .ToListAsync(cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = shopDomains;
-
-        return result;
+        return Result<List<ShopDomainListDto>>.Ok(shopDomains);
     }
 }

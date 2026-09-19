@@ -32,44 +32,33 @@ public class InvoiceDeleteHandler : IRequestHandler<InvoiceDeleteCommand, Result
     {
         _logger.LogInformation("Deleting invoice with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         var currentTenantId = _tenantContext.GetCurrentTenantId();
         if (!currentTenantId.HasValue || currentTenantId == Guid.Empty)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Invoice.NotFound, "Rechnung wurde nicht gefunden.");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Invoice.NotFound, "Invoice not found.");
         }
 
         var assignedTenantIds = _tenantContext.GetAssignedTenantIds();
         if (assignedTenantIds.Count > 0 && !assignedTenantIds.Contains(currentTenantId.Value))
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Invoice.NotFound, "Mandant wurde nicht gefunden oder ist nicht zugewiesen.");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Invoice.NotFound, "Tenant not found or not assigned.");
         }
 
         var invoiceToDelete = await _invoiceRepository.GetInvoiceWithDetailsAsync(request.Id);
         if (invoiceToDelete == null || invoiceToDelete.TenantId != currentTenantId.Value)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Invoice.NotFound, "Rechnung wurde nicht gefunden.");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Invoice.NotFound, "Invoice not found.");
         }
 
         if (invoiceToDelete.PaymentStatus == PaymentStatus.CompletelyPaid)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Invoice.Invalid, "Bezahlte Rechnungen können nicht gelöscht werden.");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.Invoice.Invalid, "Paid invoices cannot be deleted.");
         }
 
         await _invoiceRepository.DeleteAsync(invoiceToDelete);
 
-        // Set successful result with the deleted invoice ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = invoiceToDelete.Id;
-
         _logger.LogInformation("Successfully deleted invoice with ID: {Id}", invoiceToDelete.Id);
 
-        return result;
+        return Result<Guid>.Ok(invoiceToDelete.Id);
     }
 }

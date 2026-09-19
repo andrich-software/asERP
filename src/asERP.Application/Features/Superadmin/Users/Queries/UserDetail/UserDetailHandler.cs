@@ -45,8 +45,6 @@ public class UserDetailHandler : IRequestHandler<UserDetailQuery, Result<UserDet
     {
         _logger.LogInformation("Retrieving user details for ID: {Id}", request.Id);
 
-        var result = new Result<UserDetailDto>();
-
         var httpContext = _httpContextAccessor.HttpContext;
         var requestedTenantId = GetRequestedTenantId(httpContext);
         var currentTenantId = ResolveTenantId(_tenantContext.GetCurrentTenantId());
@@ -64,23 +62,20 @@ public class UserDetailHandler : IRequestHandler<UserDetailQuery, Result<UserDet
         {
             if (requestedTenantId.HasValue && !IsTenantKnown(httpContext, requestedTenantId.Value) && !_tenantContext.IsAssignedToTenant(requestedTenantId.Value))
             {
-                result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, "Tenant not found.");
-                return result;
+                return Result<UserDetailDto>.NotFound(ErrorCodes.Superadmin.NotFound, "Tenant not found.");
             }
 
             if (!currentTenantId.HasValue || currentTenantId.Value == Guid.Empty)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid, "Tenant context is required to retrieve user details.");
-                return result;
+                return Result<UserDetailDto>.Invalid(ErrorCodes.Superadmin.Invalid, "Tenant context is required to retrieve user details.");
             }
         }
 
         var user = await _userRepository.GetByIdWithTenantsAsync(request.Id);
         if (user == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, $"User with ID {request.Id} not found");
             _logger.LogWarning("User with ID {Id} not found", request.Id);
-            return result;
+            return Result<UserDetailDto>.NotFound(ErrorCodes.Superadmin.NotFound, $"User with ID {request.Id} not found");
         }
 
         if (!isSuperadmin)
@@ -94,21 +89,18 @@ public class UserDetailHandler : IRequestHandler<UserDetailQuery, Result<UserDet
 
                 if (!hasPermission)
                 {
-                    result.Fail(ErrorType.Forbidden, ErrorCodes.Superadmin.Forbidden, "You do not have permission to view other users in this tenant.");
-                    return result;
+                    return Result<UserDetailDto>.Forbidden(ErrorCodes.Superadmin.Forbidden, "You do not have permission to view other users in this tenant.");
                 }
             }
 
             if (user.UserTenants == null || !user.UserTenants.Any(ut => ut.TenantId == currentTenantId!.Value))
             {
-                result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, "User not found in current tenant.");
-                return result;
+                return Result<UserDetailDto>.NotFound(ErrorCodes.Superadmin.NotFound, "User not found in current tenant.");
             }
         }
         else if (!currentTenantId.HasValue || currentTenantId.Value == Guid.Empty)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid, "Tenant context is required to retrieve user details.");
-            return result;
+            return Result<UserDetailDto>.Invalid(ErrorCodes.Superadmin.Invalid, "Tenant context is required to retrieve user details.");
         }
 
         var userTenantAssignments = await _userRepository.GetUserTenantAssignmentsAsync(request.Id);
@@ -140,13 +132,9 @@ public class UserDetailHandler : IRequestHandler<UserDetailQuery, Result<UserDet
             TenantAssignments = tenantAssignments
         };
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
         _logger.LogInformation("User with ID {Id} retrieved successfully", request.Id);
 
-        return result;
+        return Result<UserDetailDto>.Ok(data);
     }
 
     private Guid? ResolveTenantId(Guid? currentTenantId)

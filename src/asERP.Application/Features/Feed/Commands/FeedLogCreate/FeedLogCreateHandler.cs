@@ -22,8 +22,6 @@ public class FeedLogCreateHandler : IRequestHandler<FeedLogCreateCommand, Result
 
     public async Task<Result<Guid>> Handle(FeedLogCreateCommand request, CancellationToken cancellationToken)
     {
-        var result = new Result<Guid>();
-
         var log = new FeedLog
         {
             FeedId = request.FeedId,
@@ -33,11 +31,7 @@ public class FeedLogCreateHandler : IRequestHandler<FeedLogCreateCommand, Result
 
         await _feedLogRepository.CreateAsync(log);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = log.Id;
-
-        return result;
+        return Result<Guid>.Created(log.Id);
     }
 
     private static string? Truncate(string? value, int maxLength) =>

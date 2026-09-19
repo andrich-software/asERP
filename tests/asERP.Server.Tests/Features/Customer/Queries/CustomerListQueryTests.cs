@@ -238,7 +238,7 @@ public class CustomerListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetCustomers_WithSortByFirstname_ShouldReturnSalesedResults()
+    public async Task GetCustomers_WithSortByFirstname_ShouldReturnSortedResults()
     {
         await SeedCustomerTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -258,7 +258,7 @@ public class CustomerListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetCustomers_WithSortByLastnameDescending_ShouldReturnDescSalesedResults()
+    public async Task GetCustomers_WithSortByLastnameDescending_ShouldReturnDescSortedResults()
     {
         await SeedCustomerTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -278,7 +278,7 @@ public class CustomerListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetCustomers_WithSortByDateEnrollment_ShouldReturnDateSalesedResults()
+    public async Task GetCustomers_WithSortByDateEnrollment_ShouldReturnDateSortedResults()
     {
         await SeedCustomerTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);

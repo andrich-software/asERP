@@ -46,11 +46,13 @@ Refer to the root `/CLAUDE.md` for cross-cutting rules.
 
 **There is no HTTP in this project.** A result says *what* happened; `asERP.Server`'s `ToActionResult()` is the only place that turns that into a status code.
 
-- `Result` / `Result<T>` — `Succeeded`, `Status` (`ResultStatus`: `Ok`/`Created`/`NoContent`), `Error?`, `Messages`.
+- `Result` / `Result<T>` — `Succeeded`, `Status` (`ResultStatus`: `Ok`/`Created`/`NoContent`), `Error?`, `Messages`. **Immutable**: every property is `init`-only and `Messages` is an `IReadOnlyList<string>`, so a result is built once through a factory and never patched afterwards. Gather what you need first, then return it in one call.
 - `Error` — `record (ErrorType Type, string Code, string Message)`. `ErrorType` is the transport-free failure kind (`Validation`, `NotFound`, `Conflict`, `Unauthorized`, `Forbidden`, `Unexpected`).
 - `ErrorCodes` — stable `{entity}.{kind}` constants (`customer.not_found`). Clients branch or look up translations on these; `Error.Message` is a developer-facing fallback in English. The Client references this project, so use the constants there too instead of literals.
-- Reporting a failure: `result.Fail(ErrorType.NotFound, ErrorCodes.Customer.NotFound, "Customer not found")` on an existing result, or the static factories `Result<T>.NotFound(code, message)` / `.Invalid` / `.Forbidden` / `.Unauthorized` / `.Conflict` / `.Unexpected`. Success: `Result<T>.Ok(data)` / `.Created(data)` / `.NoContent()`.
-  - The overload `Fail(type, code)` skips the message — for failures whose detail is a list the caller appends itself.
+- Reporting a failure: `Result<T>.NotFound(code, message)` / `.Invalid` / `.Forbidden` / `.Unauthorized` / `.Conflict` / `.Unexpected`. Success: `Result<T>.Ok(data)` / `.Created(data)` / `.NoContent()`.
+  - `Failure(type, code, messages)` for a failure whose detail is a list (Identity errors, per-row import failures).
+  - `From(source, data)` — and `From(source, data, leadingMessages)` — when a handler delegates to a service and only adds its own payload.
+  - `Ok(data, messages)` / `Created(data, messages)` for "succeeded, but here is a warning" (a label that could not be created, a carrier void that failed).
 - `PaginatedResult<T> : Result` — **zero-based paging** (page 0 is the first page; `HasNextPage => CurrentPage < TotalPages - 1`). Factory: `Success(data, count, page, pageSize)`.
 - `ProblemDetailsResult` — RFC 9457 envelope with `BadRequest/NotFound/...` factories and fluent `WithExtension`/`WithInstance`. Used only by `asERP.Server`; it too carries an `Error` rather than a status code.
 

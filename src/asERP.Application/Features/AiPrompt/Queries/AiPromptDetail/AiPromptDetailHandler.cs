@@ -24,16 +24,12 @@ public class AiPromptDetailHandler : IRequestHandler<AiPromptDetailQuery, Result
     {
         _logger.LogInformation("Retrieving AI prompt details for ID: {Id}", request.Id);
 
-        var result = new Result<AiPromptDetailDto>();
-
         var aiPrompt = await _aiPromptRepository.GetByIdAsync(request.Id, true);
 
         if (aiPrompt == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.AiPrompt.NotFound, $"AI prompt with ID {request.Id} not found");
-
             _logger.LogWarning("AI prompt with ID {Id} not found", request.Id);
-            return result;
+            return Result<AiPromptDetailDto>.NotFound(ErrorCodes.AiPrompt.NotFound, $"AI prompt with ID {request.Id} not found");
         }
 
         // Manuelles Mapping statt AutoMapper
@@ -45,12 +41,8 @@ public class AiPromptDetailHandler : IRequestHandler<AiPromptDetailQuery, Result
             PromptText = aiPrompt.PromptText
         };
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
         _logger.LogInformation("AI prompt with ID {Id} retrieved successfully", request.Id);
 
-        return result;
+        return Result<AiPromptDetailDto>.Ok(data);
     }
 }

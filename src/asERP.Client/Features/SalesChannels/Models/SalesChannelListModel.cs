@@ -41,9 +41,9 @@ public partial record SalesChannelListModel
     public IState<int> PageSize => State<int>.Value(this, () => 25);
 
     /// <summary>
-    /// Current sort sales (e.g., "Name Ascending").
+    /// Current sort order (e.g., "Name Ascending").
     /// </summary>
-    public IState<string> SortSales => State<string>.Value(this, () => "DateCreated Descending");
+    public IState<string> SortOrder => State<string>.Value(this, () => "DateCreated Descending");
 
     /// <summary>
     /// The field currently sorted by; bound by the SortHeaderButton column headers.
@@ -62,10 +62,10 @@ public partial record SalesChannelListModel
 
     /// <summary>
     /// Feed of sales channels from the API.
-    /// Automatically refreshes when SearchQuery, CurrentPage, or SortSales changes.
+    /// Automatically refreshes when SearchQuery, CurrentPage, or SortOrder changes.
     /// </summary>
     public IListFeed<SalesChannelListDto> SalesChannels => Feed
-        .Combine(SearchQuery, CurrentPage, PageSize, SortSales)
+        .Combine(SearchQuery, CurrentPage, PageSize, SortOrder)
         .SelectAsync(async (combined, ct) =>
         {
             var (query, page, size, sortBy) = combined;
@@ -147,11 +147,11 @@ public partial record SalesChannelListModel
     }
 
     /// <summary>
-    /// Change the sort sales.
+    /// Change the sort order.
     /// </summary>
-    public async ValueTask SetSortSales(string sortBy, CancellationToken ct = default)
+    public async ValueTask SetSortOrder(string sortBy, CancellationToken ct = default)
     {
-        await SortSales.UpdateAsync(_ => sortBy, ct);
+        await SortOrder.UpdateAsync(_ => sortBy, ct);
         await CurrentPage.UpdateAsync(_ => 0, ct); // Reset to first page when sorting changes
     }
 
@@ -170,7 +170,7 @@ public partial record SalesChannelListModel
 
         await ActiveSortField.UpdateAsync(_ => field, ct);
         await SortAscending.UpdateAsync(_ => ascending, ct);
-        await SetSortSales($"{field} {(ascending ? "Ascending" : "Descending")}", ct);
+        await SetSortOrder($"{field} {(ascending ? "Ascending" : "Descending")}", ct);
     }
 
     /// <summary>

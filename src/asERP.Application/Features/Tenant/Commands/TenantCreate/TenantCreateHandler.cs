@@ -37,8 +37,6 @@ public class TenantCreateHandler : IRequestHandler<TenantCreateCommand, Result<G
         _logger.LogInformation("User {UserId} is creating a new tenant with name: {Name}",
             request.UserId, request.Name);
 
-        var result = new Result<Guid>();
-
         // Use a database transaction to ensure atomicity
         await using var transaction = await _tenantRepository.BeginTransactionAsync(cancellationToken);
 
@@ -122,13 +120,9 @@ public class TenantCreateHandler : IRequestHandler<TenantCreateCommand, Result<G
         // Commit the transaction
         await transaction.CommitAsync(cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = tenantToCreate.Id;
-
         _logger.LogInformation("Successfully created tenant with ID: {Id} and assigned user {UserId} to it with default warehouse, sales channel and tax classes",
             tenantToCreate.Id, request.UserId);
 
-        return result;
+        return Result<Guid>.Created(tenantToCreate.Id);
     }
 }

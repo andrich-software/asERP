@@ -35,15 +35,11 @@ public class SalesReturnableItemsHandler : IRequestHandler<SalesReturnableItemsQ
     {
         _logger.LogInformation("Retrieving returnable items for sales {Id}", request.Id);
 
-        var result = new Result<List<ReturnableSalesItemDto>>();
-
         var sales = await _salesRepository.GetWithDetailsAsync(request.Id);
         if (sales == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Sales.NotFound, $"Sales with ID {request.Id} not found");
-
             _logger.LogWarning("Sales with ID {Id} not found", request.Id);
-            return result;
+            return Result<List<ReturnableSalesItemDto>>.NotFound(ErrorCodes.Sales.NotFound, $"Sales with ID {request.Id} not found");
         }
 
         var shippings = await _shippingRepository.GetBySalesIdAsync(request.Id);
@@ -86,10 +82,6 @@ public class SalesReturnableItemsHandler : IRequestHandler<SalesReturnableItemsQ
             .Where(dto => dto.ReturnableQuantity > SalesItemAssignment.QuantityTolerance)
             .ToList();
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
-        return result;
+        return Result<List<ReturnableSalesItemDto>>.Ok(data);
     }
 }

@@ -989,7 +989,6 @@ public sealed partial class Shell : UserControl, IContentControlProvider
         }
     }
 
-
     #region Dynamic SalesChannel Sidebar
 
     private void OnSalesChannelsChanged(object? sender, EventArgs e)

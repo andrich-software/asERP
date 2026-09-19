@@ -26,8 +26,6 @@ public class ShippingProviderDeleteHandler : IRequestHandler<ShippingProviderDel
     {
         _logger.LogInformation("Deleting shipping provider with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             var existsGlobally = await _shippingProviderRepository.ExistsGloballyAsync(request.Id);
@@ -47,8 +45,7 @@ public class ShippingProviderDeleteHandler : IRequestHandler<ShippingProviderDel
             // Shipments are order history — never orphan them by deleting their provider.
             if (await _shippingProviderRepository.HasShipmentsAsync(request.Id))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.ShippingProvider.Invalid, "The shipping provider cannot be deleted because shipments reference it. Disable it instead.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.ShippingProvider.Invalid, "The shipping provider cannot be deleted because shipments reference it. Disable it instead.");
             }
 
             // Cascade explicitly (repo rule: no EF cascade deletes): country joins, then rates, then provider.
@@ -61,17 +58,13 @@ public class ShippingProviderDeleteHandler : IRequestHandler<ShippingProviderDel
 
             await _shippingProviderRepository.DeleteAsync(providerToDelete);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.NoContent;
-            result.Data = request.Id;
-
             _logger.LogInformation("Successfully deleted shipping provider with ID: {Id}", request.Id);
+            return Result<Guid>.NoContent(request.Id);
         }
         catch (NotFoundException)
         {
             throw;
         }
 
-        return result;
     }
 }

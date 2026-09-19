@@ -25,28 +25,20 @@ public class ManufacturerDeleteHandler : IRequestHandler<ManufacturerDeleteComma
     {
         _logger.LogInformation("Deleting manufacturer with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         // Get entity from database first
         var manufacturerToDelete = await _manufacturerRepository.GetByIdAsync(request.Id);
 
         if (manufacturerToDelete == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Manufacturer.NotFound, "Manufacturer not found");
-
             _logger.LogWarning("Manufacturer with ID: {Id} not found for deletion", request.Id);
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Manufacturer.NotFound, "Manufacturer not found");
         }
 
         // Delete from database
         await _manufacturerRepository.DeleteAsync(manufacturerToDelete);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.NoContent;
-        result.Data = manufacturerToDelete.Id;
-
         _logger.LogInformation("Successfully deleted manufacturer with ID: {Id}", manufacturerToDelete.Id);
 
-        return result;
+        return Result<Guid>.NoContent(manufacturerToDelete.Id);
     }
 }

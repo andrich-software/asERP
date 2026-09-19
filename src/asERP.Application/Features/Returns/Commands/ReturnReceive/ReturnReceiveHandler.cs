@@ -51,8 +51,6 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
     {
         _logger.LogInformation("Receiving return {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             var existsGlobally = await _returnShipmentRepository.ExistsGloballyAsync(request.Id);
@@ -71,8 +69,7 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
 
             if (!ReceivableStatuses.Contains(returnShipment.Status))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"A return in status {returnShipment.Status} cannot be received.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.Returns.Invalid, $"A return in status {returnShipment.Status} cannot be received.");
             }
 
             // The item mutations, status transition and the order-level Returned flip are wrapped
@@ -84,8 +81,7 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
                 var item = returnShipment.Items.FirstOrDefault(i => i.Id == receiveItem.ReturnShipmentItemId);
                 if (item == null)
                 {
-                    result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"Return item {receiveItem.ReturnShipmentItemId} does not belong to this return.");
-                    return result;
+                    return Result<Guid>.Invalid(ErrorCodes.Returns.Invalid, $"Return item {receiveItem.ReturnShipmentItemId} does not belong to this return.");
                 }
 
                 var serials = receiveItem.SerialNumbers
@@ -96,8 +92,7 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
 
                 if (serials.Count > item.Quantity + SalesItemAssignment.QuantityTolerance)
                 {
-                    result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"More serial numbers ({serials.Count}) than returned quantity ({item.Quantity}) for return item {item.Id}.");
-                    return result;
+                    return Result<Guid>.Invalid(ErrorCodes.Returns.Invalid, $"More serial numbers ({serials.Count}) than returned quantity ({item.Quantity}) for return item {item.Id}.");
                 }
 
                 var knownSerials = item.SalesItem.SerialNumbers
@@ -107,8 +102,7 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
                 var unknown = serials.FirstOrDefault(s => !knownSerials.Contains(s));
                 if (unknown != null)
                 {
-                    result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"Serial number '{unknown}' does not belong to the returned order line.");
-                    return result;
+                    return Result<Guid>.Invalid(ErrorCodes.Returns.Invalid, $"Serial number '{unknown}' does not belong to the returned order line.");
                 }
 
                 item.Condition = receiveItem.Condition;
@@ -148,28 +142,20 @@ public class ReturnReceiveHandler : IRequestHandler<ReturnReceiveCommand, Result
 
             if (!statusResult.Succeeded)
             {
-                result.Succeeded = false;
-                result.Error = statusResult.Error;
-                result.Messages.AddRange(statusResult.Messages);
-                return result;
+                return Result<Guid>.From(statusResult, request.Id);
             }
 
             await FlipSalesStatusWhenFullyReturnedAsync(returnShipment.SalesId, cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = returnShipment.Id;
-
             _logger.LogInformation("Successfully received return {Id}", returnShipment.Id);
+            return Result<Guid>.Ok(returnShipment.Id);
         }
         catch (NotFoundException)
         {
             throw;
         }
-
-        return result;
     }
 
     /// <summary>

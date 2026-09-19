@@ -49,7 +49,7 @@ public class SalesChannelService : ISalesChannelService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseSalesChannelListDto, ct);
 
             if (response?.Succeeded != true)
@@ -79,7 +79,7 @@ public class SalesChannelService : ISalesChannelService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.SalesChannels.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseSalesChannelDetailDto, ct);
+        var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.ApiResponseSalesChannelDetailDto, ct);
         return apiResponse?.Data;
     }
 
@@ -108,7 +108,7 @@ public class SalesChannelService : ISalesChannelService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.SalesChannels.SyncStatus(id)}";
-        return await _httpClient.GetFromJsonAsync(
+        return await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.SalesChannelSyncStatusDto, ct);
     }
 
@@ -148,7 +148,7 @@ public class SalesChannelService : ISalesChannelService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.SalesChannels.SyncRuns(id)}?take={take}&offset={offset}";
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ListChannelSyncRunDto, ct);
         return response ?? new List<ChannelSyncRunDto>();
     }
@@ -177,7 +177,7 @@ public class SalesChannelService : ISalesChannelService
             url += $"&sinceHours={hours}";
         }
 
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.PaginatedResponseChannelSyncLogDto, ct);
         return response ?? new PaginatedResponse<ChannelSyncLogDto>();
     }
@@ -186,7 +186,7 @@ public class SalesChannelService : ISalesChannelService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.SalesChannels.DeadLetter(id)}";
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ListChannelExportOutboxDto, ct);
         return response ?? new List<ChannelExportOutboxDto>();
     }

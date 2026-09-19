@@ -49,7 +49,7 @@ public class WarehouseService : IWarehouseService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseWarehouseListDto, ct);
 
             if (response?.Succeeded != true)
@@ -79,7 +79,7 @@ public class WarehouseService : IWarehouseService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Warehouses.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseWarehouseDetailDto, ct);
+        var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.ApiResponseWarehouseDetailDto, ct);
         return apiResponse?.Data;
     }
 

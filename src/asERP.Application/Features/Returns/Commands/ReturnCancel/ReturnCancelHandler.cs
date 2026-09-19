@@ -39,7 +39,8 @@ public class ReturnCancelHandler : IRequestHandler<ReturnCancelCommand, Result<G
     {
         _logger.LogInformation("Cancelling return with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
+        // Best-effort carrier warnings collected along the way; they ride along on the result.
+        var warnings = new List<string>();
 
         try
         {
@@ -59,8 +60,7 @@ public class ReturnCancelHandler : IRequestHandler<ReturnCancelCommand, Result<G
 
             if (!CancellableStatuses.Contains(returnShipment.Status))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"A return in status {returnShipment.Status} cannot be cancelled.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.Returns.Invalid, $"A return in status {returnShipment.Status} cannot be cancelled.");
             }
 
             // Void at the carrier is best effort — a failed void must not block the local cancel.
@@ -71,7 +71,7 @@ public class ReturnCancelHandler : IRequestHandler<ReturnCancelCommand, Result<G
                 {
                     _logger.LogWarning("Carrier-side cancel failed for return {Id}: {Messages}",
                         returnShipment.Id, string.Join("; ", cancelResult.Messages));
-                    result.Messages.AddRange(cancelResult.Messages);
+                    warnings.AddRange(cancelResult.Messages);
                 }
             }
 
@@ -93,23 +93,15 @@ public class ReturnCancelHandler : IRequestHandler<ReturnCancelCommand, Result<G
 
             if (!statusResult.Succeeded)
             {
-                result.Succeeded = false;
-                result.Error = statusResult.Error;
-                result.Messages.AddRange(statusResult.Messages);
-                return result;
+                return Result<Guid>.From(statusResult, request.Id, warnings);
             }
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = returnShipment.Id;
-
             _logger.LogInformation("Successfully cancelled return with ID: {Id}", returnShipment.Id);
+            return Result<Guid>.Ok(returnShipment.Id, warnings);
         }
         catch (NotFoundException)
         {
             throw;
         }
-
-        return result;
     }
 }

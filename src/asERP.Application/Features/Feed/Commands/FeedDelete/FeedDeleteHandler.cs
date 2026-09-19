@@ -21,31 +21,24 @@ public class FeedDeleteHandler : IRequestHandler<FeedDeleteCommand, Result<Guid>
     {
         _logger.LogInformation("Deleting feed with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             var feed = await _feedRepository.GetByIdAsync(request.Id);
             if (feed == null)
             {
-                result.Fail(ErrorType.NotFound, ErrorCodes.Feed.NotFound, $"Feed with ID {request.Id} not found");
-                return result;
+                return Result<Guid>.NotFound(ErrorCodes.Feed.NotFound, $"Feed with ID {request.Id} not found");
             }
 
             // Repository removes the feed's FeedProduct/FeedLog children explicitly.
             await _feedRepository.DeleteAsync(feed);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.NoContent;
-            result.Data = feed.Id;
-
             _logger.LogInformation("Successfully deleted feed with ID: {Id}", feed.Id);
+            return Result<Guid>.NoContent(feed.Id);
         }
         catch (NotFoundException)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Feed.NotFound, $"Feed with ID {request.Id} not found");
+            return Result<Guid>.NotFound(ErrorCodes.Feed.NotFound, $"Feed with ID {request.Id} not found");
         }
 
-        return result;
     }
 }

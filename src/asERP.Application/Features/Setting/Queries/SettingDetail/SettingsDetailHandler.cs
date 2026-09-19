@@ -28,31 +28,22 @@ public class SettingDetailHandler : IRequestHandler<SettingDetailQuery, Result<S
     {
         _logger.LogInformation("Retrieving setting details for ID: {Id}", request.Id);
 
-        var result = new Result<SettingDetailDto>();
-
         // Retrieve setting with all related details from the repository
         var setting = await _settingRepository.GetByIdAsync(request.Id, true);
 
         // If setting not found, return a not found result
         if (setting == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Setting.NotFound, $"Setting with ID {request.Id} not found");
-
             _logger.LogWarning("Setting with ID {Id} not found", request.Id);
-            return result;
+            return Result<SettingDetailDto>.NotFound(ErrorCodes.Setting.NotFound, $"Setting with ID {request.Id} not found");
         }
 
         // Map entity to DTO using the mapping method
         var data = MapToDetailDto(setting);
 
-        // Set successful result with the setting details
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
         _logger.LogInformation("Setting with ID {Id} retrieved successfully", request.Id);
 
-        return result;
+        return Result<SettingDetailDto>.Ok(data);
     }
 
     /// <summary>

@@ -349,7 +349,7 @@ public class SalesReadyForDeliveryListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessReadyForDelivery_WithSortByTotal_ShouldReturnSalesedResults()
+    public async Task GetSalessReadyForDelivery_WithSortByTotal_ShouldReturnSortedResults()
     {
         await SeedSalesReadyForDeliveryTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -369,7 +369,7 @@ public class SalesReadyForDeliveryListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessReadyForDelivery_WithSortByTotalDescending_ShouldReturnDescSalesedResults()
+    public async Task GetSalessReadyForDelivery_WithSortByTotalDescending_ShouldReturnDescSortedResults()
     {
         await SeedSalesReadyForDeliveryTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -513,7 +513,7 @@ public class SalesReadyForDeliveryListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessReadyForDelivery_WithSortByDateSalesed_ShouldReturnDateSalesedResults()
+    public async Task GetSalessReadyForDelivery_WithSortByDateSalesed_ShouldReturnDateSortedResults()
     {
         await SeedSalesReadyForDeliveryTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);

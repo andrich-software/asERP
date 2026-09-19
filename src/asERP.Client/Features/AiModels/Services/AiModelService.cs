@@ -49,7 +49,7 @@ public class AiModelService : IAiModelService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseAiModelListDto, ct);
 
             if (response?.Succeeded != true)
@@ -84,7 +84,7 @@ public class AiModelService : IAiModelService
 
         try
         {
-            return await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.AiModelDetailDto, ct);
+            return await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.AiModelDetailDto, ct);
         }
         catch (Exception ex)
         {

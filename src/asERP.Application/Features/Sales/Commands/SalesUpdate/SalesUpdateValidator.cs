@@ -15,7 +15,6 @@ public class SalesUpdateValidator : SalesBaseValidator<SalesUpdateCommand>
         _salesRepository = salesRepository;
         _customerRepository = customerRepository;
 
-
         RuleFor(p => p.Id)
             .NotNull()
             .NotEqual(Guid.Empty).WithMessage("{PropertyName} cannot be empty.");
@@ -26,6 +25,5 @@ public class SalesUpdateValidator : SalesBaseValidator<SalesUpdateCommand>
 
         // Sales existence is handled in the Handler for proper NotFound vs BadRequest logic
     }
-
 
 }

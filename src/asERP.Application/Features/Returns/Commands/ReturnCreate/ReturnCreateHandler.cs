@@ -40,8 +40,6 @@ public class ReturnCreateHandler : IRequestHandler<ReturnCreateCommand, Result<G
         _logger.LogInformation("Creating return for sales {SalesId} with {Count} items",
             request.SalesId, request.Items.Count);
 
-        var result = new Result<Guid>();
-
         var sales = await _salesRepository.GetWithDetailsAsync(request.SalesId);
         if (sales == null)
         {
@@ -146,9 +144,8 @@ public class ReturnCreateHandler : IRequestHandler<ReturnCreateCommand, Result<G
             IsSystemGenerated = false
         });
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = returnToCreate.Id;
+        // Label problems are reported alongside the created return, never instead of it.
+        var warnings = new List<string>();
 
         if (request.RequestLabel)
         {
@@ -158,12 +155,12 @@ public class ReturnCreateHandler : IRequestHandler<ReturnCreateCommand, Result<G
             var labelResult = await _returnCarrierService.CreateReturnLabelAsync(returnToCreate.Id, cancellationToken);
             if (!labelResult.Succeeded)
             {
-                result.Messages.AddRange(labelResult.Messages);
+                warnings.AddRange(labelResult.Messages);
             }
         }
 
         _logger.LogInformation("Successfully created return with ID: {Id}", returnToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(returnToCreate.Id, warnings);
     }
 }

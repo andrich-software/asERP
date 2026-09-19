@@ -23,16 +23,12 @@ public class ManufacturerDetailHandler : IRequestHandler<ManufacturerDetailQuery
     {
         _logger.LogInformation("Retrieving manufacturer details for ID: {Id}", request.Id);
 
-        var result = new Result<ManufacturerDetailDto>();
-
         var manufacturer = await _manufacturerRepository.GetByIdAsync(request.Id, true);
 
         if (manufacturer == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Manufacturer.NotFound, $"Manufacturer with ID {request.Id} not found");
-
             _logger.LogWarning("Manufacturer with ID {Id} not found", request.Id);
-            return result;
+            return Result<ManufacturerDetailDto>.NotFound(ErrorCodes.Manufacturer.NotFound, $"Manufacturer with ID {request.Id} not found");
         }
 
         // Manual mapping to DTO entity
@@ -51,12 +47,8 @@ public class ManufacturerDetailHandler : IRequestHandler<ManufacturerDetailQuery
             Logo = manufacturer.Logo
         };
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
         _logger.LogInformation("Manufacturer with ID {Id} retrieved successfully", request.Id);
 
-        return result;
+        return Result<ManufacturerDetailDto>.Ok(data);
     }
 }

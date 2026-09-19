@@ -35,10 +35,10 @@ public class CustomersController(IMediator mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PaginatedResult<CustomerListDto>>> GetAll(
-        int pageNumber = 0, int pageSize = 10, string searchString = "", string salesBy = "")
+        int pageNumber = 0, int pageSize = 10, string searchString = "", string sortBy = "")
     {
         var response = await mediator.Send(
-            new CustomerListQuery(pageNumber, pageSize, searchString, salesBy));
+            new CustomerListQuery(pageNumber, pageSize, searchString, sortBy));
         return response.ToActionResult();
     }
 }

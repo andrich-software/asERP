@@ -38,7 +38,7 @@ public class TenantOAuthSettingsService : ITenantOAuthSettingsService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.TenantOAuthAppSettings.ByProvider(provider)}";
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseTenantOAuthAppSettingsDetailDto, ct);
         return response?.Data;
     }

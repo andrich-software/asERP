@@ -26,20 +26,16 @@ public class UpdateCurrentUserHandler : IRequestHandler<UpdateCurrentUserCommand
 
     public async Task<Result<string>> Handle(UpdateCurrentUserCommand request, CancellationToken cancellationToken)
     {
-        var result = new Result<string>();
-
         var userId = _httpContextAccessor.HttpContext.GetUserId();
         if (string.IsNullOrWhiteSpace(userId))
         {
-            result.Fail(ErrorType.Unauthorized, ErrorCodes.Account.Unauthorized, "Authenticated user context is required.");
-            return result;
+            return Result<string>.Unauthorized(ErrorCodes.Account.Unauthorized, "Authenticated user context is required.");
         }
 
         var existingUser = await _userManager.FindByIdAsync(userId);
         if (existingUser == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Account.NotFound, "Current user not found.");
-            return result;
+            return Result<string>.NotFound(ErrorCodes.Account.NotFound, "Current user not found.");
         }
 
         var normalizedEmail = _userManager.NormalizeEmail(request.Email);
@@ -53,8 +49,7 @@ public class UpdateCurrentUserHandler : IRequestHandler<UpdateCurrentUserCommand
 
             if (emailInUse)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Account.AlreadyExists, "Email address is already in use.");
-                return result;
+                return Result<string>.Invalid(ErrorCodes.Account.AlreadyExists, "Email address is already in use.");
             }
         }
 
@@ -70,17 +65,11 @@ public class UpdateCurrentUserHandler : IRequestHandler<UpdateCurrentUserCommand
         var updateResult = await _userManager.UpdateAsync(existingUser);
         if (!updateResult.Succeeded)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Account.Invalid);
-            result.Messages.AddRange(updateResult.Errors.Select(e => e.Description));
-            return result;
+            return Result<string>.Failure(ErrorType.Validation, ErrorCodes.Account.Invalid, updateResult.Errors.Select(e => e.Description));
         }
-
-        result.Succeeded = true;
-        result.Status = ResultStatus.NoContent;
-        result.Data = existingUser.Id;
 
         _logger.LogInformation("Current user {UserId} updated own profile", existingUser.Id);
 
-        return result;
+        return Result<string>.NoContent(existingUser.Id);
     }
 }

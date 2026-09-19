@@ -27,22 +27,15 @@ public class SettingCreateHandler : IRequestHandler<SettingCreateCommand, Result
     {
         _logger.LogInformation("Creating new setting with name: {Name}", request.Key);
 
-        var result = new Result<Guid>();
-
         // Map request to domain entity
         var settingToCreate = MapToEntity(request);
 
         // Add the new setting to the database
         await _settingRepository.CreateAsync(settingToCreate);
 
-        // Set successful result with the new setting ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = settingToCreate.Id;
-
         _logger.LogInformation("Successfully created setting with ID: {Id}", settingToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(settingToCreate.Id);
     }
 
     private static asERP.Domain.Entities.Setting MapToEntity(SettingCreateCommand request)

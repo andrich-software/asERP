@@ -10,7 +10,6 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
 {
     public ProductRepository(ApplicationDbContext context, ITenantContext tenantContext) : base(context, tenantContext)
     {
-
     }
 
     public async Task<Product?> GetBySkuAsync(string sku)
@@ -172,7 +171,7 @@ public class ProductRepository : GenericRepository<Product>, IProductRepository
         return true;
     }
 
-    public override async Task<bool> IsUniqueAsync(Product entity, Guid? id = null)
+    public async Task<bool> IsUniqueAsync(Product entity, Guid? id = null)
     {
         var currentTenantId = TenantContext.GetCurrentTenantId();
 

@@ -18,7 +18,6 @@ public static class PredicateBuilder
 
     public static Expression<Func<T, bool>> Or<T>(this Expression<Func<T, bool>> left, Expression<Func<T, bool>> right)
     {
-
         ParameterExpression p = left.Parameters.First();
         SubstExpressionVisitor visitor = new SubstExpressionVisitor
         {

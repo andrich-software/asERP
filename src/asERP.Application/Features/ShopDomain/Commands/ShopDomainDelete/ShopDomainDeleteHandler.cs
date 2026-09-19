@@ -27,13 +27,10 @@ public class ShopDomainDeleteHandler : IRequestHandler<ShopDomainDeleteCommand, 
     {
         _logger.LogInformation("Deleting shop domain with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         var shopDomain = await _shopDomainRepository.GetByIdAsync(request.Id);
         if (shopDomain == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.ShopDomain.NotFound, $"Shop domain with ID {request.Id} not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.ShopDomain.NotFound, $"Shop domain with ID {request.Id} not found");
         }
 
         await _shopDomainRepository.DeleteAsync(shopDomain);
@@ -59,12 +56,8 @@ public class ShopDomainDeleteHandler : IRequestHandler<ShopDomainDeleteCommand, 
             new ShopDomainChangedNotification(shopDomain.SalesChannelId, shopDomain.TenantId),
             cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.NoContent;
-        result.Data = shopDomain.Id;
-
         _logger.LogInformation("Successfully deleted shop domain with ID: {Id}", shopDomain.Id);
 
-        return result;
+        return Result<Guid>.NoContent(shopDomain.Id);
     }
 }

@@ -10,7 +10,6 @@ public class SettingUpdateQuery : IRequestHandler<SettingUpdateCommand, Result<G
     private readonly IAppLogger<SettingUpdateQuery> _logger;
     private readonly ISettingRepository _settingRepository;
 
-
     public SettingUpdateQuery(
         IAppLogger<SettingUpdateQuery> logger,
         ISettingRepository settingRepository)
@@ -23,14 +22,11 @@ public class SettingUpdateQuery : IRequestHandler<SettingUpdateCommand, Result<G
     {
         _logger.LogInformation("Updating setting with ID: {Id} and name: {Name}", request.Id, request.Key);
 
-        var result = new Result<Guid>();
-
         // Get the existing entity to preserve fields we don't want to overwrite
         var existingSetting = await _settingRepository.GetByIdAsync(request.Id);
         if (existingSetting == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Setting.NotFound, "Setting not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Setting.NotFound, "Setting not found");
         }
 
         // Update only the fields that should be modified
@@ -41,13 +37,9 @@ public class SettingUpdateQuery : IRequestHandler<SettingUpdateCommand, Result<G
         // Update in database
         await _settingRepository.UpdateAsync(existingSetting);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = existingSetting.Id;
-
         _logger.LogInformation("Successfully updated setting with ID: {Id}", existingSetting.Id);
 
-        return result;
+        return Result<Guid>.Ok(existingSetting.Id);
     }
 
 }

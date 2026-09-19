@@ -76,20 +76,17 @@ public class TenantMiddleware
         if (isAuthenticated && user != null)
         {
             availableTenantsIds = ExtractAvailableTenantIds(user);
-            if (availableTenantsIds.Count > 0)
-            {
-                tenantContext.SetAssignedTenantIds(availableTenantsIds);
-            }
+            // Set unconditionally: an empty list must mean "assigned to nothing", never
+            // "assignments unknown". Treating the two alike is what made the header check below
+            // fail open.
+            tenantContext.SetAssignedTenantIds(availableTenantsIds);
         }
 
-        Guid? requestedTenantId = null;
         if (context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantHeader))
         {
             var tenantHeaderValue = tenantHeader.FirstOrDefault();
             if (tenantHeaderValue != null && Guid.TryParse(tenantHeaderValue, out var headerTenantId) && headerTenantId != Guid.Empty)
             {
-                requestedTenantId = headerTenantId;
-
                 if (isTestEnvironment)
                 {
                     tenantContext.SetCurrentTenantId(headerTenantId);
@@ -100,7 +97,13 @@ public class TenantMiddleware
                 }
                 else
                 {
-                    if (availableTenantsIds.Count > 0 && !availableTenantsIds.Contains(headerTenantId))
+                    // SECURITY: the header picks the tenant that every EF global query filter
+                    // and every TenantId stamp downstream trusts, so it must name a tenant the
+                    // JWT actually grants. Zero assignments therefore DENIES — it must never
+                    // fall through and self-grant the requested tenant: a user de-assigned from
+                    // all tenants still knows their former tenant's GUID, which would hand them
+                    // full read/write access to it (reported by S9S Security Research).
+                    if (!availableTenantsIds.Contains(headerTenantId))
                     {
                         context.Response.StatusCode = 403;
                         await context.Response.WriteAsync($"Access denied: User not assigned to tenant {headerTenantId}");
@@ -108,13 +111,6 @@ public class TenantMiddleware
                     }
 
                     tenantContext.SetCurrentTenantId(headerTenantId);
-
-                    // When JWT has no tenant claims but a valid X-Tenant-Id is provided,
-                    // set the assigned tenant IDs so downstream code has consistent context
-                    if (availableTenantsIds.Count == 0)
-                    {
-                        tenantContext.SetAssignedTenantIds(new[] { headerTenantId });
-                    }
                 }
             }
             else
@@ -157,11 +153,6 @@ public class TenantMiddleware
                 await context.Response.WriteAsync("X-Tenant-Id header is required for this request");
                 return;
             }
-        }
-
-        if (isAuthenticated && availableTenantsIds.Count == 0 && requestedTenantId.HasValue)
-        {
-            tenantContext.SetAssignedTenantIds(new[] { requestedTenantId.Value });
         }
 
         await _next(context);

@@ -49,7 +49,7 @@ public class ManufacturerService : IManufacturerService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseManufacturerListDto, ct);
 
             if (response?.Succeeded != true)
@@ -86,7 +86,7 @@ public class ManufacturerService : IManufacturerService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.ManufacturerDetailDto, ct);
 
             return response;

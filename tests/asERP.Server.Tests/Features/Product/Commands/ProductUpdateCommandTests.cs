@@ -248,10 +248,8 @@ public class ProductUpdateCommandTests : TenantIsolatedTestBase
         var response = await PutAsJsonAsync($"/api/v1/Products/{productId}", updateDto);
 
         TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        var result = await ReadResponseAsync<Result<Guid>>(response);
-        TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        var content = await response.Content.ReadAsStringAsync();
+        TestAssertions.AssertTrue(content.Contains("Name"), content);
     }
 
     [Fact]
@@ -290,10 +288,8 @@ public class ProductUpdateCommandTests : TenantIsolatedTestBase
         var response = await PutAsJsonAsync($"/api/v1/Products/{productId}", updateDto);
 
         TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        var result = await ReadResponseAsync<Result<Guid>>(response);
-        TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        var content = await response.Content.ReadAsStringAsync();
+        TestAssertions.AssertTrue(content.Contains("TaxClassId"), content);
     }
 
     [Fact]
@@ -341,10 +337,8 @@ public class ProductUpdateCommandTests : TenantIsolatedTestBase
         var response = await PutAsJsonAsync($"/api/v1/Products/{productId}", updateDto);
 
         TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        var result = await ReadResponseAsync<Result<Guid>>(response);
-        TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        var content = await response.Content.ReadAsStringAsync();
+        TestAssertions.AssertTrue(content.Contains("Price"), content);
     }
 
     [Fact]

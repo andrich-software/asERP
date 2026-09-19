@@ -10,7 +10,6 @@ public class WarehouseUpdateHandler : IRequestHandler<WarehouseUpdateCommand, Re
     private readonly IAppLogger<WarehouseUpdateHandler> _logger;
     private readonly IWarehouseRepository _warehouseRepository;
 
-
     public WarehouseUpdateHandler(
         IAppLogger<WarehouseUpdateHandler> logger,
         IWarehouseRepository warehouseRepository)
@@ -23,16 +22,13 @@ public class WarehouseUpdateHandler : IRequestHandler<WarehouseUpdateCommand, Re
     {
         _logger.LogInformation("Updating warehouse with ID: {Id}, Name: {Name}", request.Id, request.Name);
 
-        var result = new Result<Guid>();
-
         // Load the tracked entity and mutate it, so the persistence layer keeps
         // TenantId/DateCreated intact instead of nulling them on a detached update.
         var warehouseToUpdate = await _warehouseRepository.GetByIdAsync(request.Id);
         if (warehouseToUpdate == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Warehouse.NotFound, "Warehouse not found.");
             _logger.LogWarning("Warehouse with ID {Id} not found for update", request.Id);
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Warehouse.NotFound, "Warehouse not found.");
         }
 
         warehouseToUpdate.Name = request.Name;
@@ -40,12 +36,8 @@ public class WarehouseUpdateHandler : IRequestHandler<WarehouseUpdateCommand, Re
         // Save changes (entity is already tracked, so just save)
         await _warehouseRepository.SaveChangesAsync();
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = warehouseToUpdate.Id;
-
         _logger.LogInformation("Successfully updated warehouse with ID: {Id}", warehouseToUpdate.Id);
 
-        return result;
+        return Result<Guid>.Ok(warehouseToUpdate.Id);
     }
 }

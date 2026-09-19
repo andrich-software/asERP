@@ -27,8 +27,6 @@ public class WarehouseCreateHandler : IRequestHandler<WarehouseCreateCommand, Re
     {
         _logger.LogInformation("Creating new warehouse with name: {Name}", request.Name);
 
-        var result = new Result<Guid>();
-
         // Manual mapping to domain entity
         var warehouseToCreate = new Domain.Entities.Warehouse
         {
@@ -38,13 +36,8 @@ public class WarehouseCreateHandler : IRequestHandler<WarehouseCreateCommand, Re
         // Add the new warehouse to the database
         await _warehouseRepository.CreateAsync(warehouseToCreate);
 
-        // Set successful result with the new warehouse ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = warehouseToCreate.Id;
-
         _logger.LogInformation("Successfully created warehouse with ID: {Id}", warehouseToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(warehouseToCreate.Id);
     }
 }

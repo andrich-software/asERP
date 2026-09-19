@@ -31,8 +31,6 @@ public class FeedRenderHandler : IRequestHandler<FeedRenderQuery, Result<FeedRen
 
     public async Task<Result<FeedRenderResult>> Handle(FeedRenderQuery request, CancellationToken cancellationToken)
     {
-        var result = new Result<FeedRenderResult>();
-
         try
         {
             // Tenant context has already been set by the caller from the resolved feed.
@@ -66,21 +64,17 @@ public class FeedRenderHandler : IRequestHandler<FeedRenderQuery, Result<FeedRen
             var renderer = _rendererResolver.Resolve(feed.Template);
             var bytes = await renderer.RenderAsync(context, cancellationToken);
 
-            result.Data = new FeedRenderResult
+            return Result<FeedRenderResult>.Ok(new FeedRenderResult
             {
                 Content = bytes,
                 ContentType = renderer.ContentType,
                 FileName = $"{BuildSlug(feed.Name, feed.Template)}.{renderer.FileNameSuffix}"
-            };
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
+            });
         }
         catch (NotFoundException)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Feed.NotFound, $"Feed with ID {request.FeedId} not found");
+            return Result<FeedRenderResult>.NotFound(ErrorCodes.Feed.NotFound, $"Feed with ID {request.FeedId} not found");
         }
-
-        return result;
     }
 
     private static FeedProductData MapProduct(Domain.Entities.Product p, Domain.Entities.Feed feed, string baseUrl)

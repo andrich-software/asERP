@@ -26,7 +26,6 @@ public static class ApiVersioningRegistration
             x.ApiVersionParameterSource = new UrlSegmentApiVersionReader();
         });
 
-
         return services;
     }
 }

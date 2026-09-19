@@ -67,12 +67,18 @@ XAML binds with the Uno `Bindings` extension. `ViewMap<{Page}, {Model}>` connect
 
 Use the established pipeline — do not add new HTTP plumbing.
 
-**In services** — let exceptions propagate by extending the response check:
+**Reads** go through `GetFromApiAsync` — **never** `HttpClient.GetFromJsonAsync`, which throws a bare
+`HttpRequestException` and loses the server's message and error code, making a failed list look empty:
 
 ```csharp
-var response = await _http.GetAsync("api/v1/customers", ct);
+return await _http.GetFromApiAsync(url, AppJsonSerializerContext.Default.PaginatedResponseCustomerListDto, ct);
+```
+
+**Writes** check the response explicitly:
+
+```csharp
+var response = await _http.PostAsJsonAsync(url, dto, ct);
 await response.EnsureSuccessOrThrowApiExceptionAsync(ct);
-return await response.Content.ReadFromJsonAsync<...>(ct);
 ```
 
 **In models** — catch `ApiException` (in `Core/Exceptions/`) and surface server-side validation:
@@ -82,7 +88,9 @@ try { /* call service */ }
 catch (ApiException ex) { ErrorMessage = ex.CombinedMessage; }
 ```
 
-`ApiException.CombinedMessage` already aggregates RFC 7807 messages from the Server.
+`ApiException.CombinedMessage` aggregates the RFC 9457 messages; `Errors` keeps the per-field
+dictionary. Prefer `ex.Code` (a stable `asERP.Domain.Wrapper.ErrorCodes` string such as
+`customer.not_found`) when you need to branch or translate — the message text is developer-facing.
 
 ## Localization
 

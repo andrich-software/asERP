@@ -23,8 +23,6 @@ public class SuperadminCreateHandler : IRequestHandler<SuperadminCreateCommand, 
         _logger.LogInformation("Creating new tenant with name: {Name}",
             request.Name);
 
-        var result = new Result<Guid>();
-
         var tenantToCreate = new Domain.Entities.Tenant
         {
             Name = request.Name,
@@ -44,12 +42,8 @@ public class SuperadminCreateHandler : IRequestHandler<SuperadminCreateCommand, 
 
         await _tenantRepository.CreateAsync(tenantToCreate);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = tenantToCreate.Id;
-
         _logger.LogInformation("Successfully created tenant with ID: {Id}", tenantToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(tenantToCreate.Id);
     }
 }

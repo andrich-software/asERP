@@ -10,7 +10,6 @@ public class CustomerRepository : GenericRepository<Customer>, ICustomerReposito
 {
     public CustomerRepository(ApplicationDbContext context, ITenantContext tenantContext) : base(context, tenantContext)
     {
-
     }
 
     public async Task<Customer?> GetCustomerWithDetails(Guid id)

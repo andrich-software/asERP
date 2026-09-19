@@ -22,8 +22,6 @@ public class AiModelDeleteHandler : IRequestHandler<AiModelDeleteCommand, Result
     {
         _logger.LogInformation("Deleting AI model with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         // Create entity to delete
         var aiModelToDelete = new Domain.Entities.AiModel
         {
@@ -42,16 +40,11 @@ public class AiModelDeleteHandler : IRequestHandler<AiModelDeleteCommand, Result
             // real infrastructure failure still bubbles up to the GlobalExceptionHandler.
             _logger.LogWarning("AI model {Id} was not deletable in this context: {Message}", request.Id, ex.Message);
 
-            result.Fail(ErrorType.NotFound, ErrorCodes.AiModel.NotFound, "AI model not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.AiModel.NotFound, "AI model not found");
         }
-
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = aiModelToDelete.Id;
 
         _logger.LogInformation("Successfully deleted AI model with ID: {Id}", aiModelToDelete.Id);
 
-        return result;
+        return Result<Guid>.Ok(aiModelToDelete.Id);
     }
 }

@@ -29,8 +29,6 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
     {
         _logger.LogInformation("Deleting sales channel with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             // Get entity from database first
@@ -38,9 +36,8 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
 
             if (salesChannel == null)
             {
-                result.Fail(ErrorType.NotFound, ErrorCodes.SalesChannel.NotFound, $"SalesChannel with ID {request.Id} not found");
                 _logger.LogWarning("Sales channel {Id} not found", request.Id);
-                return result;
+                return Result<Guid>.NotFound(ErrorCodes.SalesChannel.NotFound, $"SalesChannel with ID {request.Id} not found");
             }
 
             // The repository removes the channel together with everything that is worthless without
@@ -59,10 +56,6 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
             // never fails the delete.
             await _webAnalyticsPurgeService.PurgeSalesChannelAsync(salesChannel.Id, cancellationToken);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.NoContent;
-            result.Data = salesChannel.Id;
-
             _logger.LogInformation(
                 "Successfully deleted sales channel with ID: {Id} (removed {ShopDomains} shop domains, "
                 + "{CategoryLinks} category links, {CustomerLinks} customer links, {ProductLinks} product links, "
@@ -71,20 +64,20 @@ public class SalesChannelDeleteHandler : IRequestHandler<SalesChannelDeleteComma
                 salesChannel.Id, summary.ShopDomains, summary.CategoryLinks, summary.CustomerLinks,
                 summary.ProductLinks, summary.OAuthStates, summary.SyncRows,
                 summary.DetachedProductImages, summary.DetachedFeeds);
+            return Result<Guid>.NoContent(salesChannel.Id);
         }
         catch (asERP.Application.Exceptions.NotFoundException)
         {
             // Sales channel not found
-            result.Fail(ErrorType.NotFound, ErrorCodes.SalesChannel.NotFound, $"SalesChannel with ID {request.Id} not found");
             _logger.LogWarning("Sales channel {Id} not found", request.Id);
+            return Result<Guid>.NotFound(ErrorCodes.SalesChannel.NotFound, $"SalesChannel with ID {request.Id} not found");
         }
         catch (Exception ex) when (ex.Message.Contains("does not exist") || ex.Message.Contains("not found"))
         {
             // Handle race condition: Entity was deleted between check and delete
-            result.Fail(ErrorType.NotFound, ErrorCodes.SalesChannel.NotFound, $"SalesChannel with ID {request.Id} not found");
             _logger.LogWarning("Sales channel {Id} was deleted by concurrent operation: {ExceptionType} - {Message}", request.Id, ex.GetType().Name, ex.Message);
+            return Result<Guid>.NotFound(ErrorCodes.SalesChannel.NotFound, $"SalesChannel with ID {request.Id} not found");
         }
 
-        return result;
     }
 }

@@ -15,7 +15,6 @@ public class SalesChannelRepository : GenericRepository<SalesChannel>, ISalesCha
 {
     public SalesChannelRepository(ApplicationDbContext context, ITenantContext tenantContext) : base(context, tenantContext)
     {
-
     }
 
     public async Task<SalesChannel> GetDetails(Guid id)

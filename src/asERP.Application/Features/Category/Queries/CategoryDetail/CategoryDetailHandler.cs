@@ -24,8 +24,6 @@ public class CategoryDetailHandler : IRequestHandler<CategoryDetailQuery, Result
     {
         _logger.LogInformation("Retrieving category details for ID: {Id}", request.Id);
 
-        var result = new Result<CategoryDetailDto>();
-
         var data = await _categoryRepository.Entities
             .Where(c => c.Id == request.Id)
             .Select(c => new CategoryDetailDto
@@ -49,14 +47,9 @@ public class CategoryDetailHandler : IRequestHandler<CategoryDetailQuery, Result
 
         if (data == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Category.NotFound, $"Category with ID {request.Id} not found");
-            return result;
+            return Result<CategoryDetailDto>.NotFound(ErrorCodes.Category.NotFound, $"Category with ID {request.Id} not found");
         }
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
-        return result;
+        return Result<CategoryDetailDto>.Ok(data);
     }
 }

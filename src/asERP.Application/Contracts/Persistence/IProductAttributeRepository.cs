@@ -26,4 +26,11 @@ public interface IProductAttributeRepository : IGenericRepository<ProductAttribu
     /// Deletes an attribute together with its values (explicit cascade per project rule).
     /// </summary>
     Task DeleteWithValuesAsync(ProductAttribute attribute);
+
+    /// <summary>
+    /// True when no other ProductAttribute in the current tenant collides with this one.
+    /// Declared per repository on purpose: a uniqueness rule that silently does
+    /// nothing is worse than none, so there is no inherited default to forget.
+    /// </summary>
+    Task<bool> IsUniqueAsync(ProductAttribute entity, Guid? id = null);
 }

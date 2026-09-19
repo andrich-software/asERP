@@ -149,7 +149,7 @@ public class TenantListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetTenants_WithSortBy_ShouldReturnSalesedResults()
+    public async Task GetTenants_WithSortBy_ShouldReturnSortedResults()
     {
         await SeedUserTenantsAsync();
         SimulateAuthenticatedRequest(AdminUserId);

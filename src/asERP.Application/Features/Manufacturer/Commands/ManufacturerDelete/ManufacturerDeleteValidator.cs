@@ -19,12 +19,10 @@ public class ManufacturerDeleteValidator : AbstractValidator<ManufacturerDeleteC
             .NotNull()
             .NotEqual(Guid.Empty).WithMessage("{PropertyName} cannot be empty.");
 
-
         RuleFor(m => m)
             .MustAsync(ManufacturerIsNotUsedInProducts)
             .WithMessage("Cannot delete manufacturer as it is being used by one or more products.");
     }
-
 
     private async Task<bool> ManufacturerIsNotUsedInProducts(ManufacturerDeleteCommand command, CancellationToken cancellationToken)
     {

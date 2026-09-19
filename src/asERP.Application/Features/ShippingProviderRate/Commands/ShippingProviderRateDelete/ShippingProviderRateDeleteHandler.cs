@@ -23,8 +23,6 @@ public class ShippingProviderRateDeleteHandler : IRequestHandler<ShippingProvide
     {
         _logger.LogInformation("Deleting shipping option with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             var existsGlobally = await _shippingProviderRateRepository.ExistsGloballyAsync(request.Id);
@@ -43,25 +41,20 @@ public class ShippingProviderRateDeleteHandler : IRequestHandler<ShippingProvide
 
             if (await _shippingProviderRateRepository.HasShipmentsAsync(request.Id))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.ShippingProviderRate.Invalid, "The shipping option cannot be deleted because shipments reference it.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.ShippingProviderRate.Invalid, "The shipping option cannot be deleted because shipments reference it.");
             }
 
             // Cascade explicitly (repo rule: no EF cascade deletes): country joins, then the rate.
             await _shippingProviderRateRepository.ReplaceAllowedCountriesAsync(request.Id, Array.Empty<Guid>());
             await _shippingProviderRateRepository.DeleteAsync(rateToDelete);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.NoContent;
-            result.Data = request.Id;
-
             _logger.LogInformation("Successfully deleted shipping option with ID: {Id}", request.Id);
+            return Result<Guid>.NoContent(request.Id);
         }
         catch (NotFoundException)
         {
             throw;
         }
 
-        return result;
     }
 }

@@ -52,9 +52,7 @@ public class ShippingProviderRateCreateHandler : IRequestHandler<ShippingProvide
 
         _logger.LogInformation("Successfully created shipping option with ID: {Id}", rateToCreate.Id);
 
-        var result = Result<Guid>.Success(rateToCreate.Id);
-        result.Status = ResultStatus.Created;
-        return result;
+        return Result<Guid>.Created(rateToCreate.Id);
     }
 
     /// <summary>Carrier codes are exact identifiers — trim whitespace, treat blank as "not set".</summary>

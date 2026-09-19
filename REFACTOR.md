@@ -5,9 +5,10 @@ comparing asERP against the TAG24 backend family and current .NET practice). It 
 a mandate**: each item stands alone, is ordered by value-per-risk, and can be picked up by a future
 session independently.
 
-> **All original items (R1–R6) were completed on 2026-09-01.** The target design below is the code
-> as it stands, not a plan. What is left are the follow-ups collected under
-> "[Discovered while doing the above](#discovered-while-doing-the-above)".
+> **Everything here is done.** R1–R6 were completed on 2026-09-01, the follow-ups they turned up on
+> 2026-09-02, and the last one — dropping the `salesBy` deprecation — on 2026-09-03. The target
+> design below describes the code as it stands, not a plan. Nothing in this file is open; add new
+> items below rather than reopening these.
 
 ## How to use this file
 
@@ -52,7 +53,8 @@ id (`Result<Guid>`), and the rule that exception text never reaches a client.
       - **Six requests opted out** via the new `ISkipPipelineValidation` marker (see the table in
         `src/asERP.Application/CLAUDE.md`). Three of them (`CustomerUpdateCommand`,
         `ProductUpdateCommand`, `SettingDeleteCommand`) have a validator rule the handler maps to
-        **404** and keep their inline block until R5. Two (`AiModelDeleteCommand`,
+        **404** and kept their inline block — since migrated, see the follow-ups. Two
+        (`AiModelDeleteCommand`,
         `DeleteSalesCommand`) belong to DELETE endpoints whose controller discards the result and
         always answers 204 — their validators' failures had never reached a client, and throwing
         would have turned an idempotent DELETE into a 400.
@@ -276,13 +278,12 @@ lockstep.
 
 - [x] **done 2026-09-01** — `SalesBy` → `SortBy` across 119 files. `asERP.SalesChannels` was
       excluded on purpose: its `ImportSalesByModifiedAsync` / `salesByRemoteId` really do mean
-      "sales by …", as does one dispatch test name. The deprecated `salesBy` query parameter still
-      works through `Server/Middleware/LegacySortParameterMiddleware`, one place instead of 29 list
-      actions, so third-party API callers keep working and the whole deprecation is one file to
-      delete. Covered by `LegacySortParameterTests`.
-      Still open: the client's `SortSales`/`SetSortSales` state names, a separate artifact of the
-      same botched rename (probably from `SortOrder`), plus test names like
-      `ShouldReturnSalesedResults`. No wire impact, left alone.
+      "sales by …", as does one dispatch test name. The deprecated `salesBy` query parameter was
+      kept alive for a while by `Server/Middleware/LegacySortParameterMiddleware` — one place
+      instead of 29 list actions — and has since been dropped (see "Drop the `salesBy` deprecation"
+      below). `sortBy` is now the only accepted name.
+      The client's `SortSales`/`SetSortSales` state names, a separate artifact of the same botched
+      rename, were cleaned up later too — see "Client naming leftovers".
 - [x] **done 2026-09-01** — 59 files: "MediatR" in doc comments now says "the custom mediator". The
       one remaining mention is in `CustomMediator.cs` itself ("to replace MediatR"), where it is
       accurate.
@@ -303,27 +304,83 @@ R3 folding into R5's error object made it disappear as separate work, exactly as
 
 ## Discovered while doing the above
 
-New items, in rough value-per-risk order. None of them is started.
+Items found during R1–R6. All but the last are done; see the notes for what changed and why.
 
-- [ ] **`GenericRepository.IsUniqueAsync` returns `true` unless overridden.** Uniqueness rules are
-      therefore silently inert for every entity without an override — `Country` among them, so two
-      countries with the same name are accepted today. Either make the base implementation real or
-      make the missing override impossible to overlook.
-- [ ] **Handlers that answer 400 for a missing row.** Several report `ErrorType.Validation` with a
-      "… not found" message (e.g. parts of `Superadmin`). Faithfully preserved during R5 rather than
-      silently changed; each deserves a decision on whether 404 is the honest answer. **[wire]**
-- [ ] **Three commands still validate inline** (`CustomerUpdateCommand`, `ProductUpdateCommand`,
-      `SettingDeleteCommand`, all marked `ISkipPipelineValidation`) because their validator carries
-      an existence rule the handler maps to 404. Move that rule into the handler and let the
-      pipeline validate them like everything else.
-- [ ] **German user-facing messages.** R3 left them alone: codes are uniform, messages are not.
-      Pick English and migrate as areas are touched — clients should translate the code anyway.
-- [ ] **`Result` is still a mutable class.** R5 deliberately skipped the immutable-record half; it
-      is another ~344-site sweep and buys much less than the HTTP removal did.
-- [ ] **Client naming leftovers** from the Order→Sales rename: `SortSales`/`SetSortSales` state,
-      test names like `ShouldReturnSalesedResults`. Cosmetic, no wire impact.
-- [ ] **Drop the `salesBy` deprecation** once you are satisfied no third-party client uses it:
-      delete `LegacySortParameterMiddleware`, its registration, and `LegacySortParameterTests`.
-- [ ] **~40 client services swallow failed GETs** (`if (response?.Succeeded != true) { LogWarning;
-      return new(); }`), so a server-side error shows as an empty list. Now that failures carry a
-      code, these could surface something useful.
+- [x] **`GenericRepository.IsUniqueAsync` returned `true` unless overridden** — **done 2026-09-02**.
+      The base implementation was a lie: `Country`, `TaxClass` and `Sales` called it through
+      `IGenericRepository<T>` and always got "unique", so those rules never rejected anything.
+
+      Rather than fix the default, the declaration was **removed from `IGenericRepository<T>`** and
+      moved onto the 13 entity repositories that actually implement a rule. A validator calling it
+      on a repository without one is now a compile error, so the next missing override cannot go
+      unnoticed. `Country` (name **or** ISO code, per tenant) and `TaxClass` (rate, per tenant) got
+      real implementations; `Sales` had only a dead `SalesUniqueAsync` helper, which was deleted.
+      Covered by `UniquenessRulesTests`, including that duplicates stay allowed across tenants.
+
+      Bonus: `ICountryRepository.cs` and `ITaxClassRepository.cs` had their contents swapped — each
+      file declared the other interface. Straightened out.
+
+- [x] **Handlers that answer 400 for a missing row** — **reviewed 2026-09-02, one change**.
+      Of the five sites, four report a *referenced* entity that the payload names (the target
+      warehouse of a relocation, the user/tenant of an assignment, an attribute value that does not
+      belong to the attribute). A 400 is right there: the addressed resource exists, the body is
+      wrong. Only `ReturnCarrierService` was inconsistent — it answered `Validation` for "return
+      {id} not found" while `ReturnStatusUpdater` and `ShippingStatusUpdater` answer `NotFound` for
+      exactly the same thing. That one now says `NotFound`.
+
+- [x] **Three commands still validated inline** — **done 2026-09-02**. `CustomerUpdate`,
+      `ProductUpdate` and `SettingDelete` no longer carry `ISkipPipelineValidation`; the existence
+      rules moved into the handlers, so a missing row is a 404 while the field rules go through the
+      pipeline like everywhere else.
+
+      `ProductUpdate` needed more than the item assumed: its validator also checked that the
+      referenced tax class and manufacturer exist, and those checks are tenant-sensitive. Moving
+      only the product rule would have made a request without a tenant fail on "tax class does not
+      exist" (400) instead of "product not found" (404). All three checks are now in the handler, in
+      that order. `SettingDelete` had no existence check of its own at all; it now reports a missing
+      row from the delete itself, which also covers the race between two concurrent deletes.
+
+      Seven test assertions moved from the `Result` envelope to the problem-details body — those
+      commands now report field errors the same way every other command does.
+
+- [x] **German user-facing messages** — **done 2026-09-02**. 27 messages across Invoice, Setup,
+      Auth and `InvoicesController` are English now; nothing else in `src` still answers in German.
+      Two of them also carried Order→Sales rename damage ("erfsaleslich").
+
+- [x] **`Result` is immutable** — **done 2026-09-02**. Every property is `init`-only and `Messages`
+      is an `IReadOnlyList<string>`; the mutating `Fail(...)` helpers are gone. All ~620 mutation
+      sites were converted to factory calls, which made the handlers noticeably shorter — the common
+      shape collapsed from "declare, mutate three fields, log, return" to a single `return
+      Result<T>.Created(id);`.
+
+      New factories carry the shapes that needed more than data: `Failure(type, code, messages)` for
+      Identity-style error lists, `From(source, data[, leadingMessages])` for handlers that delegate
+      to a service and add their own payload, and `Ok`/`Created` overloads taking a message list for
+      the "succeeded, but with a warning" case (label creation, carrier voids).
+
+      Two shapes stayed deliberately: `UserList` reports a **one-based** `CurrentPage` unlike the
+      rest of the project, so it rebuilds the paginated result instead of patching it — the
+      deviation is now visible in the code rather than hidden in a post-assignment.
+
+- [x] **Client naming leftovers** — **done 2026-09-02**. `SortSales`/`SetSortSales` are
+      `SortOrder`/`SetSortOrder` (the value is a sort *order* like "Name Ascending", so the mangled
+      original was `SortOrder`, not `SortBy`), and 34 test names say `SortedResults` instead of
+      `SalesedResults`. `DateSalesed` is untouched: that one is a real persisted property.
+
+- [x] **Client services no longer swallow failed GETs** — **done 2026-09-02**, at the root rather
+      than at the ~35 guards. Reads went through `HttpClient.GetFromJsonAsync`, which throws a bare
+      `HttpRequestException` on an error status — so the server's message and its stable code were
+      lost before any handler could show them, and a failed list looked like an empty one. All 73
+      service reads now use `GetFromApiAsync`, which runs the same error extraction as the mutating
+      calls and throws an `ApiException` carrying message, field errors and code. Covered by
+      `ApiGetErrorTests`.
+
+      The `if (response?.Succeeded != true)` guards were left in place. They are unreachable now (a
+      failed result maps to a non-2xx status, which throws first) but harmless as a belt-and-braces
+      check.
+
+- [x] **Drop the `salesBy` deprecation** — **done 2026-09-03**, on your say-so. The alias was added
+      in this same batch of work and never shipped in a release, so nothing could have come to
+      depend on it. `LegacySortParameterMiddleware`, its registration in `Program.cs` and
+      `LegacySortParameterTests` are gone; `sortBy` is the only accepted name. The Uno client was
+      checked first and sends `sortBy` everywhere (`QueryParameters.cs`).

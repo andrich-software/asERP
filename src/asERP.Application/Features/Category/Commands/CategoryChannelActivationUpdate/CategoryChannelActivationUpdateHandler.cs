@@ -26,14 +26,9 @@ public class CategoryChannelActivationUpdateHandler : IRequestHandler<CategoryCh
 
     public async Task<Result<int>> Handle(CategoryChannelActivationUpdateCommand request, CancellationToken cancellationToken)
     {
-        var result = new Result<int>();
-
         if (request.Changes.Count == 0)
         {
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = 0;
-            return result;
+            return Result<int>.Ok(0);
         }
 
         // Re-apply the tree-consistency rule server-side (the client already expands, but the
@@ -57,12 +52,8 @@ public class CategoryChannelActivationUpdateHandler : IRequestHandler<CategoryCh
                 cancellationToken);
         }
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = affectedRows.Count;
-
         _logger.LogInformation("Applied {Count} category channel activation changes", affectedRows.Count);
 
-        return result;
+        return Result<int>.Ok(affectedRows.Count);
     }
 }

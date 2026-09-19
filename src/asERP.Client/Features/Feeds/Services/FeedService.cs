@@ -47,7 +47,7 @@ public class FeedService : IFeedService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseFeedListDto, ct);
 
             if (response?.Succeeded != true)
@@ -70,7 +70,7 @@ public class FeedService : IFeedService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Feeds.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(
+        var apiResponse = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseFeedDetailDto, ct);
         return apiResponse?.Data;
     }
@@ -110,7 +110,7 @@ public class FeedService : IFeedService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Feeds.Logs(id)}?{parameters.ToQueryString()}";
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.PaginatedResponseFeedLogDto, ct);
         return response ?? new PaginatedResponse<FeedLogDto>();
     }
@@ -122,7 +122,7 @@ public class FeedService : IFeedService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Feeds.Products(id)}?{parameters.ToQueryString()}";
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.PaginatedResponseFeedProductSelectionDto, ct);
         return response ?? new PaginatedResponse<FeedProductSelectionDto>();
     }

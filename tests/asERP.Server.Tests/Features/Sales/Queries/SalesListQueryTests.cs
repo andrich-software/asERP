@@ -247,7 +247,7 @@ public class SalesListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSaless_WithSortByTotal_ShouldReturnSalesedResults()
+    public async Task GetSaless_WithSortByTotal_ShouldReturnSortedResults()
     {
         await SeedSalesTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -267,7 +267,7 @@ public class SalesListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSaless_WithSortByTotalDescending_ShouldReturnDescSalesedResults()
+    public async Task GetSaless_WithSortByTotalDescending_ShouldReturnDescSortedResults()
     {
         await SeedSalesTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -287,7 +287,7 @@ public class SalesListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSaless_WithSortByDateSalesed_ShouldReturnDateSalesedResults()
+    public async Task GetSaless_WithSortByDateSalesed_ShouldReturnDateSortedResults()
     {
         await SeedSalesTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);

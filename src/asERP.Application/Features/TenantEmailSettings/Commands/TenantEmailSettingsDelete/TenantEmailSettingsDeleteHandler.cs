@@ -24,29 +24,21 @@ public class TenantEmailSettingsDeleteHandler : IRequestHandler<TenantEmailSetti
 
     public async Task<Result<Guid>> Handle(TenantEmailSettingsDeleteCommand request, CancellationToken cancellationToken)
     {
-        var result = new Result<Guid>();
-
         var tenantId = _tenantContext.GetCurrentTenantId();
         if (!tenantId.HasValue)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.TenantEmailSettings.Invalid, "No active tenant in context.");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.TenantEmailSettings.Invalid, "No active tenant in context.");
         }
 
         var existing = await _repository.GetByTenantIdAsync(tenantId.Value);
         if (existing == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.TenantEmailSettings.NotFound, "No tenant-level email configuration to delete.");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.TenantEmailSettings.NotFound, "No tenant-level email configuration to delete.");
         }
 
         await _repository.DeleteAsync(existing);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.NoContent;
-        result.Data = existing.Id;
-
         _logger.LogInformation("Deleted tenant email settings for tenant {TenantId}", tenantId.Value);
-        return result;
+        return Result<Guid>.NoContent(existing.Id);
     }
 }

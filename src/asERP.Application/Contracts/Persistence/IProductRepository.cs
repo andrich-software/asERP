@@ -27,4 +27,11 @@ public interface IProductRepository : IGenericRepository<Product>
     Task<List<ProductCategory>> GetCategoryLinksAsync(Guid productId);
     void AddProductCategory(ProductCategory link);
     void RemoveProductCategory(ProductCategory link);
+
+    /// <summary>
+    /// True when no other Product in the current tenant collides with this one.
+    /// Declared per repository on purpose: a uniqueness rule that silently does
+    /// nothing is worse than none, so there is no inherited default to forget.
+    /// </summary>
+    Task<bool> IsUniqueAsync(Product entity, Guid? id = null);
 }

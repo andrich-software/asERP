@@ -231,7 +231,7 @@ public class ProductListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetProducts_WithSortByName_ShouldReturnSalesedResults()
+    public async Task GetProducts_WithSortByName_ShouldReturnSortedResults()
     {
         await SeedProductTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -250,7 +250,7 @@ public class ProductListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetProducts_WithSortByNameDescending_ShouldReturnDescSalesedResults()
+    public async Task GetProducts_WithSortByNameDescending_ShouldReturnDescSortedResults()
     {
         await SeedProductTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -269,7 +269,7 @@ public class ProductListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetProducts_WithSortByPrice_ShouldReturnPriceSalesedResults()
+    public async Task GetProducts_WithSortByPrice_ShouldReturnPriceSortedResults()
     {
         await SeedProductTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);

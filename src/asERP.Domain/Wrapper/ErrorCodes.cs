@@ -121,6 +121,7 @@ public static class ErrorCodes
     public static class ReturnCarrier
     {
         public const string Invalid = "return_carrier.invalid";
+        public const string NotFound = "return_carrier.not_found";
     }
 
     public static class Returns

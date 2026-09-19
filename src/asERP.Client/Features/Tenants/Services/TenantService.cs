@@ -51,7 +51,7 @@ public class TenantService : ITenantService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseTenantListDto, ct);
 
             if (response?.Succeeded != true)
@@ -81,7 +81,7 @@ public class TenantService : ITenantService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Tenants.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseTenantDetailDto, ct);
+        var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.ApiResponseTenantDetailDto, ct);
         return apiResponse?.Data;
     }
 

@@ -9,46 +9,20 @@ namespace asERP.Domain.Wrapper;
 /// </summary>
 public class Result : IResult
 {
-    public List<string> Messages { get; set; } = [];
+    public IReadOnlyList<string> Messages { get; init; } = [];
 
-    public bool Succeeded { get; set; }
+    public bool Succeeded { get; init; }
 
     /// <summary>
     /// Outcome of a successful operation. Failures leave this at <see cref="ResultStatus.Ok"/> and
     /// describe themselves through <see cref="Error"/>.
     /// </summary>
-    public ResultStatus Status { get; set; } = ResultStatus.Ok;
+    public ResultStatus Status { get; init; } = ResultStatus.Ok;
 
     /// <summary>
     /// What went wrong, for results produced through the semantic factories. Null on success.
     /// </summary>
-    public Error? Error { get; set; }
-
-    /// <summary>
-    /// Marks this result as failed with a semantic error. Replaces the three-line
-    /// <c>Succeeded</c>/<c>StatusCode</c>/<c>Messages.Add</c> dance so handlers never name an HTTP
-    /// status.
-    /// </summary>
-    /// <param name="type">Kind of failure — the Server turns this into an HTTP status.</param>
-    /// <param name="code">Stable code from <see cref="ErrorCodes"/>.</param>
-    /// <param name="message">Developer-facing English fallback text.</param>
-    public void Fail(ErrorType type, string code, string message)
-    {
-        Succeeded = false;
-        Error = new Error(type, code, message);
-        Messages.Add(message);
-    }
-
-    /// <summary>
-    /// Marks this result as failed without adding a message — for the cases where the detail is a
-    /// list the caller appends itself (Identity errors, per-row import failures). The code still
-    /// tells a client what kind of failure this is.
-    /// </summary>
-    public void Fail(ErrorType type, string code)
-    {
-        Succeeded = false;
-        Error = new Error(type, code, string.Empty);
-    }
+    public Error? Error { get; init; }
 
     // ---- semantic results (preferred) --------------------------------------------------
 
@@ -139,7 +113,7 @@ public class Result : IResult
 public class Result<T> : Result, IResult<T>
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public T Data { get; set; }
+    public T Data { get; init; }
 
     // ---- semantic results (preferred) --------------------------------------------------
     // Handlers describe *what* happened; the Server decides which HTTP status that becomes.
@@ -149,6 +123,48 @@ public class Result<T> : Result, IResult<T>
         Succeeded = false,
         Error = error,
         Messages = [error.Message]
+    };
+
+    /// <summary>
+    /// A failure whose detail is a list — Identity errors, per-row import failures. The code still
+    /// says what kind of failure it is; the first message doubles as the developer-facing text.
+    /// </summary>
+    public static Result<T> Failure(ErrorType type, string code, IEnumerable<string> messages)
+    {
+        var list = messages.ToList();
+
+        return new Result<T>
+        {
+            Succeeded = false,
+            Error = new Error(type, code, list.FirstOrDefault() ?? string.Empty),
+            Messages = list
+        };
+    }
+
+    /// <summary>
+    /// Adopts another result's outcome and adds this handler's payload — for handlers that delegate
+    /// the work to a service and only supply the id they were asked about.
+    /// </summary>
+    public static Result<T> From(IResult source, T data) => new()
+    {
+        Succeeded = source.Succeeded,
+        Status = source.Status,
+        Error = source.Error,
+        Messages = [.. source.Messages],
+        Data = data
+    };
+
+    /// <summary>
+    /// As <see cref="From(IResult,T)"/>, but keeps notes the handler collected along the way —
+    /// a best-effort carrier call that failed, for instance — ahead of the source's own messages.
+    /// </summary>
+    public static Result<T> From(IResult source, T data, IEnumerable<string> leadingMessages) => new()
+    {
+        Succeeded = source.Succeeded,
+        Status = source.Status,
+        Error = source.Error,
+        Messages = [.. leadingMessages, .. source.Messages],
+        Data = data
     };
 
     public new static Result<T> Invalid(string code, string message) =>
@@ -183,9 +199,52 @@ public class Result<T> : Result, IResult<T>
         Status = ResultStatus.Created
     };
 
+    public static Result<T> Ok(T data, string message) => new()
+    {
+        Succeeded = true,
+        Data = data,
+        Status = ResultStatus.Ok,
+        Messages = [message]
+    };
+
+    public static Result<T> Ok(T data, IEnumerable<string> messages) => new()
+    {
+        Succeeded = true,
+        Data = data,
+        Status = ResultStatus.Ok,
+        Messages = [.. messages]
+    };
+
+    public static Result<T> Created(T data, IEnumerable<string> messages) => new()
+    {
+        Succeeded = true,
+        Data = data,
+        Status = ResultStatus.Created,
+        Messages = [.. messages]
+    };
+
+    public static Result<T> Created(T data, string message) => new()
+    {
+        Succeeded = true,
+        Data = data,
+        Status = ResultStatus.Created,
+        Messages = [message]
+    };
+
     public new static Result<T> NoContent() => new()
     {
         Succeeded = true,
+        Status = ResultStatus.NoContent
+    };
+
+    /// <summary>
+    /// No body goes over the wire for a 204, but in-process callers (one handler sending another a
+    /// command) still read <c>Data</c> — this keeps it available to them.
+    /// </summary>
+    public static Result<T> NoContent(T data) => new()
+    {
+        Succeeded = true,
+        Data = data,
         Status = ResultStatus.NoContent
     };
 

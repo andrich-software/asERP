@@ -20,8 +20,6 @@ public class FeedDetailHandler : IRequestHandler<FeedDetailQuery, Result<FeedDet
 
     public async Task<Result<FeedDetailDto>> Handle(FeedDetailQuery request, CancellationToken cancellationToken)
     {
-        var result = new Result<FeedDetailDto>();
-
         try
         {
             var feed = await _feedRepository.GetDetails(request.Id);
@@ -44,15 +42,12 @@ public class FeedDetailHandler : IRequestHandler<FeedDetailQuery, Result<FeedDet
                 // PublicUrl is filled in by the controller from the request host.
             };
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = data;
+            return Result<FeedDetailDto>.Ok(data);
         }
         catch (NotFoundException)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Feed.NotFound, $"Feed with ID {request.Id} not found");
+            return Result<FeedDetailDto>.NotFound(ErrorCodes.Feed.NotFound, $"Feed with ID {request.Id} not found");
         }
 
-        return result;
     }
 }

@@ -10,7 +10,6 @@ public class AiModelUpdateHandler : IRequestHandler<AiModelUpdateCommand, Result
     private readonly IAppLogger<AiModelUpdateHandler> _logger;
     private readonly IAiModelRepository _aiModelRepository;
 
-
     public AiModelUpdateHandler(
         IAppLogger<AiModelUpdateHandler> logger,
         IAiModelRepository aiModelRepository)
@@ -23,16 +22,13 @@ public class AiModelUpdateHandler : IRequestHandler<AiModelUpdateCommand, Result
     {
         _logger.LogInformation("Updating AI model with ID: {Id} and name: {Name}", request.Id, request.Name);
 
-        var result = new Result<Guid>();
-
         // Load the tracked entity and mutate it, so the persistence layer keeps
         // TenantId/DateCreated intact instead of nulling them on a detached update.
         var aiModelToUpdate = await _aiModelRepository.GetByIdAsync(request.Id);
         if (aiModelToUpdate == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.AiModel.NotFound, "AI model not found.");
             _logger.LogWarning("AI model with ID {Id} not found for update", request.Id);
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.AiModel.NotFound, "AI model not found.");
         }
 
         aiModelToUpdate.Name = request.Name;
@@ -56,12 +52,8 @@ public class AiModelUpdateHandler : IRequestHandler<AiModelUpdateCommand, Result
         // Save changes (entity is already tracked, so just save)
         await _aiModelRepository.SaveChangesAsync();
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = aiModelToUpdate.Id;
-
         _logger.LogInformation("Successfully updated AI model with ID: {Id}", aiModelToUpdate.Id);
 
-        return result;
+        return Result<Guid>.Ok(aiModelToUpdate.Id);
     }
 }

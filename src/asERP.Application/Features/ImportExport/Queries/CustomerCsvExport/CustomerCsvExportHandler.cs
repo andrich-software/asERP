@@ -34,7 +34,6 @@ public class CustomerCsvExportHandler : IRequestHandler<CustomerCsvExportQuery, 
     {
         _logger.LogInformation("Starting CSV export of customers with search: '{SearchString}'", request.SearchString);
 
-        var result = new Result<CustomerCsvExportResult>();
         var exportResult = new CustomerCsvExportResult();
 
         // Create filter specification
@@ -128,14 +127,10 @@ public class CustomerCsvExportHandler : IRequestHandler<CustomerCsvExportQuery, 
         exportResult.CustomerCount = customers.Count;
         exportResult.FileName = $"customers_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = exportResult;
-
         _logger.LogInformation("CSV export completed successfully. Exported {Count} customers, file size: {Size} bytes",
             customers.Count, exportResult.CsvData.Length);
 
-        return result;
+        return Result<CustomerCsvExportResult>.Ok(exportResult);
     }
 
     private static void WriteCustomerRow(CsvWriter csv, Domain.Entities.Customer customer, Domain.Entities.CustomerAddress? address, bool includeAddresses)

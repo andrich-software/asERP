@@ -23,25 +23,18 @@ public class GoodsReceiptDetailHandler : IRequestHandler<GoodsReceiptDetailQuery
     {
         _logger.LogInformation("Handle GoodsReceiptDetailQuery for ID: {Id}", request.Id);
 
-        var result = new Result<GoodsReceiptDetailDto>();
-
         var goodsReceipt = await _goodsReceiptRepository.GetByIdWithDetailsAsync(request.Id);
 
         if (goodsReceipt == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.GoodsReceipt.NotFound, $"Goods receipt with ID {request.Id} not found.");
-            return result;
+            return Result<GoodsReceiptDetailDto>.NotFound(ErrorCodes.GoodsReceipt.NotFound, $"Goods receipt with ID {request.Id} not found.");
         }
 
         var dto = MapToGoodsReceiptDetailDto(goodsReceipt);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = dto;
-
         _logger.LogInformation("Successfully retrieved goods receipt details for ID: {Id}", request.Id);
 
-        return result;
+        return Result<GoodsReceiptDetailDto>.Ok(dto);
     }
 
     private static GoodsReceiptDetailDto MapToGoodsReceiptDetailDto(Domain.Entities.GoodsReceipt goodsReceipt)

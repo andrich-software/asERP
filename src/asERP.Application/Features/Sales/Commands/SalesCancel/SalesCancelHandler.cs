@@ -55,7 +55,8 @@ public class SalesCancelHandler : IRequestHandler<SalesCancelCommand, Result<Gui
     {
         _logger.LogInformation("Cancelling sales order with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
+        // Best-effort carrier warnings collected along the way; they ride along on the result.
+        var warnings = new List<string>();
 
         try
         {
@@ -75,15 +76,13 @@ public class SalesCancelHandler : IRequestHandler<SalesCancelCommand, Result<Gui
 
             if (NonCancellableStatuses.Contains(sales.Status))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Sales.Invalid, $"An order in status {sales.Status} cannot be cancelled.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.Sales.Invalid, $"An order in status {sales.Status} cannot be cancelled.");
             }
 
             var shippings = await _shippingRepository.GetBySalesIdAsync(request.Id);
             if (shippings.Any(s => s.ShippedAt != null || ShippedStatuses.Contains(s.Status)))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Sales.Invalid, "The order has shipped parcels and cannot be cancelled anymore.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.Sales.Invalid, "The order has shipped parcels and cannot be cancelled anymore.");
             }
 
             // The order status flip, history row and shipment cancels are wrapped in a single
@@ -118,7 +117,7 @@ public class SalesCancelHandler : IRequestHandler<SalesCancelCommand, Result<Gui
                 {
                     _logger.LogWarning("Cancelling shipment {ShippingId} during order cancel failed: {Messages}",
                         shipping.Id, string.Join("; ", cancelResult.Messages));
-                    result.Messages.AddRange(cancelResult.Messages);
+                    warnings.AddRange(cancelResult.Messages);
                 }
             }
 
@@ -133,17 +132,12 @@ public class SalesCancelHandler : IRequestHandler<SalesCancelCommand, Result<Gui
 
             await transaction.CommitAsync(cancellationToken);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = sales.Id;
-
             _logger.LogInformation("Successfully cancelled sales order with ID: {Id}", sales.Id);
+            return Result<Guid>.Ok(sales.Id, warnings);
         }
         catch (NotFoundException)
         {
             throw;
         }
-
-        return result;
     }
 }

@@ -28,20 +28,16 @@ public class ShopDomainUpdateHandler : IRequestHandler<ShopDomainUpdateCommand, 
     {
         _logger.LogInformation("Updating shop domain with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         var existingShopDomain = await _shopDomainRepository.GetByIdAsync(request.Id);
         if (existingShopDomain == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.ShopDomain.NotFound, $"Shop domain with ID {request.Id} not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.ShopDomain.NotFound, $"Shop domain with ID {request.Id} not found");
         }
 
         // A binding never moves between channels — delete and recreate instead.
         if (existingShopDomain.SalesChannelId != request.SalesChannelId)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.ShopDomain.Invalid, "A shop domain cannot be moved to another sales channel.");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.ShopDomain.Invalid, "A shop domain cannot be moved to another sales channel.");
         }
 
         // Validator guarantees the host is normalizable.
@@ -55,8 +51,7 @@ public class ShopDomainUpdateHandler : IRequestHandler<ShopDomainUpdateCommand, 
         // the channel without a redirect target — the primary moves by marking another row.
         if (!request.IsPrimary && existingShopDomain.IsPrimary && siblings.Count > 0)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.ShopDomain.Invalid, "Mark another domain as primary instead of unmarking the current one.");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.ShopDomain.Invalid, "Mark another domain as primary instead of unmarking the current one.");
         }
 
         if (request.IsPrimary && !existingShopDomain.IsPrimary)
@@ -81,12 +76,8 @@ public class ShopDomainUpdateHandler : IRequestHandler<ShopDomainUpdateCommand, 
             new ShopDomainChangedNotification(existingShopDomain.SalesChannelId, existingShopDomain.TenantId),
             cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = existingShopDomain.Id;
-
         _logger.LogInformation("Successfully updated shop domain with ID: {Id}", existingShopDomain.Id);
 
-        return result;
+        return Result<Guid>.Ok(existingShopDomain.Id);
     }
 }

@@ -59,8 +59,6 @@ public class ProductImageDeleteHandler : IRequestHandler<ProductImageDeleteComma
         // Best-effort file cleanup after the database is consistent.
         await _productImageStorage.DeleteAsync(relativePath, thumbnailPath, cancellationToken);
 
-        var result = Result<Guid>.Success(request.ImageId);
-        result.Status = ResultStatus.NoContent;
-        return result;
+        return Result<Guid>.NoContent(request.ImageId);
     }
 }

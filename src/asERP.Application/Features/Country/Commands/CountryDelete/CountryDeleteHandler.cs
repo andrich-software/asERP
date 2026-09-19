@@ -22,8 +22,6 @@ public class CountryDeleteHandler : IRequestHandler<CountryDeleteCommand, Result
     {
         _logger.LogInformation("Deleting country with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             // Get entity from database first
@@ -31,29 +29,23 @@ public class CountryDeleteHandler : IRequestHandler<CountryDeleteCommand, Result
 
             if (countryToDelete == null)
             {
-                result.Fail(ErrorType.NotFound, ErrorCodes.Country.NotFound, "Country not found");
-
                 _logger.LogWarning("Country with ID: {Id} not found for deletion", request.Id);
-                return result;
+                return Result<Guid>.NotFound(ErrorCodes.Country.NotFound, "Country not found");
             }
 
             // Delete from database
             await _countryRepository.DeleteAsync(countryToDelete);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = countryToDelete.Id;
-
             _logger.LogInformation("Successfully deleted country with ID: {Id}", countryToDelete.Id);
+            return Result<Guid>.Ok(countryToDelete.Id);
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
         {
             // Handle concurrent deletion - country was already deleted by another request
-            result.Fail(ErrorType.NotFound, ErrorCodes.Country.NotFound, "Country not found");
 
             _logger.LogWarning("Country with ID: {Id} was deleted by another request: {Message}", request.Id, ex.Message);
+            return Result<Guid>.NotFound(ErrorCodes.Country.NotFound, "Country not found");
         }
 
-        return result;
     }
 }

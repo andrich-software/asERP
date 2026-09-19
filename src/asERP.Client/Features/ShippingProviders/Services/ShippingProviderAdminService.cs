@@ -42,7 +42,7 @@ public class ShippingProviderAdminService : IShippingProviderAdminService
         // A tenant has a handful of carriers at most — fetch them all in one page.
         var url = $"{baseUrl}{ApiEndpoints.ShippingProviders.Base}?pageNumber=0&pageSize=200&sortBy=Name";
 
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.PaginatedResponseShippingProviderListDto, ct);
 
         if (response?.Succeeded != true)
@@ -58,7 +58,7 @@ public class ShippingProviderAdminService : IShippingProviderAdminService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.ShippingProviders.ById(id)}";
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseShippingProviderDetailDto, ct);
         return response?.Data;
     }
@@ -97,7 +97,7 @@ public class ShippingProviderAdminService : IShippingProviderAdminService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.ShippingProviders.RateById(providerId, id)}";
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseShippingProviderRateDetailDto, ct);
         return response?.Data;
     }

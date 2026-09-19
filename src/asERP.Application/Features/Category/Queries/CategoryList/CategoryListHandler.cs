@@ -22,9 +22,7 @@ public class CategoryListHandler : IRequestHandler<CategoryListQuery, Result<Lis
 
     public async Task<Result<List<CategoryListDto>>> Handle(CategoryListQuery request, CancellationToken cancellationToken)
     {
-        var result = new Result<List<CategoryListDto>>();
-
-        result.Data = await _categoryRepository.Entities
+        var categories = await _categoryRepository.Entities
             .OrderBy(c => c.SortOrder)
             .ThenBy(c => c.Name)
             .Select(c => new CategoryListDto
@@ -45,9 +43,6 @@ public class CategoryListHandler : IRequestHandler<CategoryListQuery, Result<Lis
             })
             .ToListAsync(cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-
-        return result;
+        return Result<List<CategoryListDto>>.Ok(categories);
     }
 }

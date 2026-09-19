@@ -215,10 +215,8 @@ public class CustomerUpdateCommandTests : TenantIsolatedTestBase
         var response = await PutAsJsonAsync($"/api/v1/Customers/{Customer1Id}", updateData);
 
         TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        var result = await ReadResponseAsync<Result<Guid>>(response);
-        TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        var content = await response.Content.ReadAsStringAsync();
+        TestAssertions.AssertTrue(content.Contains("Firstname"), content);
     }
 
     [Fact]
@@ -233,10 +231,8 @@ public class CustomerUpdateCommandTests : TenantIsolatedTestBase
         var response = await PutAsJsonAsync($"/api/v1/Customers/{Customer1Id}", updateData);
 
         TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        var result = await ReadResponseAsync<Result<Guid>>(response);
-        TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        var content = await response.Content.ReadAsStringAsync();
+        TestAssertions.AssertTrue(content.Contains("Lastname"), content);
     }
 
     [Fact]
@@ -251,10 +247,8 @@ public class CustomerUpdateCommandTests : TenantIsolatedTestBase
         var response = await PutAsJsonAsync($"/api/v1/Customers/{Customer1Id}", updateData);
 
         TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        var result = await ReadResponseAsync<Result<Guid>>(response);
-        TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        var content = await response.Content.ReadAsStringAsync();
+        TestAssertions.AssertTrue(content.Contains("Email"), content);
     }
 
     [Fact]
@@ -269,10 +263,8 @@ public class CustomerUpdateCommandTests : TenantIsolatedTestBase
         var response = await PutAsJsonAsync($"/api/v1/Customers/{Customer1Id}", updateData);
 
         TestAssertions.AssertEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        var result = await ReadResponseAsync<Result<Guid>>(response);
-        TestAssertions.AssertNotNull(result);
-        TestAssertions.AssertFalse(result.Succeeded);
-        TestAssertions.AssertNotEmpty(result.Messages);
+        var content = await response.Content.ReadAsStringAsync();
+        TestAssertions.AssertTrue(content.Contains("Website"), content);
     }
 
     [Fact]

@@ -41,7 +41,7 @@ public class CategoryService : ICategoryService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Categories.Base}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(
+        var apiResponse = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseListCategoryListDto, ct);
 
         if (apiResponse?.Succeeded != true)
@@ -57,7 +57,7 @@ public class CategoryService : ICategoryService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Categories.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(
+        var apiResponse = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseCategoryDetailDto, ct);
         return apiResponse?.Data;
     }

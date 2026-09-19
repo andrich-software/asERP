@@ -23,8 +23,6 @@ public class ShippingProviderUpdateHandler : IRequestHandler<ShippingProviderUpd
     {
         _logger.LogInformation("Updating shipping provider with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             var existsGlobally = await _shippingProviderRepository.ExistsGloballyAsync(request.Id);
@@ -45,8 +43,7 @@ public class ShippingProviderUpdateHandler : IRequestHandler<ShippingProviderUpd
             // against it. A different carrier means a new provider.
             if (providerToUpdate.Type != request.Type)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.ShippingProvider.Invalid, "The provider type cannot be changed. Create a new shipping provider instead.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.ShippingProvider.Invalid, "The provider type cannot be changed. Create a new shipping provider instead.");
             }
 
             providerToUpdate.Name = request.Name;
@@ -75,17 +72,13 @@ public class ShippingProviderUpdateHandler : IRequestHandler<ShippingProviderUpd
 
             await _shippingProviderRepository.UpdateAsync(providerToUpdate);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = providerToUpdate.Id;
-
             _logger.LogInformation("Successfully updated shipping provider with ID: {Id}", providerToUpdate.Id);
+            return Result<Guid>.Ok(providerToUpdate.Id);
         }
         catch (NotFoundException)
         {
             throw;
         }
 
-        return result;
     }
 }

@@ -48,8 +48,6 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
     {
         _logger.LogInformation("Updating user with ID: {Id}", request.Id);
 
-        var result = new Result<string>();
-
         var rawTenantId = _tenantContext.GetCurrentTenantId();
         var currentTenantId = ResolveTenantId(rawTenantId);
         var httpContext = _httpContextAccessor.HttpContext;
@@ -61,8 +59,7 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
         var existingUser = await _userRepository.GetByIdWithTenantsAsync(request.Id);
         if (existingUser == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, $"User with ID {request.Id} not found.");
-            return result;
+            return Result<string>.NotFound(ErrorCodes.Superadmin.NotFound, $"User with ID {request.Id} not found.");
         }
 
         // The tenant context must come from the server (JWT/tenant middleware or the target
@@ -76,20 +73,17 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
 
         if (!currentTenantId.HasValue || currentTenantId.Value == Guid.Empty)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid, "Tenant context is required to update a user.");
-            return result;
+            return Result<string>.Invalid(ErrorCodes.Superadmin.Invalid, "Tenant context is required to update a user.");
         }
 
         if (!isSuperadmin && string.IsNullOrWhiteSpace(currentUserId))
         {
-            result.Fail(ErrorType.Unauthorized, ErrorCodes.Superadmin.Unauthorized, "User context is required to evaluate permissions.");
-            return result;
+            return Result<string>.Unauthorized(ErrorCodes.Superadmin.Unauthorized, "User context is required to evaluate permissions.");
         }
 
         if (!isSuperadmin && currentTenantId.HasValue && (existingUser.UserTenants == null || !existingUser.UserTenants.Any(ut => ut.TenantId == currentTenantId.Value)))
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, "User not found in current tenant.");
-            return result;
+            return Result<string>.NotFound(ErrorCodes.Superadmin.NotFound, "User not found in current tenant.");
         }
 
         var canManageUsers = isSuperadmin;
@@ -109,8 +103,7 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
                 currentUserId,
                 currentTenantId,
                 request.Id);
-            result.Fail(ErrorType.Forbidden, ErrorCodes.Superadmin.Forbidden, "You do not have permission to update other users in this tenant.");
-            return result;
+            return Result<string>.Forbidden(ErrorCodes.Superadmin.Forbidden, "You do not have permission to update other users in this tenant.");
         }
 
         var tenantIdsProvided = request.TenantIds != null;
@@ -136,8 +129,7 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
 
             if (tenantAssignmentsChanged || defaultTenantChanged)
             {
-                result.Fail(ErrorType.Forbidden, ErrorCodes.Superadmin.Forbidden, "You are not allowed to change tenant assignments for your account.");
-                return result;
+                return Result<string>.Forbidden(ErrorCodes.Superadmin.Forbidden, "You are not allowed to change tenant assignments for your account.");
             }
 
             shouldUpdateTenants = false;
@@ -147,21 +139,18 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
         {
             if (!await _userRepository.TenantsExistAsync(tenantIds))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid, "One or more provided tenant IDs do not exist.");
-                return result;
+                return Result<string>.Invalid(ErrorCodes.Superadmin.Invalid, "One or more provided tenant IDs do not exist.");
             }
 
             if (!tenantIds.Contains(currentTenantId.Value))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid, "User must remain assigned to the current tenant.");
-                return result;
+                return Result<string>.Invalid(ErrorCodes.Superadmin.Invalid, "User must remain assigned to the current tenant.");
             }
 
             if (request.DefaultTenantId.HasValue && request.DefaultTenantId.Value != Guid.Empty &&
                 !tenantIds.Contains(request.DefaultTenantId.Value))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid, "Default tenant must be part of the tenant assignments.");
-                return result;
+                return Result<string>.Invalid(ErrorCodes.Superadmin.Invalid, "Default tenant must be part of the tenant assignments.");
             }
         }
 
@@ -185,8 +174,7 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
 
             if (emailInUse)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.AlreadyExists, "Email address is already in use.");
-                return result;
+                return Result<string>.Invalid(ErrorCodes.Superadmin.AlreadyExists, "Email address is already in use.");
             }
         }
 
@@ -197,9 +185,8 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
                 var passwordValidationResult = await passwordValidator.ValidateAsync(_userManager, existingUser, request.Password);
                 if (!passwordValidationResult.Succeeded)
                 {
-                    result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid);
-                    result.Messages.AddRange(passwordValidationResult.Errors.Select(e => e.Description));
-                    return result;
+                    return Result<string>.Failure(ErrorType.Validation, ErrorCodes.Superadmin.Invalid,
+                        passwordValidationResult.Errors.Select(e => e.Description));
                 }
             }
 
@@ -229,14 +216,9 @@ public class UserUpdateHandler : IRequestHandler<UserUpdateCommand, Result<strin
             _logger.LogInformation("Updated tenant assignments for user ID: {Id}", request.Id);
         }
 
-        // Set successful result with the updated user's ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.NoContent;
-        result.Data = existingUser.Id;
-
         _logger.LogInformation("Successfully updated user with ID: {Id}", existingUser.Id);
 
-        return result;
+        return Result<string>.NoContent(existingUser.Id);
     }
 
     private Guid? ResolveTenantId(Guid? currentTenantId)

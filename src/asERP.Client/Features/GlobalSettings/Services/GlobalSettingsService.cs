@@ -38,7 +38,7 @@ public class GlobalSettingsService : IGlobalSettingsService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.GlobalSettings.Base}";
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseListGlobalSettingDto, ct);
         return response?.Data;
     }

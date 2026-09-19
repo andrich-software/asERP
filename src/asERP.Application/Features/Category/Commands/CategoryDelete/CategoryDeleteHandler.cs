@@ -26,13 +26,10 @@ public class CategoryDeleteHandler : IRequestHandler<CategoryDeleteCommand, Resu
     {
         _logger.LogInformation("Deleting category with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         var existingCategory = await _categoryRepository.GetByIdAsync(request.Id, asNoTracking: true);
         if (existingCategory == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Category.NotFound, $"Category with ID {request.Id} not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Category.NotFound, $"Category with ID {request.Id} not found");
         }
 
         // Snapshot the channel links before they are cascaded away — the remote deletes need
@@ -49,12 +46,8 @@ public class CategoryDeleteHandler : IRequestHandler<CategoryDeleteCommand, Resu
                 existingCategory.Id, existingCategory.TenantId, CategoryChangeKind.Deleted, deleteSnapshots),
             cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = existingCategory.Id;
-
         _logger.LogInformation("Successfully deleted category with ID: {Id}", existingCategory.Id);
 
-        return result;
+        return Result<Guid>.Ok(existingCategory.Id);
     }
 }

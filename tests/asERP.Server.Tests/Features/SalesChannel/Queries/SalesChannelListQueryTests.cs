@@ -267,7 +267,7 @@ public class SalesChannelListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSalesChannelsList_WithSortBy_ShouldReturnSalesedResults()
+    public async Task GetSalesChannelsList_WithSortBy_ShouldReturnSortedResults()
     {
         await SeedTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -284,7 +284,7 @@ public class SalesChannelListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetSalesChannelsList_WithMultipleSortBy_ShouldReturnSalesedResults()
+    public async Task GetSalesChannelsList_WithMultipleSortBy_ShouldReturnSortedResults()
     {
         await SeedTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);

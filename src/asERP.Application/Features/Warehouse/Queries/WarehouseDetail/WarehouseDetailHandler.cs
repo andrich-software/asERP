@@ -27,16 +27,12 @@ public class WarehouseDetailHandler : IRequestHandler<WarehouseDetailQuery, Resu
     {
         _logger.LogInformation("Retrieving warehouse details for ID: {Id}", request.Id);
 
-        var result = new Result<WarehouseDetailDto>();
-
         var warehouse = await _warehouseRepository.GetByIdAsync(request.Id, true);
 
         if (warehouse == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Warehouse.NotFound, $"Warehouse with ID {request.Id} not found");
-
             _logger.LogWarning("Warehouse with ID {Id} not found", request.Id);
-            return result;
+            return Result<WarehouseDetailDto>.NotFound(ErrorCodes.Warehouse.NotFound, $"Warehouse with ID {request.Id} not found");
         }
 
         // Anzahl der Produkte in diesem Lager ermitteln
@@ -54,12 +50,8 @@ public class WarehouseDetailHandler : IRequestHandler<WarehouseDetailQuery, Resu
             ProductCount = productCount
         };
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
         _logger.LogInformation("Warehouse with ID {Id} retrieved successfully", request.Id);
 
-        return result;
+        return Result<WarehouseDetailDto>.Ok(data);
     }
 }

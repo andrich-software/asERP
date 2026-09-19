@@ -24,13 +24,10 @@ public class TenantEmailSettingsUpsertHandler : IRequestHandler<TenantEmailSetti
 
     public async Task<Result<Guid>> Handle(TenantEmailSettingsUpsertCommand request, CancellationToken cancellationToken)
     {
-        var result = new Result<Guid>();
-
         var tenantId = _tenantContext.GetCurrentTenantId();
         if (!tenantId.HasValue)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.TenantEmailSettings.Invalid, "No active tenant in context.");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.TenantEmailSettings.Invalid, "No active tenant in context.");
         }
 
         var existing = await _repository.GetByTenantIdAsync(tenantId.Value);
@@ -59,12 +56,8 @@ public class TenantEmailSettingsUpsertHandler : IRequestHandler<TenantEmailSetti
 
             await _repository.CreateAsync(entity);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Created;
-            result.Data = entity.Id;
-
             _logger.LogInformation("Created tenant email settings for tenant {TenantId}", tenantId.Value);
-            return result;
+            return Result<Guid>.Created(entity.Id);
         }
 
         existing.ProviderType = request.ProviderType;
@@ -92,11 +85,7 @@ public class TenantEmailSettingsUpsertHandler : IRequestHandler<TenantEmailSetti
 
         await _repository.UpdateAsync(existing);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = existing.Id;
-
         _logger.LogInformation("Updated tenant email settings for tenant {TenantId}", tenantId.Value);
-        return result;
+        return Result<Guid>.Ok(existing.Id);
     }
 }

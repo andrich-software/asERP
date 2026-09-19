@@ -10,7 +10,6 @@ public class TaxClassDeleteHandler : IRequestHandler<TaxClassDeleteCommand, Resu
     private readonly IAppLogger<TaxClassDeleteHandler> _logger;
     private readonly ITaxClassRepository _taxClassRepository;
 
-
     public TaxClassDeleteHandler(
         IAppLogger<TaxClassDeleteHandler> logger,
         ITaxClassRepository taxClassRepository)
@@ -23,8 +22,6 @@ public class TaxClassDeleteHandler : IRequestHandler<TaxClassDeleteCommand, Resu
     {
         _logger.LogInformation("Deleting tax class with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             // Get entity from database first
@@ -32,29 +29,23 @@ public class TaxClassDeleteHandler : IRequestHandler<TaxClassDeleteCommand, Resu
 
             if (taxClassToDelete == null)
             {
-                result.Fail(ErrorType.NotFound, ErrorCodes.TaxClass.NotFound, "TaxClass not found");
-
                 _logger.LogWarning("TaxClass with ID: {Id} not found for deletion", request.Id);
-                return result;
+                return Result<Guid>.NotFound(ErrorCodes.TaxClass.NotFound, "TaxClass not found");
             }
 
             // Delete from database
             await _taxClassRepository.DeleteAsync(taxClassToDelete);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = taxClassToDelete.Id;
-
             _logger.LogInformation("Successfully deleted tax class with ID: {Id}", taxClassToDelete.Id);
+            return Result<Guid>.Ok(taxClassToDelete.Id);
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
         {
             // Handle concurrent deletion - tax class was already deleted by another request
-            result.Fail(ErrorType.NotFound, ErrorCodes.TaxClass.NotFound, "TaxClass not found");
 
             _logger.LogWarning("TaxClass with ID: {Id} was deleted by another request: {Message}", request.Id, ex.Message);
+            return Result<Guid>.NotFound(ErrorCodes.TaxClass.NotFound, "TaxClass not found");
         }
 
-        return result;
     }
 }

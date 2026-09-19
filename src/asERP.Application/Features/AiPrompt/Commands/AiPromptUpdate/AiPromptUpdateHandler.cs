@@ -29,16 +29,13 @@ public class AiPromptUpdateHandler : IRequestHandler<AiPromptUpdateCommand, Resu
     {
         _logger.LogInformation("Updating AI prompt with ID: {Id} and identifier: {Identifier}", request.Id, request.Identifier);
 
-        var result = new Result<Guid>();
-
         // Load existing AI prompt from database
         var aIPromptToUpdate = await _aIPromptRepository.GetByIdAsync(request.Id);
 
         if (aIPromptToUpdate == null)
         {
             _logger.LogWarning("AI prompt with ID {Id} not found for update", request.Id);
-            result.Fail(ErrorType.NotFound, ErrorCodes.AiPrompt.NotFound, "AI prompt not found.");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.AiPrompt.NotFound, "AI prompt not found.");
         }
 
         // Update properties
@@ -49,12 +46,8 @@ public class AiPromptUpdateHandler : IRequestHandler<AiPromptUpdateCommand, Resu
         // Save changes (entity is already tracked, so just save)
         await _aIPromptRepository.SaveChangesAsync();
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = aIPromptToUpdate.Id;
-
         _logger.LogInformation("Successfully updated AI prompt with ID: {Id}", aIPromptToUpdate.Id);
 
-        return result;
+        return Result<Guid>.Ok(aIPromptToUpdate.Id);
     }
 }

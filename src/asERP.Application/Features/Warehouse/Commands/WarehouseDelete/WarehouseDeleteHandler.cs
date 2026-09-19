@@ -29,14 +29,11 @@ public class WarehouseDeleteHandler : IRequestHandler<WarehouseDeleteCommand, Re
     {
         _logger.LogInformation("Deleting warehouse with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         // Check if warehouse exists
         var warehouse = await _warehouseRepository.GetByIdAsync(request.Id);
         if (warehouse == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Warehouse.NotFound, $"Warehouse with ID {request.Id} not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Warehouse.NotFound, $"Warehouse with ID {request.Id} not found");
         }
 
         // Handle product redistribution if NewWarehouseId is provided
@@ -49,8 +46,7 @@ public class WarehouseDeleteHandler : IRequestHandler<WarehouseDeleteCommand, Re
             var targetWarehouse = await _warehouseRepository.GetByIdAsync(request.NewWarehouseId.Value);
             if (targetWarehouse == null)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Warehouse.Invalid, $"Target warehouse with ID {request.NewWarehouseId.Value} not found");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.Warehouse.Invalid, $"Target warehouse with ID {request.NewWarehouseId.Value} not found");
             }
 
             // Get all product stocks for the warehouse to be deleted
@@ -107,12 +103,8 @@ public class WarehouseDeleteHandler : IRequestHandler<WarehouseDeleteCommand, Re
         // Delete from database using the existing entity
         await _warehouseRepository.DeleteAsync(warehouse);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = warehouse.Id;
-
         _logger.LogInformation("Successfully deleted warehouse with ID: {Id}", warehouse.Id);
 
-        return result;
+        return Result<Guid>.Ok(warehouse.Id);
     }
 }

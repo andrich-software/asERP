@@ -28,18 +28,14 @@ public class CountryDetailHandler : IRequestHandler<CountryDetailQuery, Result<C
     {
         _logger.LogInformation("Retrieving country details for ID: {Id}", request.Id);
 
-        var result = new Result<CountryDetailDto>();
-
         // Retrieve country with all related details from the repository
         var country = await _countryRepository.GetByIdAsync(request.Id, true);
 
         // If country not found, return a not found result
         if (country == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Country.NotFound, $"Country with ID {request.Id} not found");
-
             _logger.LogWarning("Country with ID {Id} not found", request.Id);
-            return result;
+            return Result<CountryDetailDto>.NotFound(ErrorCodes.Country.NotFound, $"Country with ID {request.Id} not found");
         }
 
         // Manual mapping from entity to DTO
@@ -50,13 +46,8 @@ public class CountryDetailHandler : IRequestHandler<CountryDetailQuery, Result<C
             CountryCode = country.CountryCode
         };
 
-        // Set successful result with the country details
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
         _logger.LogInformation("Country with ID {Id} retrieved successfully", request.Id);
 
-        return result;
+        return Result<CountryDetailDto>.Ok(data);
     }
 }

@@ -51,9 +51,9 @@ public partial record SalesListModel
     public IState<int> PageSize => State<int>.Value(this, () => 25);
 
     /// <summary>
-    /// Current sort sales (e.g., "DateSalesed Descending").
+    /// Current sort order (e.g., "DateSalesed Descending").
     /// </summary>
-    public IState<string> SortSales => State<string>.Value(this, () => "DateSalesed Descending");
+    public IState<string> SortOrder => State<string>.Value(this, () => "DateSalesed Descending");
 
     /// <summary>
     /// The field currently sorted by; bound by the SortHeaderButton column headers.
@@ -75,7 +75,7 @@ public partial record SalesListModel
     /// Automatically refreshes when the filter, page, page size, or sort changes.
     /// </summary>
     public IListFeed<SalesListDto> Saless => Feed
-        .Combine(Filter, CurrentPage, PageSize, SortSales)
+        .Combine(Filter, CurrentPage, PageSize, SortOrder)
         .SelectAsync(async (combined, ct) =>
         {
             var (filter, page, size, sortBy) = combined;
@@ -194,11 +194,11 @@ public partial record SalesListModel
     }
 
     /// <summary>
-    /// Change the sort sales.
+    /// Change the sort order.
     /// </summary>
-    public async ValueTask SetSortSales(string sortBy, CancellationToken ct = default)
+    public async ValueTask SetSortOrder(string sortBy, CancellationToken ct = default)
     {
-        await SortSales.UpdateAsync(_ => sortBy, ct);
+        await SortOrder.UpdateAsync(_ => sortBy, ct);
         await CurrentPage.UpdateAsync(_ => 0, ct); // Reset to first page when sorting changes
     }
 
@@ -217,7 +217,7 @@ public partial record SalesListModel
 
         await ActiveSortField.UpdateAsync(_ => field, ct);
         await SortAscending.UpdateAsync(_ => ascending, ct);
-        await SetSortSales($"{field} {(ascending ? "Ascending" : "Descending")}", ct);
+        await SetSortOrder($"{field} {(ascending ? "Ascending" : "Descending")}", ct);
     }
 
     /// <summary>

@@ -23,41 +23,13 @@ public class CustomerUpdateHandler : IRequestHandler<CustomerUpdateCommand, Resu
     {
         _logger.LogInformation("Updating customer with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
-        // Validate incoming data
-        var validator = new CustomerUpdateValidator(_customerRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            // The validator carries an existence rule, so a missing customer arrives here as a
-            // validation failure and has to be reported as such (see ISkipPipelineValidation on the
-            // command; moving the rule into the handler is REFACTOR.md R5's remaining work).
-            var customerMissing = validationResult.Errors.Any(e => e.ErrorMessage.Contains("Customer not found"));
-
-            result.Fail(
-                customerMissing ? ErrorType.NotFound : ErrorType.Validation,
-                customerMissing ? ErrorCodes.Customer.NotFound : ErrorCodes.Customer.Invalid);
-
-            result.Messages.AddRange(validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(CustomerUpdateCommand),
-                string.Join(", ", result.Messages));
-
-            return result;
-        }
-
         // Get the customer for tracking (required for update)
         var customerToUpdate = await _customerRepository.GetByIdAsync(request.Id);
 
         if (customerToUpdate == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Customer.NotFound, "Customer not found or access denied due to tenant isolation.");
-
             _logger.LogWarning("Customer with ID {Id} not found or access denied due to tenant isolation", request.Id);
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Customer.NotFound, "Customer not found or access denied due to tenant isolation.");
         }
 
         // Manual assignment of properties
@@ -123,12 +95,8 @@ public class CustomerUpdateHandler : IRequestHandler<CustomerUpdateCommand, Resu
         // Update in database
         await _customerRepository.UpdateAsync(customerToUpdate);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.NoContent;
-        result.Data = customerToUpdate.Id;
-
         _logger.LogInformation("Successfully updated customer with ID: {Id}", customerToUpdate.Id);
 
-        return result;
+        return Result<Guid>.NoContent(customerToUpdate.Id);
     }
 }

@@ -22,8 +22,6 @@ public class AiPromptDeleteHandler : IRequestHandler<AiPromptDeleteCommand, Resu
     {
         _logger.LogInformation("Deleting AI prompt with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             // Get entity from database first
@@ -32,25 +30,21 @@ public class AiPromptDeleteHandler : IRequestHandler<AiPromptDeleteCommand, Resu
             if (aIPromptToDelete == null)
             {
                 _logger.LogWarning("AI prompt with ID: {Id} not found for deletion", request.Id);
-                result.Fail(ErrorType.NotFound, ErrorCodes.AiPrompt.NotFound, "AI prompt not found");
-                return result;
+                return Result<Guid>.NotFound(ErrorCodes.AiPrompt.NotFound, "AI prompt not found");
             }
 
             // Delete from database
             await _aIPromptRepository.DeleteAsync(aIPromptToDelete);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.NoContent;
-            result.Data = aIPromptToDelete.Id;
-
             _logger.LogInformation("Successfully deleted AI prompt with ID: {Id}", aIPromptToDelete.Id);
+            return Result<Guid>.NoContent(aIPromptToDelete.Id);
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
         {
             // Handle concurrent deletion - prompt was already deleted by another request
             _logger.LogWarning("AI prompt with ID: {Id} was deleted by another request: {Message}", request.Id, ex.Message);
 
-            result.Fail(ErrorType.NotFound, ErrorCodes.AiPrompt.NotFound, "AI prompt not found");
+            return Result<Guid>.NotFound(ErrorCodes.AiPrompt.NotFound, "AI prompt not found");
         }
         catch (InvalidOperationException ex)
         {
@@ -60,9 +54,8 @@ public class AiPromptDeleteHandler : IRequestHandler<AiPromptDeleteCommand, Resu
                 request.Id,
                 ex.Message);
 
-            result.Fail(ErrorType.NotFound, ErrorCodes.AiPrompt.NotFound, "AI prompt not found");
+            return Result<Guid>.NotFound(ErrorCodes.AiPrompt.NotFound, "AI prompt not found");
         }
 
-        return result;
     }
 }

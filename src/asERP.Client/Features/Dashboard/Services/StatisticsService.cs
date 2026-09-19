@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using asERP.Client.Core.Constants;
+using asERP.Client.Core.Extensions;
 using asERP.Client.Core.Json;
 using asERP.Client.Core.Models;
 using asERP.Client.Features.Auth.Services;
@@ -49,7 +50,7 @@ public class StatisticsService : IStatisticsService
 
         try
         {
-            var apiResponse = await _httpClient.GetFromJsonAsync(
+            var apiResponse = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.ApiResponseSalesTodayDto, ct);
 
             if (apiResponse?.Succeeded != true)
@@ -85,7 +86,7 @@ public class StatisticsService : IStatisticsService
 
         try
         {
-            var apiResponse = await _httpClient.GetFromJsonAsync(
+            var apiResponse = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.ApiResponseSalessTodayDto, ct);
 
             if (apiResponse?.Succeeded != true)
@@ -121,7 +122,7 @@ public class StatisticsService : IStatisticsService
 
         try
         {
-            var apiResponse = await _httpClient.GetFromJsonAsync(
+            var apiResponse = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.ApiResponseCustomersTodayDto, ct);
 
             if (apiResponse?.Succeeded != true)
@@ -157,7 +158,7 @@ public class StatisticsService : IStatisticsService
 
         try
         {
-            var apiResponse = await _httpClient.GetFromJsonAsync(
+            var apiResponse = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.ApiResponseDashboardTodosDto, ct);
 
             if (apiResponse?.Succeeded != true)
@@ -193,7 +194,7 @@ public class StatisticsService : IStatisticsService
 
         try
         {
-            var apiResponse = await _httpClient.GetFromJsonAsync(
+            var apiResponse = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.ApiResponseSalessLatestDto, ct);
 
             if (apiResponse?.Succeeded != true)
@@ -228,7 +229,7 @@ public class StatisticsService : IStatisticsService
 
         try
         {
-            var apiResponse = await _httpClient.GetFromJsonAsync(
+            var apiResponse = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.ApiResponseProductsBestSellingDto, ct);
 
             if (apiResponse?.Succeeded != true)

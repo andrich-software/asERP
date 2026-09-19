@@ -29,8 +29,6 @@ public class AiPromptCreateHandler : IRequestHandler<AiPromptCreateCommand, Resu
     {
         _logger.LogInformation("Creating new AI prompt with identifier: {Identifier}", request.Identifier);
 
-        var result = new Result<Guid>();
-
         // Manuelles Mapping statt AutoMapper
         var aIPromptToCreate = new Domain.Entities.AiPrompt
         {
@@ -42,12 +40,8 @@ public class AiPromptCreateHandler : IRequestHandler<AiPromptCreateCommand, Resu
         // add to database
         await _aIPromptRepository.CreateAsync(aIPromptToCreate);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = aIPromptToCreate.Id;
-
         _logger.LogInformation("Successfully created AI prompt with ID: {Id}", aIPromptToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(aIPromptToCreate.Id);
     }
 }

@@ -38,7 +38,7 @@ public class SystemOAuthSettingsService : ISystemOAuthSettingsService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.SystemOAuthAppSettings.ByProvider(provider)}";
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseSystemOAuthSettingsDto, ct);
         return response?.Data;
     }

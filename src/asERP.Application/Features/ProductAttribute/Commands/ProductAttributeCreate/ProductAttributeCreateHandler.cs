@@ -22,8 +22,6 @@ public class ProductAttributeCreateHandler : IRequestHandler<ProductAttributeCre
     {
         _logger.LogInformation("Creating new product attribute with name: {Name}", request.Name);
 
-        var result = new Result<Guid>();
-
         // Manual mapping to domain entity
         var attributeToCreate = new Domain.Entities.ProductAttribute
         {
@@ -38,12 +36,8 @@ public class ProductAttributeCreateHandler : IRequestHandler<ProductAttributeCre
 
         await _productAttributeRepository.CreateAsync(attributeToCreate);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = attributeToCreate.Id;
-
         _logger.LogInformation("Successfully created product attribute with ID: {Id}", attributeToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(attributeToCreate.Id);
     }
 }

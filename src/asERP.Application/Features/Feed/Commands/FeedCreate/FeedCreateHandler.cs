@@ -25,18 +25,12 @@ public class FeedCreateHandler : IRequestHandler<FeedCreateCommand, Result<Guid>
     {
         _logger.LogInformation("Creating new feed with name: {Name}", request.Name);
 
-        var result = new Result<Guid>();
-
         var feed = MapToEntity(request);
         await _feedRepository.CreateAsync(feed);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = feed.Id;
-
         _logger.LogInformation("Successfully created feed with ID: {Id}", feed.Id);
 
-        return result;
+        return Result<Guid>.Created(feed.Id);
     }
 
     private static Domain.Entities.Feed MapToEntity(FeedCreateCommand c) => new()

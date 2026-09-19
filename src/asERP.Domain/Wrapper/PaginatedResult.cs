@@ -12,7 +12,7 @@ public class PaginatedResult<T> : Result
         Data = data;
     }
 
-    public List<T> Data { get; set; }
+    public List<T> Data { get; init; }
 
     internal PaginatedResult(bool succeeded, List<T> data = default!, List<string>? messages = null, int count = 0, int page = 1, int pageSize = 10)
     {
@@ -35,12 +35,12 @@ public class PaginatedResult<T> : Result
         return new PaginatedResult<T>(true, data, null, count, page, pageSize);
     }
 
-    public int CurrentPage { get; set; }
+    public int CurrentPage { get; init; }
 
-    public int TotalPages { get; set; }
+    public int TotalPages { get; init; }
 
-    public int TotalCount { get; set; }
-    public int PageSize { get; set; }
+    public int TotalCount { get; init; }
+    public int PageSize { get; init; }
 
     // Paging is zero-based across the project: page 0 is the first page.
     public bool HasPreviousPage => CurrentPage > 0;

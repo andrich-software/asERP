@@ -10,7 +10,6 @@ public class DeleteSalesHandler : IRequestHandler<DeleteSalesCommand, Result<Gui
     private readonly IAppLogger<DeleteSalesHandler> _logger;
     private readonly ISalesRepository _salesRepository;
 
-
     public DeleteSalesHandler(IAppLogger<DeleteSalesHandler> logger,
         ISalesRepository salesRepository)
     {
@@ -21,8 +20,6 @@ public class DeleteSalesHandler : IRequestHandler<DeleteSalesCommand, Result<Gui
     public async Task<Result<Guid>> Handle(DeleteSalesCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Deleting sales with ID: {Id}", request.Id);
-
-        var result = new Result<Guid>();
 
         // Create entity to delete
         var salesToDelete = new Domain.Entities.Sales
@@ -42,16 +39,11 @@ public class DeleteSalesHandler : IRequestHandler<DeleteSalesCommand, Result<Gui
             // real infrastructure failure still bubbles up to the GlobalExceptionHandler.
             _logger.LogWarning("Sales {Id} was not deletable in this context: {Message}", request.Id, ex.Message);
 
-            result.Fail(ErrorType.NotFound, ErrorCodes.Sales.NotFound, "Sales not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Sales.NotFound, "Sales not found");
         }
-
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = salesToDelete.Id;
 
         _logger.LogInformation("Successfully deleted sales with ID: {Id}", salesToDelete.Id);
 
-        return result;
+        return Result<Guid>.Ok(salesToDelete.Id);
     }
 }

@@ -50,7 +50,7 @@ public class ProductService : IProductService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseProductListDto, ct);
 
             if (response?.Succeeded != true)
@@ -80,7 +80,7 @@ public class ProductService : IProductService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Products.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseProductDetailDto, ct);
+        var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.ApiResponseProductDetailDto, ct);
         return apiResponse?.Data;
     }
 
@@ -125,7 +125,7 @@ public class ProductService : IProductService
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Products.Images(productId)}";
 
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseListProductImageDto, ct);
         return response?.Data ?? new List<ProductImageDto>();
     }

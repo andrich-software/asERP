@@ -130,7 +130,7 @@ public class CategoryRepository : GenericRepository<Category>, ICategoryReposito
         return effective;
     }
 
-    public override async Task<bool> IsUniqueAsync(Category entity, Guid? id = null)
+    public async Task<bool> IsUniqueAsync(Category entity, Guid? id = null)
     {
         var currentTenantId = TenantContext.GetCurrentTenantId();
 

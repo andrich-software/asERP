@@ -25,13 +25,10 @@ public class TenantEmailSettingsTestSendHandler : IRequestHandler<TenantEmailSet
 
     public async Task<Result<bool>> Handle(TenantEmailSettingsTestSendCommand request, CancellationToken cancellationToken)
     {
-        var result = new Result<bool>();
-
         var tenantId = _tenantContext.GetCurrentTenantId();
         if (!tenantId.HasValue)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.TenantEmailSettings.Invalid, "No active tenant in context.");
-            return result;
+            return Result<bool>.Invalid(ErrorCodes.TenantEmailSettings.Invalid, "No active tenant in context.");
         }
 
         var message = new EmailMessage
@@ -47,20 +44,14 @@ public class TenantEmailSettingsTestSendHandler : IRequestHandler<TenantEmailSet
 
         var sent = await _emailService.SendEmailAsync(message, tenantId);
 
-        result.Succeeded = sent;
-        result.Data = sent;
-
         if (!sent)
         {
-            result.Fail(ErrorType.Unexpected, ErrorCodes.TenantEmailSettings.Unexpected,
-                "Failed to send the test email. Check the server logs for provider errors.");
             _logger.LogWarning("Test send failed for tenant {TenantId}", tenantId.Value);
-        }
-        else
-        {
-            _logger.LogInformation("Test send succeeded for tenant {TenantId} to {Recipient}", tenantId.Value, request.Recipient);
+            return Result<bool>.Unexpected(ErrorCodes.TenantEmailSettings.Unexpected,
+                "Failed to send the test email. Check the server logs for provider errors.");
         }
 
-        return result;
+        _logger.LogInformation("Test send succeeded for tenant {TenantId} to {Recipient}", tenantId.Value, request.Recipient);
+        return Result<bool>.Ok(true);
     }
 }

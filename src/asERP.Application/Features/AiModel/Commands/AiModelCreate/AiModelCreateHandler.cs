@@ -29,16 +29,12 @@ public class AiModelCreateHandler : IRequestHandler<AiModelCreateCommand, Result
     {
         _logger.LogInformation("Creating new AI model with name: {Name}", request.Name);
 
-        var result = new Result<Guid>();
-
         // Validate that the AI model type is a valid enum value
         if (!Enum.IsDefined(typeof(AiModelType), request.AiModelType))
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.AiModel.Invalid, $"Invalid AiModelType value: {request.AiModelType}");
-
             _logger.LogWarning("Invalid AiModelType value in create request: {0}", request.AiModelType);
 
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.AiModel.Invalid, $"Invalid AiModelType value: {request.AiModelType}");
         }
 
         // Direct manual mapping without helper class
@@ -55,13 +51,8 @@ public class AiModelCreateHandler : IRequestHandler<AiModelCreateCommand, Result
         // Add the new AI model to the database
         await _aiModelRepository.CreateAsync(aiModelToCreate);
 
-        // Set successful result with the new AI model ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = aiModelToCreate.Id;
-
         _logger.LogInformation("Successfully created AI model with ID: {Id}", aiModelToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(aiModelToCreate.Id);
     }
 }

@@ -10,7 +10,6 @@ public class AiPromptRepository : GenericRepository<AiPrompt>, IAiPromptReposito
 {
     public AiPromptRepository(ApplicationDbContext context, ITenantContext tenantContext) : base(context, tenantContext)
     {
-
     }
 
     public async Task<AiPrompt?> GetByIdentifier(string identifier)
@@ -18,7 +17,7 @@ public class AiPromptRepository : GenericRepository<AiPrompt>, IAiPromptReposito
         return await Entities.FirstOrDefaultAsync(p => p.Identifier == identifier);
     }
 
-    public override async Task<bool> IsUniqueAsync(AiPrompt entity, Guid? id = null)
+    public async Task<bool> IsUniqueAsync(AiPrompt entity, Guid? id = null)
     {
         var currentTenantId = TenantContext.GetCurrentTenantId();
 

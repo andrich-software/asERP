@@ -41,8 +41,6 @@ public class ShippingProviderCreateHandler : IRequestHandler<ShippingProviderCre
 
         _logger.LogInformation("Successfully created shipping provider with ID: {Id}", providerToCreate.Id);
 
-        var result = Result<Guid>.Success(providerToCreate.Id);
-        result.Status = ResultStatus.Created;
-        return result;
+        return Result<Guid>.Created(providerToCreate.Id);
     }
 }

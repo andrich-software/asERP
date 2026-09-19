@@ -28,8 +28,6 @@ public class ShippingUpdateHandler : IRequestHandler<ShippingUpdateCommand, Resu
     {
         _logger.LogInformation("Updating shipment with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             var existsGlobally = await _shippingRepository.ExistsGloballyAsync(request.Id);
@@ -48,8 +46,7 @@ public class ShippingUpdateHandler : IRequestHandler<ShippingUpdateCommand, Resu
 
             if (shippingToUpdate.Status == ShippingStatus.Cancelled)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Shipping.Invalid, "A cancelled shipment cannot be updated.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid, "A cancelled shipment cannot be updated.");
             }
 
             if (request.TrackingNumber != null)
@@ -93,24 +90,16 @@ public class ShippingUpdateHandler : IRequestHandler<ShippingUpdateCommand, Resu
 
                 if (!statusResult.Succeeded)
                 {
-                    result.Succeeded = false;
-                    result.Error = statusResult.Error;
-                    result.Messages.AddRange(statusResult.Messages);
-                    return result;
+                    return Result<Guid>.From(statusResult, request.Id);
                 }
             }
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = shippingToUpdate.Id;
-
             _logger.LogInformation("Successfully updated shipment with ID: {Id}", shippingToUpdate.Id);
+            return Result<Guid>.Ok(shippingToUpdate.Id);
         }
         catch (NotFoundException)
         {
             throw;
         }
-
-        return result;
     }
 }

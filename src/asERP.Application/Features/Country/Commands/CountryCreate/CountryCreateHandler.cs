@@ -28,8 +28,6 @@ public class CountryCreateHandler : IRequestHandler<CountryCreateCommand, Result
         _logger.LogInformation("Creating new country with name: {Name}, code: {CountryCode}",
             request.Name, request.CountryCode);
 
-        var result = new Result<Guid>();
-
         // Manual mapping to domain entity
         var countryToCreate = new Domain.Entities.Country
         {
@@ -40,13 +38,8 @@ public class CountryCreateHandler : IRequestHandler<CountryCreateCommand, Result
         // Add the new country to the database
         await _countryRepository.CreateAsync(countryToCreate);
 
-        // Set successful result with the new country ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = countryToCreate.Id;
-
         _logger.LogInformation("Successfully created country with ID: {Id}", countryToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(countryToCreate.Id);
     }
 }

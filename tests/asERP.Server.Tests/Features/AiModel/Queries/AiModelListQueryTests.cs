@@ -141,7 +141,7 @@ public class AiModelListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetAiModels_WithSortByName_ShouldReturnSalesedResults()
+    public async Task GetAiModels_WithSortByName_ShouldReturnSortedResults()
     {
         // Arrange
         await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
@@ -163,7 +163,7 @@ public class AiModelListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetAiModels_WithSortByNameDescending_ShouldReturnDescSalesedResults()
+    public async Task GetAiModels_WithSortByNameDescending_ShouldReturnDescSortedResults()
     {
         // Arrange
         await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);

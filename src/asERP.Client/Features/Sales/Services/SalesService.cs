@@ -58,7 +58,7 @@ public class SalesService : ISalesService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseSalesListDto, ct);
 
             if (response?.Succeeded != true)
@@ -98,7 +98,7 @@ public class SalesService : ISalesService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseSalesListDto, ct);
 
             if (response?.Succeeded != true)
@@ -121,7 +121,7 @@ public class SalesService : ISalesService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Saless.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseSalesDetailDto, ct);
+        var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.ApiResponseSalesDetailDto, ct);
         return apiResponse?.Data;
     }
 

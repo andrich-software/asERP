@@ -23,16 +23,12 @@ public class ProductAttributeDetailHandler : IRequestHandler<ProductAttributeDet
     {
         _logger.LogInformation("Retrieving product attribute details for ID: {Id}", request.Id);
 
-        var result = new Result<ProductAttributeDetailDto>();
-
         var attribute = await _productAttributeRepository.GetWithValuesAsync(request.Id);
 
         if (attribute == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.ProductAttribute.NotFound, $"Product attribute with ID {request.Id} not found");
-
             _logger.LogWarning("Product attribute with ID {Id} not found", request.Id);
-            return result;
+            return Result<ProductAttributeDetailDto>.NotFound(ErrorCodes.ProductAttribute.NotFound, $"Product attribute with ID {request.Id} not found");
         }
 
         // Manual mapping from entity to DTO
@@ -49,12 +45,8 @@ public class ProductAttributeDetailHandler : IRequestHandler<ProductAttributeDet
             }).ToList()
         };
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
         _logger.LogInformation("Product attribute with ID {Id} retrieved successfully", request.Id);
 
-        return result;
+        return Result<ProductAttributeDetailDto>.Ok(data);
     }
 }

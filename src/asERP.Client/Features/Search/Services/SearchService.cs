@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using asERP.Client.Core.Constants;
+using asERP.Client.Core.Extensions;
 using asERP.Client.Core.Json;
 using asERP.Client.Features.Auth.Services;
 using asERP.Domain.Dtos.Search;
@@ -41,7 +42,7 @@ public class SearchService : ISearchService
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Search.Base}?searchString={Uri.EscapeDataString(query)}&limit={limit}";
 
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseGlobalSearchResultDto, ct);
 
         if (response?.Succeeded != true)

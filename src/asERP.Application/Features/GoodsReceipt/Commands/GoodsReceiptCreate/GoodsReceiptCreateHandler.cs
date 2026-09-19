@@ -43,8 +43,6 @@ public class GoodsReceiptCreateHandler : IRequestHandler<GoodsReceiptCreateComma
         _logger.LogInformation("Creating new goods receipt for Product ID: {ProductId}, Quantity: {Quantity}",
             request.ProductId, request.Quantity);
 
-        var result = new Result<Guid>();
-
         var createdBy = _httpContextAccessor.HttpContext.GetUserId() ?? "System";
 
         // Manual mapping
@@ -71,10 +69,6 @@ public class GoodsReceiptCreateHandler : IRequestHandler<GoodsReceiptCreateComma
 
         await transaction.CommitAsync(cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = goodsReceiptToCreate.Id;
-
         _logger.LogInformation("Successfully created goods receipt with ID: {Id}", goodsReceiptToCreate.Id);
 
         // Stock changed → let channels mirror the new level. Published after commit so the
@@ -90,7 +84,7 @@ public class GoodsReceiptCreateHandler : IRequestHandler<GoodsReceiptCreateComma
             _logger.LogError(ex, "StockChangedNotification failed for goods receipt {Id}", goodsReceiptToCreate.Id);
         }
 
-        return result;
+        return Result<Guid>.Created(goodsReceiptToCreate.Id);
     }
 
     private async Task UpdateProductStock(Guid productId, Guid warehouseId, int quantity)

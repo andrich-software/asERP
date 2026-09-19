@@ -157,7 +157,7 @@ public class SettingListQueryTests : GlobalTestBase
     }
 
     [Fact]
-    public async Task GetSettings_WithSortByKey_ShouldReturnSalesedResults()
+    public async Task GetSettings_WithSortByKey_ShouldReturnSortedResults()
     {
         await SeedSettingTestDataAsync();
 
@@ -176,7 +176,7 @@ public class SettingListQueryTests : GlobalTestBase
     }
 
     [Fact]
-    public async Task GetSettings_WithSortByKeyDescending_ShouldReturnDescSalesedResults()
+    public async Task GetSettings_WithSortByKeyDescending_ShouldReturnDescSortedResults()
     {
         await SeedSettingTestDataAsync();
 

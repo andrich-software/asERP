@@ -27,8 +27,6 @@ public class ManufacturerCreateHandler : IRequestHandler<ManufacturerCreateComma
     {
         _logger.LogInformation("Creating new manufacturer with name: {Name}", request.Name);
 
-        var result = new Result<Guid>();
-
         // Manual mapping to domain entity
         var manufacturerToCreate = new Domain.Entities.Manufacturer
         {
@@ -47,13 +45,8 @@ public class ManufacturerCreateHandler : IRequestHandler<ManufacturerCreateComma
         // Add the new manufacturer to the database
         await _manufacturerRepository.CreateAsync(manufacturerToCreate);
 
-        // Set successful result with the new manufacturer ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = manufacturerToCreate.Id;
-
         _logger.LogInformation("Successfully created manufacturer with ID: {Id}", manufacturerToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(manufacturerToCreate.Id);
     }
 }

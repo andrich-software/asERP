@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using asERP.Client.Core.Constants;
+using asERP.Client.Core.Extensions;
 using asERP.Client.Core.Json;
 using asERP.Client.Features.Auth.Services;
 using asERP.Domain.Dtos.Statistic;
@@ -46,7 +47,7 @@ public class RevenueStatisticsService : IRevenueStatisticsService
 
         try
         {
-            var apiResponse = await _httpClient.GetFromJsonAsync(
+            var apiResponse = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.ApiResponseRevenueChartDto, ct);
 
             if (apiResponse?.Succeeded != true)

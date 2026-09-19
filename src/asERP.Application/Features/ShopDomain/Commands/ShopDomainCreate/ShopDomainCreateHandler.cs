@@ -32,8 +32,6 @@ public class ShopDomainCreateHandler : IRequestHandler<ShopDomainCreateCommand, 
         _logger.LogInformation("Creating shop domain {Host} for sales channel {SalesChannelId}",
             request.Host, request.SalesChannelId);
 
-        var result = new Result<Guid>();
-
         // Validator guarantees the host is normalizable.
         ShopHostNormalizer.TryNormalize(request.Host, out var normalizedHost);
 
@@ -69,12 +67,8 @@ public class ShopDomainCreateHandler : IRequestHandler<ShopDomainCreateCommand, 
             new ShopDomainChangedNotification(request.SalesChannelId, shopDomainToCreate.TenantId),
             cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = shopDomainToCreate.Id;
-
         _logger.LogInformation("Successfully created shop domain with ID: {Id}", shopDomainToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(shopDomainToCreate.Id);
     }
 }

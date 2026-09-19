@@ -41,18 +41,27 @@ One folder per request — copy `Features/Customer/Commands/CustomerCreate/` or 
 - `{Name}Validator.cs` — FluentValidation, usually extends the Domain base validator and adds DB-aware rules. Constructor-inject the repos it needs; DI resolves it.
 
 **Validators must stay purely about "is this request well-formed".** Anything else fights the
-pipeline, which reports every failure as a 400 *before* the handler runs. Six requests carry
-`ISkipPipelineValidation` today — don't add a seventh without the same kind of reason:
+pipeline, which reports every failure as a 400 *before* the handler runs. Exactly three requests
+carry `ISkipPipelineValidation` today — don't add a fourth without the same kind of reason:
 
 | Request | Why it opts out |
 |---|---|
-| `CustomerUpdateCommand`, `ProductUpdateCommand`, `SettingDeleteCommand` | validator carries a "… not found" rule the handler maps to **404**, which a uniform 400 cannot express (REFACTOR.md R5) |
 | `AiModelDeleteCommand`, `DeleteSalesCommand` | their controllers discard the result and always answer **204**; a throwing validator would turn a deliberately idempotent DELETE into a 400 |
 | `SetupInitializeCommand` | the anonymous setup endpoint must answer 403 for every payload once setup is done — validating first would let the email-uniqueness rule reveal which accounts exist |
 
+**"Does this row exist?" belongs in the handler, not the validator** — a validator can only report
+400, and a missing row is a 404. `CustomerUpdate`, `ProductUpdate` and `SettingDelete` used to opt
+out of the pipeline for exactly that reason; their existence checks now live in `Handle` while the
+field rules go through the pipeline like everywhere else. Where several such checks exist, order
+them so the addressed resource is checked first: `ProductUpdateHandler` looks up the product before
+the referenced tax class and manufacturer, so a request that cannot see the product answers 404
+rather than "tax class does not exist".
+
 Return types: mutations `Result<Guid>`/`Result<int>`, detail queries `Result<TDto>`, lists `PaginatedResult<TDto>` (all from `asERP.Domain.Wrapper`).
 
-**Never name an HTTP status.** A handler reports *what* happened — `Result<T>.NotFound(ErrorCodes.Customer.NotFound, "Customer not found")`, `result.Fail(ErrorType.Validation, ErrorCodes.Product.Invalid, "…")`, `Result<T>.Created(id)` — and the Server maps that to a status code in one place. See `asERP.Domain/CLAUDE.md` for the full vocabulary.
+**Never name an HTTP status.** A handler reports *what* happened — `Result<T>.NotFound(ErrorCodes.Customer.NotFound, "Customer not found")`, `Result<T>.Invalid(ErrorCodes.Product.Invalid, "…")`, `Result<T>.Created(id)` — and the Server maps that to a status code in one place.
+
+A result is **immutable**: build it in one call at the point of return rather than declaring one up front and filling it in. Gather messages into a local list first if you need several. See `asERP.Domain/CLAUDE.md` for the full vocabulary.
 
 Error handling: **don't wrap the handler body in a broad `try/catch`.** An unexpected exception is
 meant to reach the Server's `GlobalExceptionHandler`, which already logs it in full and answers with
@@ -76,7 +85,9 @@ Where you do log, use `IAppLogger<T>` — never inject `ILogger<T>` directly.
 
 ## Repositories & the Update-Graph Pitfall (critical)
 
-`IGenericRepository<T>` (`Contracts/Persistence/IGenericRepository.cs`): `Entities` (no-tracking, tenant-filtered `IQueryable`), `CreateAsync`, `GetByIdAsync`, `UpdateAsync`, `DeleteAsync`, `IsUniqueAsync`, `BeginTransactionAsync`, `SaveChangesAsync`. No separate unit-of-work — the DbContext is the UoW.
+`IGenericRepository<T>` (`Contracts/Persistence/IGenericRepository.cs`): `Entities` (no-tracking, tenant-filtered `IQueryable`), `CreateAsync`, `GetAllAsync`, `GetByIdAsync`, `UpdateAsync`, `DeleteAsync`, `ExistsAsync`, `BeginTransactionAsync`, `SaveChangesAsync`. No separate unit-of-work — the DbContext is the UoW.
+
+**`IsUniqueAsync` is deliberately *not* on the generic interface.** It used to be, with a base implementation that returned `true` unconditionally, so every entity whose repository forgot to override it accepted duplicates in silence (REFACTOR.md). It now sits on the 13 entity-specific interfaces that actually have a uniqueness rule, each with its own tenant-scoped implementation — a validator calling it on a repository that never implemented it is a compile error.
 
 **`UpdateAsync` copies scalar properties only** (`CurrentValues.SetValues`) — it never inserts/updates/deletes child rows and it pins `TenantId`. Therefore:
 
@@ -93,7 +104,7 @@ Not configured in EF — delete children explicitly before the parent (also requ
 - `ToPaginatedListAsync(page, size, ct)` — **zero-based** (`Skip(page * size)`), clamps negative page to 0, size ≤ 0 → 10, max **200**.
 - `ApplySafeOrdering(query, sortBy, allowedFields)` — dynamic ordering restricted to an explicit **allow-list** (`static readonly HashSet<string> AllowedSortFields` in the handler); unknown fields are silently dropped (security by design). **Never pass raw client sort strings to `OrderBy`.**
 - `Specify(spec)` applies Includes + Criteria from a `Specifications/` class.
-- Naming trap: list queries name their sort parameter `SalesBy` — a rename artifact of `SortBy`. It sorts, it does not filter by sales.
+- List queries name their sort parameter `SortBy`. It was briefly `SalesBy`, an Order→Sales rename artifact; the deprecated `salesBy` query-string alias has been dropped, so the old name is gone everywhere.
 
 ## Tenancy
 
@@ -111,5 +122,5 @@ Manual, no AutoMapper. Inline object initializers / `.Select(x => new Dto {...})
 
 ## Misc
 
-- Some handlers return German user-facing messages, others English — match the surrounding feature's language; identifiers/comments stay English.
-- `Exceptions/NotFoundException` etc. exist but are used sparingly — prefer `Result` + `ResultStatusCode`.
+- User-facing messages are **English throughout** — the last German ones were translated (REFACTOR.md). Keep it that way; identifiers and comments are English too.
+- `Exceptions/NotFoundException` etc. exist but are used sparingly — prefer returning `Result<T>.NotFound(...)` and friends.

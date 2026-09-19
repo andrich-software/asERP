@@ -22,16 +22,12 @@ public class SuperadminUpdateHandler : IRequestHandler<SuperadminUpdateCommand, 
     {
         _logger.LogInformation("Updating tenant with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         var tenantToUpdate = await _tenantRepository.GetByIdAsync(request.Id);
 
         if (tenantToUpdate == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, "Tenant not found.");
-
             _logger.LogWarning("Tenant with ID {Id} not found for update", request.Id);
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Superadmin.NotFound, "Tenant not found.");
         }
 
         tenantToUpdate.Name = request.Name;
@@ -55,12 +51,8 @@ public class SuperadminUpdateHandler : IRequestHandler<SuperadminUpdateCommand, 
 
         await _tenantRepository.UpdateAsync(tenantToUpdate);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = tenantToUpdate.Id;
-
         _logger.LogInformation("Successfully updated tenant with ID: {Id}", tenantToUpdate.Id);
 
-        return result;
+        return Result<Guid>.Ok(tenantToUpdate.Id);
     }
 }

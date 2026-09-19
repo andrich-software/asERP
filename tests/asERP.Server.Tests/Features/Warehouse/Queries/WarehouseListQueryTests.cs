@@ -111,7 +111,7 @@ public class WarehouseListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetWarehouseList_WithSortBy_ShouldReturnSalesedResults()
+    public async Task GetWarehouseList_WithSortBy_ShouldReturnSortedResults()
     {
         // Arrange
         await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);

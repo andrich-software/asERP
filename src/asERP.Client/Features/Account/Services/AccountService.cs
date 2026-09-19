@@ -42,7 +42,7 @@ public class AccountService : IAccountService
 
         _logger.LogInformation("Fetching current user profile from {Url}", url);
 
-        var apiResponse = await _httpClient.GetFromJsonAsync(
+        var apiResponse = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseCurrentUserProfileDto, ct);
 
         return apiResponse?.Data;

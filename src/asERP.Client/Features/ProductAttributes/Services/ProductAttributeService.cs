@@ -49,7 +49,7 @@ public class ProductAttributeService : IProductAttributeService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseProductAttributeListDto, ct);
 
             if (response?.Succeeded != true)
@@ -79,7 +79,7 @@ public class ProductAttributeService : IProductAttributeService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.ProductAttributes.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseProductAttributeDetailDto, ct);
+        var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.ApiResponseProductAttributeDetailDto, ct);
         return apiResponse?.Data;
     }
 

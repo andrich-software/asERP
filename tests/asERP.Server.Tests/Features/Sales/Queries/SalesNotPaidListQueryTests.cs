@@ -326,7 +326,7 @@ public class SalesNotPaidListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessNotPaid_WithSortByTotal_ShouldReturnSalesedResults()
+    public async Task GetSalessNotPaid_WithSortByTotal_ShouldReturnSortedResults()
     {
         await SeedSalesNotPaidTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -346,7 +346,7 @@ public class SalesNotPaidListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessNotPaid_WithSortByTotalDescending_ShouldReturnDescSalesedResults()
+    public async Task GetSalessNotPaid_WithSortByTotalDescending_ShouldReturnDescSortedResults()
     {
         await SeedSalesNotPaidTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -494,7 +494,7 @@ public class SalesNotPaidListQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSalessNotPaid_WithSortByDateSalesed_ShouldReturnDateSalesedResults()
+    public async Task GetSalessNotPaid_WithSortByDateSalesed_ShouldReturnDateSortedResults()
     {
         await SeedSalesNotPaidTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);

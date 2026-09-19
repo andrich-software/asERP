@@ -27,8 +27,6 @@ public class ReturnLabelRetryHandler : IRequestHandler<ReturnLabelRetryCommand, 
     {
         _logger.LogInformation("Retrying return-label creation for return {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         var existsGlobally = await _returnShipmentRepository.ExistsGloballyAsync(request.Id);
         if (!existsGlobally)
         {
@@ -45,17 +43,11 @@ public class ReturnLabelRetryHandler : IRequestHandler<ReturnLabelRetryCommand, 
 
         if (returnShipment.LabelData is { Length: > 0 })
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, "The return already has a label.");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.Returns.Invalid, "The return already has a label.");
         }
 
         var labelResult = await _returnCarrierService.CreateReturnLabelAsync(request.Id, cancellationToken);
 
-        result.Succeeded = labelResult.Succeeded;
-        result.Error = labelResult.Error;
-        result.Messages.AddRange(labelResult.Messages);
-        result.Data = request.Id;
-
-        return result;
+        return Result<Guid>.From(labelResult, request.Id);
     }
 }

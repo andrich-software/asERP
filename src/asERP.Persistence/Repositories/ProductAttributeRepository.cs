@@ -94,7 +94,7 @@ public class ProductAttributeRepository : GenericRepository<ProductAttribute>, I
         await Context.SaveChangesAsync();
     }
 
-    public override async Task<bool> IsUniqueAsync(ProductAttribute entity, Guid? id = null)
+    public async Task<bool> IsUniqueAsync(ProductAttribute entity, Guid? id = null)
     {
         var currentTenantId = TenantContext.GetCurrentTenantId();
 

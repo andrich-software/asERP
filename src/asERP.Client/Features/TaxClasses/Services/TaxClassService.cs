@@ -49,7 +49,7 @@ public class TaxClassService : ITaxClassService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseTaxClassListDto, ct);
 
             if (response?.Succeeded != true)
@@ -79,7 +79,7 @@ public class TaxClassService : ITaxClassService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.TaxClasses.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseTaxClassDetailDto, ct);
+        var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.ApiResponseTaxClassDetailDto, ct);
         return apiResponse?.Data;
     }
 

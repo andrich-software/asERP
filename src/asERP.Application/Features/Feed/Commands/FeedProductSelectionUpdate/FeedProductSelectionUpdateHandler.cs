@@ -18,22 +18,15 @@ public class FeedProductSelectionUpdateHandler : IRequestHandler<FeedProductSele
 
     public async Task<Result<Guid>> Handle(FeedProductSelectionUpdateCommand request, CancellationToken cancellationToken)
     {
-        var result = new Result<Guid>();
-
         // Existence + tenant ownership check (GetByIdAsync is tenant-filtered).
         var feed = await _feedRepository.GetByIdAsync(request.FeedId, asNoTracking: true);
         if (feed == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Feed.NotFound, $"Feed with ID {request.FeedId} not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Feed.NotFound, $"Feed with ID {request.FeedId} not found");
         }
 
         await _feedRepository.ApplyProductSelectionAsync(request.FeedId, request.Changes, cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = request.FeedId;
-
-        return result;
+        return Result<Guid>.Ok(request.FeedId);
     }
 }

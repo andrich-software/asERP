@@ -33,8 +33,6 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
     {
         _logger.LogInformation("Updating sales channel with ID: {Id} and name: {Name}", request.Id, request.Name);
 
-        var result = new Result<Guid>();
-
         // Get existing sales channel with warehouses
         Domain.Entities.SalesChannel existingSalesChannel;
         try
@@ -43,8 +41,7 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
         }
         catch (NotFoundException)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.SalesChannel.NotFound, $"Sales channel with ID {request.Id} not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.SalesChannel.NotFound, $"Sales channel with ID {request.Id} not found");
         }
 
         // Snapshot the stock-relevant state before any mutation: the exported stock is the sum over
@@ -91,7 +88,6 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
         existingSalesChannel.ShipmentTrackingMode =
             syncAlwaysOn ? Domain.Enums.ShipmentTrackingMode.None : request.ShipmentTrackingMode;
 
-
         // Update warehouse relationships
         var warehouses = new List<Domain.Entities.Warehouse>();
         if (request.WarehouseIds != null && request.WarehouseIds.Any())
@@ -114,8 +110,7 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
             // Return error if any warehouse IDs are invalid
             if (invalidWarehouseIds.Any())
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.SalesChannel.Invalid, $"The following warehouse IDs do not exist: {string.Join(", ", invalidWarehouseIds)}");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.SalesChannel.Invalid, $"The following warehouse IDs do not exist: {string.Join(", ", invalidWarehouseIds)}");
             }
         }
         existingSalesChannel.Warehouses = warehouses;
@@ -139,8 +134,7 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
 
         if (unknownProviderIds.Count > 0)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.SalesChannel.Invalid, $"The following shipping provider IDs do not exist: {string.Join(", ", unknownProviderIds)}");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.SalesChannel.Invalid, $"The following shipping provider IDs do not exist: {string.Join(", ", unknownProviderIds)}");
         }
 
         // Update in database
@@ -161,12 +155,8 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
                 cancellationToken);
         }
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = existingSalesChannel.Id;
-
         _logger.LogInformation("Successfully updated sales channel with ID: {Id}", existingSalesChannel.Id);
 
-        return result;
+        return Result<Guid>.Ok(existingSalesChannel.Id);
     }
 }

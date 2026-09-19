@@ -29,8 +29,6 @@ public class ReturnCompleteHandler : IRequestHandler<ReturnCompleteCommand, Resu
         var targetStatus = request.Reject ? ReturnShipmentStatus.Rejected : ReturnShipmentStatus.Completed;
         _logger.LogInformation("Closing return {Id} as {Status}", request.Id, targetStatus);
 
-        var result = new Result<Guid>();
-
         var existsGlobally = await _returnShipmentRepository.ExistsGloballyAsync(request.Id);
         if (!existsGlobally)
         {
@@ -47,18 +45,12 @@ public class ReturnCompleteHandler : IRequestHandler<ReturnCompleteCommand, Resu
 
         if (returnShipment.Status != ReturnShipmentStatus.Received)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Returns.Invalid, $"Only a received return can be closed; this one is {returnShipment.Status}.");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.Returns.Invalid, $"Only a received return can be closed; this one is {returnShipment.Status}.");
         }
 
         var statusResult = await _returnStatusUpdater.ApplyStatusAsync(
             returnShipment.Id, targetStatus, cancellationToken: cancellationToken);
 
-        result.Succeeded = statusResult.Succeeded;
-        result.Error = statusResult.Error;
-        result.Messages.AddRange(statusResult.Messages);
-        result.Data = request.Id;
-
-        return result;
+        return Result<Guid>.From(statusResult, request.Id);
     }
 }

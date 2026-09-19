@@ -184,7 +184,7 @@ public sealed class ReturnCarrierService : IReturnCarrierService
 
         if (returnShipment is null)
         {
-            return Result.Invalid(ErrorCodes.ReturnCarrier.Invalid, $"Return {returnShipmentId} not found.");
+            return Result.NotFound(ErrorCodes.ReturnCarrier.NotFound, $"Return {returnShipmentId} not found.");
         }
 
         _tenantContext.SetCurrentTenantId(returnShipment.TenantId);

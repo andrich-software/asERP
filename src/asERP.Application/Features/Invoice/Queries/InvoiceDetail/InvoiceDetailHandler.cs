@@ -31,18 +31,14 @@ public class InvoiceDetailHandler : IRequestHandler<InvoiceDetailQuery, Result<I
     {
         _logger.LogInformation("Retrieving invoice details for ID: {Id}", request.Id);
 
-        var result = new Result<InvoiceDetailDto>();
-
         // Retrieve invoice with all related details from the repository
         var invoice = await _invoiceRepository.GetInvoiceWithDetailsAsync(request.Id);
 
         // If invoice not found, return a not found result
         if (invoice == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Invoice.NotFound, $"Rechnung mit ID {request.Id} wurde nicht gefunden");
-
             _logger.LogWarning("Invoice with ID {Id} not found", request.Id);
-            return result;
+            return Result<InvoiceDetailDto>.NotFound(ErrorCodes.Invoice.NotFound, $"Rechnung mit ID {request.Id} wurde nicht gefunden");
         }
 
         // Get customer data to include customer name
@@ -104,13 +100,8 @@ public class InvoiceDetailHandler : IRequestHandler<InvoiceDetailQuery, Result<I
             DeliveryAddressCountry = invoice.DeliveryAddressCountry
         };
 
-        // Set successful result with the invoice details
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
         _logger.LogInformation("Invoice with ID {Id} retrieved successfully", request.Id);
 
-        return result;
+        return Result<InvoiceDetailDto>.Ok(data);
     }
 }

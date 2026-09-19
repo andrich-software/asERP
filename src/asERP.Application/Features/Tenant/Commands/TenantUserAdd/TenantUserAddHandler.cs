@@ -100,8 +100,6 @@ public class TenantUserAddHandler : IRequestHandler<TenantUserAddCommand, Result
             return Result<bool>.Invalid(ErrorCodes.Tenant.Invalid, "Failed to add user to tenant");
         }
 
-        var success = Result<bool>.Success(true, "User successfully added to tenant");
-        success.Status = ResultStatus.Created;
-        return success;
+        return Result<bool>.Created(true, "User successfully added to tenant");
     }
 }

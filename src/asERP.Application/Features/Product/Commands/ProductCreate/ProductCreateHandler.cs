@@ -146,8 +146,6 @@ public class ProductCreateHandler : IRequestHandler<ProductCreateCommand, Result
 
         _logger.LogInformation("Successfully created product with ID: {Id}", productToCreate.Id);
 
-        var result = Result<Guid>.Success(productToCreate.Id);
-        result.Status = ResultStatus.Created;
-        return result;
+        return Result<Guid>.Created(productToCreate.Id);
     }
 }

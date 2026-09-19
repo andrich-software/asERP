@@ -84,8 +84,6 @@ public class AssignUserToTenantHandler : IRequestHandler<AssignUserToTenantComma
             return Result<int>.Invalid(ErrorCodes.Superadmin.AlreadyExists, "User is already assigned to this tenant");
         }
 
-        var success = Result<int>.Success(1, "User successfully assigned to tenant");
-        success.Status = ResultStatus.Created;
-        return success;
+        return Result<int>.Created(1, "User successfully assigned to tenant");
     }
 }

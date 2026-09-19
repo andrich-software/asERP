@@ -36,8 +36,6 @@ public class RemoveUserFromTenantHandler : IRequestHandler<RemoveUserFromTenantC
             return Result<bool>.Invalid(ErrorCodes.Superadmin.Invalid, "User is not assigned to this tenant");
         }
 
-        var success = Result<bool>.Success(true, "User successfully removed from tenant");
-        success.Status = ResultStatus.Ok;
-        return success;
+        return Result<bool>.Ok(true, "User successfully removed from tenant");
     }
 }

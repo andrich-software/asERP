@@ -144,7 +144,7 @@ public class TaxClassListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetTaxClassList_WithSortBy_ShouldReturnSalesedResults()
+    public async Task GetTaxClassList_WithSortBy_ShouldReturnSortedResults()
     {
         // Arrange
         await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);

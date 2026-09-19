@@ -173,7 +173,6 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
     /// not guess by reflecting over every scalar property — that produced one round-trip per property
     /// and wrongly rejected rows that merely shared a value in an unrelated column.
     /// </summary>
-    public virtual Task<bool> IsUniqueAsync(T entity, Guid? id = null) => Task.FromResult(true);
 
     // Transaction support methods
     public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)

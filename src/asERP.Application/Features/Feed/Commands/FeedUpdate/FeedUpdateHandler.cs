@@ -26,8 +26,6 @@ public class FeedUpdateHandler : IRequestHandler<FeedUpdateCommand, Result<Guid>
     {
         _logger.LogInformation("Updating feed with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         Domain.Entities.Feed existing;
         try
         {
@@ -35,8 +33,7 @@ public class FeedUpdateHandler : IRequestHandler<FeedUpdateCommand, Result<Guid>
         }
         catch (NotFoundException)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Feed.NotFound, $"Feed with ID {request.Id} not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Feed.NotFound, $"Feed with ID {request.Id} not found");
         }
 
         existing.Name = request.Name;
@@ -49,12 +46,8 @@ public class FeedUpdateHandler : IRequestHandler<FeedUpdateCommand, Result<Guid>
 
         await _feedRepository.UpdateAsync(existing);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = existing.Id;
-
         _logger.LogInformation("Successfully updated feed with ID: {Id}", existing.Id);
 
-        return result;
+        return Result<Guid>.Ok(existing.Id);
     }
 }

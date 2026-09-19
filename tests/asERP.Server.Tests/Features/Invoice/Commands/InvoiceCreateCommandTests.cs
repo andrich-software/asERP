@@ -82,45 +82,45 @@ public class InvoiceCreateCommandTests : IDisposable
             using var document = JsonDocument.Parse(content);
             var root = document.RootElement;
 
-            var manualResult = new Result<Guid?>
-            {
-                Status = TryGetPropertyCaseInsensitive(root, "status", out var statusElement) && statusElement.TryGetInt32(out var statusValue)
-                    ? (ResultStatus)statusValue
-                    : ResultStatus.Ok,
-                Succeeded = TryGetPropertyCaseInsensitive(root, "succeeded", out var succeededElement) && succeededElement.ValueKind is JsonValueKind.True or JsonValueKind.False
-                    ? succeededElement.GetBoolean()
-                    : false
-            };
-
+            // A Result is immutable, so everything is gathered first and handed to the initialiser.
+            var messages = new List<string>();
             if (TryGetPropertyCaseInsensitive(root, "messages", out var messagesElement) && messagesElement.ValueKind == JsonValueKind.Array)
             {
                 foreach (var messageElement in messagesElement.EnumerateArray())
                 {
                     if (messageElement.ValueKind == JsonValueKind.String)
                     {
-                        manualResult.Messages.Add(messageElement.GetString() ?? string.Empty);
+                        messages.Add(messageElement.GetString() ?? string.Empty);
                     }
                 }
             }
 
+            Guid? data = null;
             if (TryGetPropertyCaseInsensitive(root, "data", out var dataElement) && dataElement.ValueKind != JsonValueKind.Null)
             {
                 if (dataElement.ValueKind == JsonValueKind.String)
                 {
                     if (Guid.TryParse(dataElement.GetString(), out var parsedGuid))
                     {
-                        manualResult.Data = parsedGuid;
+                        data = parsedGuid;
                     }
                 }
-                else if (dataElement.ValueKind == JsonValueKind.Object)
+                else if (dataElement.ValueKind != JsonValueKind.Object)
                 {
-                    // Unexpected object - ignore
-                }
-                else
-                {
-                    manualResult.Data = dataElement.GetGuid();
+                    data = dataElement.GetGuid();
                 }
             }
+
+            var manualResult = new Result<Guid?>
+            {
+                Status = TryGetPropertyCaseInsensitive(root, "status", out var statusElement) && statusElement.TryGetInt32(out var statusValue)
+                    ? (ResultStatus)statusValue
+                    : ResultStatus.Ok,
+                Succeeded = TryGetPropertyCaseInsensitive(root, "succeeded", out var succeededElement) && succeededElement.ValueKind is JsonValueKind.True or JsonValueKind.False
+                    && succeededElement.GetBoolean(),
+                Messages = messages,
+                Data = data
+            };
 
             return (manualResult as T)!;
         }

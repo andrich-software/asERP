@@ -62,9 +62,18 @@ public class UserListHandler : IRequestHandler<UserListQuery, PaginatedResult<Us
 
         query = query.ApplySafeOrdering(request.SortBy, AllowedSortFields);
 
-        var result = await query.ToPaginatedListAsync(pageIndex, sanitizedPageSize);
-        result.CurrentPage = sanitizedPage;
-        result.PageSize = sanitizedPageSize;
-        return result;
+        var page = await query.ToPaginatedListAsync(pageIndex, sanitizedPageSize);
+
+        // Unlike the rest of the project this endpoint reports a one-based CurrentPage; the result
+        // is rebuilt rather than patched because a result is immutable once created.
+        return new PaginatedResult<UserListDto>(page.Data)
+        {
+            Succeeded = page.Succeeded,
+            Messages = page.Messages,
+            TotalCount = page.TotalCount,
+            TotalPages = page.TotalPages,
+            CurrentPage = sanitizedPage,
+            PageSize = sanitizedPageSize
+        };
     }
 }

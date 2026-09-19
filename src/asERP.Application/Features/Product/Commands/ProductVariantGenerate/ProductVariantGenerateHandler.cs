@@ -150,8 +150,6 @@ public class ProductVariantGenerateHandler : IRequestHandler<ProductVariantGener
         _logger.LogInformation("Generated {Count} variants for parent product {ParentProductId}",
             createdIds.Count, parent.Id);
 
-        var result = Result<List<Guid>>.Success(createdIds);
-        result.Status = ResultStatus.Created;
-        return result;
+        return Result<List<Guid>>.Created(createdIds);
     }
 }

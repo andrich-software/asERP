@@ -34,8 +34,6 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
     {
         _logger.LogInformation("Retrieving sales channel details for ID: {Id}", request.Id);
 
-        var result = new Result<SalesChannelDetailDto>();
-
         try
         {
             // Retrieve sales channel with all related details from the repository
@@ -67,22 +65,14 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
                     .ToListAsync(cancellationToken);
             }
 
-            // Set successful result with the sales channel details
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = data;
-
             _logger.LogInformation("Sales channel with ID {Id} retrieved successfully", request.Id);
+            return Result<SalesChannelDetailDto>.Ok(data);
         }
         catch (Application.Exceptions.NotFoundException)
         {
-            // Handle not found exceptions specifically
-            result.Fail(ErrorType.NotFound, ErrorCodes.SalesChannel.NotFound, $"Sales channel with ID {request.Id} not found");
-
             _logger.LogWarning("Sales channel with ID {Id} not found", request.Id);
+            return Result<SalesChannelDetailDto>.NotFound(ErrorCodes.SalesChannel.NotFound, $"Sales channel with ID {request.Id} not found");
         }
-
-        return result;
     }
 
     /// <summary>

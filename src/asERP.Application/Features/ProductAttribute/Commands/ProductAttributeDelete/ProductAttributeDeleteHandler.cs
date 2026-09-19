@@ -22,45 +22,34 @@ public class ProductAttributeDeleteHandler : IRequestHandler<ProductAttributeDel
     {
         _logger.LogInformation("Deleting product attribute with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             var attributeToDelete = await _productAttributeRepository.GetWithValuesAsync(request.Id);
 
             if (attributeToDelete == null)
             {
-                result.Fail(ErrorType.NotFound, ErrorCodes.ProductAttribute.NotFound, "ProductAttribute not found");
-
                 _logger.LogWarning("ProductAttribute with ID: {Id} not found for deletion", request.Id);
-                return result;
+                return Result<Guid>.NotFound(ErrorCodes.ProductAttribute.NotFound, "ProductAttribute not found");
             }
 
             if (await _productAttributeRepository.IsInUseAsync(request.Id))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.ProductAttribute.Invalid, "ProductAttribute is in use by variant products and cannot be deleted.");
-
                 _logger.LogWarning("ProductAttribute with ID: {Id} is in use and cannot be deleted", request.Id);
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.ProductAttribute.Invalid, "ProductAttribute is in use by variant products and cannot be deleted.");
             }
 
             // Explicit cascade: delete values then the attribute via the DbSet (the value→attribute
             // FK is Restrict, so clearing the navigation collection would throw).
             await _productAttributeRepository.DeleteWithValuesAsync(attributeToDelete);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = attributeToDelete.Id;
-
             _logger.LogInformation("Successfully deleted product attribute with ID: {Id}", attributeToDelete.Id);
+            return Result<Guid>.Ok(attributeToDelete.Id);
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.ProductAttribute.NotFound, "ProductAttribute not found");
-
             _logger.LogWarning("ProductAttribute with ID: {Id} was deleted by another request: {Message}", request.Id, ex.Message);
+            return Result<Guid>.NotFound(ErrorCodes.ProductAttribute.NotFound, "ProductAttribute not found");
         }
 
-        return result;
     }
 }

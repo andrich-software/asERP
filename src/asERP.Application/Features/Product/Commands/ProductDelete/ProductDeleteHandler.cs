@@ -68,9 +68,7 @@ public class ProductDeleteHandler : IRequestHandler<ProductDeleteCommand, Result
 
             _logger.LogInformation("Successfully deleted product with ID: {Id}", productToDelete.Id);
 
-            var result = Result<Guid>.Success(productToDelete.Id);
-            result.Status = ResultStatus.NoContent;
-            return result;
+            return Result<Guid>.NoContent(productToDelete.Id);
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
         {

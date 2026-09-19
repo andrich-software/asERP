@@ -27,8 +27,6 @@ public class ShippingLabelRetryHandler : IRequestHandler<ShippingLabelRetryComma
     {
         _logger.LogInformation("Retrying label creation for shipment {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         var existsGlobally = await _shippingRepository.ExistsGloballyAsync(request.Id);
         if (!existsGlobally)
         {
@@ -45,17 +43,11 @@ public class ShippingLabelRetryHandler : IRequestHandler<ShippingLabelRetryComma
 
         if (shipping.LabelData is { Length: > 0 })
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Shipping.Invalid, "The shipment already has a label.");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid, "The shipment already has a label.");
         }
 
         var labelResult = await _shippingCarrierService.CreateLabelAsync(request.Id, cancellationToken);
 
-        result.Succeeded = labelResult.Succeeded;
-        result.Error = labelResult.Error;
-        result.Messages.AddRange(labelResult.Messages);
-        result.Data = request.Id;
-
-        return result;
+        return Result<Guid>.From(labelResult, request.Id);
     }
 }

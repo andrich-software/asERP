@@ -27,8 +27,6 @@ public class TaxClassCreateHandler : IRequestHandler<TaxClassCreateCommand, Resu
     {
         _logger.LogInformation("Creating new tax class with tax rate: {TaxRate}", request.TaxRate);
 
-        var result = new Result<Guid>();
-
         // Manual mapping to domain entity
         var taxClassToCreate = new Domain.Entities.TaxClass
         {
@@ -38,13 +36,8 @@ public class TaxClassCreateHandler : IRequestHandler<TaxClassCreateCommand, Resu
         // Add the new tax class to the database
         await _taxClassRepository.CreateAsync(taxClassToCreate);
 
-        // Set successful result with the new tax class ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = taxClassToCreate.Id;
-
         _logger.LogInformation("Successfully created tax class with ID: {Id}", taxClassToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(taxClassToCreate.Id);
     }
 }

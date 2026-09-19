@@ -36,8 +36,6 @@ public class ShippingDeleteHandler : IRequestHandler<ShippingDeleteCommand, Resu
     {
         _logger.LogInformation("Deleting shipment with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             var existsGlobally = await _shippingRepository.ExistsGloballyAsync(request.Id);
@@ -56,8 +54,7 @@ public class ShippingDeleteHandler : IRequestHandler<ShippingDeleteCommand, Resu
 
             if (!DeletableStatuses.Contains(shipping.Status))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Shipping.Invalid, $"A shipment in status {shipping.Status} cannot be deleted. Cancel it instead.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid, $"A shipment in status {shipping.Status} cannot be deleted. Cancel it instead.");
             }
 
             var assignedItems = await _shippingRepository.GetAssignedSalesItemsAsync(shipping.Id);
@@ -71,17 +68,13 @@ public class ShippingDeleteHandler : IRequestHandler<ShippingDeleteCommand, Resu
 
             await _salesShippingStatusService.RecomputeAsync(shipping.SalesId, cancellationToken);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.NoContent;
-            result.Data = request.Id;
-
             _logger.LogInformation("Successfully deleted shipment with ID: {Id}", request.Id);
+            return Result<Guid>.NoContent(request.Id);
         }
         catch (NotFoundException)
         {
             throw;
         }
 
-        return result;
     }
 }

@@ -42,7 +42,7 @@ public class ShopDomainService : IShopDomainService
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.ShopDomains.ByChannel(salesChannelId)}";
 
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseListShopDomainListDto, ct);
 
         return response?.Data ?? new List<ShopDomainListDto>();

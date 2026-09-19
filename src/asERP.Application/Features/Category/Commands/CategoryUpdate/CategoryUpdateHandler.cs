@@ -27,13 +27,10 @@ public class CategoryUpdateHandler : IRequestHandler<CategoryUpdateCommand, Resu
     {
         _logger.LogInformation("Updating category with ID: {Id} and name: {Name}", request.Id, request.Name);
 
-        var result = new Result<Guid>();
-
         var existingCategory = await _categoryRepository.GetByIdAsync(request.Id);
         if (existingCategory == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Category.NotFound, $"Category with ID {request.Id} not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Category.NotFound, $"Category with ID {request.Id} not found");
         }
 
         existingCategory.Name = request.Name;
@@ -50,12 +47,8 @@ public class CategoryUpdateHandler : IRequestHandler<CategoryUpdateCommand, Resu
             new CategoryChangedNotification(existingCategory.Id, existingCategory.TenantId, CategoryChangeKind.Updated),
             cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = existingCategory.Id;
-
         _logger.LogInformation("Successfully updated category with ID: {Id}", existingCategory.Id);
 
-        return result;
+        return Result<Guid>.Ok(existingCategory.Id);
     }
 }

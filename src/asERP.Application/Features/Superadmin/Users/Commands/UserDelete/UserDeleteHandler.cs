@@ -44,8 +44,6 @@ public class UserDeleteHandler : IRequestHandler<UserDeleteCommand, Result<strin
     {
         _logger.LogInformation("Deleting user with ID: {Id}", request.Id);
 
-        var result = new Result<string>();
-
         // Find the user to delete by ID
         var currentTenantId = ResolveTenantId(_tenantContext.GetCurrentTenantId());
         var httpContext = _httpContextAccessor.HttpContext;
@@ -58,10 +56,8 @@ public class UserDeleteHandler : IRequestHandler<UserDeleteCommand, Result<strin
         // If user not found, return a not found result
         if (userToDelete == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, $"User with ID {request.Id} not found.");
-
             _logger.LogWarning("User with ID {0} not found", request.Id);
-            return result;
+            return Result<string>.NotFound(ErrorCodes.Superadmin.NotFound, $"User with ID {request.Id} not found.");
         }
 
         if (!currentTenantId.HasValue || currentTenantId.Value == Guid.Empty)
@@ -72,8 +68,7 @@ public class UserDeleteHandler : IRequestHandler<UserDeleteCommand, Result<strin
 
         if (!currentTenantId.HasValue || currentTenantId.Value == Guid.Empty)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid, "Tenant context is required to delete a user.");
-            return result;
+            return Result<string>.Invalid(ErrorCodes.Superadmin.Invalid, "Tenant context is required to delete a user.");
         }
 
         var isUserInCurrentTenant = userToDelete.UserTenants != null &&
@@ -81,16 +76,14 @@ public class UserDeleteHandler : IRequestHandler<UserDeleteCommand, Result<strin
 
         if (!isSuperadmin && !isUserInCurrentTenant)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, "User not found in current tenant.");
-            return result;
+            return Result<string>.NotFound(ErrorCodes.Superadmin.NotFound, "User not found in current tenant.");
         }
 
         if (!isSuperadmin)
         {
             if (string.IsNullOrWhiteSpace(currentUserId))
             {
-                result.Fail(ErrorType.Unauthorized, ErrorCodes.Superadmin.Unauthorized, "User context is required to evaluate permissions.");
-                return result;
+                return Result<string>.Unauthorized(ErrorCodes.Superadmin.Unauthorized, "User context is required to evaluate permissions.");
             }
 
             var hasPermission = await _tenantPermissionService.CanManageUsersAsync(
@@ -102,13 +95,11 @@ public class UserDeleteHandler : IRequestHandler<UserDeleteCommand, Result<strin
             {
                 // A caller without permission must not learn whether the user exists in this tenant,
                 // hence the two shapes.
-                result.Fail(
-                    isUserInCurrentTenant ? ErrorType.Forbidden : ErrorType.NotFound,
-                    isUserInCurrentTenant ? ErrorCodes.Superadmin.Forbidden : ErrorCodes.Superadmin.NotFound,
-                    isUserInCurrentTenant
-                        ? "You do not have permission to delete users for this tenant."
-                        : "User not found in current tenant.");
-                return result;
+                return isUserInCurrentTenant
+                    ? Result<string>.Forbidden(ErrorCodes.Superadmin.Forbidden,
+                        "You do not have permission to delete users for this tenant.")
+                    : Result<string>.NotFound(ErrorCodes.Superadmin.NotFound,
+                        "User not found in current tenant.");
             }
         }
 
@@ -120,31 +111,22 @@ public class UserDeleteHandler : IRequestHandler<UserDeleteCommand, Result<strin
         }
         catch (DbUpdateConcurrencyException)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, "User not found in current tenant.");
-            return result;
+            return Result<string>.NotFound(ErrorCodes.Superadmin.NotFound, "User not found in current tenant.");
         }
 
         // If deletion fails, return an error result with the error descriptions
         if (!deleteResult.Succeeded)
         {
-            result.Fail(ErrorType.Unexpected, ErrorCodes.Superadmin.Unexpected);
-            result.Messages.AddRange(deleteResult.Errors.Select(e => e.Description));
-
             _logger.LogError("Error deleting user {0}: {1}",
                 request.Id,
                 string.Join(", ", deleteResult.Errors.Select(e => e.Description)));
 
-            return result;
+            return Result<string>.Failure(ErrorType.Unexpected, ErrorCodes.Superadmin.Unexpected, deleteResult.Errors.Select(e => e.Description));
         }
-
-        // Set successful result with the deleted user's ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.NoContent;
-        result.Data = userToDelete.Id;
 
         _logger.LogInformation("User {0} deleted successfully", userToDelete.Id);
 
-        return result;
+        return Result<string>.NoContent(userToDelete.Id);
     }
 
     private Guid? ResolveTenantId(Guid? currentTenantId)

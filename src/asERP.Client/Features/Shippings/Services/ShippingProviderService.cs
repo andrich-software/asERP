@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using asERP.Client.Core.Constants;
+using asERP.Client.Core.Extensions;
 using asERP.Client.Core.Json;
 using asERP.Client.Core.Models;
 using asERP.Client.Features.Auth.Services;
@@ -38,7 +39,7 @@ public class ShippingProviderService : IShippingProviderService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseShippingProviderListDto, ct);
 
             if (response?.Succeeded != true)

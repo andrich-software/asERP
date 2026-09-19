@@ -51,7 +51,7 @@ public class SuperadminTenantService : ISuperadminTenantService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseTenantListDto, ct);
 
             if (response?.Succeeded != true)
@@ -81,7 +81,7 @@ public class SuperadminTenantService : ISuperadminTenantService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Superadmin.TenantById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseTenantDetailDto, ct);
+        var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.ApiResponseTenantDetailDto, ct);
         return apiResponse?.Data;
     }
 
@@ -94,7 +94,7 @@ public class SuperadminTenantService : ISuperadminTenantService
 
         try
         {
-            var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseSuperadminTenantDetailDto, ct);
+            var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.ApiResponseSuperadminTenantDetailDto, ct);
             return apiResponse?.Data;
         }
         catch (Exception ex)
@@ -148,7 +148,7 @@ public class SuperadminTenantService : ISuperadminTenantService
 
         try
         {
-            var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.PaginatedResponseUserListDto, ct);
+            var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.PaginatedResponseUserListDto, ct);
             return apiResponse?.Data ?? new List<UserListDto>();
         }
         catch (Exception ex)

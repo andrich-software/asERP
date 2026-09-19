@@ -49,7 +49,7 @@ public class CustomerService : ICustomerService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseCustomerListDto, ct);
 
             if (response?.Succeeded != true)
@@ -84,7 +84,7 @@ public class CustomerService : ICustomerService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseCustomerListWithAddressDto, ct);
 
             if (response?.Succeeded != true)
@@ -107,7 +107,7 @@ public class CustomerService : ICustomerService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Customers.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.ApiResponseCustomerDetailDto, ct);
+        var apiResponse = await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.ApiResponseCustomerDetailDto, ct);
         return apiResponse?.Data;
     }
 

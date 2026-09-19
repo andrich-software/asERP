@@ -43,8 +43,6 @@ public class UserCreateHandler : IRequestHandler<UserCreateCommand, Result<strin
     {
         _logger.LogInformation("Creating new user with email: {Email}", request.Email);
 
-        var result = new Result<string>();
-
         var httpContext = _httpContextAccessor.HttpContext;
         var currentUser = httpContext?.User;
         var currentUserId = httpContext.GetUserId() ?? string.Empty;
@@ -57,8 +55,7 @@ public class UserCreateHandler : IRequestHandler<UserCreateCommand, Result<strin
 
         if (!desiredDefaultTenantId.HasValue || desiredDefaultTenantId.Value == Guid.Empty)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid, "Default tenant is required to create a user.");
-            return result;
+            return Result<string>.Invalid(ErrorCodes.Superadmin.Invalid, "Default tenant is required to create a user.");
         }
 
         request.DefaultTenantId = desiredDefaultTenantId.Value;
@@ -73,16 +70,14 @@ public class UserCreateHandler : IRequestHandler<UserCreateCommand, Result<strin
 
         if (!await _userRepository.TenantsExistAsync(allTenantIds))
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid, "One or more provided tenant IDs do not exist.");
-            return result;
+            return Result<string>.Invalid(ErrorCodes.Superadmin.Invalid, "One or more provided tenant IDs do not exist.");
         }
 
         if (!isSuperadmin)
         {
             if (string.IsNullOrWhiteSpace(currentUserId))
             {
-                result.Fail(ErrorType.Unauthorized, ErrorCodes.Superadmin.Unauthorized, "User context is required to evaluate permissions.");
-                return result;
+                return Result<string>.Unauthorized(ErrorCodes.Superadmin.Unauthorized, "User context is required to evaluate permissions.");
             }
 
             foreach (var tenantId in allTenantIds.Distinct())
@@ -94,8 +89,7 @@ public class UserCreateHandler : IRequestHandler<UserCreateCommand, Result<strin
 
                 if (!hasPermission)
                 {
-                    result.Fail(ErrorType.Forbidden, ErrorCodes.Superadmin.Forbidden, "You do not have permission to create users for this tenant.");
-                    return result;
+                    return Result<string>.Forbidden(ErrorCodes.Superadmin.Forbidden, "You do not have permission to create users for this tenant.");
                 }
             }
         }
@@ -120,9 +114,8 @@ public class UserCreateHandler : IRequestHandler<UserCreateCommand, Result<strin
         if (createResult.Any())
         {
             // Creation failed, return errors
-            result.Fail(ErrorType.Validation, ErrorCodes.Superadmin.Invalid);
-            result.Messages.AddRange(createResult.Select(e => e.Description));
-            return result;
+            return Result<string>.Failure(ErrorType.Validation, ErrorCodes.Superadmin.Invalid,
+                createResult.Select(e => e.Description));
         }
 
         // Assign user to tenants
@@ -131,15 +124,10 @@ public class UserCreateHandler : IRequestHandler<UserCreateCommand, Result<strin
             allTenantIds,
             request.DefaultTenantId);
 
-        // Set successful result with the new user's ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = userToCreate.Id;
-
         _logger.LogInformation("Successfully created user with ID: {Id} and assigned to {TenantCount} tenants",
             userToCreate.Id, allTenantIds.Count);
 
-        return result;
+        return Result<string>.Created(userToCreate.Id);
     }
 
     private Guid? ResolveTenantId(Guid? currentTenantId)

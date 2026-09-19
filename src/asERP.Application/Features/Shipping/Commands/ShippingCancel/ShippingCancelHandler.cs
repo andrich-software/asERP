@@ -35,7 +35,8 @@ public class ShippingCancelHandler : IRequestHandler<ShippingCancelCommand, Resu
     {
         _logger.LogInformation("Cancelling shipment with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
+        // Best-effort carrier warnings collected along the way; they ride along on the result.
+        var warnings = new List<string>();
 
         try
         {
@@ -55,8 +56,7 @@ public class ShippingCancelHandler : IRequestHandler<ShippingCancelCommand, Resu
 
             if (shipping.Status is ShippingStatus.Delivered or ShippingStatus.Cancelled)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Shipping.Invalid, $"A shipment in status {shipping.Status} cannot be cancelled.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.Shipping.Invalid, $"A shipment in status {shipping.Status} cannot be cancelled.");
             }
 
             // Void at the carrier is best effort — a failed void must not block the local cancel.
@@ -67,7 +67,7 @@ public class ShippingCancelHandler : IRequestHandler<ShippingCancelCommand, Resu
                 {
                     _logger.LogWarning("Carrier-side cancel failed for shipment {Id}: {Messages}",
                         shipping.Id, string.Join("; ", cancelResult.Messages));
-                    result.Messages.AddRange(cancelResult.Messages);
+                    warnings.AddRange(cancelResult.Messages);
                 }
             }
 
@@ -82,10 +82,7 @@ public class ShippingCancelHandler : IRequestHandler<ShippingCancelCommand, Resu
 
             if (!statusResult.Succeeded)
             {
-                result.Succeeded = false;
-                result.Error = statusResult.Error;
-                result.Messages.AddRange(statusResult.Messages);
-                return result;
+                return Result<Guid>.From(statusResult, request.Id, warnings);
             }
 
             // Free the order lines for a replacement shipment.
@@ -99,17 +96,12 @@ public class ShippingCancelHandler : IRequestHandler<ShippingCancelCommand, Resu
 
             await _salesShippingStatusService.RecomputeAsync(shipping.SalesId, cancellationToken);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = shipping.Id;
-
             _logger.LogInformation("Successfully cancelled shipment with ID: {Id}", shipping.Id);
+            return Result<Guid>.Ok(shipping.Id, warnings);
         }
         catch (NotFoundException)
         {
             throw;
         }
-
-        return result;
     }
 }

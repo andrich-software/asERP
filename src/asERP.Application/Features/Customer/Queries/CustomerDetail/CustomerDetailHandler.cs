@@ -29,18 +29,14 @@ public class CustomerDetailHandler : IRequestHandler<CustomerDetailQuery, Result
     {
         _logger.LogInformation("Retrieving customer details for ID: {Id}", request.Id);
 
-        var result = new Result<CustomerDetailDto>();
-
         // Retrieve customer with all related details from the repository
         var customer = await _customerRepository.GetCustomerWithDetails(request.Id);
 
         // If customer not found, return a not found result
         if (customer == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Customer.NotFound, $"Customer with ID {request.Id} not found");
-
             _logger.LogWarning("Customer with ID {Id} not found", request.Id);
-            return result;
+            return Result<CustomerDetailDto>.NotFound(ErrorCodes.Customer.NotFound, $"Customer with ID {request.Id} not found");
         }
 
         // Manual mapping instead of using AutoMapper
@@ -75,13 +71,8 @@ public class CustomerDetailHandler : IRequestHandler<CustomerDetailQuery, Result
             }).ToList() ?? new List<CustomerAddressListDto>()
         };
 
-        // Set successful result with the customer details
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
         _logger.LogInformation("Customer with ID {Id} retrieved successfully", request.Id);
 
-        return result;
+        return Result<CustomerDetailDto>.Ok(data);
     }
 }

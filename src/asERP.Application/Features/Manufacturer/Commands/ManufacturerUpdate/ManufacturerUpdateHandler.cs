@@ -22,15 +22,12 @@ public class ManufacturerUpdateHandler : IRequestHandler<ManufacturerUpdateComma
     {
         _logger.LogInformation("Updating manufacturer with ID: {Id}, Name: {Name}", request.Id, request.Name);
 
-        var result = new Result<Guid>();
-
         // Load existing manufacturer from database
         var existingManufacturer = await _manufacturerRepository.GetByIdAsync(request.Id);
 
         if (existingManufacturer == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Manufacturer.NotFound, $"Manufacturer with ID {request.Id} not found");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Manufacturer.NotFound, $"Manufacturer with ID {request.Id} not found");
         }
 
         // Update only the provided fields, preserving system fields like TenantId, DateCreated, etc.
@@ -48,12 +45,8 @@ public class ManufacturerUpdateHandler : IRequestHandler<ManufacturerUpdateComma
         // Update in database
         await _manufacturerRepository.UpdateAsync(existingManufacturer);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = existingManufacturer.Id;
-
         _logger.LogInformation("Successfully updated manufacturer with ID: {Id}", existingManufacturer.Id);
 
-        return result;
+        return Result<Guid>.Ok(existingManufacturer.Id);
     }
 }

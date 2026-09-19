@@ -40,26 +40,6 @@ public class ProductUpdateHandler : IRequestHandler<ProductUpdateCommand, Result
     {
         _logger.LogInformation("Updating product with ID: {Id}", request.Id);
 
-        // Validate incoming data
-        var validator = new ProductUpdateValidator(_productRepository, _taxClassRepository, _manufacturerRepository);
-        var validationResult = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validationResult.IsValid)
-        {
-            var validationErrors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-
-            _logger.LogWarning("Validation errors in update request for {0}: {1}",
-                nameof(ProductUpdateCommand), validationErrors);
-
-            // Check if the validation error is about product not found
-            if (validationResult.Errors.Any(e => e.ErrorMessage.Contains("Product not found")))
-            {
-                return Result<Guid>.NotFound(ErrorCodes.Product.NotFound, validationErrors);
-            }
-
-            return Result<Guid>.Invalid(ErrorCodes.Product.Invalid, validationErrors);
-        }
-
         // Load existing product incl. variant axes/options for tracking
         var productToUpdate = await _productRepository.GetWithDetailsAsync(request.Id);
 
@@ -67,6 +47,21 @@ public class ProductUpdateHandler : IRequestHandler<ProductUpdateCommand, Result
         {
             _logger.LogWarning("Product with ID {Id} not found for update", request.Id);
             return Result<Guid>.NotFound(ErrorCodes.Product.NotFound, "Product not found.");
+        }
+
+        // Referenced rows are checked here rather than in the validator: they are 400s, while the
+        // product itself is a 404, and the product check has to come first so a request that cannot
+        // see the product at all (wrong or missing tenant) is answered as "not found".
+        if (!await _taxClassRepository.ExistsAsync(request.TaxClassId))
+        {
+            _logger.LogWarning("Tax class {TaxClassId} does not exist for product update", request.TaxClassId);
+            return Result<Guid>.Invalid(ErrorCodes.Product.Invalid, "Tax class does not exist.");
+        }
+
+        if (request.ManufacturerId.HasValue && !await _manufacturerRepository.ExistsAsync(request.ManufacturerId.Value))
+        {
+            _logger.LogWarning("Manufacturer {ManufacturerId} does not exist for product update", request.ManufacturerId);
+            return Result<Guid>.Invalid(ErrorCodes.Product.Invalid, "Manufacturer does not exist.");
         }
 
         // Cross-entity variant rules: type transitions and variant option sets

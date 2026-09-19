@@ -22,26 +22,18 @@ public class SuperadminDeleteHandler : IRequestHandler<SuperadminDeleteCommand, 
     {
         _logger.LogInformation("Deleting tenant with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         var tenantToDelete = await _tenantRepository.GetByIdAsync(request.Id);
 
         if (tenantToDelete == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Superadmin.NotFound, "Tenant not found.");
-
             _logger.LogWarning("Tenant with ID {Id} not found for deletion", request.Id);
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Superadmin.NotFound, "Tenant not found.");
         }
 
         await _tenantRepository.DeleteAsync(tenantToDelete);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = tenantToDelete.Id;
-
         _logger.LogInformation("Successfully deleted tenant with ID: {Id}", tenantToDelete.Id);
 
-        return result;
+        return Result<Guid>.Ok(tenantToDelete.Id);
     }
 }

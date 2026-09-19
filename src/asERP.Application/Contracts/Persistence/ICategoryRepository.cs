@@ -24,4 +24,11 @@ public interface ICategoryRepository : IGenericRepository<Category>
     Task<IReadOnlyList<CategorySalesChannel>> ApplyChannelActivationAsync(
         IReadOnlyList<CategoryChannelActivationChange> changes,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// True when no other Category in the current tenant collides with this one.
+    /// Declared per repository on purpose: a uniqueness rule that silently does
+    /// nothing is worse than none, so there is no inherited default to forget.
+    /// </summary>
+    Task<bool> IsUniqueAsync(Category entity, Guid? id = null);
 }

@@ -89,8 +89,6 @@ public class ProductImageUploadHandler : IRequestHandler<ProductImageUploadComma
 
         _logger.LogInformation("Created image {ImageId} for product {ProductId}", image.Id, request.ProductId);
 
-        var result = Result<ProductImageDto>.Success(ProductImageMapping.ToDto(image));
-        result.Status = ResultStatus.Created;
-        return result;
+        return Result<ProductImageDto>.Created(ProductImageMapping.ToDto(image));
     }
 }

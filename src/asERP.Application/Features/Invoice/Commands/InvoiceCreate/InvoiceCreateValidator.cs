@@ -26,7 +26,7 @@ public class InvoiceCreateValidator : InvoiceBaseValidator<InvoiceCreateCommand>
 
         // Add validation rule for unique invoice numbers
         RuleFor(q => q.InvoiceNumber)
-            .MustAsync(InvoiceNumberUniqueAsync).WithMessage("Eine Rechnung mit dieser Nummer existiert bereits.");
+            .MustAsync(InvoiceNumberUniqueAsync).WithMessage("An invoice with this number already exists.");
     }
 
     /// <summary>

@@ -10,10 +10,9 @@ public class AiModelRepository : GenericRepository<AiModel>, IAiModelRepository
 {
     public AiModelRepository(ApplicationDbContext context, ITenantContext tenantContext) : base(context, tenantContext)
     {
-
     }
 
-    public override async Task<bool> IsUniqueAsync(AiModel entity, Guid? id = null)
+    public async Task<bool> IsUniqueAsync(AiModel entity, Guid? id = null)
     {
         var currentTenantId = TenantContext.GetCurrentTenantId();
 

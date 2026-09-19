@@ -24,7 +24,6 @@ public class AiPromptUpdateValidator : AiPromptBaseValidator<AiPromptUpdateComma
             .MustAsync(ValidateAiModelTenantAccessAsync).WithMessage("AI Model not found or does not belong to current tenant.");
     }
 
-
     private async Task<bool> IsUniqueAsync(AiPromptUpdateCommand command, CancellationToken cancellationToken)
     {
         var aIPrompt = new Domain.Entities.AiPrompt

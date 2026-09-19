@@ -27,16 +27,12 @@ public class TenantUpdateHandler : IRequestHandler<TenantUpdateCommand, Result<G
         _logger.LogInformation("User {UserId} is updating tenant {TenantId} with name: {Name}",
             request.UserId, request.TenantId, request.Name);
 
-        var result = new Result<Guid>();
-
         var tenantToUpdate = await _tenantRepository.GetByIdAsync(request.TenantId);
 
         if (tenantToUpdate == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Tenant.NotFound, "Tenant not found.");
-
             _logger.LogWarning("Tenant with ID {TenantId} not found for update", request.TenantId);
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Tenant.NotFound, "Tenant not found.");
         }
 
         // Update tenant properties
@@ -65,12 +61,8 @@ public class TenantUpdateHandler : IRequestHandler<TenantUpdateCommand, Result<G
 
         await _tenantRepository.UpdateAsync(tenantToUpdate);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = tenantToUpdate.Id;
-
         _logger.LogInformation("Successfully updated tenant with ID: {Id}", tenantToUpdate.Id);
 
-        return result;
+        return Result<Guid>.Ok(tenantToUpdate.Id);
     }
 }

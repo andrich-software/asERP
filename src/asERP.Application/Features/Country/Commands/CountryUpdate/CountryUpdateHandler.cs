@@ -22,16 +22,12 @@ public class CountryUpdateHandler : IRequestHandler<CountryUpdateCommand, Result
     {
         _logger.LogInformation("Updating country with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         // Get the country for tracking (required for update)
         var countryToUpdate = await _countryRepository.GetByIdAsync(request.Id, true);
         if (countryToUpdate == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Country.NotFound, "Country not found or access denied due to tenant isolation.");
-
             _logger.LogWarning("Country with ID {Id} not found or access denied due to tenant isolation", request.Id);
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Country.NotFound, "Country not found or access denied due to tenant isolation.");
         }
 
         // Update the existing entity properties
@@ -41,12 +37,8 @@ public class CountryUpdateHandler : IRequestHandler<CountryUpdateCommand, Result
         // Update in database
         await _countryRepository.UpdateAsync(countryToUpdate);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = countryToUpdate.Id;
-
         _logger.LogInformation("Successfully updated country with ID: {Id}", countryToUpdate.Id);
 
-        return result;
+        return Result<Guid>.Ok(countryToUpdate.Id);
     }
 }

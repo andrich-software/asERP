@@ -28,26 +28,19 @@ public class TenantDeleteHandler : IRequestHandler<TenantDeleteCommand, Result<G
         _logger.LogInformation("User {UserId} is deleting tenant {TenantId}",
             request.UserId, request.TenantId);
 
-        var result = new Result<Guid>();
-
         try
         {
             await _tenantRepository.DeleteTenantWithCascadeAsync(request.TenantId, cancellationToken);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.NoContent;
-            result.Data = request.TenantId;
-
             _logger.LogInformation("Successfully deleted tenant with ID: {TenantId}", request.TenantId);
+            return Result<Guid>.NoContent(request.TenantId);
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Tenant.NotFound, "Tenant was already deleted by another request");
-
             _logger.LogWarning("Tenant with ID: {TenantId} was deleted by another request: {Message}",
                 request.TenantId, ex.Message);
+            return Result<Guid>.NotFound(ErrorCodes.Tenant.NotFound, "Tenant was already deleted by another request");
         }
 
-        return result;
     }
 }

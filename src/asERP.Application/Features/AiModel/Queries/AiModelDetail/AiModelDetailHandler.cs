@@ -28,18 +28,14 @@ public class AiModelDetailHandler : IRequestHandler<AiModelDetailQuery, Result<A
     {
         _logger.LogInformation("Retrieving AI model details for ID: {Id}", request.Id);
 
-        var result = new Result<AiModelDetailDto>();
-
         // Retrieve AI model with all related details from the repository
         var aiModel = await _aiModelRepository.GetByIdAsync(request.Id, true);
 
         // If AI model not found, return a not found result
         if (aiModel == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.AiModel.NotFound, $"AI model with ID {request.Id} not found");
-
             _logger.LogWarning("AI model with ID {Id} not found", request.Id);
-            return result;
+            return Result<AiModelDetailDto>.NotFound(ErrorCodes.AiModel.NotFound, $"AI model with ID {request.Id} not found");
         }
 
         // Manual mapping instead of using AutoMapper
@@ -57,13 +53,8 @@ public class AiModelDetailHandler : IRequestHandler<AiModelDetailQuery, Result<A
             NCtx = aiModel.NCtx
         };
 
-        // Set successful result with the AI model details
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = data;
-
         _logger.LogInformation("AI model with ID {Id} retrieved successfully", request.Id);
 
-        return result;
+        return Result<AiModelDetailDto>.Ok(data);
     }
 }

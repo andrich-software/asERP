@@ -223,7 +223,7 @@ public class ManufacturerListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetManufacturers_WithSortByName_ShouldReturnSalesedResults()
+    public async Task GetManufacturers_WithSortByName_ShouldReturnSortedResults()
     {
         await SeedManufacturerTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -243,7 +243,7 @@ public class ManufacturerListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetManufacturers_WithSortByNameDescending_ShouldReturnDescSalesedResults()
+    public async Task GetManufacturers_WithSortByNameDescending_ShouldReturnDescSortedResults()
     {
         await SeedManufacturerTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);
@@ -263,7 +263,7 @@ public class ManufacturerListQueryTests : TenantIsolatedTestBase
     }
 
     [Fact]
-    public async Task GetManufacturers_WithSortByCity_ShouldReturnCitySalesedResults()
+    public async Task GetManufacturers_WithSortByCity_ShouldReturnCitySortedResults()
     {
         await SeedManufacturerTestDataAsync();
         SetTenantHeader(TenantConstants.TestTenant1Id);

@@ -71,7 +71,7 @@ public class ShippingService : IShippingService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseShipmentListItemDto, ct);
 
             if (response?.Succeeded != true)
@@ -94,7 +94,7 @@ public class ShippingService : IShippingService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Shippings.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(
+        var apiResponse = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseShippingDetailDto, ct);
         return apiResponse?.Data;
     }
@@ -119,7 +119,7 @@ public class ShippingService : IShippingService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Saless.ShippableItems(salesId)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(
+        var apiResponse = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseListShippableSalesItemDto, ct);
         return apiResponse?.Data ?? new List<ShippableSalesItemDto>();
     }
@@ -129,7 +129,7 @@ public class ShippingService : IShippingService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Saless.ReadyToShip}?pageNumber={pageNumber}&pageSize={pageSize}";
-        var response = await _httpClient.GetFromJsonAsync(
+        var response = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.PaginatedResponseSalesReadyToShipListDto, ct);
         return response ?? new PaginatedResponse<SalesReadyToShipListDto>();
     }
@@ -140,7 +140,7 @@ public class ShippingService : IShippingService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Saless.ShippingOptions(salesId)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(
+        var apiResponse = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseListApplicableShippingRateDto, ct);
         return apiResponse ?? new ApiResponse<List<ApplicableShippingRateDto>>();
     }

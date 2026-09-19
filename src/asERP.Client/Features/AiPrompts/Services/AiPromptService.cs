@@ -49,7 +49,7 @@ public class AiPromptService : IAiPromptService
 
         try
         {
-            var response = await _httpClient.GetFromJsonAsync(
+            var response = await _httpClient.GetFromApiAsync(
                 url, AppJsonSerializerContext.Default.PaginatedResponseAiPromptListDto, ct);
 
             if (response?.Succeeded != true)
@@ -84,7 +84,7 @@ public class AiPromptService : IAiPromptService
 
         try
         {
-            return await _httpClient.GetFromJsonAsync(url, AppJsonSerializerContext.Default.AiPromptDetailDto, ct);
+            return await _httpClient.GetFromApiAsync(url, AppJsonSerializerContext.Default.AiPromptDetailDto, ct);
         }
         catch (Exception ex)
         {

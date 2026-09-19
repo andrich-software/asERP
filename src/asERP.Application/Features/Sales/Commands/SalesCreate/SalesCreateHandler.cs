@@ -30,8 +30,6 @@ public class SalesCreateHandler : IRequestHandler<SalesCreateCommand, Result<Gui
     {
         _logger.LogInformation("Creating new sales with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         // Auto-generate SalesId if not provided
         var salesId = request.SalesId;
         if (salesId == 0)
@@ -82,13 +80,8 @@ public class SalesCreateHandler : IRequestHandler<SalesCreateCommand, Result<Gui
         // Add the new sales to the database
         await _salesRepository.CreateAsync(salesToCreate);
 
-        // Set successful result with the new sales ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = salesToCreate.Id;
-
         _logger.LogInformation("Successfully created sales with ID: {Id}", salesToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(salesToCreate.Id);
     }
 }

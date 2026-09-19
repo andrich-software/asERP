@@ -116,7 +116,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
         if (!_serverInfoService.IsRegistrationEnabled)
         {
             _logger.LogWarning("Registration attempt rejected — registration is disabled on this server.");
-            return Result<LoginResponseDto>.Forbidden(ErrorCodes.Auth.Forbidden, "Die Registrierung ist auf diesem Server deaktiviert.");
+            return Result<LoginResponseDto>.Forbidden(ErrorCodes.Auth.Forbidden, "Registration is disabled on this server.");
         }
 
         var user = new ApplicationUser
@@ -272,7 +272,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
         if (stored == null)
         {
             _logger.LogWarning("Refresh attempt with unknown token hash");
-            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Refresh-Token ungültig.");
+            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Refresh token is invalid.");
         }
 
         // Replay detection: a previously-revoked token is being presented again.
@@ -281,7 +281,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
         {
             _logger.LogWarning("Refresh-token replay detected for family {Family} (user {UserId}) — revoking family", stored.Family, stored.UserId);
             await _refreshTokenRepository.RevokeFamilyAsync(stored.Family, DateTime.UtcNow);
-            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Refresh-Token ungültig.");
+            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Refresh token is invalid.");
         }
 
         if (stored.ExpiresAt <= DateTime.UtcNow)
@@ -292,7 +292,7 @@ public class AuthService : asERP.Application.Contracts.Identity.IAuthService
         var user = await _userManager.FindByIdAsync(stored.UserId);
         if (user == null)
         {
-            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "Benutzer nicht gefunden.");
+            return Result<LoginResponseDto>.Unauthorized(ErrorCodes.Auth.Unauthorized, "User not found.");
         }
 
         var availableTenants = await _userTenantService.GetUserTenantsAsync(user.Id);

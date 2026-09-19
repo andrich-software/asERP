@@ -26,8 +26,6 @@ public class ShippingProviderRateUpdateHandler : IRequestHandler<ShippingProvide
     {
         _logger.LogInformation("Updating shipping option with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         try
         {
             var existsGlobally = await _shippingProviderRateRepository.ExistsGloballyAsync(request.Id);
@@ -47,8 +45,7 @@ public class ShippingProviderRateUpdateHandler : IRequestHandler<ShippingProvide
             // A shipping option cannot move to another carrier — its shipments were booked against this one.
             if (rateToUpdate.ShippingProviderId != request.ShippingProviderId)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.ShippingProviderRate.Invalid, "The shipping provider of an option cannot be changed. Create a new option instead.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.ShippingProviderRate.Invalid, "The shipping provider of an option cannot be changed. Create a new option instead.");
             }
 
             rateToUpdate.Name = request.Name;
@@ -67,17 +64,13 @@ public class ShippingProviderRateUpdateHandler : IRequestHandler<ShippingProvide
             await _shippingProviderRateRepository.UpdateAsync(rateToUpdate);
             await _shippingProviderRateRepository.ReplaceAllowedCountriesAsync(rateToUpdate.Id, request.AllowedCountryIds);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = rateToUpdate.Id;
-
             _logger.LogInformation("Successfully updated shipping option with ID: {Id}", rateToUpdate.Id);
+            return Result<Guid>.Ok(rateToUpdate.Id);
         }
         catch (NotFoundException)
         {
             throw;
         }
 
-        return result;
     }
 }

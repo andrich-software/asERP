@@ -17,7 +17,6 @@ public class SalesUpdateHandler : IRequestHandler<SalesUpdateCommand, Result<Gui
     private readonly IInvoiceRepository _invoiceRepository;
     private readonly IPdfService _pdfService;
 
-
     public SalesUpdateHandler(
         IAppLogger<SalesUpdateHandler> logger,
         ISalesRepository salesRepository,
@@ -36,7 +35,8 @@ public class SalesUpdateHandler : IRequestHandler<SalesUpdateCommand, Result<Gui
     {
         _logger.LogInformation("Updating sales with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
+        // Notes worth returning even though the update itself succeeded.
+        var warnings = new List<string>();
 
         try
         {
@@ -62,9 +62,8 @@ public class SalesUpdateHandler : IRequestHandler<SalesUpdateCommand, Result<Gui
             var customer = await _customerRepository.GetByCustomerIdAsync(request.CustomerId);
             if (customer == null)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Sales.Invalid, "The specified customer does not exist or does not belong to your tenant.");
                 _logger.LogWarning("Cross-tenant customer access attempt for customer {CustomerId}", request.CustomerId);
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.Sales.Invalid, "The specified customer does not exist or does not belong to your tenant.");
             }
 
             // Load the tracked entity and mutate it, so the persistence layer keeps
@@ -139,24 +138,19 @@ public class SalesUpdateHandler : IRequestHandler<SalesUpdateCommand, Result<Gui
                     // Invoice creation must not silently succeed: surface a warning to the caller
                     // (compliance-relevant in an ERP) and log the full exception server-side.
                     _logger.LogError(ex, "Error creating invoice for sales ID {Id}", salesToUpdate.Id);
-                    result.Messages.Add("The sales order was updated, but the invoice could not be created. Please create it manually.");
+                    warnings.Add("The sales order was updated, but the invoice could not be created. Please create it manually.");
                 }
             }
 
             await transaction.CommitAsync(cancellationToken);
 
-            result.Succeeded = true;
-            result.Status = ResultStatus.Ok;
-            result.Data = salesToUpdate.Id;
-
             _logger.LogInformation("Successfully updated sales with ID: {Id}", salesToUpdate.Id);
+            return Result<Guid>.Ok(salesToUpdate.Id, warnings);
         }
         catch (NotFoundException)
         {
             // Let NotFoundException bubble up to middleware for proper 404 handling
             throw;
         }
-
-        return result;
     }
 }

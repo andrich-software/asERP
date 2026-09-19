@@ -43,8 +43,6 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
         _logger.LogInformation("Creating shipment for sales {SalesId} with rate {RateId}",
             request.SalesId, request.ShippingProviderRateId);
 
-        var result = new Result<Guid>();
-
         var rate = await _shippingProviderRateRepository.GetWithCountriesAsync(request.ShippingProviderRateId);
         if (rate == null)
         {
@@ -165,9 +163,8 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
 
         await transaction.CommitAsync(cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = shippingToCreate.Id;
+        // Label problems are reported alongside the created shipment, never instead of it.
+        var warnings = new List<string>();
 
         if (request.RequestLabel)
         {
@@ -177,13 +174,13 @@ public class ShippingCreateHandler : IRequestHandler<ShippingCreateCommand, Resu
             var labelResult = await _shippingCarrierService.CreateLabelAsync(shippingToCreate.Id, cancellationToken);
             if (!labelResult.Succeeded)
             {
-                result.Messages.AddRange(labelResult.Messages);
+                warnings.AddRange(labelResult.Messages);
             }
         }
 
         _logger.LogInformation("Successfully created shipment with ID: {Id}", shippingToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(shippingToCreate.Id, warnings);
     }
 
     /// <summary>Resolves the order's delivery country via the shared resolver and checks the rate allows it.</summary>

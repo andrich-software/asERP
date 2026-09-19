@@ -32,7 +32,6 @@ public class CustomerCsvImportHandler : IRequestHandler<CustomerCsvImportCommand
     {
         _logger.LogInformation("Starting CSV import of customers, file size: {FileSize} bytes", request.CsvFile.Length);
 
-        var result = new Result<CustomerCsvImportResult>();
         var importResult = new CustomerCsvImportResult();
 
         // Read and process CSV file
@@ -79,9 +78,8 @@ public class CustomerCsvImportHandler : IRequestHandler<CustomerCsvImportCommand
         }
         catch (Exception ex)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.ImportExport.Invalid, "Error reading CSV file.");
             _logger.LogError(ex, "Error reading CSV file during customer import");
-            return result;
+            return Result<CustomerCsvImportResult>.Invalid(ErrorCodes.ImportExport.Invalid, "Error reading CSV file.");
         }
 
         importResult.TotalRows = customers.Count;
@@ -140,14 +138,10 @@ public class CustomerCsvImportHandler : IRequestHandler<CustomerCsvImportCommand
             }
         }
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = importResult;
-
         _logger.LogInformation("CSV import completed. Imported: {Imported}, Updated: {Updated}, Skipped: {Skipped}",
             importResult.ImportedCount, importResult.UpdatedCount, importResult.SkippedCount);
 
-        return result;
+        return Result<CustomerCsvImportResult>.Ok(importResult);
     }
 
     private static Domain.Entities.Customer MapCsvRecordToCustomer(CustomerCsvRecord csvRecord, Domain.Entities.Customer? existingCustomer)

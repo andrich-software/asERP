@@ -12,7 +12,7 @@ public class ManufacturerRepository : GenericRepository<Manufacturer>, IManufact
     {
     }
 
-    public override async Task<bool> IsUniqueAsync(Manufacturer entity, Guid? id = null)
+    public async Task<bool> IsUniqueAsync(Manufacturer entity, Guid? id = null)
     {
         var currentTenantId = TenantContext.GetCurrentTenantId();
 

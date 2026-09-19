@@ -41,7 +41,7 @@ public class ReturnService : IReturnService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Saless.ReturnableItems(salesId)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(
+        var apiResponse = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseListReturnableSalesItemDto, ct);
         return apiResponse?.Data ?? new List<ReturnableSalesItemDto>();
     }
@@ -63,7 +63,7 @@ public class ReturnService : IReturnService
     {
         var baseUrl = await GetBaseUrlAsync();
         var url = $"{baseUrl}{ApiEndpoints.Returns.ById(id)}";
-        var apiResponse = await _httpClient.GetFromJsonAsync(
+        var apiResponse = await _httpClient.GetFromApiAsync(
             url, AppJsonSerializerContext.Default.ApiResponseReturnShipmentDetailDto, ct);
         return apiResponse?.Data;
     }

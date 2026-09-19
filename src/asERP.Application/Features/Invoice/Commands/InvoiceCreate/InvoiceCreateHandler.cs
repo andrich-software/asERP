@@ -38,27 +38,22 @@ public class InvoiceCreateHandler : IRequestHandler<InvoiceCreateCommand, Result
     {
         _logger.LogInformation("Creating new invoice with number: {InvoiceNumber}", request.InvoiceNumber);
 
-        var result = new Result<Guid>();
-
         var currentTenantId = _tenantContext.GetCurrentTenantId();
         if (!currentTenantId.HasValue || currentTenantId == Guid.Empty)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Invoice.Invalid, "Ein Mandantenkontext ist erforderlich.");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.Invoice.Invalid, "A tenant context is required.");
         }
 
         var assignedTenantIds = _tenantContext.GetAssignedTenantIds();
         if (assignedTenantIds.Count > 0 && !assignedTenantIds.Contains(currentTenantId.Value))
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.Invoice.NotFound, "Mandant wurde nicht gefunden oder ist nicht zugewiesen.");
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.Invoice.NotFound, "Tenant not found or not assigned.");
         }
 
         var customer = await _customerRepository.GetByCustomerIdAsync(request.CustomerId);
         if (customer == null || customer.TenantId != currentTenantId.Value)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.Invoice.Invalid, "Kunde wurde nicht gefunden oder gehört zu einem anderen Mandanten.");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.Invoice.Invalid, "Customer not found or belongs to another tenant.");
         }
 
         if (request.SalesId.HasValue)
@@ -66,14 +61,12 @@ public class InvoiceCreateHandler : IRequestHandler<InvoiceCreateCommand, Result
             var relatedSales = await _salesRepository.GetByIdAsync(request.SalesId.Value);
             if (relatedSales == null || relatedSales.TenantId != currentTenantId.Value)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Invoice.Invalid, "Verkauf wurde nicht gefunden oder gehört zu einem anderen Mandanten.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.Invoice.Invalid, "Sales order not found or belongs to another tenant.");
             }
 
             if (relatedSales.CustomerId != request.CustomerId)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.Invoice.Invalid, "Die Verkauf gehört nicht zum ausgewählten Kunden.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.Invoice.Invalid, "The sales order does not belong to the selected customer.");
             }
         }
 
@@ -116,13 +109,8 @@ public class InvoiceCreateHandler : IRequestHandler<InvoiceCreateCommand, Result
         // Add the new invoice to the database
         await _invoiceRepository.CreateAsync(invoiceToCreate);
 
-        // Set successful result with the new invoice ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = invoiceToCreate.Id;
-
         _logger.LogInformation("Successfully created invoice with ID: {Id}", invoiceToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(invoiceToCreate.Id);
     }
 }

@@ -49,8 +49,6 @@ public class CustomerCreateHandler : IRequestHandler<CustomerCreateCommand, Resu
 
         _logger.LogInformation("Successfully created customer with ID: {Id}", customerToCreate.Id);
 
-        var result = Result<Guid>.Success(customerToCreate.Id);
-        result.Status = ResultStatus.Created;
-        return result;
+        return Result<Guid>.Created(customerToCreate.Id);
     }
 }

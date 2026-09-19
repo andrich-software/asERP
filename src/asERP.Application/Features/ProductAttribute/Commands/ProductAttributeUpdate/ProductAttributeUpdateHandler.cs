@@ -22,16 +22,12 @@ public class ProductAttributeUpdateHandler : IRequestHandler<ProductAttributeUpd
     {
         _logger.LogInformation("Updating product attribute with ID: {Id}", request.Id);
 
-        var result = new Result<Guid>();
-
         // Load the aggregate with values for tracking
         var attributeToUpdate = await _productAttributeRepository.GetWithValuesAsync(request.Id);
         if (attributeToUpdate == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.ProductAttribute.NotFound, "ProductAttribute not found or access denied due to tenant isolation.");
-
             _logger.LogWarning("ProductAttribute with ID {Id} not found or access denied due to tenant isolation", request.Id);
-            return result;
+            return Result<Guid>.NotFound(ErrorCodes.ProductAttribute.NotFound, "ProductAttribute not found or access denied due to tenant isolation.");
         }
 
         attributeToUpdate.Name = request.Name;
@@ -45,8 +41,7 @@ public class ProductAttributeUpdateHandler : IRequestHandler<ProductAttributeUpd
         {
             if (await _productAttributeRepository.IsValueInUseAsync(valueToRemove.Id))
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.ProductAttribute.Invalid, $"Attribute value '{valueToRemove.Value}' is in use by a variant and cannot be removed.");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.ProductAttribute.Invalid, $"Attribute value '{valueToRemove.Value}' is in use by a variant and cannot be removed.");
             }
 
             // Delete via the DbSet (the value→attribute FK is Restrict; severing the
@@ -61,8 +56,7 @@ public class ProductAttributeUpdateHandler : IRequestHandler<ProductAttributeUpd
                 var existingValue = attributeToUpdate.Values.FirstOrDefault(v => v.Id == valueInput.Id.Value);
                 if (existingValue == null)
                 {
-                    result.Fail(ErrorType.Validation, ErrorCodes.ProductAttribute.Invalid, $"Attribute value with ID {valueInput.Id} not found on this attribute.");
-                    return result;
+                    return Result<Guid>.Invalid(ErrorCodes.ProductAttribute.Invalid, $"Attribute value with ID {valueInput.Id} not found on this attribute.");
                 }
 
                 existingValue.Value = valueInput.Value;
@@ -83,12 +77,8 @@ public class ProductAttributeUpdateHandler : IRequestHandler<ProductAttributeUpd
 
         await _productAttributeRepository.SaveChangesAsync(cancellationToken);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = attributeToUpdate.Id;
-
         _logger.LogInformation("Successfully updated product attribute with ID: {Id}", attributeToUpdate.Id);
 
-        return result;
+        return Result<Guid>.Ok(attributeToUpdate.Id);
     }
 }

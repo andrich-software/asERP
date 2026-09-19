@@ -23,8 +23,6 @@ public class CategoryCreateHandler : IRequestHandler<CategoryCreateCommand, Resu
     {
         _logger.LogInformation("Creating new category with name: {Name}", request.Name);
 
-        var result = new Result<Guid>();
-
         // Manual mapping to domain entity
         var categoryToCreate = new Domain.Entities.Category
         {
@@ -37,13 +35,9 @@ public class CategoryCreateHandler : IRequestHandler<CategoryCreateCommand, Resu
 
         await _categoryRepository.CreateAsync(categoryToCreate);
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = categoryToCreate.Id;
-
         _logger.LogInformation("Successfully created category with ID: {Id}", categoryToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(categoryToCreate.Id);
     }
 
     internal static string ResolveSlug(string slug, string name)

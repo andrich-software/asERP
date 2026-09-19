@@ -33,8 +33,6 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
     {
         _logger.LogInformation("Creating new sales channel with name: {Name}", request.Name);
 
-        var result = new Result<Guid>();
-
         // Carrier mappings must only ever reference the caller's own shipping providers: the id
         // travels in the request body and the database FK is tenant-blind, so an unchecked id
         // would let a channel resolve imported shipments onto another tenant's carrier (and its
@@ -54,8 +52,7 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
 
         if (unknownProviderIds.Count > 0)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.SalesChannel.Invalid, $"The following shipping provider IDs do not exist: {string.Join(", ", unknownProviderIds)}");
-            return result;
+            return Result<Guid>.Invalid(ErrorCodes.SalesChannel.Invalid, $"The following shipping provider IDs do not exist: {string.Join(", ", unknownProviderIds)}");
         }
 
         // Map request to domain entity
@@ -69,8 +66,7 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
             var warehouse = await _warehouseRepository.GetByIdAsync(warehouseId);
             if (warehouse == null)
             {
-                result.Fail(ErrorType.Validation, ErrorCodes.SalesChannel.Invalid, $"The following warehouse IDs do not exist: {warehouseId}");
-                return result;
+                return Result<Guid>.Invalid(ErrorCodes.SalesChannel.Invalid, $"The following warehouse IDs do not exist: {warehouseId}");
             }
 
             warehouses.Add(warehouse);
@@ -80,14 +76,9 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
         // Add the new sales channel to the database
         await _salesChannelRepository.CreateAsync(salesChannelToCreate);
 
-        // Set successful result with the new sales channel ID
-        result.Succeeded = true;
-        result.Status = ResultStatus.Created;
-        result.Data = salesChannelToCreate.Id;
-
         _logger.LogInformation("Successfully created sales channel with ID: {Id}", salesChannelToCreate.Id);
 
-        return result;
+        return Result<Guid>.Created(salesChannelToCreate.Id);
     }
 
     /// <summary>

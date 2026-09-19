@@ -25,25 +25,20 @@ public class TenantEmailSettingsDetailHandler : IRequestHandler<TenantEmailSetti
 
     public async Task<Result<TenantEmailSettingsDetailDto>> Handle(TenantEmailSettingsDetailQuery request, CancellationToken cancellationToken)
     {
-        var result = new Result<TenantEmailSettingsDetailDto>();
 
         var tenantId = _tenantContext.GetCurrentTenantId();
         if (!tenantId.HasValue)
         {
-            result.Fail(ErrorType.Validation, ErrorCodes.TenantEmailSettings.Invalid, "No active tenant in context.");
-            return result;
+            return Result<TenantEmailSettingsDetailDto>.Invalid(ErrorCodes.TenantEmailSettings.Invalid, "No active tenant in context.");
         }
 
         var entity = await _repository.GetByTenantIdAsync(tenantId.Value);
         if (entity == null)
         {
-            result.Fail(ErrorType.NotFound, ErrorCodes.TenantEmailSettings.NotFound, "No tenant-level email configuration found. Server defaults apply.");
-            return result;
+            return Result<TenantEmailSettingsDetailDto>.NotFound(ErrorCodes.TenantEmailSettings.NotFound, "No tenant-level email configuration found. Server defaults apply.");
         }
 
-        result.Succeeded = true;
-        result.Status = ResultStatus.Ok;
-        result.Data = new TenantEmailSettingsDetailDto
+        var dto = new TenantEmailSettingsDetailDto
         {
             Id = entity.Id,
             TenantId = entity.TenantId,
@@ -67,6 +62,6 @@ public class TenantEmailSettingsDetailHandler : IRequestHandler<TenantEmailSetti
         };
 
         _logger.LogInformation("Returning tenant email settings for tenant {TenantId}", tenantId.Value);
-        return result;
+        return Result<TenantEmailSettingsDetailDto>.Ok(dto);
     }
 }
