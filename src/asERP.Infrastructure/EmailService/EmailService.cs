@@ -127,7 +127,9 @@ public class TenantAwareEmailService : IEmailService
             if (tenantSettings != null)
             {
                 _logger.LogDebug("Merging tenant email settings for tenant {TenantId} onto server defaults", resolvedTenantId);
-                return MergeWithTenant(serverSettings, tenantSettings);
+
+                // A null merge result is a deliberate refusal, not a miss: do not fall back to the server settings.
+                return MergeWithTenant(serverSettings, tenantSettings, resolvedTenantId.Value);
             }
         }
 
@@ -154,15 +156,38 @@ public class TenantAwareEmailService : IEmailService
         return GetDefaultEmailSettingsFromConfiguration();
     }
 
-    private static EmailSettings MergeWithTenant(EmailSettings server, Domain.Entities.TenantEmailSettings tenant)
+    private EmailSettings? MergeWithTenant(EmailSettings server, Domain.Entities.TenantEmailSettings tenant, Guid tenantId)
     {
+        // Host, username and password form one atomic override group: the installation-wide relay
+        // credentials must never be presented to an SMTP host a tenant picked.
+        var isForeignHost = IsForeignSmtpHost(tenant.SmtpHost, server.SmtpHost);
+        var hasOwnSmtpCredentials = !string.IsNullOrWhiteSpace(tenant.SmtpUsername)
+                                    && !string.IsNullOrWhiteSpace(tenant.SmtpPassword);
+
+        if (isForeignHost)
+        {
+            _logger.LogWarning(
+                "Tenant {TenantId} overrides the SMTP host with {SmtpHost}; server-level SMTP credentials are not inherited by a tenant-chosen host",
+                tenantId, tenant.SmtpHost);
+
+            // Without credentials of its own the message would be relayed anonymously through a
+            // tenant-chosen host from the installation's network identity, so fail closed instead.
+            if (tenant.ProviderType == EmailProviderType.Smtp && !hasOwnSmtpCredentials)
+            {
+                _logger.LogError(
+                    "Refusing to send email for tenant {TenantId}: SMTP host {SmtpHost} is tenant-configured but the tenant supplied no SMTP credentials of its own",
+                    tenantId, tenant.SmtpHost);
+                return null;
+            }
+        }
+
         return new EmailSettings
         {
             ProviderType = tenant.ProviderType,
             SmtpHost = Coalesce(tenant.SmtpHost, server.SmtpHost),
             SmtpPort = tenant.SmtpPort ?? server.SmtpPort,
-            SmtpUsername = Coalesce(tenant.SmtpUsername, server.SmtpUsername),
-            SmtpPassword = Coalesce(tenant.SmtpPassword, server.SmtpPassword),
+            SmtpUsername = isForeignHost ? tenant.SmtpUsername : Coalesce(tenant.SmtpUsername, server.SmtpUsername),
+            SmtpPassword = isForeignHost ? tenant.SmtpPassword : Coalesce(tenant.SmtpPassword, server.SmtpPassword),
             SmtpEnableSsl = tenant.SmtpEnableSsl ?? server.SmtpEnableSsl,
             M365TenantId = Coalesce(tenant.M365TenantId, server.M365TenantId),
             M365ClientId = Coalesce(tenant.M365ClientId, server.M365ClientId),
@@ -177,6 +202,14 @@ public class TenantAwareEmailService : IEmailService
 
     private static string? Coalesce(string? primary, string? fallback)
         => string.IsNullOrWhiteSpace(primary) ? fallback : primary;
+
+    /// <summary>
+    /// True when the tenant points SMTP at a host other than the server-configured one.
+    /// An empty tenant host means "no override" and is never foreign.
+    /// </summary>
+    private static bool IsForeignSmtpHost(string? tenantHost, string? serverHost)
+        => !string.IsNullOrWhiteSpace(tenantHost)
+           && !string.Equals(tenantHost.Trim(), serverHost?.Trim(), StringComparison.OrdinalIgnoreCase);
 
     private EmailSettings GetDefaultEmailSettingsFromConfiguration()
     {

@@ -126,6 +126,212 @@ public class TenantAwareEmailServiceFallbackTest
         Assert.Equal("server@example.com", smtp.LastSettings.FromAddress);
     }
 
+    [Fact]
+    public async Task TenantForeignSmtpHost_WithoutOwnCredentials_RefusesSend()
+    {
+        var serverSettings = ServerSmtpSettings();
+
+        var tenantOverride = new Domain.Entities.TenantEmailSettings
+        {
+            TenantId = Guid.NewGuid(),
+            ProviderType = EmailProviderType.Smtp,
+            IsActive = true,
+            SmtpHost = "mx.attacker.tld",
+            SmtpPort = 25,
+            SmtpEnableSsl = false
+        };
+
+        var smtp = new CapturingProvider(EmailProviderType.Smtp);
+        var service = BuildService(serverSettings, tenantOverride, smtp);
+
+        var sent = await service.SendEmailAsync(TestMessage(), tenantOverride.TenantId);
+
+        Assert.False(sent);
+        Assert.Null(smtp.LastSettings);
+        Assert.Equal(0, smtp.SendCount);
+    }
+
+    [Fact]
+    public async Task TenantForeignSmtpHost_WithUsernameButNoPassword_RefusesSend()
+    {
+        var serverSettings = ServerSmtpSettings();
+
+        var tenantOverride = new Domain.Entities.TenantEmailSettings
+        {
+            TenantId = Guid.NewGuid(),
+            ProviderType = EmailProviderType.Smtp,
+            IsActive = true,
+            SmtpHost = "mx.attacker.tld",
+            SmtpPort = 25,
+            SmtpUsername = "tenant-user"
+        };
+
+        var smtp = new CapturingProvider(EmailProviderType.Smtp);
+        var service = BuildService(serverSettings, tenantOverride, smtp);
+
+        var sent = await service.SendEmailAsync(TestMessage(), tenantOverride.TenantId);
+
+        Assert.False(sent);
+        Assert.Equal(0, smtp.SendCount);
+    }
+
+    [Fact]
+    public async Task TenantForeignSmtpHost_WithOwnCredentials_SendsWithTenantCredentialsOnly()
+    {
+        var serverSettings = ServerSmtpSettings();
+
+        var tenantOverride = new Domain.Entities.TenantEmailSettings
+        {
+            TenantId = Guid.NewGuid(),
+            ProviderType = EmailProviderType.Smtp,
+            IsActive = true,
+            SmtpHost = "smtp.tenant.example",
+            SmtpPort = 587,
+            SmtpUsername = "tenant-user",
+            SmtpPassword = "tenant-secret"
+        };
+
+        var smtp = new CapturingProvider(EmailProviderType.Smtp);
+        var service = BuildService(serverSettings, tenantOverride, smtp);
+
+        var sent = await service.SendEmailAsync(TestMessage(), tenantOverride.TenantId);
+
+        Assert.True(sent);
+        Assert.NotNull(smtp.LastSettings);
+        Assert.Equal("smtp.tenant.example", smtp.LastSettings!.SmtpHost);
+        Assert.Equal("tenant-user", smtp.LastSettings.SmtpUsername);
+        Assert.Equal("tenant-secret", smtp.LastSettings.SmtpPassword);
+    }
+
+    [Fact]
+    public async Task TenantWithoutSmtpHost_StillInheritsServerCredentials()
+    {
+        var serverSettings = ServerSmtpSettings();
+
+        var tenantOverride = new Domain.Entities.TenantEmailSettings
+        {
+            TenantId = Guid.NewGuid(),
+            ProviderType = EmailProviderType.Smtp,
+            IsActive = true,
+            FromName = "Tenant Override"
+        };
+
+        var smtp = new CapturingProvider(EmailProviderType.Smtp);
+        var service = BuildService(serverSettings, tenantOverride, smtp);
+
+        var sent = await service.SendEmailAsync(TestMessage(), tenantOverride.TenantId);
+
+        Assert.True(sent);
+        Assert.Equal("smtp.server", smtp.LastSettings!.SmtpHost);
+        Assert.Equal("server-user", smtp.LastSettings.SmtpUsername);
+        Assert.Equal("server-secret", smtp.LastSettings.SmtpPassword);
+    }
+
+    [Fact]
+    public async Task TenantRepeatsServerSmtpHost_StillInheritsServerCredentials()
+    {
+        var serverSettings = ServerSmtpSettings();
+
+        var tenantOverride = new Domain.Entities.TenantEmailSettings
+        {
+            TenantId = Guid.NewGuid(),
+            ProviderType = EmailProviderType.Smtp,
+            IsActive = true,
+            SmtpHost = " SMTP.Server ",
+            SmtpPort = 2525
+        };
+
+        var smtp = new CapturingProvider(EmailProviderType.Smtp);
+        var service = BuildService(serverSettings, tenantOverride, smtp);
+
+        var sent = await service.SendEmailAsync(TestMessage(), tenantOverride.TenantId);
+
+        Assert.True(sent);
+        Assert.Equal("server-user", smtp.LastSettings!.SmtpUsername);
+        Assert.Equal("server-secret", smtp.LastSettings.SmtpPassword);
+        Assert.Equal(2525, smtp.LastSettings.SmtpPort);
+    }
+
+    [Fact]
+    public async Task AnonymousServerRelay_WithoutTenantOverride_StillSends()
+    {
+        // Mailpit-style local relay: no credentials, no TLS (EMAIL-TESTING.md).
+        var serverSettings = new EmailSettings
+        {
+            ProviderType = EmailProviderType.Smtp,
+            SmtpHost = "localhost",
+            SmtpPort = 1025,
+            SmtpUsername = string.Empty,
+            SmtpPassword = string.Empty,
+            SmtpEnableSsl = false,
+            FromAddress = "server@example.com",
+            FromName = "Server"
+        };
+
+        var smtp = new CapturingProvider(EmailProviderType.Smtp);
+        var service = BuildService(serverSettings, tenantOverride: null, smtp);
+
+        var sent = await service.SendEmailAsync(TestMessage(), Guid.NewGuid());
+
+        Assert.True(sent);
+        Assert.Equal("localhost", smtp.LastSettings!.SmtpHost);
+        Assert.Equal(1025, smtp.LastSettings.SmtpPort);
+        Assert.False(smtp.LastSettings.SmtpEnableSsl);
+    }
+
+    [Fact]
+    public async Task AnonymousServerRelay_WithTenantOverrideKeepingTheHost_StillSends()
+    {
+        var serverSettings = new EmailSettings
+        {
+            ProviderType = EmailProviderType.Smtp,
+            SmtpHost = "localhost",
+            SmtpPort = 1025,
+            SmtpEnableSsl = false,
+            FromAddress = "server@example.com",
+            FromName = "Server"
+        };
+
+        var tenantOverride = new Domain.Entities.TenantEmailSettings
+        {
+            TenantId = Guid.NewGuid(),
+            ProviderType = EmailProviderType.Smtp,
+            IsActive = true,
+            SmtpEnableSsl = false,
+            FromAddress = "tenant@example.com",
+            FromName = "Tenant"
+        };
+
+        var smtp = new CapturingProvider(EmailProviderType.Smtp);
+        var service = BuildService(serverSettings, tenantOverride, smtp);
+
+        var sent = await service.SendEmailAsync(TestMessage(), tenantOverride.TenantId);
+
+        Assert.True(sent);
+        Assert.Equal("localhost", smtp.LastSettings!.SmtpHost);
+        Assert.Equal("tenant@example.com", smtp.LastSettings.FromAddress);
+    }
+
+    private static EmailSettings ServerSmtpSettings() => new()
+    {
+        ProviderType = EmailProviderType.Smtp,
+        SmtpHost = "smtp.server",
+        SmtpPort = 587,
+        SmtpUsername = "server-user",
+        SmtpPassword = "server-secret",
+        SmtpEnableSsl = true,
+        FromAddress = "server@example.com",
+        FromName = "Server"
+    };
+
+    private static EmailMessage TestMessage() => new()
+    {
+        To = "to@example.com",
+        ToName = "To",
+        Subject = "Subject",
+        Body = "Body"
+    };
+
     private static TenantAwareEmailService BuildService(
         EmailSettings serverSettings,
         Domain.Entities.TenantEmailSettings? tenantOverride,
@@ -146,9 +352,11 @@ public class TenantAwareEmailServiceFallbackTest
         public CapturingProvider(EmailProviderType type) => ProviderType = type;
         public EmailProviderType ProviderType { get; }
         public EmailSettings? LastSettings { get; private set; }
+        public int SendCount { get; private set; }
         public Task<bool> SendAsync(EmailMessage email, EmailSettings settings)
         {
             LastSettings = settings;
+            SendCount++;
             return Task.FromResult(true);
         }
     }
