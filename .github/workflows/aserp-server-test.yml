@@ -50,7 +50,14 @@ env:
 
 jobs:
   test:
+    # A pull request from a fork carries untrusted code that the build/test steps below
+    # would execute on the shared, non-ephemeral self-hosted runner — the same host that later
+    # runs the publish/deploy workflows with their secrets. Only run this job for branches
+    # of this repository; fork PRs must be validated elsewhere before they are trusted here.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, Linux, X64]
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET

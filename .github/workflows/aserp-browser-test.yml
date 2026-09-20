@@ -25,7 +25,12 @@ env:
 
 jobs:
   test:
+    # A fork PR head controls MSBuild and test-assembly code, so never build it
+    # on the persistent self-hosted runner that also runs the publish/deploy jobs.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, Linux, X64]
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
