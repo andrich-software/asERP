@@ -35,6 +35,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         }
         _credentialEncryptor = credentialEncryptor ?? new NoOpCredentialEncryptor();
     }
+
+    /// <summary>
+    /// The encryptor baked into this context's credential value converters. Part of the model cache key
+    /// (see <see cref="CredentialEncryptorModelCacheKeyFactory"/>) so a model built with the no-op
+    /// encryptor can never be reused by a context that is supposed to encrypt.
+    /// </summary>
+    internal ICredentialEncryptor CredentialEncryptor => _credentialEncryptor;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -142,6 +142,14 @@ if (!builder.Environment.IsEnvironment("Testing"))
         var bootstrapServices = new ServiceCollection();
         bootstrapServices.AddLogging();
         bootstrapServices.Configure<DatabaseOptions>(builder.Configuration.GetSection(DatabaseOptions.Section));
+        // Same key ring as the host (application name + key directory must match), so anything this
+        // provider reads or writes uses the same DataProtection keys. Without the registration the
+        // bootstrap ApplicationDbContext would fall back to the no-op encryptor and store credentials
+        // in cleartext.
+        bootstrapServices.AddDataProtection()
+            .SetApplicationName("asERP")
+            .PersistKeysToFileSystem(new DirectoryInfo(dpKeyDir));
+        bootstrapServices.AddSingleton<ICredentialEncryptor, DataProtectionCredentialEncryptor>();
         bootstrapServices.AddPersistenceServices();
         bootstrapServices.AddScoped<ITenantContext, TenantContext>();
         bootstrapServices.AddScoped<ISettingRepository, SettingRepository>();

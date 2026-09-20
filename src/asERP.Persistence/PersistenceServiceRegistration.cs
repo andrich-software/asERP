@@ -7,6 +7,7 @@ using asERP.Persistence.Services.Backup;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -22,6 +23,24 @@ public static class PersistenceServiceRegistration
         {
             var dbOptions = serviceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
             var connectionString = dbOptions.GetConnectionString();
+
+            // Credential columns are encrypted at rest through value converters that capture the
+            // ICredentialEncryptor injected into ApplicationDbContext. Without a registration the context
+            // falls back to the identity-function no-op and secrets are written in cleartext — fail closed
+            // here instead of degrading silently. Design-time (dotnet ef) has no key ring and never writes
+            // data, so the no-op stays acceptable there.
+            if (!DesignTimeDetection.IsDesignTime && serviceProvider.GetService<ICredentialEncryptor>() is null)
+            {
+                throw new InvalidOperationException(
+                    "No ICredentialEncryptor is registered in this service collection. ApplicationDbContext would " +
+                    "store sales-channel, shipping, email and OAuth credentials UNENCRYPTED at rest. Register the " +
+                    "DataProtection-backed encryptor (see Program.cs) before calling AddPersistenceServices().");
+            }
+
+            // EF caches the model per DbContext CLR type, so the credential converters of the first context
+            // built in the process would otherwise be handed to every later context — including one built by
+            // a bootstrap service provider that has no encryptor. Key the cache on the encryptor identity.
+            options.ReplaceService<IModelCacheKeyFactory, CredentialEncryptorModelCacheKeyFactory>();
 
             // NOTE: This suppression is required. Reference-data seeds (Country, Manufacturer, Warehouse,
             // TaxClass, Setting, SalesChannel) set DateCreated/DateModified (and IdentityRole its
