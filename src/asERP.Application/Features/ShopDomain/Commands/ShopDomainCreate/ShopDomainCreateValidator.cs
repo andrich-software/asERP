@@ -31,9 +31,9 @@ public class ShopDomainCreateValidator : ShopDomainBaseValidator<ShopDomainCreat
                     return true; // the base Host rule already reports the format error
                 }
 
-                return await shopDomainRepository.HostIsUniqueAsync(host, command.Port);
+                return await shopDomainRepository.HostIsUniqueAsync(host, command.Port, command.SalesChannelId);
             })
-            .WithMessage("This host and port combination is already bound to a shop.")
+            .WithMessage("This host is already bound to a shop.")
             .OverridePropertyName(nameof(ShopDomainCreateCommand.Host));
     }
 }

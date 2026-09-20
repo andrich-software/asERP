@@ -21,9 +21,9 @@ public class ShopDomainUpdateValidator : ShopDomainBaseValidator<ShopDomainUpdat
                     return true; // the base Host rule already reports the format error
                 }
 
-                return await shopDomainRepository.HostIsUniqueAsync(host, command.Port, command.Id);
+                return await shopDomainRepository.HostIsUniqueAsync(host, command.Port, command.SalesChannelId, command.Id);
             })
-            .WithMessage("This host and port combination is already bound to a shop.")
+            .WithMessage("This host is already bound to a shop.")
             .OverridePropertyName(nameof(ShopDomainUpdateCommand.Host));
     }
 }

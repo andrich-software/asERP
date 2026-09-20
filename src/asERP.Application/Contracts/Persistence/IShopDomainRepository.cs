@@ -14,9 +14,11 @@ public interface IShopDomainRepository : IGenericRepository<ShopDomain>
     Task<List<ShopHostBindingRef>> GetActiveBindingsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// True when no binding with the same normalized host + port exists yet, ACROSS tenants —
-    /// a hostname belongs to exactly one channel globally. Pass <paramref name="id"/> on update
-    /// to exclude the row being edited.
+    /// True when <paramref name="salesChannelId"/> may claim the normalized host on the given port,
+    /// checked ACROSS tenants — a hostname belongs to exactly one channel globally. Any row of
+    /// another channel on that host blocks it regardless of its port (port 0 and exact-port rows
+    /// resolve to the same host), while the owning channel may add further ports of its own host.
+    /// Pass <paramref name="id"/> on update to exclude the row being edited.
     /// </summary>
-    Task<bool> HostIsUniqueAsync(string host, int port, Guid? id = null);
+    Task<bool> HostIsUniqueAsync(string host, int port, Guid salesChannelId, Guid? id = null);
 }

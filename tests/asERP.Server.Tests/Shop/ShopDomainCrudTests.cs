@@ -122,6 +122,72 @@ public class ShopDomainCrudTests : TenantIsolatedTestBase
         Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
     }
 
+    [Theory]
+    // Shadow bindings on a host another channel already owns: wildcard vs. exact port, exact vs.
+    // wildcard, and two different exact ports. Every shape resolves to the same host at request
+    // time (ShopHostResolver prefers the exact-port row, else the port-0 row), so every shape
+    // must be rejected — otherwise the foreign row hijacks the victim's storefront traffic.
+    [InlineData(0, 443)]
+    [InlineData(443, 0)]
+    [InlineData(443, 80)]
+    public async Task Create_ShadowBindingOnForeignTenantsHost_IsRejected(int ownerPort, int shadowPort)
+    {
+        var host = $"schatten-{ownerPort}-{shadowPort}.local";
+        var tenant1Channel = await SeedChannelAsync(TenantConstants.TestTenant1Id);
+        var tenant2Channel = await SeedChannelAsync(TenantConstants.TestTenant2Id);
+
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        var owner = await PostAsJsonAsync("/api/v1/shopdomains", DomainInput(tenant1Channel.Id, host, ownerPort));
+        TestAssertions.AssertHttpSuccess(owner);
+
+        SetTenantHeader(TenantConstants.TestTenant2Id);
+        var shadow = await PostAsJsonAsync("/api/v1/shopdomains", DomainInput(tenant2Channel.Id, host, shadowPort));
+
+        Assert.Equal(HttpStatusCode.BadRequest, shadow.StatusCode);
+        Assert.False(await DbContext.ShopDomain.AsNoTracking().IgnoreQueryFilters()
+            .AnyAsync(d => d.Host == host && d.SalesChannelId == tenant2Channel.Id));
+    }
+
+    [Fact]
+    public async Task Update_ToForeignTenantsHostOnAnotherPort_IsRejected()
+    {
+        var tenant1Channel = await SeedChannelAsync(TenantConstants.TestTenant1Id);
+        var tenant2Channel = await SeedChannelAsync(TenantConstants.TestTenant2Id);
+
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        TestAssertions.AssertHttpSuccess(
+            await PostAsJsonAsync("/api/v1/shopdomains", DomainInput(tenant1Channel.Id, "belegt.local", 443)));
+
+        SetTenantHeader(TenantConstants.TestTenant2Id);
+        var createResponse = await PostAsJsonAsync("/api/v1/shopdomains", DomainInput(tenant2Channel.Id, "eigen.local"));
+        var created = await ReadResponseAsync<Result<Guid>>(createResponse);
+
+        var update = DomainInput(tenant2Channel.Id, "belegt.local", 80);
+        update.Id = created.Data;
+        update.IsPrimary = true;
+        var response = await PutAsJsonAsync($"/api/v1/shopdomains/{created.Data}", update);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var domain = await DbContext.ShopDomain.AsNoTracking().SingleAsync(d => d.Id == created.Data);
+        Assert.Equal("eigen.local", domain.Host);
+    }
+
+    [Fact]
+    public async Task Create_AdditionalPortOnOwnChannelsHost_IsAllowed()
+    {
+        var channel = await SeedChannelAsync(TenantConstants.TestTenant1Id);
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        TestAssertions.AssertHttpSuccess(
+            await PostAsJsonAsync("/api/v1/shopdomains", DomainInput(channel.Id, "mehrfach.local")));
+
+        // The host already belongs to this channel — a second port on it is no takeover.
+        var response = await PostAsJsonAsync("/api/v1/shopdomains", DomainInput(channel.Id, "mehrfach.local", 8080));
+
+        TestAssertions.AssertHttpSuccess(response);
+        Assert.Equal(2, await DbContext.ShopDomain.AsNoTracking()
+            .CountAsync(d => d.Host == "mehrfach.local" && d.SalesChannelId == channel.Id));
+    }
+
     [Fact]
     public async Task Create_OnForeignTenantsChannel_IsRejected()
     {

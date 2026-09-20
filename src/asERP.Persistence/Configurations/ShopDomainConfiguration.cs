@@ -15,7 +15,9 @@ public class ShopDomainConfiguration : IEntityTypeConfiguration<ShopDomain>
         // A hostname resolves to exactly one channel across ALL tenants — the host is the
         // security boundary of anonymous tenant resolution, so this unique index deliberately
         // has no TenantId component. Port 0 is the "any port" sentinel (not null, so the unique
-        // index semantics are identical across MSSQL/PostgreSQL/SQLite).
+        // index semantics are identical across MSSQL/PostgreSQL/SQLite). The index can only cover
+        // the exact pair — that no OTHER channel holds the host on any port is enforced in
+        // ShopDomainRepository.HostIsUniqueAsync.
         builder.HasIndex(d => new { d.Host, d.Port }).IsUnique();
 
         builder.HasOne(d => d.SalesChannel)

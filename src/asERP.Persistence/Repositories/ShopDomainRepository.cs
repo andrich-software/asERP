@@ -58,12 +58,18 @@ public class ShopDomainRepository : GenericRepository<ShopDomain>, IShopDomainRe
             .ToList();
     }
 
-    public async Task<bool> HostIsUniqueAsync(string host, int port, Guid? id = null)
+    public async Task<bool> HostIsUniqueAsync(string host, int port, Guid salesChannelId, Guid? id = null)
     {
-        // Cross-tenant on purpose: the (Host, Port) pair is globally unique — it is the security
-        // boundary that maps an anonymous request to a tenant. The unique index is the backstop.
+        // Cross-tenant on purpose: the host is the security boundary that maps an anonymous request
+        // to a tenant, and ShopHostResolver matches an exact-port row before falling back to the
+        // port-0 row of the same host. A foreign channel owning ANY row for this host — whatever the
+        // port — could therefore shadow it, so the whole host is claimed, not just the (Host, Port)
+        // pair. Extra ports stay allowed inside the owning channel; the unique (Host, Port) index
+        // remains the backstop for the exact pair.
         return !await Context.ShopDomain
             .IgnoreQueryFilters()
-            .AnyAsync(d => d.Host == host && d.Port == port && (id == null || d.Id != id));
+            .AnyAsync(d => d.Host == host
+                           && (id == null || d.Id != id)
+                           && (d.Port == port || d.SalesChannelId != salesChannelId));
     }
 }
