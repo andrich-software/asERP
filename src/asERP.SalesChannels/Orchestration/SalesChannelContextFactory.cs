@@ -27,21 +27,30 @@ public sealed class SalesChannelContextFactory
         CancellationToken cancellationToken,
         DateTime? incrementalSince = null,
         Func<int, int, CancellationToken, Task>? reportProgress = null,
-        SalesChannelOperationState? operationState = null)
+        SalesChannelOperationState? operationState = null,
+        bool credentialsArePlaintext = false)
     {
         var clientName = HttpClientNameFor(salesChannel.Type);
         var httpClient = _httpClientFactory.CreateClient(clientName);
         httpClient.Timeout = TimeSpan.FromSeconds(60);
 
+        // Credentials on an entity materialised from the database are already decrypted by the
+        // EncryptedStringConverter when EF reads them, so we just pass them through. We re-decrypt
+        // only as a guard against legacy plaintext rows (the encryptor passes plaintext through
+        // unchanged). Callers that build a transient channel from request input must pass
+        // credentialsArePlaintext: running caller-supplied values through Decrypt would make such an
+        // endpoint a decryption oracle for the key ring — submit a ciphertext read out of the
+        // database, get the plaintext delivered to the caller-chosen URL.
+        string Materialize(string? credential) => credentialsArePlaintext
+            ? credential ?? string.Empty
+            : _encryptor.Decrypt(credential ?? string.Empty);
+
         return new SalesChannelContext
         {
             SalesChannel = salesChannel,
-            // SalesChannel entity properties are already decrypted by the EncryptedStringConverter
-            // when EF reads them, so we just pass them through. We re-decrypt only as a guard
-            // against legacy plaintext rows (the encryptor passes plaintext through unchanged).
-            Password = _encryptor.Decrypt(salesChannel.Password),
-            AccessToken = _encryptor.Decrypt(salesChannel.AccessToken ?? string.Empty),
-            RefreshToken = _encryptor.Decrypt(salesChannel.RefreshToken ?? string.Empty),
+            Password = Materialize(salesChannel.Password),
+            AccessToken = Materialize(salesChannel.AccessToken),
+            RefreshToken = Materialize(salesChannel.RefreshToken),
             HttpClient = httpClient,
             SyncRun = syncRun,
             OperationState = operationState,

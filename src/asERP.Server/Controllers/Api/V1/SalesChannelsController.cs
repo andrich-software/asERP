@@ -260,8 +260,9 @@ public class SalesChannelsController(
         var tenantId = tenantContext.GetCurrentTenantId();
 
         // Transient entity — carries the user-entered credentials into the connector context.
-        // The context factory re-decrypts Password as a plaintext-passthrough guard, so the raw
-        // value from the request works here just like a decrypted stored one.
+        // The values come straight from the request body, so the context factory must treat them as
+        // plaintext: decrypting them would let a caller submit a ciphertext lifted from the database
+        // and have the connector ship the recovered secret to a URL of their choosing.
         var salesChannel = new SalesChannel
         {
             Id = Guid.NewGuid(),
@@ -287,7 +288,7 @@ public class SalesChannelsController(
             CorrelationId = Guid.NewGuid(),
         };
 
-        var context = contextFactory.Create(salesChannel, run, cancellationToken);
+        var context = contextFactory.Create(salesChannel, run, cancellationToken, credentialsArePlaintext: true);
         var result = await connector.TestConnectionAsync(context);
 
         return Ok(new SalesChannelConnectionTestResultDto { Success = result.Success, Message = result.Message });
