@@ -379,6 +379,10 @@ src/asERP.Server/aserp.db
 /aserp.db*
 src/asERP.Server/aserp.db-shm
 src/asERP.Server/aserp.db-wal
+# Any SQLite database under the server project: these hold live credentials and customer data
+src/asERP.Server/*.db
+src/asERP.Server/*.db-shm
+src/asERP.Server/*.db-wal
 /.run
 src/asERP.Server/appsettings.Production.json
 .claude/settings.local.json
