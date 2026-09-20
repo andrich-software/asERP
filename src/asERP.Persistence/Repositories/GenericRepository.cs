@@ -67,21 +67,22 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
         // update. Callers frequently build a fresh detached entity without a TenantId; copying that
         // over the tracked row would null-out the owner and expose the row to every tenant.
         // Look up the owner without the query filter so a cross-tenant target is detected and rejected
-        // (rather than silently updating zero rows).
-        var ownerTenantId = await Context.Set<T>()
+        // (rather than silently updating zero rows). The projection wraps TenantId so a missing row
+        // (null result) stays distinguishable from an existing tenant-agnostic row (null TenantId).
+        var owner = await Context.Set<T>()
             .IgnoreQueryFilters()
             .Where(e => e.Id == entity.Id)
-            .Select(e => e.TenantId)
+            .Select(e => new { e.TenantId })
             .FirstOrDefaultAsync();
 
         var currentTenantId = TenantContext.GetCurrentTenantId();
-        if (ownerTenantId != null && currentTenantId.HasValue && ownerTenantId != currentTenantId)
+        if (owner != null)
         {
-            throw new UnauthorizedAccessException("Cannot update entity from a different tenant");
+            EnsureWritableByCurrentTenant(owner.TenantId, currentTenantId, "update");
         }
 
         // Never let the incoming entity change the persisted owner.
-        entity.TenantId = ownerTenantId;
+        entity.TenantId = owner?.TenantId;
 
         // Ensure the entity is being tracked and mark it as modified
         var existingEntry = Context.ChangeTracker.Entries<T>().FirstOrDefault(e => e.Entity.Id == entity.Id);
@@ -140,18 +141,27 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
     /// tenant-agnostic rows.
     /// </summary>
     protected static void EnsureDeletableByCurrentTenant(Guid? rowTenantId, Guid? currentTenantId)
+        => EnsureWritableByCurrentTenant(rowTenantId, currentTenantId, "delete");
+
+    /// <summary>
+    /// Enforces tenant ownership for any write: an owned row may only be written by its owner, and a
+    /// tenant-scoped context must not write tenant-agnostic (globally shared) rows — every tenant reads
+    /// those through the <c>TenantId == null</c> arm of the global query filter, so letting a single
+    /// tenant rewrite one crosses the tenancy boundary. <paramref name="operation"/> names the attempted
+    /// write in the exception message.
+    /// </summary>
+    protected static void EnsureWritableByCurrentTenant(Guid? rowTenantId, Guid? currentTenantId, string operation)
     {
         if (rowTenantId != null)
         {
             if (currentTenantId != rowTenantId)
             {
-                throw new UnauthorizedAccessException("Cannot delete entity from a different tenant");
+                throw new UnauthorizedAccessException($"Cannot {operation} entity from a different tenant");
             }
         }
         else if (currentTenantId != null)
         {
-            // A tenant-scoped context must not delete tenant-agnostic (global) rows.
-            throw new UnauthorizedAccessException("Cannot delete a tenant-agnostic entity from a tenant context");
+            throw new UnauthorizedAccessException($"Cannot {operation} a tenant-agnostic entity from a tenant context");
         }
     }
 
