@@ -32,7 +32,7 @@ public class WooCommerceRestTransportTests
     private static WooCommerceConnector Connector(IHttpClientFactory httpClientFactory) =>
         new(null!, null!, null!, null!, null!, null!, httpClientFactory, NullLogger<WooCommerceConnector>.Instance);
 
-    private static SalesChannelContext Context(string url = ShopUrl) => new()
+    private static SalesChannelContext Context(string url = ShopUrl, string? additionalConfigJson = null) => new()
     {
         SalesChannel = new SalesChannel
         {
@@ -40,6 +40,7 @@ public class WooCommerceRestTransportTests
             Type = SalesChannelType.WooCommerce,
             Name = "woo-rest",
             Url = url,
+            AdditionalConfigJson = additionalConfigJson,
             // WooCommerce quirk: consumer key = Username, consumer secret = Password.
             Username = ConsumerKey,
         },
@@ -120,19 +121,80 @@ public class WooCommerceRestTransportTests
     }
 
     [Fact]
-    public async Task PayloadTheSdkCannotSerialize_BehavesExactlyAsBefore()
+    public async Task ShipmentPush_SendsTheTrackingNumbersAsAPartialOrderUpdate()
     {
-        // Pre-existing and out of scope here: WooCommerceNET's DataContract serializer cannot serialize
-        // the shipment push's Dictionary<string, object> body, and its transport swallowed that error and
-        // returned the message in place of a response — so the push has always reported success without
-        // ever sending anything. The guarded transport keeps that behaviour rather than turning a live
-        // silent no-op into dead-lettered outbox rows as a side effect of an SSRF fix.
-        var handler = new CapturingHandler("{}");
+        // The body the SDK's DataContract serializer could not express (a Dictionary<string, object>
+        // carrying an array of dictionaries): it threw, the SDK's transport handed the message back in
+        // place of a response, and the push reported success while sending nothing. The connector now
+        // serializes the update itself and passes the JSON as a string, which is the one shape
+        // WooCommerceNET puts on the wire byte-for-byte instead of re-serializing.
+        var handler = new CapturingHandler("{\"id\":42}");
+        var payload = new ShipmentPushPayload(
+            Guid.NewGuid(), "42", new[] { "00340434666768541089", "CE737758155DE" }, "dhl");
+
+        var result = await Connector(new StubHttpClientFactory(handler)).PushShipmentAsync(Context(), payload);
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal("42", result.RemoteId);
+        var request = Assert.Single(handler.Requests);
+        // A partial order update, which WooCommerce takes as a POST on the item route.
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal("https://203.0.113.10/wp-json/wc/v3/orders/42", request.Uri);
+        Assert.Equal("application/json", request.ContentType);
+        // Byte-for-byte what the SDK's own typed Order.Update produces for one meta entry: only
+        // meta_data, no "id" on the entry (which is what makes WooCommerce merge it by key), and the
+        // numbers rendered by WooShipmentTracking.FormatNumbers so ImportShipments reads them back.
+        Assert.Equal(
+            "{\"meta_data\":[{\"key\":\"_order_shipment_numbers\","
+            + "\"value\":\"00340434666768541089, CE737758155DE\"}]}",
+            request.Body);
+    }
+
+    [Fact]
+    public async Task ShipmentPush_WritesToTheMetaKeyFromTheChannelConfig()
+    {
+        var handler = new CapturingHandler("{\"id\":42}");
+        var context = Context(additionalConfigJson: "{\"shipmentTrackingMetaKey\":\"_wc_shipment_tracking_items\"}");
+        var payload = new ShipmentPushPayload(Guid.NewGuid(), "42", new[] { "ABC123" }, null);
+
+        var result = await Connector(new StubHttpClientFactory(handler)).PushShipmentAsync(context, payload);
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal(
+            "{\"meta_data\":[{\"key\":\"_wc_shipment_tracking_items\",\"value\":\"ABC123\"}]}",
+            Assert.Single(handler.Requests).Body);
+    }
+
+    [Fact]
+    public async Task ShipmentPush_RejectedByTheShop_IsReportedAsAFailure()
+    {
+        // What the replaced test protected: the connector must still hand back a result instead of
+        // throwing — the dispatcher's control flow depends on it. What changed is which result a
+        // rejected push gets: a genuine failure is now a failure, so the outbox retries it and can
+        // eventually dead-letter the row, where it silently completed before.
+        const string error = "{\"code\":\"woocommerce_rest_shop_order_invalid_id\",\"message\":\"Invalid ID.\"}";
+        var handler = new CapturingHandler(error, HttpStatusCode.BadRequest);
         var payload = new ShipmentPushPayload(Guid.NewGuid(), "42", new[] { "00340434666768541089" }, "dhl");
 
         var result = await Connector(new StubHttpClientFactory(handler)).PushShipmentAsync(Context(), payload);
 
-        Assert.True(result.Success);
+        Assert.False(result.Success);
+        Assert.Contains("Invalid ID.", result.ErrorMessage);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ShipmentPush_WithoutATrackingNumber_SendsNothing()
+    {
+        // A Shipping row exists before its label does, so the order can reach the connector with no
+        // number at all. Pushing the empty value would clear the key in the shop; the write that
+        // produces the number enqueues its own push.
+        var handler = new CapturingHandler("{\"id\":42}");
+        var payload = new ShipmentPushPayload(Guid.NewGuid(), "42", Array.Empty<string>(), "dhl");
+
+        var result = await Connector(new StubHttpClientFactory(handler)).PushShipmentAsync(Context(), payload);
+
+        Assert.True(result.Success, result.ErrorMessage);
         Assert.Empty(handler.Requests);
     }
 

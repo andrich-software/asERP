@@ -1543,25 +1543,36 @@ public sealed class WooCommerceConnector : ConnectorBase
         }
 
         var metaKey = WooShipmentTracking.ResolveMetaKey(context.SalesChannel.AdditionalConfigJson);
+        var metaValue = WooShipmentTracking.FormatNumbers(payload.TrackingNumbers);
+
+        if (metaValue.Length == 0)
+        {
+            // Nothing to push yet: a Shipping row exists before its label does, so an order can reach
+            // here with no tracking number on any of its shipments. Sending the empty value would clear
+            // whatever the shop holds under the key; the write that produces the number enqueues its
+            // own push (the enqueuer resets a Done row to Pending), so nothing is lost by waiting.
+            return ExportResult.Ok(payload.RemoteSalesId);
+        }
 
         try
         {
             var rest = BuildRestApi(context);
 
             // A partial order update sent as raw JSON — same reason the order import bypasses the
-            // SDK's typed layer. WooCommerce merges meta_data by key, so only the tracking key is
-            // touched and every other field of the order stays as it is.
-            var body = new Dictionary<string, object>
+            // SDK's typed layer. WooCommerce merges meta_data by key (an entry without an "id" updates
+            // the meta of that key, or adds it), so only the tracking key is touched and every other
+            // field of the order stays as it is.
+            //
+            // Serialized here and handed over as a string on purpose: WooCommerceNET sends a string
+            // body byte-for-byte and runs its DataContract serializer on every other type. That
+            // serializer cannot express a Dictionary<string, object> payload — it threw, the SDK's
+            // transport swallowed the exception and returned its message in place of a response body,
+            // so this push reported success while sending nothing at all. These are the same bytes the
+            // SDK's own typed Order.Update puts on the wire for this update.
+            var body = JsonSerializer.Serialize(new
             {
-                ["meta_data"] = new[]
-                {
-                    new Dictionary<string, object>
-                    {
-                        ["key"] = metaKey,
-                        ["value"] = WooShipmentTracking.FormatNumbers(payload.TrackingNumbers),
-                    },
-                },
-            };
+                meta_data = new[] { new { key = metaKey, value = metaValue } },
+            });
 
             await rest.PostRestful($"orders/{orderId}", body);
 
