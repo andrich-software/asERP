@@ -79,13 +79,42 @@ public sealed class SmtpHostPolicyOptions
     /// 1..65535 is ignored, which again only narrows.
     /// </summary>
     public IList<int> AllowedPorts { get; set; } = [];
+
+    /// <summary>
+    /// Lets this installation send SMTP in the clear where the <em>operator's own</em> settings ask
+    /// for it (<see cref="EmailSettings.SmtpEnableSsl"/> false and
+    /// <see cref="EmailSettings.SmtpEnableSslIsOperatorConfigured"/>), instead of the mandatory
+    /// STARTTLS every endpoint otherwise gets. The AUTH exchange and every message body —
+    /// password-reset and confirmation tokens among them — then travel readable to anyone on the
+    /// path, and an attacker who strips the STARTTLS capability from the EHLO response gets the same.
+    /// Off by default.
+    ///
+    /// Needed only for a relay that offers no TLS at all and does not sit on loopback — a LAN
+    /// Postfix, a hoster's plain relay. The <em>operator's own</em> relay on loopback needs nothing:
+    /// cleartext that never reaches a network is permitted without this switch, which is what keeps
+    /// the Mailpit of <c>docker-compose.mail.yml</c> usable (once configured:
+    /// <c>Email.SmtpHost=localhost</c>, <c>Email.SmtpPort=1025</c>, <c>Email.SmtpEnableSsl=False</c> —
+    /// a fresh install seeds an empty host, port 587 and <c>true</c>, and sends nothing) without
+    /// telling every developer to set an installation-wide cleartext switch.
+    ///
+    /// Installation-wide, like every entry here, so it is not confined to the operator's own relay: it
+    /// covers every endpoint the guard admits, a tenant-configured one included, whenever the
+    /// transport flag in force is the operator's <c>false</c>. <em>That re-opens part of F3 where it
+    /// is set</em>: a tenant that echoes the operator's relay host still inherits the installation-wide SMTP
+    /// credentials (<c>TenantAwareEmailService.MergeWithTenant</c> — an echoed host is not foreign),
+    /// so the <em>server's</em> username and password go onto the wire in the clear for that tenant's
+    /// sends. Leave it off and no configuration of any kind puts cleartext onto a network. Repairing
+    /// the relay's TLS is the better answer; this is the single escape hatch, as
+    /// <c>SalesChannelHostPolicy:AllowInsecureTransport</c> is for the shop database.
+    /// </summary>
+    public bool AllowInsecureTransport { get; set; }
 }
 
 /// <summary>
 /// The evaluated form of <see cref="SmtpHostPolicyOptions"/>: parses the configured CIDRs, hosts and
-/// ports once and answers the three questions the SMTP endpoint guard asks. Registered as a
-/// singleton and taken by constructor injection, so the answer can never come from the tenant row
-/// being validated.
+/// ports once and answers the questions the SMTP endpoint guard asks — which endpoint may be dialled
+/// and whether it may be dialled in the clear. Registered as a singleton and taken by constructor
+/// injection, so the answer can never come from the tenant row being validated.
 /// </summary>
 public sealed class SmtpHostPolicy
 {
@@ -142,10 +171,14 @@ public sealed class SmtpHostPolicy
         }
 
         _allowedPorts = ports.Count > 0 ? ports : [.. DefaultAllowedPorts];
+        AllowInsecureTransport = options.AllowInsecureTransport;
     }
 
     /// <summary>True when the operator listed relay hosts, which makes the list exclusive.</summary>
     public bool HasRelayHostAllowList => _allowedRelayHosts.Count > 0;
+
+    /// <inheritdoc cref="SmtpHostPolicyOptions.AllowInsecureTransport"/>
+    public bool AllowInsecureTransport { get; }
 
     /// <inheritdoc cref="SmtpHostPolicyOptions.AllowedRelayHosts"/>
     /// <remarks>

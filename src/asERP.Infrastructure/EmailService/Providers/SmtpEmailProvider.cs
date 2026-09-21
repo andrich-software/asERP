@@ -2,7 +2,6 @@ using asERP.Application.Contracts.Infrastructure;
 using asERP.Application.Models.Email;
 using asERP.Domain.Enums;
 using MailKit.Net.Smtp;
-using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 
@@ -47,11 +46,12 @@ public class SmtpEmailProvider : IEmailProvider
 
             using var smtpClient = new SmtpClient();
 
-            // Preserve the legacy semantics of the SmtpEnableSsl flag: when disabled, connect in the clear
-            // (e.g. Mailpit on port 1025); when enabled, let MailKit pick implicit SSL (465) or STARTTLS.
-            var secureSocketOptions = settings.SmtpEnableSsl
-                ? SecureSocketOptions.Auto
-                : SecureSocketOptions.None;
+            // The transport is the operator's decision and never the caller's: mandatory TLS unless
+            // the policy leaves this one endpoint open for cleartext (the operator's own loopback
+            // relay, or SmtpHostPolicy:AllowInsecureTransport). StartTls fails closed where Auto used
+            // to continue in the clear, so the AUTH exchange below and the message body cannot be
+            // stripped onto the wire by an EHLO response that drops the capability.
+            var secureSocketOptions = await _endpointGuard.ResolveTransportAsync(settings);
 
             // Verbatim, exactly as SmtpEndpointGuard saw it: neither side normalizes this string, so
             // the value that was validated is the value that is dialled.

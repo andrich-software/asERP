@@ -16,6 +16,14 @@ public class TenantEmailSettingsInputDto
     public int? SmtpPort { get; set; }
     public string? SmtpUsername { get; set; }
     public string? SmtpPassword { get; set; }
+
+    /// <summary>
+    /// Kept for compatibility, and no longer a way to turn encryption off: the server dials every
+    /// SMTP endpoint with TLS (implicit on 465, STARTTLS elsewhere), and only the server operator's
+    /// own setting can ask for a cleartext session. Setting this field at all makes the transport the
+    /// tenant's choice, and a tenant's choice is encrypted, whichever value it carries. Null inherits
+    /// the server-level value, as every optional field here does.
+    /// </summary>
     public bool? SmtpEnableSsl { get; set; }
 
     // Microsoft 365

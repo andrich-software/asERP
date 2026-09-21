@@ -73,10 +73,13 @@ public class SettingsService : ISettingsService
 
         var emailSettings = new EmailSettings
         {
-            // The Setting table is Superadmin-only (SettingsController, GlobalSettingsController),
-            // so its SMTP endpoint is the operator's own and not what SmtpHostPolicy guards against.
+            // The Setting table is Superadmin-only (SettingsController, GlobalSettingsController), so
+            // its SMTP endpoint is the operator's own and not what SmtpHostPolicy guards against, and
+            // Email.SmtpEnableSsl is the operator's own answer on the transport — the one answer that
+            // may ask for a cleartext session.
             SmtpHostIsOperatorConfigured = true,
-            SmtpPortIsOperatorConfigured = true
+            SmtpPortIsOperatorConfigured = true,
+            SmtpEnableSslIsOperatorConfigured = true
         };
 
         foreach (var setting in settings)

@@ -1,5 +1,13 @@
 ﻿version: '3.8'
 
+# Mailpit offers no STARTTLS, and the server requires TLS on every SMTP endpoint except the operator's
+# own relay on loopback. Point the server here through the Superadmin settings — all three of
+#   Email.SmtpHost = localhost    Email.SmtpPort = 1025    Email.SmtpEnableSsl = False
+# The migration seeds an empty host, port 587 and SmtpEnableSsl = "true", so a fresh install sends no
+# mail at all; and leaving that "true" in place selects STARTTLS, which this container does not offer,
+# so the send fails with only the server log saying why. Running Mailpit on another machine instead
+# needs SmtpHostPolicy:AllowInsecureTransport, an operator-only switch that permits cleartext SMTP
+# installation-wide — see src/asERP.Infrastructure/CLAUDE.md.
 services:
   mailpit:
     image: axllent/mailpit:latest

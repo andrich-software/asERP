@@ -2,11 +2,13 @@ using System.Net;
 using System.Net.Sockets;
 using asERP.Application.Models.Email;
 using asERP.Application.Services;
+using MailKit.Security;
 
 namespace asERP.Infrastructure.EmailService;
 
 /// <summary>
-/// Decides whether an SMTP endpoint may be dialled, for the endpoints a tenant chose.
+/// Decides whether an SMTP endpoint may be dialled, for the endpoints a tenant chose, and with which
+/// transport (<see cref="ResolveTransportAsync"/>).
 ///
 /// <c>TenantEmailSettings.SmtpHost</c>/<c>SmtpPort</c> are written through a plain
 /// <c>[Authorize]</c> endpoint and were handed straight to <c>SmtpClient.ConnectAsync</c>, so any
@@ -26,10 +28,19 @@ namespace asERP.Infrastructure.EmailService;
 /// Every refusal is a <em>log-only</em> reason string. It never reaches the caller — the provider
 /// returns the same <c>false</c> it returns for a refused connection, an unreachable host or a bad
 /// password, so the test-send endpoint stays the single generic 500 it was and answers nothing
-/// about what is listening where.
+/// about what is listening where. A transport that fails closed is refused the same way: MailKit
+/// throws, the provider logs it and returns that same <c>false</c>.
 /// </summary>
 public sealed class SmtpEndpointGuard
 {
+    /// <summary>
+    /// The registered implicit-TLS submission port (RFC 8314 <c>submissions</c>): TLS is established
+    /// by connecting, so there is no cleartext phase an attacker could keep. Every other port —
+    /// 25, 587, 2525, whatever the operator allow-listed — opens in the clear and is upgraded with
+    /// STARTTLS, which is why the two cannot share one option.
+    /// </summary>
+    private const int ImplicitTlsPort = 465;
+
     private readonly SmtpHostPolicy _policy;
 
     public SmtpEndpointGuard(SmtpHostPolicy policy)
@@ -62,6 +73,74 @@ public sealed class SmtpEndpointGuard
     /// </summary>
     public Task<string?> EvaluateAsync(string? host, int? port) =>
         EvaluateAsync(host, port, hostIsOperatorConfigured: false, portIsOperatorConfigured: false);
+
+    /// <summary>
+    /// The transport these settings are dialled with. Encryption is mandatory —
+    /// <see cref="SecureSocketOptions.SslOnConnect"/> on the implicit-TLS port,
+    /// <see cref="SecureSocketOptions.StartTls"/> on every other — unless the operator's policy
+    /// leaves cleartext open for this one endpoint.
+    ///
+    /// <see cref="SecureSocketOptions.Auto"/> is what this replaces, and the reason it had to go is
+    /// that it is documented to continue <em>without any encryption</em> when the server does not
+    /// advertise STARTTLS: an attacker on the path strips that capability from the EHLO response and
+    /// the AUTH exchange and the whole message body — password-reset and confirmation tokens
+    /// included — follow in the clear. <c>StartTls</c> makes the same server a hard failure instead,
+    /// before any command is sent.
+    ///
+    /// That is also where F3's second half lands, with one honest exception: authentication cannot
+    /// happen over an unencrypted connection because the connection is either encrypted or never
+    /// established — except on the two endpoints the operator opened below, where the AUTH exchange
+    /// does go out in the clear because that is what the operator asked for. No separate check guards
+    /// <c>AuthenticateAsync</c>; adding one would only refuse those same two.
+    ///
+    /// Cleartext survives for exactly two endpoints, and never because a tenant asked for it:
+    /// <list type="bullet">
+    /// <item>the operator's own relay <em>on loopback</em> — all three dimensions operator-configured
+    /// by provenance (<see cref="EmailSettings.SmtpHostIsOperatorConfigured"/>,
+    /// <see cref="EmailSettings.SmtpPortIsOperatorConfigured"/>,
+    /// <see cref="EmailSettings.SmtpEnableSslIsOperatorConfigured"/>) and a host that resolves to
+    /// loopback and nothing else. That is the Mailpit of <c>docker-compose.mail.yml</c> <em>once a
+    /// developer has configured it</em>: <c>Email.SmtpHost=localhost</c>, <c>Email.SmtpPort=1025</c>
+    /// and <c>Email.SmtpEnableSsl=False</c> in the Superadmin settings. A fresh install has none of
+    /// them — the migration seeds an empty host, port 587 and <c>true</c> (<c>SettingsSeeder</c>), so
+    /// a stock installation sends no mail at all until somebody configures a relay. Such a session
+    /// never leaves the machine, so the network observer this guards against cannot see it;</item>
+    /// <item>whatever <see cref="SmtpHostPolicyOptions.AllowInsecureTransport"/> covers — the
+    /// operator's explicit "this installation may relay in the clear", for a LAN relay that offers no
+    /// TLS at all.</item>
+    /// </list>
+    ///
+    /// The loopback case earns its complexity for a security reason rather than a convenience one:
+    /// without it, the answer for a developer relaying into Mailpit is <c>AllowInsecureTransport</c>,
+    /// which is installation-wide and permits cleartext to <em>any</em> host the endpoint guard
+    /// admits. The carve-out confines the same convenience to a session that cannot leave the
+    /// machine — so it is not dead weight, and removing it would widen what a developer is told to
+    /// switch on.
+    ///
+    /// Both cases need <see cref="EmailSettings.SmtpEnableSsl"/> to be false <em>and</em> that false
+    /// to be the operator's own, so the flag can only ever <em>ask</em> for cleartext where the
+    /// operator already permits it. A tenant row saying <c>SmtpEnableSsl=false</c> changes nothing
+    /// anywhere — on a host of its own, on the operator's, on loopback — which is exactly what made it
+    /// a remote downgrade switch before.
+    /// </summary>
+    public async Task<SecureSocketOptions> ResolveTransportAsync(EmailSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        // Nothing speaks cleartext SMTP on 465 — the port means "TLS first" — so it is decided by the
+        // port alone and not by the flag.
+        if (settings.SmtpPort == ImplicitTlsPort)
+        {
+            return SecureSocketOptions.SslOnConnect;
+        }
+
+        if (!settings.SmtpEnableSsl && await MaySendInTheClearAsync(settings))
+        {
+            return SecureSocketOptions.None;
+        }
+
+        return SecureSocketOptions.StartTls;
+    }
 
     private async Task<string?> EvaluateAsync(
         string? host, int? port, bool hostIsOperatorConfigured, bool portIsOperatorConfigured)
@@ -153,4 +232,68 @@ public sealed class SmtpEndpointGuard
 
     private bool IsBlocked(IPAddress address) =>
         OutboundAddressGuard.IsBlockedAddress(address) && !_policy.IsAllowedPrivateAddress(address);
+
+    /// <summary>
+    /// True when this endpoint may carry an unencrypted session: the operator said so
+    /// installation-wide, or it is the operator's own relay on loopback, where nothing an observer
+    /// could reach is exposed. Either way the answer to "no TLS?" has to be the operator's own.
+    /// </summary>
+    private async Task<bool> MaySendInTheClearAsync(EmailSettings settings)
+    {
+        // The flag is a dimension of the endpoint like the host and the port, and provenance decides
+        // it the same way: a tenant row that sets SmtpEnableSsl at all has chosen the transport, and
+        // a tenant's choice is encrypted. Without this, a tenant could flip even the operator's own
+        // loopback relay out of TLS. The marks are set by the operator's settings sources alone
+        // (SettingsService, the appsettings fallback), so no request can forge this state.
+        if (!settings.SmtpEnableSslIsOperatorConfigured)
+        {
+            return false;
+        }
+
+        if (_policy.AllowInsecureTransport)
+        {
+            return true;
+        }
+
+        return settings.SmtpHostIsOperatorConfigured
+               && settings.SmtpPortIsOperatorConfigured
+               && await ResolvesToLoopbackOnlyAsync(settings.SmtpHost);
+    }
+
+    /// <summary>
+    /// True when the host is a loopback literal, or a name every one of whose addresses is loopback.
+    /// Fails closed: a host that does not resolve, resolves to nothing, or resolves to one
+    /// non-loopback address among others is not loopback, and its session is encrypted.
+    ///
+    /// The rebinding window <see cref="ResolvesToBlockedAddressAsync"/> describes exists here too —
+    /// MailKit connects by name afterwards. Its cost is bounded the same way: a resolver that answers
+    /// <c>127.0.0.1</c> here and something routable at connect time is a resolver that could also
+    /// have answered a public address, and the operator had to have configured that host in the first
+    /// place.
+    /// </summary>
+    private static async Task<bool> ResolvesToLoopbackOnlyAsync(string? host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return false;
+        }
+
+        if (IPAddress.TryParse(host, out var literal))
+        {
+            return IsLoopback(literal);
+        }
+
+        try
+        {
+            var addresses = await Dns.GetHostAddressesAsync(host);
+            return addresses.Length > 0 && addresses.All(IsLoopback);
+        }
+        catch (Exception ex) when (ex is SocketException or ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsLoopback(IPAddress address) =>
+        IPAddress.IsLoopback(address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address);
 }

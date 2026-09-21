@@ -15,6 +15,27 @@ public class EmailSettings
     public int? SmtpPort { get; set; }
     public string? SmtpUsername { get; set; }
     public string? SmtpPassword { get; set; }
+
+    /// <summary>
+    /// Whether this endpoint is dialled with TLS. True is what every endpoint gets regardless — the
+    /// transport is chosen by <c>SmtpEndpointGuard.ResolveTransportAsync</c> and is mandatory
+    /// (<c>SslOnConnect</c> on 465, <c>StartTls</c> elsewhere) unless the operator's
+    /// <see cref="SmtpHostPolicy"/> leaves that one endpoint open for cleartext.
+    ///
+    /// False therefore no longer <em>selects</em> an unencrypted connection, it only asks for one,
+    /// and only the operator may ask (<see cref="SmtpEnableSslIsOperatorConfigured"/>): honoured on
+    /// the operator's own relay when that relay is on loopback, and where
+    /// <see cref="SmtpHostPolicyOptions.AllowInsecureTransport"/> is set, ignored everywhere else. A
+    /// tenant row setting it false — on a host of its own, on the operator's, on loopback, anywhere —
+    /// is dialled with STARTTLS all the same; it used to be the remote switch that put the SMTP
+    /// credentials and the message body, password-reset tokens included, on the wire in the clear.
+    ///
+    /// The value a fresh installation runs on is <c>true</c>: the migration seeds
+    /// <c>Email.SmtpEnableSsl = "true"</c> (<c>SettingsSeeder</c>, <c>InitDb</c>) together with an
+    /// <em>empty</em> <c>Email.SmtpHost</c> and port 587, so nothing is sent until an operator
+    /// configures the relay. A developer relaying into the Mailpit of <c>docker-compose.mail.yml</c>
+    /// has to set this to <c>False</c> along with the host and port — Mailpit offers no STARTTLS.
+    /// </summary>
     public bool SmtpEnableSsl { get; set; } = true;
 
     /// <summary>
@@ -50,6 +71,19 @@ public class EmailSettings
     /// False by default, for the same fail-closed reason.
     /// </summary>
     public bool SmtpPortIsOperatorConfigured { get; set; }
+
+    /// <summary>
+    /// True when <see cref="SmtpEnableSsl"/> came from operator configuration, in the same sense as
+    /// <see cref="SmtpHostIsOperatorConfigured"/> — the tenant row left the field null. It is the
+    /// third dimension of the same rule: a half of the endpoint is the operator's only while the
+    /// tenant supplies nothing for it, and only the operator's own <c>false</c> can ask for a
+    /// cleartext session (<c>SmtpEndpointGuard.ResolveTransportAsync</c>).
+    ///
+    /// Without it the flag stayed a remote switch on one endpoint: on the operator's loopback relay a
+    /// tenant row could still flip a TLS session to cleartext. False by default, for the same
+    /// fail-closed reason, which is also why a settings source added later has to opt in.
+    /// </summary>
+    public bool SmtpEnableSslIsOperatorConfigured { get; set; }
 
     // Microsoft 365 (Graph API, client credentials / app-only)
     public string? M365TenantId { get; set; }

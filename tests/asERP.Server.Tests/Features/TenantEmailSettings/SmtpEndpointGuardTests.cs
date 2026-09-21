@@ -177,7 +177,7 @@ public class SmtpEndpointGuardTests
         //
         // Only the server settings path produces marks like these: the merge grants a half solely
         // when the tenant row supplies nothing for it, so a tenant cannot reach this state by naming
-        // the same endpoint (SeededStockInstall_RelaysForTheOperatorButNotForAnEchoingTenant).
+        // the same endpoint (OperatorLocalRelay_RelaysForTheOperatorButNotForAnEchoingTenant).
         var mailpit = TenantEndpoint("localhost", 1025);
         mailpit.SmtpHostIsOperatorConfigured = true;
         mailpit.SmtpPortIsOperatorConfigured = true;

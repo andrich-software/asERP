@@ -4,6 +4,7 @@ using asERP.Application.Contracts.Services;
 using asERP.Application.Models.Email;
 using asERP.Domain.Enums;
 using asERP.Infrastructure.EmailService;
+using MailKit.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -402,32 +403,86 @@ public class TenantAwareEmailServiceFallbackTest
     }
 
     [Fact]
-    public async Task SeededStockInstall_RelaysForTheOperatorButNotForAnEchoingTenant()
+    public async Task OperatorLocalRelay_RelaysForTheOperatorButNotForAnEchoingTenant()
     {
-        // What SettingsInitializer writes into a fresh database: localhost:1025, no credentials, no
-        // TLS, FromAddress noreply@aserp.local — the last of which is what makes LoadServerSettingsAsync
-        // prefer that row over appsettings. TenantEmailSettings is plain [Authorize] with no role
-        // check, so "echo the server's host back" is available to every authenticated user.
+        // The local relay of a developer machine: localhost:1025, no credentials, no TLS, FromAddress
+        // noreply@aserp.local — the last of which is what makes LoadServerSettingsAsync prefer the
+        // Setting row over appsettings. TenantEmailSettings is plain [Authorize] with no role check,
+        // so "echo the server's host back" is available to every authenticated user.
         var guard = new SmtpEndpointGuard(SmtpHostPolicy.Default);
 
         // The operator's own mail, with no tenant row at all: unchanged, and it has to stay so.
         var smtp = new CapturingProvider(EmailProviderType.Smtp);
-        var service = BuildService(SeededStockInstallSettings(), tenantOverride: null, smtp);
+        var service = BuildService(LocalMailpitSettings(), tenantOverride: null, smtp);
         Assert.True(await service.SendEmailAsync(TestMessage(), Guid.NewGuid()));
         Assert.Null(await guard.EvaluateAsync(smtp.LastSettings!));
 
         // Echoing the host: loopback, and that half is the tenant's now.
         Assert.NotNull(await guard.EvaluateAsync(
-            await MergeAsync(SeededStockInstallSettings(), TenantRow(host: "localhost"))));
+            await MergeAsync(LocalMailpitSettings(), TenantRow(host: "localhost"))));
 
         // Echoing the port: the host half is still the operator's, but 1025 is the tenant's choice
         // and is not a submission port — the other half catches it.
         Assert.NotNull(await guard.EvaluateAsync(
-            await MergeAsync(SeededStockInstallSettings(), TenantRow(port: 1025))));
+            await MergeAsync(LocalMailpitSettings(), TenantRow(port: 1025))));
 
         // Echoing both.
         Assert.NotNull(await guard.EvaluateAsync(
-            await MergeAsync(SeededStockInstallSettings(), TenantRow(host: "localhost", port: 1025))));
+            await MergeAsync(LocalMailpitSettings(), TenantRow(host: "localhost", port: 1025))));
+    }
+
+    [Fact]
+    public async Task TenantRow_CannotSelectCleartext_ByAnyRouteThroughTheMerge()
+    {
+        // The merge is what an installation actually experiences, so F34's flag is pinned here too:
+        // SmtpEnableSsl = false reaches the provider unchanged, and selects nothing — a tenant row
+        // that sets the field has chosen the transport, and a tenant's choice is encrypted.
+        var guard = new SmtpEndpointGuard(SmtpHostPolicy.Default);
+
+        // A relay of the tenant's own, with credentials of its own (F3) and "no SSL".
+        Assert.Equal(SecureSocketOptions.StartTls, await guard.ResolveTransportAsync(
+            await MergeAsync(
+                PublicRelaySettings(),
+                TenantRow(host: "203.0.113.20", port: 587, username: "tenant-user",
+                          password: "tenant-secret", enableSsl: false))));
+
+        // Echoing the operator's own loopback endpoint back: not provenance here either.
+        Assert.Equal(SecureSocketOptions.StartTls, await guard.ResolveTransportAsync(
+            await MergeAsync(
+                LocalMailpitSettings(), TenantRow(host: "localhost", port: 1025, enableSsl: false))));
+
+        // The operator's LAN relay with the tenant asking for cleartext: off loopback, so encrypted
+        // until the operator sets SmtpHostPolicy:AllowInsecureTransport.
+        Assert.Equal(SecureSocketOptions.StartTls, await guard.ResolveTransportAsync(
+            await MergeAsync(LanRelaySettings(), TenantRow(enableSsl: false))));
+
+        // The operator's Mailpit, with a tenant row that touches the flag at all: the third mark is
+        // gone, so even this endpoint is encrypted — and Mailpit offers no STARTTLS, so that tenant's
+        // mail fails rather than travelling in the clear.
+        Assert.Equal(SecureSocketOptions.StartTls, await guard.ResolveTransportAsync(
+            await MergeAsync(LocalMailpitSettings(), TenantRow(enableSsl: false))));
+
+        // A tenant row that leaves the flag alone keeps the operator's answer, and with it the local
+        // relay a developer configured — the flow the docs describe.
+        Assert.Equal(SecureSocketOptions.None, await guard.ResolveTransportAsync(
+            await MergeAsync(LocalMailpitSettings(), TenantRow())));
+    }
+
+    [Fact]
+    public async Task TransportFlagIsOperatorConfigured_FollowsTheSameProvenanceRuleAsHostAndPort()
+    {
+        Assert.True((await MergeAsync(LanRelaySettings(), TenantRow())).SmtpEnableSslIsOperatorConfigured);
+
+        // Either value, set by the tenant, is the tenant's choice — including one that echoes the
+        // operator's own, exactly as an echoed host is not provenance.
+        Assert.False((await MergeAsync(LanRelaySettings(), TenantRow(enableSsl: false)))
+            .SmtpEnableSslIsOperatorConfigured);
+        Assert.False((await MergeAsync(LanRelaySettings(), TenantRow(enableSsl: true)))
+            .SmtpEnableSslIsOperatorConfigured);
+
+        // And the value itself still merges as it always did.
+        Assert.True((await MergeAsync(ServerSmtpSettings(), TenantRow())).SmtpEnableSsl);
+        Assert.False((await MergeAsync(ServerSmtpSettings(), TenantRow(enableSsl: false))).SmtpEnableSsl);
     }
 
     private static async Task<EmailSettings> MergeAsync(
@@ -441,7 +496,8 @@ public class TenantAwareEmailServiceFallbackTest
     }
 
     private static Domain.Entities.TenantEmailSettings TenantRow(
-        string? host = null, int? port = null, string? username = null, string? password = null) => new()
+        string? host = null, int? port = null, string? username = null, string? password = null,
+        bool? enableSsl = null) => new()
         {
             TenantId = Guid.NewGuid(),
             ProviderType = EmailProviderType.Smtp,
@@ -450,6 +506,7 @@ public class TenantAwareEmailServiceFallbackTest
             SmtpPort = port,
             SmtpUsername = username,
             SmtpPassword = password,
+            SmtpEnableSsl = enableSsl,
             FromName = "Tenant Override"
         };
 
@@ -462,6 +519,7 @@ public class TenantAwareEmailServiceFallbackTest
         SmtpEnableSsl = false,
         SmtpHostIsOperatorConfigured = true,
         SmtpPortIsOperatorConfigured = true,
+        SmtpEnableSslIsOperatorConfigured = true,
         FromAddress = "server@example.com",
         FromName = "Server"
     };
@@ -475,8 +533,14 @@ public class TenantAwareEmailServiceFallbackTest
         return settings;
     }
 
-    /// <summary>What SettingsInitializer seeds into a fresh database (SettingsInitializer.cs:221-227).</summary>
-    private static EmailSettings SeededStockInstallSettings() => new()
+    /// <summary>
+    /// The Mailpit of <c>docker-compose.mail.yml</c> as a developer configures it in the Superadmin
+    /// settings: <c>Email.SmtpHost=localhost</c>, <c>Email.SmtpPort=1025</c>,
+    /// <c>Email.SmtpEnableSsl=False</c>. Not a default — the migration seeds an empty host, port 587
+    /// and <c>true</c> (<c>SettingsSeeder</c>), and <c>SettingsInitializer</c> only fills in keys that
+    /// are missing, after <c>Migrate()</c>. A stock installation sends no mail at all.
+    /// </summary>
+    private static EmailSettings LocalMailpitSettings() => new()
     {
         ProviderType = EmailProviderType.Smtp,
         SmtpHost = "localhost",
@@ -484,6 +548,7 @@ public class TenantAwareEmailServiceFallbackTest
         SmtpEnableSsl = false,
         SmtpHostIsOperatorConfigured = true,
         SmtpPortIsOperatorConfigured = true,
+        SmtpEnableSslIsOperatorConfigured = true,
         FromAddress = "noreply@aserp.local",
         FromName = "asERP System"
     };
@@ -497,6 +562,7 @@ public class TenantAwareEmailServiceFallbackTest
         SmtpEnableSsl = false,
         SmtpHostIsOperatorConfigured = true,
         SmtpPortIsOperatorConfigured = true,
+        SmtpEnableSslIsOperatorConfigured = true,
         FromAddress = "server@example.com",
         FromName = "Server"
     };
@@ -509,6 +575,7 @@ public class TenantAwareEmailServiceFallbackTest
         SmtpUsername = "server-user",
         SmtpPassword = "server-secret",
         SmtpEnableSsl = true,
+        SmtpEnableSslIsOperatorConfigured = true,
         FromAddress = "server@example.com",
         FromName = "Server"
     };
