@@ -69,7 +69,7 @@ public sealed class ConfigJsonSecretRedactor
     /// <summary>
     /// Returns the blob with every secret value replaced by <see cref="RedactedValue"/>, keeping
     /// the keys themselves so the client still sees that a value is configured. A blob that cannot
-    /// be parsed is suppressed entirely (<c>null</c>) rather than echoed — unparseable text can
+    /// be read is suppressed entirely (<c>null</c>) rather than echoed — unreadable text can
     /// still contain a readable secret.
     /// </summary>
     public string? Redact(string? json)
@@ -79,22 +79,26 @@ public sealed class ConfigJsonSecretRedactor
             return json;
         }
 
-        JsonNode? root;
         try
         {
-            root = JsonNode.Parse(json);
+            var root = JsonNode.Parse(json);
+            if (root is null)
+            {
+                return json;
+            }
+
+            return RedactNode(root) ? root.ToJsonString() : json;
         }
         catch (JsonException)
         {
             return null;
         }
-
-        if (root is null)
+        catch (ArgumentException)
         {
-            return json;
+            // A blob with an exactly repeated key parses, but JsonObject throws while building its
+            // dictionary on the first read. Suppress it like text that does not parse at all.
+            return null;
         }
-
-        return RedactNode(root) ? root.ToJsonString() : json;
     }
 
     /// <summary>
@@ -117,7 +121,17 @@ public sealed class ConfigJsonSecretRedactor
 
         var stored = TryParse(storedJson);
 
-        return MergeNode(incoming, stored) ? incoming.ToJsonString() : incomingJson;
+        try
+        {
+            return MergeNode(incoming, stored) ? incoming.ToJsonString() : incomingJson;
+        }
+        catch (ArgumentException)
+        {
+            // Exactly repeated key in the incoming blob: JsonObject throws while building its
+            // dictionary. Store the text as it came, like a blob that does not parse at all — the
+            // read side suppresses it either way.
+            return incomingJson;
+        }
     }
 
     private static JsonNode? TryParse(string? json)
@@ -250,12 +264,21 @@ public sealed class ConfigJsonSecretRedactor
             return null;
         }
 
-        foreach (var pair in obj)
+        try
         {
-            if (string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase))
+            foreach (var pair in obj)
             {
-                return pair.Value;
+                if (string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return pair.Value;
+                }
             }
+        }
+        catch (ArgumentException)
+        {
+            // Stored blob with an exactly repeated key — unreadable, so nothing is stored under
+            // this key and the placeholder is dropped rather than kept.
+            return null;
         }
 
         return null;

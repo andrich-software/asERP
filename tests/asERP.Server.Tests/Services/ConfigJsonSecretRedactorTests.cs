@@ -152,6 +152,50 @@ public class ConfigJsonSecretRedactorTests
         Assert.False(HasKey(merged, "TrackingApiKey"));
     }
 
+    // A blob with an exactly repeated key parses, but JsonObject throws ArgumentException while
+    // building its dictionary on the first read — both entry points must survive that.
+
+    private const string DuplicateKeyConfig =
+        """{"Procedure":"01","TrackingApiKey":"live-dhl-tracking-key","TrackingApiKey":"live-dhl-tracking-key"}""";
+
+    [Fact]
+    public void Redact_WithDuplicatedKey_SuppressesTheBlobInsteadOfThrowing()
+    {
+        Assert.Null(Shipping.Redact(DuplicateKeyConfig));
+    }
+
+    [Fact]
+    public void Redact_WithKeysDifferingOnlyInCase_RedactsEveryOccurrence()
+    {
+        var redacted = Shipping.Redact("""{"TrackingApiKey":"live-dhl-tracking-key","trackingapikey":"second-key"}""");
+
+        Assert.Equal(ConfigJsonSecretRedactor.RedactedValue, Value(redacted, "TrackingApiKey"));
+        Assert.Equal(ConfigJsonSecretRedactor.RedactedValue, Value(redacted, "trackingapikey"));
+    }
+
+    [Fact]
+    public void Merge_WithDuplicatedKeyInTheIncomingBlob_StoresItUnchangedInsteadOfThrowing()
+    {
+        Assert.Equal(DuplicateKeyConfig, Shipping.Merge(DuplicateKeyConfig, StoredConfig));
+    }
+
+    [Fact]
+    public void Merge_WithDuplicatedKeyInTheStoredBlob_DropsThePlaceholderInsteadOfThrowing()
+    {
+        var merged = Shipping.Merge("""{"TrackingApiKey":"********"}""", DuplicateKeyConfig);
+
+        Assert.False(HasKey(merged, "TrackingApiKey"));
+    }
+
+    [Fact]
+    public void Merge_WithKeysDifferingOnlyInCase_KeepsTheStoredSecretForEach()
+    {
+        var merged = Shipping.Merge("""{"TrackingApiKey":"********","trackingapikey":"********"}""", StoredConfig);
+
+        Assert.Equal("live-dhl-tracking-key", Value(merged, "TrackingApiKey"));
+        Assert.Equal("live-dhl-tracking-key", Value(merged, "trackingapikey"));
+    }
+
     [Theory]
     [InlineData("TrackingApiKey")]
     [InlineData("SomeFutureApiKey")]

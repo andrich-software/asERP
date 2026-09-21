@@ -17,8 +17,11 @@ public class SalesChannelInputDto : ISalesChannelInputModel
 
     /// <summary>
     /// Free-form connector configuration (schema owned by the connector — e.g. MySQL host/database/
-    /// table prefix for WooCommerceDatabase). Must not contain secrets; those belong in Password.
-    /// Null means "keep the stored value unchanged" on update.
+    /// table prefix for WooCommerceDatabase, the Shopware 6 / Amazon API credentials).
+    /// Null means "keep the stored value unchanged" on update, an empty string clears it.
+    /// Per secret key inside the blob the same rule applies as for <see cref="Password"/>: the
+    /// placeholder <c>********</c> keeps the stored value, a missing key clears it, any other
+    /// value replaces it.
     /// </summary>
     public string? AdditionalConfigJson { get; set; }
 

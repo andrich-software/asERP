@@ -15,7 +15,11 @@ public class SalesChannelDetailDto
 
     public string Password { get; set; } = string.Empty;
 
-    /// <summary>Free-form connector configuration (never contains secrets — see input DTO).</summary>
+    /// <summary>
+    /// Free-form connector configuration. Secret-bearing keys (the Shopware 6 / Amazon API
+    /// secrets) keep their key but carry the constant placeholder <c>********</c> as their value;
+    /// a blob that cannot be read back is suppressed entirely.
+    /// </summary>
     public string? AdditionalConfigJson { get; set; }
 
     public bool ImportProducts { get; set; }

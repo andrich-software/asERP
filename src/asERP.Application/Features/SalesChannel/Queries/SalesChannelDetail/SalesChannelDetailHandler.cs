@@ -91,7 +91,9 @@ public class SalesChannelDetailHandler : IRequestHandler<SalesChannelDetailQuery
             Username = entity.Username,
             // Password is intentionally never returned in detail DTOs (write-only on the wire).
             Password = string.Empty,
-            AdditionalConfigJson = entity.AdditionalConfigJson,
+            // The blob is the documented home of the Shopware 6 / Amazon API secrets — they leave
+            // the server only as the redaction placeholder, exactly like the password above.
+            AdditionalConfigJson = SalesChannelConfigSecrets.Redactor.Redact(entity.AdditionalConfigJson),
             HasRefreshToken = !string.IsNullOrEmpty(entity.RefreshToken),
             TokenExpiresAt = entity.TokenExpiresAt,
             ImportProducts = entity.ImportProducts,

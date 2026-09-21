@@ -100,7 +100,9 @@ public class SalesChannelCreateHandler : IRequestHandler<SalesChannelCreateComma
             Url = command.Url,
             Username = command.Username,
             Password = command.Password,
-            AdditionalConfigJson = command.AdditionalConfigJson,
+            // Merged against nothing stored, so a placeholder echoed back from a redacted detail
+            // response is dropped instead of becoming the channel's stored credential.
+            AdditionalConfigJson = SalesChannelConfigSecrets.Redactor.Merge(command.AdditionalConfigJson, null),
             ImportProducts = syncAlwaysOn || command.ImportProducts,
             ImportCustomers = syncAlwaysOn || command.ImportCustomers,
             ImportSaless = syncAlwaysOn || command.ImportSaless,

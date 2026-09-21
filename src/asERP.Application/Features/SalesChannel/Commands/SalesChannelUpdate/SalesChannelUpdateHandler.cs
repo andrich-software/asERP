@@ -63,11 +63,16 @@ public class SalesChannelUpdateHandler : IRequestHandler<SalesChannelUpdateComma
             existingSalesChannel.Password = request.Password;
         }
         // Null means "keep the stored connector config" (older clients don't send the field);
-        // an empty string deliberately clears it.
+        // an empty string deliberately clears it. A supplied blob is merged: its secret keys are
+        // redacted on read, so the placeholder coming back means "keep the stored value" — the
+        // same convention as the password above, applied per key.
         if (request.AdditionalConfigJson is not null)
         {
             existingSalesChannel.AdditionalConfigJson =
-                string.IsNullOrWhiteSpace(request.AdditionalConfigJson) ? null : request.AdditionalConfigJson;
+                string.IsNullOrWhiteSpace(request.AdditionalConfigJson)
+                    ? null
+                    : SalesChannelConfigSecrets.Redactor.Merge(
+                        request.AdditionalConfigJson, existingSalesChannel.AdditionalConfigJson);
         }
         // asShop channels keep every sync direction always on (the client hides the toggles);
         // forcing here also heals channels created before that rule existed. The connector's
