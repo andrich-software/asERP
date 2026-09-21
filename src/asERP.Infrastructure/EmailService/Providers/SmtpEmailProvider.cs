@@ -11,10 +11,12 @@ namespace asERP.Infrastructure.EmailService.Providers;
 public class SmtpEmailProvider : IEmailProvider
 {
     private readonly ILogger<SmtpEmailProvider> _logger;
+    private readonly SmtpEndpointGuard _endpointGuard;
 
-    public SmtpEmailProvider(ILogger<SmtpEmailProvider> logger)
+    public SmtpEmailProvider(ILogger<SmtpEmailProvider> logger, SmtpEndpointGuard endpointGuard)
     {
         _logger = logger;
+        _endpointGuard = endpointGuard;
     }
 
     public EmailProviderType ProviderType => EmailProviderType.Smtp;
@@ -30,6 +32,17 @@ public class SmtpEmailProvider : IEmailProvider
                 return false;
             }
 
+            // SmtpHost/SmtpPort are tenant-writable through a plain [Authorize] endpoint, so the
+            // socket below is aimed by the caller unless the operator's policy agrees with the
+            // target. The reason stays in the log: the caller gets the same false as any other
+            // failed send and learns nothing about what is listening where.
+            var refusal = await _endpointGuard.EvaluateAsync(settings);
+            if (refusal != null)
+            {
+                _logger.LogError("Refusing to send email via SMTP to {To}: {Reason}", email.To, refusal);
+                return false;
+            }
+
             using var message = BuildMessage(email, settings);
 
             using var smtpClient = new SmtpClient();
@@ -40,6 +53,8 @@ public class SmtpEmailProvider : IEmailProvider
                 ? SecureSocketOptions.Auto
                 : SecureSocketOptions.None;
 
+            // Verbatim, exactly as SmtpEndpointGuard saw it: neither side normalizes this string, so
+            // the value that was validated is the value that is dialled.
             await smtpClient.ConnectAsync(settings.SmtpHost, settings.SmtpPort.Value, secureSocketOptions);
 
             if (!string.IsNullOrEmpty(settings.SmtpUsername) && !string.IsNullOrEmpty(settings.SmtpPassword))

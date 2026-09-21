@@ -164,6 +164,25 @@ public class TenantAwareEmailService : IEmailService
         var hasOwnSmtpCredentials = !string.IsNullOrWhiteSpace(tenant.SmtpUsername)
                                     && !string.IsNullOrWhiteSpace(tenant.SmtpPassword);
 
+        // What waives the guard is provenance, not equality: a half stays the operator's only while
+        // the tenant supplies nothing for it. A tenant that echoes the server's own host back —
+        // "localhost" on a stock install is a guess, not a secret — is choosing that value and is
+        // checked like any other caller. The conditions below are the ones Coalesce and ?? use, so a
+        // surviving mark always describes the server's own string rather than a matching copy of it.
+        //
+        // The two halves are carried separately because SmtpHostPolicy checks them separately
+        // (SmtpEndpointGuard): the operator's host stays exempt from the private-address check when
+        // the tenant only picks another port, and a port the tenant picked is checked even on the
+        // operator's own host. Coupling them would refuse an operator relay on the LAN as soon as a
+        // tenant moved from 25 to 587 — a working installation, stopped silently.
+        //
+        // This is deliberately not the test that governs credential inheritance below: isForeignHost
+        // asks "would these credentials reach someone other than the server's own relay", which an
+        // echoed host does not, so such a tenant still inherits them exactly as it did (F3).
+        var keepsServerSmtpHost = server.SmtpHostIsOperatorConfigured
+                                  && string.IsNullOrWhiteSpace(tenant.SmtpHost);
+        var keepsServerSmtpPort = server.SmtpPortIsOperatorConfigured && tenant.SmtpPort is null;
+
         if (isForeignHost)
         {
             _logger.LogWarning(
@@ -189,6 +208,8 @@ public class TenantAwareEmailService : IEmailService
             SmtpUsername = isForeignHost ? tenant.SmtpUsername : Coalesce(tenant.SmtpUsername, server.SmtpUsername),
             SmtpPassword = isForeignHost ? tenant.SmtpPassword : Coalesce(tenant.SmtpPassword, server.SmtpPassword),
             SmtpEnableSsl = tenant.SmtpEnableSsl ?? server.SmtpEnableSsl,
+            SmtpHostIsOperatorConfigured = keepsServerSmtpHost,
+            SmtpPortIsOperatorConfigured = keepsServerSmtpPort,
             M365TenantId = Coalesce(tenant.M365TenantId, server.M365TenantId),
             M365ClientId = Coalesce(tenant.M365ClientId, server.M365ClientId),
             M365ClientSecret = Coalesce(tenant.M365ClientSecret, server.M365ClientSecret),
@@ -227,6 +248,9 @@ public class TenantAwareEmailService : IEmailService
             SmtpUsername = _configuration["EmailSettings:SmtpUsername"],
             SmtpPassword = _configuration["EmailSettings:SmtpPassword"],
             SmtpEnableSsl = !bool.TryParse(_configuration["EmailSettings:SmtpEnableSsl"], out var enableSsl) || enableSsl,
+            // appsettings is operator configuration, so this endpoint is not the one SmtpHostPolicy guards.
+            SmtpHostIsOperatorConfigured = true,
+            SmtpPortIsOperatorConfigured = true,
             M365TenantId = _configuration["EmailSettings:M365TenantId"],
             M365ClientId = _configuration["EmailSettings:M365ClientId"],
             M365ClientSecret = _configuration["EmailSettings:M365ClientSecret"],

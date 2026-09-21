@@ -71,7 +71,13 @@ public class SettingsService : ISettingsService
     {
         var settings = await _settingRepository.Entities.Where(s => s.Key.StartsWith("Email.")).ToListAsync();
 
-        var emailSettings = new EmailSettings();
+        var emailSettings = new EmailSettings
+        {
+            // The Setting table is Superadmin-only (SettingsController, GlobalSettingsController),
+            // so its SMTP endpoint is the operator's own and not what SmtpHostPolicy guards against.
+            SmtpHostIsOperatorConfigured = true,
+            SmtpPortIsOperatorConfigured = true
+        };
 
         foreach (var setting in settings)
         {

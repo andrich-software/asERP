@@ -312,6 +312,195 @@ public class TenantAwareEmailServiceFallbackTest
         Assert.Equal("tenant@example.com", smtp.LastSettings.FromAddress);
     }
 
+    [Fact]
+    public async Task TenantOverrideWithoutAnEndpoint_KeepsBothHalvesOperatorConfigured()
+    {
+        var merged = await MergeAsync(LanRelaySettings(), TenantRow());
+
+        Assert.True(merged.SmtpHostIsOperatorConfigured);
+        Assert.True(merged.SmtpPortIsOperatorConfigured);
+    }
+
+    [Fact]
+    public async Task TenantEchoingTheServerEndpoint_KeepsNeitherHalfAndStillInheritsCredentials()
+    {
+        var merged = await MergeAsync(CredentialedLanRelaySettings(), TenantRow(host: "192.168.10.5", port: 25));
+
+        // Echoing is not provenance: the tenant wrote these values, so neither half is the operator's
+        // and both are checked. The server's own host is a guess away on a stock install.
+        Assert.False(merged.SmtpHostIsOperatorConfigured);
+        Assert.False(merged.SmtpPortIsOperatorConfigured);
+
+        // F3's rule is decided by a different question — would these credentials reach anyone but the
+        // server's own relay — and is untouched: an echoed host still inherits them, exactly as
+        // TenantRepeatsServerSmtpHost_StillInheritsServerCredentials above pins it.
+        Assert.Equal("server-user", merged.SmtpUsername);
+        Assert.Equal("server-secret", merged.SmtpPassword);
+    }
+
+    [Fact]
+    public async Task TenantOverridingOnlyThePort_KeepsTheOperatorHost()
+    {
+        // The half the tenant did not touch stays the operator's. Coupling the two would re-run the
+        // private-address check on the operator's own relay and refuse it.
+        var merged = await MergeAsync(LanRelaySettings(), TenantRow(port: 587));
+
+        Assert.True(merged.SmtpHostIsOperatorConfigured);
+        Assert.False(merged.SmtpPortIsOperatorConfigured);
+    }
+
+    [Fact]
+    public async Task TenantOverridingOnlyTheHost_KeepsTheOperatorPort()
+    {
+        var merged = await MergeAsync(
+            LanRelaySettings(),
+            TenantRow(host: "smtp.tenant.example", username: "tenant-user", password: "tenant-secret"));
+
+        Assert.False(merged.SmtpHostIsOperatorConfigured);
+        Assert.True(merged.SmtpPortIsOperatorConfigured);
+        Assert.Equal(25, merged.SmtpPort);
+    }
+
+    [Fact]
+    public async Task TenantOverridingBothHalves_KeepsNeither()
+    {
+        var merged = await MergeAsync(
+            LanRelaySettings(),
+            TenantRow(host: "smtp.tenant.example", port: 587, username: "tenant-user", password: "tenant-secret"));
+
+        Assert.False(merged.SmtpHostIsOperatorConfigured);
+        Assert.False(merged.SmtpPortIsOperatorConfigured);
+    }
+
+    [Fact]
+    public async Task OperatorRelayOnAPrivateNetwork_SurvivesTheOverridesItShould()
+    {
+        // The merge feeds the guard here, so this pins what an installation actually experiences.
+        var guard = new SmtpEndpointGuard(SmtpHostPolicy.Default);
+
+        // A tenant row that names no endpoint: the operator's relay, untouched.
+        Assert.Null(await guard.EvaluateAsync(
+            await MergeAsync(LanRelaySettings(), TenantRow())));
+
+        // The tenant moves only the port. The host half is still the operator's, so the private
+        // address is not re-checked and 587 is a submission port — the case a coupled marker broke.
+        Assert.Null(await guard.EvaluateAsync(
+            await MergeAsync(LanRelaySettings(), TenantRow(port: 587))));
+
+        // Same host, a port no relay listens on: that half is the tenant's and is checked.
+        Assert.NotNull(await guard.EvaluateAsync(
+            await MergeAsync(LanRelaySettings(), TenantRow(port: 6379))));
+
+        // The tenant names the host itself — even the operator's own — and is checked on it.
+        Assert.NotNull(await guard.EvaluateAsync(
+            await MergeAsync(LanRelaySettings(), TenantRow(host: "192.168.10.5"))));
+
+        // The same override against a public relay stays permitted: the address check is what the
+        // private one fails, and 587 is a submission port either way.
+        Assert.Null(await guard.EvaluateAsync(
+            await MergeAsync(PublicRelaySettings(), TenantRow(host: "203.0.113.10", port: 587))));
+    }
+
+    [Fact]
+    public async Task SeededStockInstall_RelaysForTheOperatorButNotForAnEchoingTenant()
+    {
+        // What SettingsInitializer writes into a fresh database: localhost:1025, no credentials, no
+        // TLS, FromAddress noreply@aserp.local — the last of which is what makes LoadServerSettingsAsync
+        // prefer that row over appsettings. TenantEmailSettings is plain [Authorize] with no role
+        // check, so "echo the server's host back" is available to every authenticated user.
+        var guard = new SmtpEndpointGuard(SmtpHostPolicy.Default);
+
+        // The operator's own mail, with no tenant row at all: unchanged, and it has to stay so.
+        var smtp = new CapturingProvider(EmailProviderType.Smtp);
+        var service = BuildService(SeededStockInstallSettings(), tenantOverride: null, smtp);
+        Assert.True(await service.SendEmailAsync(TestMessage(), Guid.NewGuid()));
+        Assert.Null(await guard.EvaluateAsync(smtp.LastSettings!));
+
+        // Echoing the host: loopback, and that half is the tenant's now.
+        Assert.NotNull(await guard.EvaluateAsync(
+            await MergeAsync(SeededStockInstallSettings(), TenantRow(host: "localhost"))));
+
+        // Echoing the port: the host half is still the operator's, but 1025 is the tenant's choice
+        // and is not a submission port — the other half catches it.
+        Assert.NotNull(await guard.EvaluateAsync(
+            await MergeAsync(SeededStockInstallSettings(), TenantRow(port: 1025))));
+
+        // Echoing both.
+        Assert.NotNull(await guard.EvaluateAsync(
+            await MergeAsync(SeededStockInstallSettings(), TenantRow(host: "localhost", port: 1025))));
+    }
+
+    private static async Task<EmailSettings> MergeAsync(
+        EmailSettings serverSettings, Domain.Entities.TenantEmailSettings tenantOverride)
+    {
+        var smtp = new CapturingProvider(EmailProviderType.Smtp);
+        var service = BuildService(serverSettings, tenantOverride, smtp);
+
+        Assert.True(await service.SendEmailAsync(TestMessage(), tenantOverride.TenantId));
+        return smtp.LastSettings!;
+    }
+
+    private static Domain.Entities.TenantEmailSettings TenantRow(
+        string? host = null, int? port = null, string? username = null, string? password = null) => new()
+        {
+            TenantId = Guid.NewGuid(),
+            ProviderType = EmailProviderType.Smtp,
+            IsActive = true,
+            SmtpHost = host,
+            SmtpPort = port,
+            SmtpUsername = username,
+            SmtpPassword = password,
+            FromName = "Tenant Override"
+        };
+
+    /// <summary>An installation-wide relay on the LAN, anonymous — the Postfix-style setup.</summary>
+    private static EmailSettings LanRelaySettings() => new()
+    {
+        ProviderType = EmailProviderType.Smtp,
+        SmtpHost = "192.168.10.5",
+        SmtpPort = 25,
+        SmtpEnableSsl = false,
+        SmtpHostIsOperatorConfigured = true,
+        SmtpPortIsOperatorConfigured = true,
+        FromAddress = "server@example.com",
+        FromName = "Server"
+    };
+
+    /// <summary>The LAN relay with installation-wide credentials, for the F3 cross-check.</summary>
+    private static EmailSettings CredentialedLanRelaySettings()
+    {
+        var settings = LanRelaySettings();
+        settings.SmtpUsername = "server-user";
+        settings.SmtpPassword = "server-secret";
+        return settings;
+    }
+
+    /// <summary>What SettingsInitializer seeds into a fresh database (SettingsInitializer.cs:221-227).</summary>
+    private static EmailSettings SeededStockInstallSettings() => new()
+    {
+        ProviderType = EmailProviderType.Smtp,
+        SmtpHost = "localhost",
+        SmtpPort = 1025,
+        SmtpEnableSsl = false,
+        SmtpHostIsOperatorConfigured = true,
+        SmtpPortIsOperatorConfigured = true,
+        FromAddress = "noreply@aserp.local",
+        FromName = "asERP System"
+    };
+
+    /// <summary>The same relay on a public address (RFC 5737 documentation space, never dialled).</summary>
+    private static EmailSettings PublicRelaySettings() => new()
+    {
+        ProviderType = EmailProviderType.Smtp,
+        SmtpHost = "203.0.113.10",
+        SmtpPort = 25,
+        SmtpEnableSsl = false,
+        SmtpHostIsOperatorConfigured = true,
+        SmtpPortIsOperatorConfigured = true,
+        FromAddress = "server@example.com",
+        FromName = "Server"
+    };
+
     private static EmailSettings ServerSmtpSettings() => new()
     {
         ProviderType = EmailProviderType.Smtp,

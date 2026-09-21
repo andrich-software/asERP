@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using asERP.Application.Services;
 
 namespace asERP.SalesChannels;
 
@@ -116,52 +117,10 @@ public static class SalesChannelUrlValidator
     /// True when the address is private, loopback, link-local, ULA or otherwise reserved. Exposed for the
     /// HttpClient ConnectCallback so the actually-dialed IP can be re-validated at connect time.
     /// </summary>
-    public static bool IsBlockedAddress(IPAddress ip)
-    {
-        // IPv4-mapped IPv6 (e.g. ::ffff:10.0.0.1) would otherwise slip past the IPv4 checks — normalize it.
-        if (ip.IsIPv4MappedToIPv6)
-        {
-            ip = ip.MapToIPv4();
-        }
-
-        if (IPAddress.IsLoopback(ip))
-        {
-            return true;
-        }
-
-        if (ip.AddressFamily == AddressFamily.InterNetworkV6)
-        {
-            if (ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal || ip.IsIPv6Multicast)
-            {
-                return true;
-            }
-
-            // Unique-local addresses fc00::/7 (the high 7 bits are 1111 110x).
-            var v6 = ip.GetAddressBytes();
-            if ((v6[0] & 0xFE) == 0xFC)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        if (ip.AddressFamily != AddressFamily.InterNetwork)
-        {
-            return false;
-        }
-
-        byte[] bytes = ip.GetAddressBytes();
-
-        return bytes[0] switch
-        {
-            10 => true,                                          // 10.0.0.0/8
-            127 => true,                                         // 127.0.0.0/8
-            172 => bytes[1] >= 16 && bytes[1] <= 31,             // 172.16.0.0/12
-            192 => bytes[1] == 168,                              // 192.168.0.0/16
-            169 => bytes[1] == 254,                              // 169.254.0.0/16 (link-local)
-            0 => true,                                           // 0.0.0.0/8
-            _ => false
-        };
-    }
+    /// <remarks>
+    /// The predicate itself is <see cref="OutboundAddressGuard.IsBlockedAddress"/>: the SMTP endpoint
+    /// guard in Infrastructure needs the very same list and cannot reference this assembly, so the list
+    /// moved to the Application layer. This stays the name every sales-channel call site uses.
+    /// </remarks>
+    public static bool IsBlockedAddress(IPAddress ip) => OutboundAddressGuard.IsBlockedAddress(ip);
 }
