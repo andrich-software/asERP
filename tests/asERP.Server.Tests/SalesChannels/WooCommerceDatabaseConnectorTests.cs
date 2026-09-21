@@ -181,29 +181,86 @@ public class WooCommerceDatabaseConnectorTests
         Assert.Contains("not permitted", error);
     }
 
+    // --- TLS: verifying by default, anything weaker only through the operator switches -------------
+
+    private static WooCommerceDatabaseChannelConfig TlsConfig() =>
+        new() { Host = "10.0.0.7", Database = "wp" };
+
+    private static MySqlConnectionStringBuilder BuildWith(SalesChannelHostPolicy policy) =>
+        new(TlsConfig().BuildConnectionString("woo", "secret", policy));
+
+    private static MySqlConnectionStringBuilder BuildWith(SalesChannelHostPolicyOptions options) =>
+        BuildWith(new SalesChannelHostPolicy(options));
+
     [Fact]
-    public void Config_AllowInsecureTransportInTheBlob_DoesNotDowngradeTls()
+    public void Config_ByDefault_VerifiesTheCertificateChainAndTheHostName()
     {
-        var config = WooCommerceDatabaseChannelConfig.FromSalesChannel(new SalesChannel
-        {
-            AdditionalConfigJson = """{"host":"10.0.0.7","database":"wp","allowInsecureTransport":true}""",
-        });
+        // Required encrypts but authenticates nobody: an on-path attacker answering the connect with
+        // any self-signed certificate is handed the MySQL credentials in the authentication packet.
+        var built = BuildWith(SalesChannelHostPolicy.DenyAll);
 
-        var connectionString = config.BuildConnectionString("woo", "secret", PolicyAllowing("10.0.0.0/8"));
-
-        Assert.Equal(MySqlSslMode.Required, new MySqlConnectionStringBuilder(connectionString).SslMode);
+        Assert.Equal(MySqlSslMode.VerifyFull, built.SslMode);
+        Assert.Equal(string.Empty, built.SslCa);
     }
 
     [Fact]
-    public void Config_InsecureTransport_NeedsTheOperatorSwitch()
+    public void Config_OperatorCaPath_ReachesSslCaWithoutWeakeningTheMode()
     {
-        var config = new WooCommerceDatabaseChannelConfig { Host = "10.0.0.7", Database = "wp" };
-        var policy = new SalesChannelHostPolicy(
-            new SalesChannelHostPolicyOptions { AllowInsecureTransport = true });
+        var built = BuildWith(new SalesChannelHostPolicyOptions { SslCaPath = "  /etc/ssl/shop-ca.pem  " });
 
-        var connectionString = config.BuildConnectionString("woo", "secret", policy);
+        Assert.Equal("/etc/ssl/shop-ca.pem", built.SslCa);
+        Assert.Equal(MySqlSslMode.VerifyFull, built.SslMode);
+    }
 
-        Assert.Equal(MySqlSslMode.Preferred, new MySqlConnectionStringBuilder(connectionString).SslMode);
+    [Fact]
+    public void Config_HostnameMismatchSwitch_StillVerifiesTheChain()
+    {
+        var built = BuildWith(new SalesChannelHostPolicyOptions { AllowCertificateHostnameMismatch = true });
+
+        Assert.Equal(MySqlSslMode.VerifyCA, built.SslMode);
+    }
+
+    [Fact]
+    public void Config_InsecureTransport_IsTheOnlyRouteToANonVerifyingMode()
+    {
+        MySqlSslMode[] verifying = [MySqlSslMode.VerifyCA, MySqlSslMode.VerifyFull];
+
+        // Everything else an operator can turn on leaves the peer authenticated.
+        SalesChannelHostPolicyOptions[] withoutTheHatch =
+        [
+            new(),
+            new() { AllowedPrivateNetworks = ["10.0.0.0/8"] },
+            new() { SslCaPath = "/etc/ssl/shop-ca.pem" },
+            new() { AllowCertificateHostnameMismatch = true },
+            new() { SslCaPath = "/etc/ssl/shop-ca.pem", AllowCertificateHostnameMismatch = true },
+        ];
+
+        foreach (var options in withoutTheHatch)
+        {
+            Assert.Contains(BuildWith(options).SslMode, verifying);
+        }
+
+        Assert.Equal(
+            MySqlSslMode.Preferred,
+            BuildWith(new SalesChannelHostPolicyOptions { AllowInsecureTransport = true }).SslMode);
+    }
+
+    [Fact]
+    public void Config_TlsKeysInTheBlob_AreIgnored()
+    {
+        // The blob arrives in the same request as the host it would unlock, and a CA path in it
+        // would be a filesystem path the server opens because the caller named it — neither is
+        // channel data.
+        var config = WooCommerceDatabaseChannelConfig.FromSalesChannel(new SalesChannel
+        {
+            AdditionalConfigJson = """{"host":"10.0.0.7","database":"wp","allowInsecureTransport":true,"sslCaPath":"/etc/ssl/attacker-ca.pem","allowCertificateHostnameMismatch":true}""",
+        });
+
+        var built = new MySqlConnectionStringBuilder(
+            config.BuildConnectionString("woo", "secret", PolicyAllowing("10.0.0.0/8")));
+
+        Assert.Equal(MySqlSslMode.VerifyFull, built.SslMode);
+        Assert.Equal(string.Empty, built.SslCa);
     }
 
     // --- Host policy -------------------------------------------------------------------------------
@@ -213,6 +270,8 @@ public class WooCommerceDatabaseConnectorTests
     {
         Assert.False(SalesChannelHostPolicy.DenyAll.IsAllowedPrivateAddress(IPAddress.Parse("10.0.0.7")));
         Assert.False(SalesChannelHostPolicy.DenyAll.AllowInsecureTransport);
+        Assert.False(SalesChannelHostPolicy.DenyAll.AllowCertificateHostnameMismatch);
+        Assert.Null(SalesChannelHostPolicy.DenyAll.SslCaPath);
     }
 
     [Fact]

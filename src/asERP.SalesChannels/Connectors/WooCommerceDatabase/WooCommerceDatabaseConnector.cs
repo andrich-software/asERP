@@ -149,14 +149,20 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
 
     /// <summary>
     /// What a failed connect or probe tells the caller. Deliberately one text for "refused",
-    /// "timed out", "unknown database" and "access denied": the test dials a host and port the
-    /// caller supplied, so a differentiated message is a working port scanner and credential
-    /// oracle. The exception itself goes to the server log, where the operator reads it.
+    /// "timed out", "unknown database", "access denied" and a rejected server certificate: the test
+    /// dials a host and port the caller supplied, so a differentiated message is a working port
+    /// scanner and credential oracle. Naming the three operator switches costs nothing here — the
+    /// text is a constant, identical for every outcome, and says which knob exists, never which one
+    /// this attempt would have needed. The exception itself, and the TLS mode that was attempted, go
+    /// to the server log, where the operator reads them.
     /// </summary>
     private const string ConnectFailureMessage =
         "Could not connect to the MySQL server with these settings. Check host, port, database, user " +
-        "and password. A server that offers no TLS additionally needs the operator to set " +
-        "SalesChannelHostPolicy:AllowInsecureTransport. The server log holds the details.";
+        "and password. The connect also fails when the server certificate does not verify: one issued " +
+        "by a private CA needs the operator to point SalesChannelHostPolicy:SslCaPath at that CA, one " +
+        "issued for a different host name needs SalesChannelHostPolicy:AllowCertificateHostnameMismatch, " +
+        "and a server that offers no TLS at all needs SalesChannelHostPolicy:AllowInsecureTransport. " +
+        "The server log holds the details.";
 
     public override async Task<ConnectionTestResult> TestConnectionAsync(SalesChannelContext context)
     {
@@ -187,10 +193,13 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         }
         catch (Exception ex)
         {
+            // The TLS mode is logged because a verification failure otherwise looks like any other
+            // connect error, and the caller is told nothing that would tell the two apart.
             _logger.LogWarning(
                 ex,
-                "WooCommerceDatabase connection test against {Host}:{Port} (database {Database}) failed for channel {ChannelId}",
-                db.Config.Host, db.Config.Port, db.Config.Database, context.SalesChannel.Id);
+                "WooCommerceDatabase connection test against {Host}:{Port} (database {Database}, TLS mode {SslMode}) failed for channel {ChannelId}",
+                db.Config.Host, db.Config.Port, db.Config.Database,
+                WooCommerceDatabaseChannelConfig.ResolveSslMode(_hostPolicy), context.SalesChannel.Id);
             return new ConnectionTestResult(false, ConnectFailureMessage);
         }
     }

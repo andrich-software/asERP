@@ -30,12 +30,14 @@ public sealed class WooCommerceDatabaseChannelConfig
     [JsonPropertyName("tablePrefix")]
     public string TablePrefix { get; set; } = "wp_";
 
-    // Deliberately no allowPrivateHost / allowInsecureTransport members. Both used to be read from
-    // this blob, which the caller posts in the same request that is being guarded — so the caller
-    // supplied the switch that turned the guard off. They are operator configuration now
-    // (SalesChannelHostPolicyOptions). Not binding them here is what makes a blob written before
-    // that change inert: the keys are stripped from every incoming blob, and a stored one that
-    // still carries them is ignored, never honoured.
+    // Deliberately no allowPrivateHost / allowInsecureTransport members, and no sslCaPath either.
+    // The first two used to be read from this blob, which the caller posts in the same request that
+    // is being guarded — so the caller supplied the switch that turned the guard off. They are
+    // operator configuration now (SalesChannelHostPolicyOptions), and so is the TLS trust anchor: a
+    // CA path taken from this blob would be a filesystem path the server opens because a tenant
+    // named it, and would let that tenant pick the trust anchor for their own connection. Not binding
+    // here is what makes a blob written before that change inert: the keys are stripped from every
+    // incoming blob, and a stored one that still carries them is ignored, never honoured.
 
     public static WooCommerceDatabaseChannelConfig FromSalesChannel(SalesChannel salesChannel)
     {
@@ -96,26 +98,59 @@ public sealed class WooCommerceDatabaseChannelConfig
     internal static bool IsSafeIdentifierPrefix(string prefix) =>
         !string.IsNullOrEmpty(prefix) && prefix.All(c => char.IsAsciiLetterOrDigit(c) || c == '_');
 
+    /// <summary>
+    /// The MySQL credentials and the whole replicated dataset travel over this link to a host the
+    /// tenant named, so the server is authenticated and not merely encrypted to:
+    /// <see cref="ResolveSslMode"/> yields a verifying mode unless the operator says otherwise. The
+    /// CA path, operator-owned as well, is added as an extra trust anchor for a privately issued
+    /// server certificate.
+    /// </summary>
     public string BuildConnectionString(string username, string password, SalesChannelHostPolicy hostPolicy)
     {
         ArgumentNullException.ThrowIfNull(hostPolicy);
 
-        return new MySqlConnectionStringBuilder
+        var builder = new MySqlConnectionStringBuilder
         {
             Server = Host,
             Port = (uint)Port,
             Database = Database,
             UserID = username,
             Password = password,
-            // TLS is required so credentials never traverse the wire in cleartext. Only the operator
-            // can opt the installation down to Preferred (a trusted LAN link whose server has no
-            // certificate); a tenant cannot, which is what the removed allowInsecureTransport key
-            // used to allow.
-            SslMode = hostPolicy.AllowInsecureTransport ? MySqlSslMode.Preferred : MySqlSslMode.Required,
+            SslMode = ResolveSslMode(hostPolicy),
             ConnectionTimeout = 15,
             DefaultCommandTimeout = 120,
-        }.ConnectionString;
+        };
+
+        if (hostPolicy.SslCaPath is { Length: > 0 } caPath)
+        {
+            builder.SslCa = caPath;
+        }
+
+        return builder.ConnectionString;
     }
+
+    /// <summary>
+    /// The TLS mode the operator policy leads to.
+    ///
+    /// <c>VerifyFull</c> by default: <c>Required</c> encrypts but validates neither the certificate
+    /// chain nor the host name, so an on-path attacker answering the connect with any self-signed
+    /// certificate receives the authentication packet — the shop database user and password — and
+    /// can then proxy to the real server and rewrite the stream. Worse: the <c>Required</c> branch of
+    /// <c>ValidateRemoteCertificate</c> returns before <c>m_sslPolicyErrors</c> is assigned, so a
+    /// forged certificate still counts as a verified server identity, and a fake server that asks for
+    /// <c>mysql_clear_password</c> is handed the password itself rather than a challenge response.
+    /// Only <c>VerifyCA</c> and <c>VerifyFull</c> authenticate the peer at all, and <c>VerifyFull</c>
+    /// ends the session before any query runs.
+    ///
+    /// The two steps down are operator configuration and nothing else. <c>VerifyCA</c> still verifies
+    /// the chain and only forgives a name mismatch; <c>Preferred</c> verifies nothing and can be
+    /// stripped to a cleartext session by an active attacker, which is why it hangs off the one
+    /// switch that says "insecure" in its name.
+    /// </summary>
+    internal static MySqlSslMode ResolveSslMode(SalesChannelHostPolicy hostPolicy) =>
+        hostPolicy.AllowInsecureTransport ? MySqlSslMode.Preferred
+            : hostPolicy.AllowCertificateHostnameMismatch ? MySqlSslMode.VerifyCA
+            : MySqlSslMode.VerifyFull;
 
     /// <summary>
     /// True when the host is a private/reserved IP, or a DNS name that resolves to one — the same guard the
@@ -126,11 +161,28 @@ public sealed class WooCommerceDatabaseChannelConfig
     /// This is a pre-flight resolution and the connection is then opened by name, so a rebinding name
     /// can answer publicly here and internally at connect time. The HTTP clients close that gap with
     /// <c>SocketsHttpHandler.ConnectCallback</c> (<c>SalesChannelServiceRegistration</c>); MySqlConnector
-    /// 2.6.2 has no equivalent hook — <c>UseConnectionOpenedCallback</c> runs after the handshake, and
-    /// pinning the validated IP into <c>Server=</c> would break the hostname verification that
-    /// <c>SslMode</c> is due to gain. The connection test no longer reports the outcome, but the import
-    /// paths still surface the raw connect error through <c>ChannelSyncRun.ErrorSummary</c>, so the
-    /// oracle is closed on one endpoint only — do not treat rebinding as unobservable.
+    /// 2.6.2 has no equivalent hook — <c>UseConnectionOpenedCallback</c> runs after the handshake — and
+    /// the gap is left open here deliberately, in favour of the certificate check.
+    ///
+    /// Pinning the validated IP into <c>Server=</c> would close it, but that same string is the TLS
+    /// target host, so <c>VerifyFull</c> would then demand a certificate issued for the IP. Keeping
+    /// the name verified while dialling the pinned address is not on offer either: MySqlConnector
+    /// takes <c>MySqlDataSourceBuilder.UseRemoteCertificateValidationCallback</c> only when
+    /// <c>SslMode</c> is <c>Preferred</c> or <c>Required</c> and no <c>SslCa</c> is set
+    /// (<c>ServerSession.InitSslAsync</c> logs that it is ignoring the callback otherwise), so the
+    /// callback is an alternative to the library verification, never an addition to it. It would put
+    /// the whole chain and name check into hand-written code, which goes subtly wrong far more often
+    /// than DNS is attacker-controlled: the rebinding window needs a hostile resolver, a broken
+    /// validator is on for every connection.
+    ///
+    /// What is left is a dial at a private address, not a credential leak — whatever answers still
+    /// has to present a certificate this trust store accepts for the configured name. That bound is
+    /// the default mode talking: under
+    /// <see cref="SalesChannelHostPolicyOptions.AllowCertificateHostnameMismatch"/> any certificate
+    /// chaining to a trusted CA passes whatever name it carries, and only the trust store is left of
+    /// it. The connection test no longer reports the outcome, but the import paths still surface the
+    /// raw connect error through <c>ChannelSyncRun.ErrorSummary</c>, so the oracle is closed on one
+    /// endpoint only — do not treat rebinding as unobservable.
     /// </summary>
     private static bool ResolvesToBlockedAddress(string host, SalesChannelHostPolicy hostPolicy)
     {

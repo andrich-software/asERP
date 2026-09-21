@@ -12,9 +12,9 @@ namespace asERP.Server.Tests.SalesChannels;
 /// <summary>
 /// The connection test dials a host and a port the caller typed in, so its failure text used to
 /// report open/closed/filtered per target — an internal port scanner with a JSON response. The
-/// connect outcome now reads the same whatever went wrong, and the detail goes to the server log.
-/// Configuration errors stay verbatim: they are computed from the caller's own input and nothing is
-/// dialled to produce them.
+/// connect outcome now reads the same whatever went wrong, including a rejected server certificate,
+/// and the detail goes to the server log. Configuration errors stay verbatim: they are computed from
+/// the caller's own input and nothing is dialled to produce them.
 /// </summary>
 public class WooCommerceDatabaseConnectionTestMessageTests
 {
@@ -117,5 +117,59 @@ public class WooCommerceDatabaseConnectionTestMessageTests
         Assert.False(result.Success);
         Assert.Contains("host is missing", result.Message);
         Assert.Empty(logger.Entries);
+    }
+
+    // --- TLS verification: diagnosable for the operator, opaque to the caller ----------------------
+
+    /// <summary>
+    /// Dials the closed loopback port under the given policy. Loopback is allow-listed so the
+    /// attempt reaches the connect phase; no TLS handshake ever happens, which keeps the test
+    /// offline and deterministic.
+    /// </summary>
+    private static async Task<(string Message, CapturingLogger<WooCommerceDatabaseConnector> Logger)>
+        FailedConnectAsync(SalesChannelHostPolicyOptions options)
+    {
+        var logger = new CapturingLogger<WooCommerceDatabaseConnector>();
+        options.AllowedPrivateNetworks = ["127.0.0.0/8"];
+
+        var result = await Connector(logger, new SalesChannelHostPolicy(options))
+            .TestConnectionAsync(Context("""{"host":"127.0.0.1","port":9,"database":"wp"}"""));
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.Message);
+        return (result.Message, logger);
+    }
+
+    [Fact]
+    public async Task ConnectFailure_ReadsTheSameUnderEveryTlsPolicy_AndNamesTheOperatorSwitches()
+    {
+        // VerifyFull default vs. the insecure escape hatch, same unreachable target: the caller must
+        // not be able to tell from the text which mode was attempted or what the server presented.
+        var (verifying, _) = await FailedConnectAsync(new SalesChannelHostPolicyOptions());
+        var (insecure, _) = await FailedConnectAsync(
+            new SalesChannelHostPolicyOptions { AllowInsecureTransport = true });
+        var (mismatch, _) = await FailedConnectAsync(
+            new SalesChannelHostPolicyOptions { AllowCertificateHostnameMismatch = true });
+
+        Assert.Equal(verifying, insecure);
+        Assert.Equal(verifying, mismatch);
+
+        // Naming the switches costs no oracle: the text is a constant and says which knobs exist,
+        // never which one this attempt would have needed. Without it a TLS-verification failure
+        // reads as "check host, port, database, user and password" and the operator never looks.
+        Assert.Contains("SalesChannelHostPolicy:SslCaPath", verifying, StringComparison.Ordinal);
+        Assert.Contains("SalesChannelHostPolicy:AllowCertificateHostnameMismatch", verifying, StringComparison.Ordinal);
+        Assert.Contains("SalesChannelHostPolicy:AllowInsecureTransport", verifying, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ConnectFailure_LogsTheAttemptedTlsMode()
+    {
+        // The one place the outcome is allowed to be specific. Without the mode in the log a
+        // certificate rejection is indistinguishable from a closed port for the operator too.
+        var (_, logger) = await FailedConnectAsync(new SalesChannelHostPolicyOptions());
+
+        var entry = Assert.Single(logger.Entries);
+        Assert.Contains("VerifyFull", entry.Message, StringComparison.Ordinal);
     }
 }

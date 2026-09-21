@@ -12,18 +12,20 @@ using Xunit;
 namespace asERP.Server.Tests.Features.SalesChannel;
 
 /// <summary>
-/// <c>allowPrivateHost</c> and <c>allowInsecureTransport</c> decide whether the direct-MySQL
-/// connector may dial a private address and whether it may drop TLS. They used to ride in the same
-/// request body as the host they unlocked, so the caller supplied both the target and the
-/// permission. They are operator configuration now, and every tenant-facing path strips them out of
-/// the blob: create, update and the draft connection test.
+/// <c>allowPrivateHost</c>, <c>allowInsecureTransport</c> and <c>sslCaPath</c> decide whether the
+/// direct-MySQL connector may dial a private address, whether it may stop authenticating the server,
+/// and which CA it trusts. The first two used to ride in the same request body as the host they
+/// unlocked, so the caller supplied both the target and the permission; a CA path would additionally
+/// be a filesystem path the server opens on the caller's word. All three are operator configuration,
+/// and every tenant-facing path strips them out of the blob: create, update and the draft connection
+/// test.
 /// </summary>
 public class SalesChannelOperatorOnlyConfigTests : TenantIsolatedTestBase
 {
     private const string ChannelName = "Woo DB Store";
 
     private const string ConfigWithOperatorFlags =
-        """{"host":"10.0.0.7","port":3306,"database":"wp","tablePrefix":"wp_","allowPrivateHost":true,"allowInsecureTransport":true}""";
+        """{"host":"10.0.0.7","port":3306,"database":"wp","tablePrefix":"wp_","allowPrivateHost":true,"allowInsecureTransport":true,"sslCaPath":"/etc/ssl/attacker-ca.pem"}""";
 
     private Guid _warehouseId;
 
@@ -110,6 +112,9 @@ public class SalesChannelOperatorOnlyConfigTests : TenantIsolatedTestBase
             "allowPrivateHost must never become channel data — it is server configuration.");
         TestAssertions.AssertFalse(config.ContainsKey("allowInsecureTransport"),
             "allowInsecureTransport must never become channel data — it is server configuration.");
+        TestAssertions.AssertFalse(config.ContainsKey("sslCaPath"),
+            "sslCaPath must never become channel data — the server opens that path and it selects "
+            + "the trust anchor the connection is verified against.");
     }
 
     [Fact]

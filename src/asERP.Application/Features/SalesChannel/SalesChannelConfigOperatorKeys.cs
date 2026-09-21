@@ -11,14 +11,17 @@ namespace asERP.Application.Features.SalesChannel;
 public static class SalesChannelConfigOperatorKeys
 {
     /// <summary>
-    /// The direct-MySQL connector's two guard opt-outs. They disabled the private-address check and
-    /// the TLS requirement of the very connection they were configuring, so whoever supplied the
-    /// host also supplied the permission to dial it. Both moved to the operator-owned
+    /// The direct-MySQL connector's guard opt-outs. The first two disabled the private-address check
+    /// and the TLS requirement of the very connection they were configuring, so whoever supplied the
+    /// host also supplied the permission to dial it. <c>sslCaPath</c> never was channel data and must
+    /// not become it: it is a filesystem path the server would open, and it picks the trust anchor
+    /// that the caller's own connection is then verified against. All three live in the operator-owned
     /// <c>SalesChannelHostPolicy</c> configuration section; they are stripped here so a request
-    /// body cannot re-introduce them, and <c>WooCommerceDatabaseChannelConfig</c> no longer binds
+    /// body cannot re-introduce them, and <c>WooCommerceDatabaseChannelConfig</c> binds none of
     /// them, so a blob stored before this change is inert rather than honoured.
     /// </summary>
-    private static readonly string[] OperatorOnlyKeys = ["allowPrivateHost", "allowInsecureTransport"];
+    private static readonly string[] OperatorOnlyKeys =
+        ["allowPrivateHost", "allowInsecureTransport", "sslCaPath"];
 
     public static ConfigJsonKeyStripper Stripper { get; } = new(OperatorOnlyKeys);
 }
