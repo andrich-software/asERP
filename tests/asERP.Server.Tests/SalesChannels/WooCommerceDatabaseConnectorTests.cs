@@ -1,11 +1,14 @@
+using System.Net;
 using asERP.Domain.Dtos.SalesChannel;
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
 using asERP.Domain.Validators;
+using asERP.SalesChannels;
 using asERP.SalesChannels.Abstractions;
 using asERP.SalesChannels.Connectors.WooCommerceDatabase;
 using asERP.SalesChannels.Models.WooCommerceDatabase;
 using Microsoft.Extensions.Logging.Abstractions;
+using MySqlConnector;
 using Xunit;
 
 namespace asERP.Server.Tests.SalesChannels;
@@ -18,13 +21,21 @@ namespace asERP.Server.Tests.SalesChannels;
 /// </summary>
 public class WooCommerceDatabaseConnectorTests
 {
+    /// <summary>
+    /// The operator's outbound-host policy. Private addresses are only reachable when an
+    /// installation-wide CIDR allow-list says so — the channel config cannot grant it any more.
+    /// </summary>
+    private static SalesChannelHostPolicy PolicyAllowing(params string[] networks) =>
+        new(new SalesChannelHostPolicyOptions { AllowedPrivateNetworks = networks });
+
     // --- Registry / type wiring --------------------------------------------------------------------
 
     [Fact]
     public void Connector_IsResolvableByType_AndMirrorsRestCapabilities()
     {
         var connector = new WooCommerceDatabaseConnector(
-            null!, null!, null!, null!, null!, null!, NullLogger<WooCommerceDatabaseConnector>.Instance);
+            null!, null!, null!, null!, null!, null!, NullLogger<WooCommerceDatabaseConnector>.Instance,
+            SalesChannelHostPolicy.DenyAll);
         var registry = new SalesChannelConnectorRegistry(new ISalesChannelConnector[] { connector });
 
         Assert.Same(connector, registry.Get(SalesChannelType.WooCommerceDatabase));
@@ -53,7 +64,7 @@ public class WooCommerceDatabaseConnectorTests
 
         Assert.Equal(3306, config.Port);
         Assert.Equal("wp_", config.TablePrefix);
-        Assert.NotNull(config.Validate());
+        Assert.NotNull(config.Validate(SalesChannelHostPolicy.DenyAll));
     }
 
     [Fact]
@@ -61,21 +72,22 @@ public class WooCommerceDatabaseConnectorTests
     {
         var channel = new SalesChannel
         {
-            // allowPrivateHost bypasses the DNS-based SSRF guard so this test stays deterministic and
-            // offline — it exercises JSON parsing and connection-string building, not host resolution.
-            AdditionalConfigJson = """{"host":"db.example.com","port":3307,"database":"shop","tablePrefix":"wpx_","allowPrivateHost":true}""",
+            // A literal address the operator allow-listed below: no DNS lookup, so the test stays
+            // deterministic and offline — it exercises JSON parsing and connection-string building,
+            // not host resolution.
+            AdditionalConfigJson = """{"host":"10.10.0.5","port":3307,"database":"shop","tablePrefix":"wpx_"}""",
         };
 
         var config = WooCommerceDatabaseChannelConfig.FromSalesChannel(channel);
 
-        Assert.Null(config.Validate());
-        Assert.Equal("db.example.com", config.Host);
+        Assert.Null(config.Validate(PolicyAllowing("10.0.0.0/8")));
+        Assert.Equal("10.10.0.5", config.Host);
         Assert.Equal(3307, config.Port);
         Assert.Equal("shop", config.Database);
         Assert.Equal("wpx_", config.TablePrefix);
 
-        var connectionString = config.BuildConnectionString("woo", "secret");
-        Assert.Contains("db.example.com", connectionString);
+        var connectionString = config.BuildConnectionString("woo", "secret", SalesChannelHostPolicy.DenyAll);
+        Assert.Contains("10.10.0.5", connectionString);
         Assert.Contains("shop", connectionString);
         Assert.Contains("3307", connectionString);
     }
@@ -97,8 +109,26 @@ public class WooCommerceDatabaseConnectorTests
     [InlineData("wp ")]                 // whitespace not allowed
     public void Config_RejectsUnsafeTablePrefix(string prefix)
     {
-        var config = new WooCommerceDatabaseChannelConfig { Host = "h", Database = "d", TablePrefix = prefix };
-        Assert.NotNull(config.Validate());
+        // An allow-listed literal host, so validation actually reaches the prefix rule instead of
+        // stopping at the host guard (and passing for the wrong reason).
+        var config = new WooCommerceDatabaseChannelConfig { Host = "10.0.0.7", Database = "d", TablePrefix = prefix };
+
+        var error = config.Validate(PolicyAllowing("10.0.0.0/8"));
+
+        Assert.NotNull(error);
+        Assert.Contains("Table prefix", error);
+    }
+
+    [Theory]
+    [InlineData("wp_")]
+    [InlineData("wp2_")]
+    [InlineData("WordPress")]
+    public void Config_AcceptsSafeTablePrefix(string prefix)
+    {
+        Assert.True(WooCommerceDatabaseChannelConfig.IsSafeIdentifierPrefix(prefix));
+
+        var config = new WooCommerceDatabaseChannelConfig { Host = "10.0.0.7", Database = "d", TablePrefix = prefix };
+        Assert.Null(config.Validate(PolicyAllowing("10.0.0.0/8")));
     }
 
     [Theory]
@@ -108,7 +138,98 @@ public class WooCommerceDatabaseConnectorTests
     public void Config_RejectsOutOfRangePort(int port)
     {
         var config = new WooCommerceDatabaseChannelConfig { Host = "h", Database = "d", Port = port };
-        Assert.NotNull(config.Validate());
+        Assert.NotNull(config.Validate(SalesChannelHostPolicy.DenyAll));
+    }
+
+    // --- Private-host guard: operator-owned, not tenant-owned --------------------------------------
+
+    private const string PrivateHostConfig =
+        """{"host":"10.0.0.7","port":3306,"database":"wp","tablePrefix":"wp_"}""";
+
+    [Fact]
+    public void Config_PrivateHost_IsRefusedWhenTheOperatorAllowedNothing()
+    {
+        var config = WooCommerceDatabaseChannelConfig.FromSalesChannel(
+            new SalesChannel { AdditionalConfigJson = PrivateHostConfig });
+
+        Assert.NotNull(config.Validate(SalesChannelHostPolicy.DenyAll));
+    }
+
+    [Fact]
+    public void Config_PrivateHost_IsPermittedOnlyByTheOperatorAllowList()
+    {
+        var config = WooCommerceDatabaseChannelConfig.FromSalesChannel(
+            new SalesChannel { AdditionalConfigJson = PrivateHostConfig });
+
+        Assert.Null(config.Validate(PolicyAllowing("10.0.0.0/8")));
+        Assert.NotNull(config.Validate(PolicyAllowing("192.168.0.0/16")));
+    }
+
+    [Fact]
+    public void Config_AllowPrivateHostInTheBlob_DoesNotEnableIt()
+    {
+        // The flag the finding exploited: supplied in the same document as the host it unlocked.
+        var config = WooCommerceDatabaseChannelConfig.FromSalesChannel(new SalesChannel
+        {
+            AdditionalConfigJson =
+                """{"host":"10.0.0.7","database":"wp","allowPrivateHost":true,"allowInsecureTransport":true}""",
+        });
+
+        var error = config.Validate(SalesChannelHostPolicy.DenyAll);
+
+        Assert.NotNull(error);
+        Assert.Contains("not permitted", error);
+    }
+
+    [Fact]
+    public void Config_AllowInsecureTransportInTheBlob_DoesNotDowngradeTls()
+    {
+        var config = WooCommerceDatabaseChannelConfig.FromSalesChannel(new SalesChannel
+        {
+            AdditionalConfigJson = """{"host":"10.0.0.7","database":"wp","allowInsecureTransport":true}""",
+        });
+
+        var connectionString = config.BuildConnectionString("woo", "secret", PolicyAllowing("10.0.0.0/8"));
+
+        Assert.Equal(MySqlSslMode.Required, new MySqlConnectionStringBuilder(connectionString).SslMode);
+    }
+
+    [Fact]
+    public void Config_InsecureTransport_NeedsTheOperatorSwitch()
+    {
+        var config = new WooCommerceDatabaseChannelConfig { Host = "10.0.0.7", Database = "wp" };
+        var policy = new SalesChannelHostPolicy(
+            new SalesChannelHostPolicyOptions { AllowInsecureTransport = true });
+
+        var connectionString = config.BuildConnectionString("woo", "secret", policy);
+
+        Assert.Equal(MySqlSslMode.Preferred, new MySqlConnectionStringBuilder(connectionString).SslMode);
+    }
+
+    // --- Host policy -------------------------------------------------------------------------------
+
+    [Fact]
+    public void HostPolicy_WithoutConfiguration_AllowsNothing()
+    {
+        Assert.False(SalesChannelHostPolicy.DenyAll.IsAllowedPrivateAddress(IPAddress.Parse("10.0.0.7")));
+        Assert.False(SalesChannelHostPolicy.DenyAll.AllowInsecureTransport);
+    }
+
+    [Fact]
+    public void HostPolicy_IgnoresEntriesThatAreNotValidCidr()
+    {
+        // A typo must leave the policy narrower, never wider.
+        var policy = PolicyAllowing("not-a-cidr", "10.0.0.0/8", "");
+
+        Assert.True(policy.IsAllowedPrivateAddress(IPAddress.Parse("10.1.2.3")));
+        Assert.False(policy.IsAllowedPrivateAddress(IPAddress.Parse("192.168.1.1")));
+    }
+
+    [Fact]
+    public void HostPolicy_MatchesIPv4MappedAddressesAgainstIPv4Networks()
+    {
+        // ::ffff:10.0.0.7 is the same host; the block-list normalizes it, so the allow-list must too.
+        Assert.True(PolicyAllowing("10.0.0.0/8").IsAllowedPrivateAddress(IPAddress.Parse("::ffff:10.0.0.7")));
     }
 
     // --- _product_attributes parser ----------------------------------------------------------------

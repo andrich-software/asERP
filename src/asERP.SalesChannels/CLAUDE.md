@@ -65,7 +65,7 @@ No HTTP request → nothing populates `ITenantContext`. `SyncDispatcher.AlignTen
 ## Resilience & Security
 
 - Named HttpClients per channel with `.AddPollyHandlers()` (retry + circuit breaker) and `.AddSsrfGuardedPrimaryHandler()` (ConnectCallback re-validates dialed IPs via `SalesChannelUrlValidator` against DNS-rebind/redirect SSRF). Exception: `"amazon-lwa"` (fixed Amazon host). WooCommerce REST uses the WooCommerceNET SDK transport, not IHttpClientFactory.
-- **Any tenant-controlled URL/host (channel URL, image URL, MySQL host) must pass `SalesChannelUrlValidator`.**
+- **Any tenant-controlled URL/host (channel URL, image URL, MySQL host) must pass `SalesChannelUrlValidator`.** Exceptions to it are operator-owned: `SalesChannelHostPolicy` (section `SalesChannelHostPolicy`, allowed private CIDRs + the MySQL cleartext escape hatch), injected — never a flag out of `AdditionalConfigJson`, which the same caller supplies. Such keys are stripped from every tenant path via `SalesChannelConfigOperatorKeys`.
 - Connectors return `SyncResult`/`ExportResult` instead of throwing; the dispatcher maps to `Success`/`PartialFailure`/`Failed` and catches exceptions — nothing bubbles to the tick loop.
 
 ## Domain Invariants

@@ -30,22 +30,12 @@ public sealed class WooCommerceDatabaseChannelConfig
     [JsonPropertyName("tablePrefix")]
     public string TablePrefix { get; set; } = "wp_";
 
-    /// <summary>
-    /// Opt-out for the private-range host guard, for genuine self-hosted LAN deployments where the MySQL
-    /// server legitimately sits on a private/internal address. Off by default: a tenant cannot point the
-    /// connector at internal infrastructure (SSRF/port-scan primitive) unless the operator explicitly
-    /// allows it per channel.
-    /// </summary>
-    [JsonPropertyName("allowPrivateHost")]
-    public bool AllowPrivateHost { get; set; }
-
-    /// <summary>
-    /// Opt-out for requiring TLS on the MySQL connection. Off by default, so the connection uses
-    /// <c>SslMode.Required</c> (no silent cleartext downgrade). Set only for a trusted LAN link where the
-    /// server has no certificate.
-    /// </summary>
-    [JsonPropertyName("allowInsecureTransport")]
-    public bool AllowInsecureTransport { get; set; }
+    // Deliberately no allowPrivateHost / allowInsecureTransport members. Both used to be read from
+    // this blob, which the caller posts in the same request that is being guarded — so the caller
+    // supplied the switch that turned the guard off. They are operator configuration now
+    // (SalesChannelHostPolicyOptions). Not binding them here is what makes a blob written before
+    // that change inert: the keys are stripped from every incoming blob, and a stored one that
+    // still carries them is ignored, never honoured.
 
     public static WooCommerceDatabaseChannelConfig FromSalesChannel(SalesChannel salesChannel)
     {
@@ -63,8 +53,14 @@ public sealed class WooCommerceDatabaseChannelConfig
     }
 
     /// <summary>Human-readable description of what is missing; null when the config is usable.</summary>
-    public string? Validate()
+    /// <param name="hostPolicy">
+    /// The operator's outbound-host policy — the only thing that can widen the private-address
+    /// guard. Pass <see cref="SalesChannelHostPolicy.DenyAll"/> where no configuration applies.
+    /// </param>
+    public string? Validate(SalesChannelHostPolicy hostPolicy)
     {
+        ArgumentNullException.ThrowIfNull(hostPolicy);
+
         if (string.IsNullOrWhiteSpace(Host))
         {
             return "MySQL host is missing in AdditionalConfigJson";
@@ -73,10 +69,14 @@ public sealed class WooCommerceDatabaseChannelConfig
         {
             return $"MySQL port {Port} is out of range";
         }
-        if (!AllowPrivateHost && ResolvesToBlockedAddress(Host))
+        if (ResolvesToBlockedAddress(Host, hostPolicy))
         {
-            return $"MySQL host '{Host}' resolves to a private or reserved address; set allowPrivateHost=true " +
-                   "in AdditionalConfigJson to permit a self-hosted LAN database.";
+            // One wording for "private/reserved" and for "does not resolve": telling the two apart
+            // would answer which internal names exist for a caller who cannot query internal DNS.
+            return $"MySQL host '{Host}' is not permitted. Only public addresses are dialled; a database " +
+                   "on a private network has to be allow-listed by the server operator " +
+                   $"({SalesChannelHostPolicyOptions.Section}:" +
+                   $"{nameof(SalesChannelHostPolicyOptions.AllowedPrivateNetworks)}).";
         }
         if (string.IsNullOrWhiteSpace(Database))
         {
@@ -96,41 +96,60 @@ public sealed class WooCommerceDatabaseChannelConfig
     internal static bool IsSafeIdentifierPrefix(string prefix) =>
         !string.IsNullOrEmpty(prefix) && prefix.All(c => char.IsAsciiLetterOrDigit(c) || c == '_');
 
-    public string BuildConnectionString(string username, string password) =>
-        new MySqlConnectionStringBuilder
+    public string BuildConnectionString(string username, string password, SalesChannelHostPolicy hostPolicy)
+    {
+        ArgumentNullException.ThrowIfNull(hostPolicy);
+
+        return new MySqlConnectionStringBuilder
         {
             Server = Host,
             Port = (uint)Port,
             Database = Database,
             UserID = username,
             Password = password,
-            // TLS is required by default so credentials never traverse the wire in cleartext. A trusted
-            // LAN link without a server certificate can opt back down to Preferred per channel.
-            SslMode = AllowInsecureTransport ? MySqlSslMode.Preferred : MySqlSslMode.Required,
+            // TLS is required so credentials never traverse the wire in cleartext. Only the operator
+            // can opt the installation down to Preferred (a trusted LAN link whose server has no
+            // certificate); a tenant cannot, which is what the removed allowInsecureTransport key
+            // used to allow.
+            SslMode = hostPolicy.AllowInsecureTransport ? MySqlSslMode.Preferred : MySqlSslMode.Required,
             ConnectionTimeout = 15,
             DefaultCommandTimeout = 120,
         }.ConnectionString;
+    }
 
     /// <summary>
     /// True when the host is a private/reserved IP, or a DNS name that resolves to one — the same guard the
     /// HTTP channel URLs use, applied to the MySQL host so a tenant cannot repurpose the connector as an
     /// internal port/credential scanner. Fails closed: an unresolvable host is treated as blocked.
+    /// An address the operator allow-listed in <paramref name="hostPolicy"/> passes.
+    ///
+    /// This is a pre-flight resolution and the connection is then opened by name, so a rebinding name
+    /// can answer publicly here and internally at connect time. The HTTP clients close that gap with
+    /// <c>SocketsHttpHandler.ConnectCallback</c> (<c>SalesChannelServiceRegistration</c>); MySqlConnector
+    /// 2.6.2 has no equivalent hook — <c>UseConnectionOpenedCallback</c> runs after the handshake, and
+    /// pinning the validated IP into <c>Server=</c> would break the hostname verification that
+    /// <c>SslMode</c> is due to gain. The connection test no longer reports the outcome, but the import
+    /// paths still surface the raw connect error through <c>ChannelSyncRun.ErrorSummary</c>, so the
+    /// oracle is closed on one endpoint only — do not treat rebinding as unobservable.
     /// </summary>
-    private static bool ResolvesToBlockedAddress(string host)
+    private static bool ResolvesToBlockedAddress(string host, SalesChannelHostPolicy hostPolicy)
     {
         if (IPAddress.TryParse(host, out var literal))
         {
-            return SalesChannelUrlValidator.IsBlockedAddress(literal);
+            return IsBlocked(literal, hostPolicy);
         }
 
         try
         {
             var addresses = Dns.GetHostAddresses(host);
-            return addresses.Length == 0 || addresses.Any(SalesChannelUrlValidator.IsBlockedAddress);
+            return addresses.Length == 0 || addresses.Any(address => IsBlocked(address, hostPolicy));
         }
         catch (SocketException)
         {
             return true;
         }
     }
+
+    private static bool IsBlocked(IPAddress address, SalesChannelHostPolicy hostPolicy) =>
+        SalesChannelUrlValidator.IsBlockedAddress(address) && !hostPolicy.IsAllowedPrivateAddress(address);
 }

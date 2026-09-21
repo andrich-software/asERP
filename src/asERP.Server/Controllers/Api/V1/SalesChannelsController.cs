@@ -1,5 +1,6 @@
 using asERP.Application.Contracts.Persistence;
 using asERP.Application.Contracts.Services;
+using asERP.Application.Features.SalesChannel;
 using asERP.Application.Features.SalesChannel.Commands.SalesChannelCreate;
 using asERP.Application.Features.SalesChannel.Commands.SalesChannelDelete;
 using asERP.Application.Features.SalesChannel.Commands.SalesChannelUpdate;
@@ -272,7 +273,11 @@ public class SalesChannelsController(
             Url = input.Url,
             Username = input.Username,
             Password = input.Password,
-            AdditionalConfigJson = input.AdditionalConfigJson,
+            // The config blob loses its operator-only keys here for the same reason it does on
+            // create and update — otherwise this endpoint is the way to switch the connectors' own
+            // guards off without persisting anything. Stripping only removes: no stored value is
+            // merged into a caller-supplied document, so it cannot become a read-back oracle.
+            AdditionalConfigJson = SalesChannelConfigOperatorKeys.Stripper.Strip(input.AdditionalConfigJson),
         };
 
         var run = new ChannelSyncRun

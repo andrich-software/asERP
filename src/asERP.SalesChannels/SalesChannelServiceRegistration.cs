@@ -18,6 +18,7 @@ using asERP.SalesChannels.Orchestration;
 using asERP.SalesChannels.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Options;
 
 namespace asERP.SalesChannels;
 
@@ -32,6 +33,12 @@ public static class SalesChannelServiceRegistration
         // The sync engine's tunables resolve via IOptions<SalesChannelSyncOptions> with code defaults;
         // the Server binds the "SalesChannelSync" appsettings section over them in Program.cs.
         services.AddOptions();
+
+        // Operator-owned exceptions to the outbound-host guard, same arrangement: the code defaults
+        // deny everything, the Server binds the "SalesChannelHostPolicy" section over them.
+        // Singleton because it parses the configured CIDRs once.
+        services.AddSingleton(sp =>
+            new SalesChannelHostPolicy(sp.GetRequiredService<IOptions<SalesChannelHostPolicyOptions>>().Value));
 
         services.AddScoped<IProductImportRepository, ProductImportRepository>();
         services.AddScoped<ISalesImportRepository, SalesImportRepository>();

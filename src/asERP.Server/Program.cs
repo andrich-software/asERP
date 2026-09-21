@@ -131,6 +131,10 @@ builder.Services.Configure<asERP.Persistence.Services.Backup.BackupOptions>(
     builder.Configuration.GetSection(asERP.Persistence.Services.Backup.BackupOptions.Section));
 builder.Services.Configure<asERP.SalesChannels.Orchestration.SalesChannelSyncOptions>(
     builder.Configuration.GetSection(asERP.SalesChannels.Orchestration.SalesChannelSyncOptions.Section));
+// Operator-owned exceptions to the sales-channel outbound-host guard (allowed private CIDRs, the
+// MySQL cleartext escape hatch). An absent section denies everything.
+builder.Services.Configure<asERP.SalesChannels.SalesChannelHostPolicyOptions>(
+    builder.Configuration.GetSection(asERP.SalesChannels.SalesChannelHostPolicyOptions.Section));
 
 // Bootstrap: load Grafana settings from the database before wiring up logging/telemetry.
 // Falls back to safe defaults when persistence is not available (e.g. test environment).

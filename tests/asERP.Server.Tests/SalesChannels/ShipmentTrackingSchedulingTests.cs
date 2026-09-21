@@ -1,5 +1,6 @@
 using asERP.Domain.Entities;
 using asERP.Domain.Enums;
+using asERP.SalesChannels;
 using asERP.SalesChannels.Abstractions;
 using asERP.SalesChannels.Connectors.WooCommerce;
 using asERP.SalesChannels.Connectors.WooCommerceDatabase;
@@ -74,7 +75,8 @@ public class ShipmentTrackingSchedulingTests
         ISalesChannelConnector rest = new WooCommerceConnector(
             null!, null!, null!, null!, null!, null!, NullLogger<WooCommerceConnector>.Instance);
         ISalesChannelConnector direct = new WooCommerceDatabaseConnector(
-            null!, null!, null!, null!, null!, null!, NullLogger<WooCommerceDatabaseConnector>.Instance);
+            null!, null!, null!, null!, null!, null!, NullLogger<WooCommerceDatabaseConnector>.Instance,
+            SalesChannelHostPolicy.DenyAll);
 
         foreach (var connector in new[] { rest, direct })
         {

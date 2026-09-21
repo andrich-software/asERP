@@ -36,6 +36,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
     private readonly ICategoryImportRepository _categoryImportRepository;
     private readonly IShipmentImportRepository _shipmentImportRepository;
     private readonly ILogger<WooCommerceDatabaseConnector> _logger;
+    private readonly SalesChannelHostPolicy _hostPolicy;
 
     public WooCommerceDatabaseConnector(
         IProductImportRepository productImportRepository,
@@ -44,7 +45,8 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         IStockImportRepository stockImportRepository,
         ICategoryImportRepository categoryImportRepository,
         IShipmentImportRepository shipmentImportRepository,
-        ILogger<WooCommerceDatabaseConnector> logger)
+        ILogger<WooCommerceDatabaseConnector> logger,
+        SalesChannelHostPolicy hostPolicy)
     {
         _productImportRepository = productImportRepository;
         _salesImportRepository = salesImportRepository;
@@ -53,6 +55,7 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         _categoryImportRepository = categoryImportRepository;
         _shipmentImportRepository = shipmentImportRepository;
         _logger = logger;
+        _hostPolicy = hostPolicy;
     }
 
     public override SalesChannelType Type => SalesChannelType.WooCommerceDatabase;
@@ -84,12 +87,14 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
     /// <summary>Resolved per-run connection info: validated config + ready connection string.</summary>
     private sealed record Db(WooCommerceDatabaseChannelConfig Config, string ConnectionString, string Prefix, string ShopBaseUrl);
 
-    private static Db Prepare(SalesChannelContext context)
+    // Instance method, not static: the private-address guard is decided by the operator's policy,
+    // which arrives through DI — never by the channel row that is being validated.
+    private Db Prepare(SalesChannelContext context)
     {
         var sc = context.SalesChannel;
 
         var config = WooCommerceDatabaseChannelConfig.FromSalesChannel(sc);
-        if (config.Validate() is { } error)
+        if (config.Validate(_hostPolicy) is { } error)
         {
             throw new InvalidOperationException(error);
         }
@@ -102,7 +107,11 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         // service — keep the SSRF guard that every HTTP-based channel URL goes through.
         SalesChannelUrlValidator.Validate(sc.Url);
 
-        return new Db(config, config.BuildConnectionString(sc.Username, context.Password), config.TablePrefix, NormalizeShopBaseUrl(sc.Url));
+        return new Db(
+            config,
+            config.BuildConnectionString(sc.Username, context.Password, _hostPolicy),
+            config.TablePrefix,
+            NormalizeShopBaseUrl(sc.Url));
     }
 
     /// <summary>
@@ -138,11 +147,34 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         return connection;
     }
 
+    /// <summary>
+    /// What a failed connect or probe tells the caller. Deliberately one text for "refused",
+    /// "timed out", "unknown database" and "access denied": the test dials a host and port the
+    /// caller supplied, so a differentiated message is a working port scanner and credential
+    /// oracle. The exception itself goes to the server log, where the operator reads it.
+    /// </summary>
+    private const string ConnectFailureMessage =
+        "Could not connect to the MySQL server with these settings. Check host, port, database, user " +
+        "and password. A server that offers no TLS additionally needs the operator to set " +
+        "SalesChannelHostPolicy:AllowInsecureTransport. The server log holds the details.";
+
     public override async Task<ConnectionTestResult> TestConnectionAsync(SalesChannelContext context)
     {
+        Db db;
         try
         {
-            var db = Prepare(context);
+            db = Prepare(context);
+        }
+        catch (Exception ex)
+        {
+            // Configuration and policy errors are computed from the caller's own input without
+            // dialling anything, so they stay verbatim — they are the diagnostic the create wizard
+            // needs to be usable at all.
+            return new ConnectionTestResult(false, ex.Message);
+        }
+
+        try
+        {
             await using var connection = await OpenAsync(db, context.CancellationToken);
 
             // The product meta lookup table is the backbone of every import here; a missing table
@@ -155,7 +187,11 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         }
         catch (Exception ex)
         {
-            return new ConnectionTestResult(false, ex.Message);
+            _logger.LogWarning(
+                ex,
+                "WooCommerceDatabase connection test against {Host}:{Port} (database {Database}) failed for channel {ChannelId}",
+                db.Config.Host, db.Config.Port, db.Config.Database, context.SalesChannel.Id);
+            return new ConnectionTestResult(false, ConnectFailureMessage);
         }
     }
 
