@@ -6,6 +6,8 @@ namespace asERP.Domain.Dtos.ShippingProvider;
 /// <summary>
 /// Update payload. Empty/null credential fields (<see cref="Password"/>, <see cref="ApiKey"/>,
 /// <see cref="ApiSecret"/>) mean "keep the stored secret" — secrets are never round-tripped to the client.
+/// Inside <see cref="AdditionalConfigJson"/> the same rule applies per key: the placeholder
+/// <c>********</c> keeps the stored value, a missing key clears it, any other value replaces it.
 /// </summary>
 public class ShippingProviderUpdateDto : IShippingProviderInputModel
 {

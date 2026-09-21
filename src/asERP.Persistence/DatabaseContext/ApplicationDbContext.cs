@@ -152,6 +152,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<ShippingProvider>().Property(e => e.Password).HasConversion(encryptedConverter);
         modelBuilder.Entity<ShippingProvider>().Property(e => e.ApiKey).HasConversion(encryptedConverter!);
         modelBuilder.Entity<ShippingProvider>().Property(e => e.ApiSecret).HasConversion(encryptedConverter!);
+        // The free-form carrier config carries a live credential as well (DHL TrackingApiKey);
+        // encrypt the whole blob at rest, like the SalesChannel one below.
+        modelBuilder.Entity<ShippingProvider>().Property(e => e.AdditionalConfigJson).HasConversion(encryptedConverter!);
         // Free-form connector config can carry live OAuth secrets (Shopware6 apiClientSecret,
         // Amazon lwaClientSecret); encrypt the whole blob at rest with the same key ring.
         modelBuilder.Entity<SalesChannel>().Property(e => e.AdditionalConfigJson).HasConversion(encryptedConverter!);

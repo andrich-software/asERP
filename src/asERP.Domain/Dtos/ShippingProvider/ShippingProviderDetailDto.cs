@@ -4,7 +4,9 @@ using asERP.Domain.Enums;
 namespace asERP.Domain.Dtos.ShippingProvider;
 
 /// <summary>
-/// Detail view. Secrets are never echoed — only the <c>Has*</c> presence flags.
+/// Detail view. Secrets are never echoed — only the <c>Has*</c> presence flags. Secret-bearing
+/// keys inside <see cref="AdditionalConfigJson"/> keep their key but carry the constant
+/// placeholder <c>********</c> as their value.
 /// </summary>
 public class ShippingProviderDetailDto
 {

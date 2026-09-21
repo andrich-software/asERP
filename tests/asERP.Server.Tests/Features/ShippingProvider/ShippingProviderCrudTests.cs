@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json.Nodes;
 using asERP.Domain.Constants;
 using asERP.Domain.Dtos.ShippingProvider;
 using asERP.Domain.Enums;
@@ -227,5 +228,141 @@ public class ShippingProviderCrudTests : TenantIsolatedTestBase
         TestAssertions.AssertEqual(1, result.Data!.Rates.Count);
         TestAssertions.AssertEqual(rate.Id, result.Data.Rates[0].Id);
         TestAssertions.AssertEqual(1, result.Data.Rates[0].AllowedCountryCount);
+    }
+    // --- Carrier config blob: secrets are redacted on read and merged back on write ---
+
+    private const string CarrierConfigWithSecret =
+        """{"Procedure":"01","TrackingApiKey":"live-dhl-tracking-key","Sender":{"Name":"ACME"}}""";
+
+    private static ShippingProviderUpdateDto ConfigUpdateDto(string name, string? configJson) => new()
+    {
+        Name = name,
+        Type = ShippingProviderType.Dhl,
+        IsEnabled = true,
+        UseSandbox = true,
+        Username = "test-user",
+        AdditionalConfigJson = configJson,
+        TrackingPollIntervalSeconds = 3600
+    };
+
+    private async Task<Guid> SeedProviderWithCarrierConfigAsync(string? configJson = CarrierConfigWithSecret)
+    {
+        await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
+        var provider = ShippingTestDataSeeder.AddProvider(DbContext, TenantConstants.TestTenant1Id);
+        provider.AdditionalConfigJson = configJson;
+        await DbContext.SaveChangesAsync();
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+        return provider.Id;
+    }
+
+    private async Task<JsonObject> StoredCarrierConfigAsync(Guid providerId)
+    {
+        DbContext.ChangeTracker.Clear();
+        var stored = await DbContext.ShippingProvider.FirstAsync(p => p.Id == providerId);
+        return JsonNode.Parse(stored.AdditionalConfigJson!)!.AsObject();
+    }
+
+    [Fact]
+    public async Task GetProviderDetail_ShouldRedactCarrierConfigSecrets()
+    {
+        var providerId = await SeedProviderWithCarrierConfigAsync();
+
+        var response = await Client.GetAsync($"/api/v1/ShippingProviders/{providerId}");
+
+        TestAssertions.AssertHttpSuccess(response);
+        var raw = await ReadResponseStringAsync(response);
+        TestAssertions.AssertFalse(raw.Contains("live-dhl-tracking-key", StringComparison.OrdinalIgnoreCase),
+            "Detail response must not contain the carrier tracking API key.");
+
+        var result = await ReadResponseAsync<Result<ShippingProviderDetailDto>>(response);
+        var config = JsonNode.Parse(result.Data!.AdditionalConfigJson!)!.AsObject();
+        TestAssertions.AssertEqual("********", config["TrackingApiKey"]!.GetValue<string>());
+        TestAssertions.AssertEqual("01", config["Procedure"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task UpdateProvider_WithRedactedCarrierConfigSecret_ShouldKeepStoredSecret()
+    {
+        var providerId = await SeedProviderWithCarrierConfigAsync();
+
+        var response = await PutAsJsonAsync($"/api/v1/ShippingProviders/{providerId}",
+            ConfigUpdateDto("Renamed Provider", """{"Procedure":"02","TrackingApiKey":"********"}"""));
+
+        TestAssertions.AssertHttpSuccess(response);
+        var config = await StoredCarrierConfigAsync(providerId);
+        TestAssertions.AssertEqual("live-dhl-tracking-key", config["TrackingApiKey"]!.GetValue<string>());
+        TestAssertions.AssertEqual("02", config["Procedure"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task UpdateProvider_WithDifferentlyCasedRedactedSecret_ShouldKeepStoredSecret()
+    {
+        var providerId = await SeedProviderWithCarrierConfigAsync();
+
+        var response = await PutAsJsonAsync($"/api/v1/ShippingProviders/{providerId}",
+            ConfigUpdateDto("Renamed Provider", """{"trackingapikey":"********"}"""));
+
+        TestAssertions.AssertHttpSuccess(response);
+        var config = await StoredCarrierConfigAsync(providerId);
+        TestAssertions.AssertEqual("live-dhl-tracking-key", config["trackingapikey"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task UpdateProvider_WithoutCarrierConfigSecret_ShouldClearStoredSecret()
+    {
+        var providerId = await SeedProviderWithCarrierConfigAsync();
+
+        var response = await PutAsJsonAsync($"/api/v1/ShippingProviders/{providerId}",
+            ConfigUpdateDto("Renamed Provider", """{"Procedure":"02"}"""));
+
+        TestAssertions.AssertHttpSuccess(response);
+        var config = await StoredCarrierConfigAsync(providerId);
+        TestAssertions.AssertFalse(config.ContainsKey("TrackingApiKey"),
+            "A key the user removed must be cleared, not restored.");
+    }
+
+    [Fact]
+    public async Task UpdateProvider_WithNewCarrierConfigSecret_ShouldReplaceStoredSecret()
+    {
+        var providerId = await SeedProviderWithCarrierConfigAsync();
+
+        var response = await PutAsJsonAsync($"/api/v1/ShippingProviders/{providerId}",
+            ConfigUpdateDto("Renamed Provider", """{"TrackingApiKey":"rotated-key"}"""));
+
+        TestAssertions.AssertHttpSuccess(response);
+        var config = await StoredCarrierConfigAsync(providerId);
+        TestAssertions.AssertEqual("rotated-key", config["TrackingApiKey"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task UpdateProvider_WithMalformedCarrierConfig_ShouldNotFail()
+    {
+        var providerId = await SeedProviderWithCarrierConfigAsync();
+
+        var response = await PutAsJsonAsync($"/api/v1/ShippingProviders/{providerId}",
+            ConfigUpdateDto("Renamed Provider", "not json at all"));
+
+        TestAssertions.AssertHttpSuccess(response);
+        DbContext.ChangeTracker.Clear();
+        var stored = await DbContext.ShippingProvider.FirstAsync(p => p.Id == providerId);
+        TestAssertions.AssertEqual("not json at all", stored.AdditionalConfigJson);
+    }
+
+    [Fact]
+    public async Task CreateProvider_WithRedactedCarrierConfigSecret_ShouldNotStoreThePlaceholder()
+    {
+        await TestDataSeeder.SeedTestDataAsync(DbContext, TenantContext);
+        SetTenantHeader(TenantConstants.TestTenant1Id);
+
+        var createDto = CreateValidProviderDto("DHL Fresh");
+        createDto.AdditionalConfigJson = """{"Procedure":"01","TrackingApiKey":"********"}""";
+        var response = await PostAsJsonAsync("/api/v1/ShippingProviders", createDto);
+
+        TestAssertions.AssertEqual(HttpStatusCode.Created, response.StatusCode);
+        var result = await ReadResponseAsync<Result<Guid>>(response);
+        var config = await StoredCarrierConfigAsync(result.Data);
+        TestAssertions.AssertFalse(config.ContainsKey("TrackingApiKey"),
+            "The redaction placeholder must never become a stored credential.");
+        TestAssertions.AssertEqual("01", config["Procedure"]!.GetValue<string>());
     }
 }

@@ -51,7 +51,10 @@ public class ShippingProviderUpdateHandler : IRequestHandler<ShippingProviderUpd
             providerToUpdate.UseSandbox = request.UseSandbox;
             providerToUpdate.Username = request.Username;
             providerToUpdate.AccountNumber = request.AccountNumber;
-            providerToUpdate.AdditionalConfigJson = request.AdditionalConfigJson;
+            // Secret keys of the config blob are redacted on read, so the placeholder that comes
+            // back means "keep the stored value" — same convention as the credential fields below.
+            providerToUpdate.AdditionalConfigJson = ShippingProviderConfigSecrets.Redactor.Merge(
+                request.AdditionalConfigJson, providerToUpdate.AdditionalConfigJson);
             providerToUpdate.TrackingPollIntervalSeconds = request.TrackingPollIntervalSeconds;
 
             // Secrets are never round-tripped to the client — empty means "keep the stored value".

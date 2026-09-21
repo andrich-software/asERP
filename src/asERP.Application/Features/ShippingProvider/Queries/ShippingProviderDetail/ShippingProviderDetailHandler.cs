@@ -41,7 +41,9 @@ public class ShippingProviderDetailHandler : IRequestHandler<ShippingProviderDet
             UseSandbox = provider.UseSandbox,
             Username = provider.Username,
             AccountNumber = provider.AccountNumber,
-            AdditionalConfigJson = provider.AdditionalConfigJson,
+            // The blob carries carrier credentials (DHL TrackingApiKey) — they leave the
+            // server only as the redaction placeholder, like the Has* flags below.
+            AdditionalConfigJson = ShippingProviderConfigSecrets.Redactor.Redact(provider.AdditionalConfigJson),
             TrackingPollIntervalSeconds = provider.TrackingPollIntervalSeconds,
             HasPassword = !string.IsNullOrEmpty(provider.Password),
             HasApiKey = !string.IsNullOrEmpty(provider.ApiKey),

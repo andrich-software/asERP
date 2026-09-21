@@ -33,7 +33,7 @@ public class ShippingProviderCreateHandler : IRequestHandler<ShippingProviderCre
             ApiKey = request.ApiKey,
             ApiSecret = request.ApiSecret,
             AccountNumber = request.AccountNumber,
-            AdditionalConfigJson = request.AdditionalConfigJson,
+            AdditionalConfigJson = ShippingProviderConfigSecrets.Redactor.Merge(request.AdditionalConfigJson, null),
             TrackingPollIntervalSeconds = request.TrackingPollIntervalSeconds
         };
 
