@@ -60,9 +60,17 @@ public static class SalesChannelServiceRegistration
         // SSRF connect-time guard so a redirect or DNS-rebind to an internal IP is refused at the
         // socket, not just at the pre-flight URL check.
         services.AddHttpClient("shopware6").AddPollyHandlers().AddSsrfGuardedPrimaryHandler();
-        // NOTE: no "woocommerce" named client — the WooCommerce REST connector uses WooCommerceNET's own
-        // RestAPI transport (see WooCommerceConnector.BuildRestApi), not IHttpClientFactory. Product-image
-        // downloads for every channel go through the shared product-images client below.
+        // The WooCommerce REST connector drives the WooCommerceNET SDK, whose RestAPI transport is
+        // HttpWebRequest and accepts no handler; GuardedRestApi overrides the SDK's send method and puts
+        // the request on this client instead, so the connect-time guard covers WooCommerce as well. No
+        // Polly: the connector already retries its own page fetches, and a blind retry of its POST/PUT
+        // exports could duplicate writes in the shop. The timeout is HttpWebRequest's own default, the
+        // ceiling the SDK's transport used to give a single write — the connector takes this client
+        // straight from the factory because SalesChannelContextFactory pins the context's instance to
+        // 60 s, which the paged imports enforce themselves but which would cut a slow write short.
+        // Product-image downloads for every channel go through the shared product-images client below.
+        services.AddHttpClient("woocommerce", client => client.Timeout = TimeSpan.FromSeconds(100))
+            .AddSsrfGuardedPrimaryHandler();
         services.AddHttpClient("ebay").AddPollyHandlers().AddSsrfGuardedPrimaryHandler();
         services.AddHttpClient("amazon").AddPollyHandlers().AddSsrfGuardedPrimaryHandler();
         // Dedicated client for the LWA token endpoint — different host (api.amazon.com) and

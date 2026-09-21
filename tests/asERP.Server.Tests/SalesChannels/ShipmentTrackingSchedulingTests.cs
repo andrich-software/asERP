@@ -73,7 +73,7 @@ public class ShipmentTrackingSchedulingTests
     public void BothWooCommerceConnectors_DeclareTrackingCapabilities()
     {
         ISalesChannelConnector rest = new WooCommerceConnector(
-            null!, null!, null!, null!, null!, null!, NullLogger<WooCommerceConnector>.Instance);
+            null!, null!, null!, null!, null!, null!, null!, NullLogger<WooCommerceConnector>.Instance);
         ISalesChannelConnector direct = new WooCommerceDatabaseConnector(
             null!, null!, null!, null!, null!, null!, NullLogger<WooCommerceDatabaseConnector>.Instance,
             SalesChannelHostPolicy.DenyAll);

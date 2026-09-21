@@ -8,6 +8,7 @@ using asERP.SalesChannels.Connectors.Common;
 using asERP.SalesChannels.Contracts;
 using asERP.SalesChannels.Models;
 using asERP.SalesChannels.Models.WooCommerce;
+using asERP.SalesChannels.Orchestration;
 using Microsoft.Extensions.Logging;
 using WooCommerceNET;
 using WooCommerceNET.WooCommerce.v3;
@@ -27,6 +28,7 @@ public sealed class WooCommerceConnector : ConnectorBase
     private readonly IStockImportRepository _stockImportRepository;
     private readonly ICategoryImportRepository _categoryImportRepository;
     private readonly IShipmentImportRepository _shipmentImportRepository;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<WooCommerceConnector> _logger;
 
     public WooCommerceConnector(
@@ -36,6 +38,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         IStockImportRepository stockImportRepository,
         ICategoryImportRepository categoryImportRepository,
         IShipmentImportRepository shipmentImportRepository,
+        IHttpClientFactory httpClientFactory,
         ILogger<WooCommerceConnector> logger)
     {
         _productImportRepository = productImportRepository;
@@ -44,6 +47,7 @@ public sealed class WooCommerceConnector : ConnectorBase
         _stockImportRepository = stockImportRepository;
         _categoryImportRepository = categoryImportRepository;
         _shipmentImportRepository = shipmentImportRepository;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -1860,17 +1864,25 @@ public sealed class WooCommerceConnector : ConnectorBase
     private const string BrowserUserAgent =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-    // Upper bound on a single list-page fetch. WooCommerceNET's own HttpClient has no effective cap here,
-    // so a hung request (seen when a CDN stops responding) would block the orchestrator indefinitely.
+    // Upper bound on a single list-page fetch. The SDK's calls take no CancellationToken, so a hung
+    // request (seen when a CDN stops responding) would otherwise block the orchestrator for as long as
+    // the transport allows.
     private static readonly TimeSpan PageFetchTimeout = TimeSpan.FromSeconds(60);
 
-    private static WCObject BuildClient(SalesChannelContext context) => new(BuildRestApi(context));
+    private WCObject BuildClient(SalesChannelContext context) => new(BuildRestApi(context));
 
-    private static RestAPI BuildRestApi(SalesChannelContext context)
+    private RestAPI BuildRestApi(SalesChannelContext context)
     {
         var sc = context.SalesChannel;
-        return new RestAPI(BuildApiUrl(sc.Url), sc.Username, context.Password,
-            requestFilter: req => req.UserAgent = BrowserUserAgent);
+        // GuardedRestApi instead of the SDK's RestAPI: its own transport (HttpWebRequest) offers no
+        // connect-time IP check, so the tenant-controlled URL would be covered by the pre-flight DNS
+        // check alone. The client comes from the factory rather than from the context: both carry the
+        // same SSRF guard, but SalesChannelContextFactory pins its instance to 60 s — right for the
+        // paged imports (PageFetchTimeout applies it here anyway), too short for a slow single write
+        // that the SDK's transport allowed 100 s for.
+        var httpClient = _httpClientFactory.CreateClient(SalesChannelContextFactory.HttpClientNameFor(Type));
+        return new GuardedRestApi(
+            BuildApiUrl(sc.Url), sc.Username, context.Password, httpClient, BrowserUserAgent);
     }
 
     /// <summary>
