@@ -7,6 +7,7 @@ using asERP.SalesChannels.Logging;
 using asERP.SalesChannels.Orchestration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -172,6 +173,67 @@ public class SyncOrchestrationTests
         Assert.Fail($"Log line '{marker}' was not persisted within {timeout.TotalSeconds}s — the tick loop was blocked by the import.");
     }
 
+    // --- The run ↔ log-line join -------------------------------------------------------------------
+
+    /// <summary>
+    /// A failed connect no longer tells the caller what the network did — the detail is in the server
+    /// log instead. That trade only works if the operator can get from the run the user complains
+    /// about to the lines it produced: the dispatcher scopes every line of the run with
+    /// <c>SyncRunCorrelationId</c>, and the same value reaches the client as
+    /// <c>ChannelSyncRunDto.CorrelationId</c>.
+    /// </summary>
+    [Fact]
+    public async Task Dispatcher_ScopesTheRunsLogLinesWithTheCorrelationIdTheClientSees()
+    {
+        var options = NewInMemoryOptions(Guid.NewGuid().ToString());
+        await using var context = new ApplicationDbContext(options, new TestTenantContext());
+
+        var channel = NewChannel();
+        var logger = new ScopeCapturingLogger();
+        var dispatcher = NewDispatcher(context, new PlainConnector(), logger);
+
+        var run = await dispatcher.RunImportAsync(
+            channel, ChannelSyncOperation.ImportSaless, ChannelSyncTriggerSource.Manual, CancellationToken.None);
+
+        var scope = Assert.Single(logger.Scopes);
+        Assert.Equal(run.CorrelationId, Assert.Contains("SyncRunCorrelationId", scope));
+        Assert.Equal(channel.Id, Assert.Contains("SalesChannelId", scope));
+        Assert.NotEqual(Guid.Empty, run.CorrelationId);
+    }
+
+    /// <summary>Records the scope dictionaries the dispatcher opens; ignores the messages.</summary>
+    private sealed class ScopeCapturingLogger : ILogger<SyncDispatcher>
+    {
+        public List<Dictionary<string, object>> Scopes { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+        {
+            if (state is IEnumerable<KeyValuePair<string, object>> pairs)
+            {
+                Scopes.Add(pairs.ToDictionary(p => p.Key, p => p.Value));
+            }
+
+            return null;
+        }
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+        }
+    }
+
+    /// <summary>A connector that simply succeeds — the run only has to open and close.</summary>
+    private sealed class PlainConnector : TestConnectorBase
+    {
+        public override SalesChannelType Type => SalesChannelType.WooCommerce;
+    }
+
     // --- helpers -----------------------------------------------------------------------------------
 
     private static SalesChannel NewChannel(int syncIntervalSeconds = 60, bool importSaless = true, bool initialSalesDone = false) => new()
@@ -191,12 +253,16 @@ public class SyncOrchestrationTests
         SyncState = new SalesChannelSyncState { InitialSalesImportCompleted = initialSalesDone },
     };
 
-    private static SyncDispatcher NewDispatcher(ApplicationDbContext context, ISalesChannelConnector connector)
+    private static SyncDispatcher NewDispatcher(
+        ApplicationDbContext context,
+        ISalesChannelConnector connector,
+        ILogger<SyncDispatcher>? logger = null)
     {
         var registry = new SalesChannelConnectorRegistry(new[] { connector });
         var factory = new SalesChannelContextFactory(new StubHttpClientFactory(), new PassthroughEncryptor());
         return new SyncDispatcher(context, registry, factory, new TestTenantContext(),
-            Microsoft.Extensions.Options.Options.Create(new SalesChannelSyncOptions()), NullLogger<SyncDispatcher>.Instance);
+            Microsoft.Extensions.Options.Options.Create(new SalesChannelSyncOptions()),
+            logger ?? NullLogger<SyncDispatcher>.Instance);
     }
 
     private static ServiceProvider BuildProvider(string dbName, ISalesChannelConnector connector)

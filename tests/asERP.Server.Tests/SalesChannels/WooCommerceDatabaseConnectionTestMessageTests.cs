@@ -172,4 +172,98 @@ public class WooCommerceDatabaseConnectionTestMessageTests
         var entry = Assert.Single(logger.Entries);
         Assert.Contains("VerifyFull", entry.Message, StringComparison.Ordinal);
     }
+
+    // --- The import paths: same connect, same text ------------------------------------------------
+
+    private const string ClosedPort = """{"host":"127.0.0.1","port":9,"database":"wp"}""";
+
+    private static SalesChannelHostPolicy LoopbackPolicy() =>
+        new(new SalesChannelHostPolicyOptions { AllowedPrivateNetworks = ["127.0.0.0/8"] });
+
+    /// <summary>The verdict the connection test gives for an unreachable target — the reference text.</summary>
+    private static async Task<string> ConnectionTestMessageAsync()
+    {
+        var result = await Connector(new CapturingLogger<WooCommerceDatabaseConnector>(), LoopbackPolicy())
+            .TestConnectionAsync(Context(ClosedPort));
+
+        Assert.NotNull(result.Message);
+        return result.Message;
+    }
+
+    private static readonly (string Name, Func<WooCommerceDatabaseConnector, SalesChannelContext, Task<SyncResult>> Invoke)[]
+        ImportOperations =
+        [
+            ("products", (c, ctx) => c.ImportProductsAsync(ctx)),
+            ("categories", (c, ctx) => c.ImportCategoriesAsync(ctx)),
+            ("saless", (c, ctx) => c.ImportSalessAsync(ctx)),
+            ("customers", (c, ctx) => c.ImportCustomersAsync(ctx)),
+            ("stock", (c, ctx) => c.ImportStockAsync(ctx)),
+            ("shipments", (c, ctx) => c.ImportShipmentsAsync(ctx)),
+        ];
+
+    /// <summary>
+    /// The oracle the connection test closed stayed open one orchestrator tick away: an import puts
+    /// the connect exception's own message into <c>ChannelSyncRun.ErrorSummary</c>, which four
+    /// endpoints hand back to the same authenticated user. Every import path dials through the one
+    /// OpenAsync, so all of them now report what the connection test reports — asserted against that
+    /// text rather than against a copy of the constant, so the two cannot drift apart.
+    /// </summary>
+    [Fact]
+    public async Task EveryImportPath_ReportsTheConnectionTestVerdict_NotTheConnectOutcome()
+    {
+        var expected = await ConnectionTestMessageAsync();
+
+        foreach (var (name, invoke) in ImportOperations)
+        {
+            var result = await invoke(
+                Connector(new CapturingLogger<WooCommerceDatabaseConnector>(), LoopbackPolicy()),
+                Context(ClosedPort));
+
+            Assert.Equal(expected, result.ErrorSummary);
+            Assert.False(result.ErrorSummary!.Contains("127.0.0.1", StringComparison.Ordinal),
+                $"{name}: the dialled target must not come back — that is what makes it a port scanner.");
+            Assert.False(result.ErrorSummary.Contains("refused", StringComparison.OrdinalIgnoreCase),
+                $"{name}: open, closed and filtered must be indistinguishable to the caller.");
+        }
+    }
+
+    /// <summary>
+    /// The operator's half of the trade: the import path logs the target and the attempted TLS mode
+    /// with the real exception attached, exactly as the connection test does. (The run's own "import
+    /// aborted" line follows it — that one carries only the sanitised message.)
+    /// </summary>
+    [Fact]
+    public async Task ImportConnectFailure_LogsTheTargetAndTheException()
+    {
+        var logger = new CapturingLogger<WooCommerceDatabaseConnector>();
+
+        await Connector(logger, LoopbackPolicy()).ImportProductsAsync(Context(ClosedPort));
+
+        var connectEntry = Assert.Single(logger.Entries, e => e.Message.Contains("connect to", StringComparison.Ordinal));
+        Assert.Equal(LogLevel.Warning, connectEntry.Level);
+        Assert.NotNull(connectEntry.Exception);
+        Assert.Contains("127.0.0.1", connectEntry.Message, StringComparison.Ordinal);
+        Assert.Contains("VerifyFull", connectEntry.Message, StringComparison.Ordinal);
+        // The real reason the caller no longer gets, kept for whoever reads the server log.
+        Assert.Contains("MySql", connectEntry.Exception!.InnerException?.GetType().FullName ?? "", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Every line the failure produces is marked as a transport failure, which is what also keeps its
+    /// detail out of the tenant-readable sync log (see <c>SalesChannelSyncLogSinkTests</c>) —
+    /// sanitising ErrorSummary alone would just move the oracle to GET sync-logs, which serves the
+    /// captured exception text of the same run.
+    /// </summary>
+    [Fact]
+    public async Task EveryLoggedLineOfAConnectFailure_IsMarkedAsATransportFailure()
+    {
+        var logger = new CapturingLogger<WooCommerceDatabaseConnector>();
+
+        await Connector(logger, LoopbackPolicy()).ImportProductsAsync(Context(ClosedPort));
+
+        Assert.NotEmpty(logger.Entries);
+        Assert.All(logger.Entries, e => Assert.True(
+            ChannelTransportException.Describes(e.Exception),
+            $"'{e.Message}' would reach the tenant through GET sync-logs with its exception attached."));
+    }
 }

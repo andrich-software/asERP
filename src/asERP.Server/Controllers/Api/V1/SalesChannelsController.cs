@@ -37,9 +37,12 @@ public class SalesChannelsController(
     ApplicationDbContext dbContext) : ControllerBase
 {
     /// <summary>
-    /// Loads a channel scoped to the current tenant. The global query filter is the primary guard, but
-    /// it is disabled in the Testing environment and bypassed by some paths — so tracking mutations filter
-    /// the tenant explicitly here (defense in depth), matching the repository pattern.
+    /// Loads a channel scoped to the current tenant. The global query filter is the primary guard, and
+    /// it is applied unconditionally (<c>e2bb2375</c> removed the Testing-environment exemption this
+    /// comment used to cite) — but it is still bypassed wherever a path calls
+    /// <c>IgnoreQueryFilters()</c>, and it lets a row with a null <c>TenantId</c> through to every
+    /// tenant by design. So callers filter the tenant explicitly here, in defense in depth, matching
+    /// the repository pattern.
     /// </summary>
     private Task<SalesChannel?> FindTenantChannelAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -48,6 +51,19 @@ public class SalesChannelsController(
             .Include(s => s.SyncState)
             .FirstOrDefaultAsync(s => s.Id == id && (s.TenantId == null || s.TenantId == currentTenantId), cancellationToken);
     }
+
+    /// <summary>
+    /// True when the channel is not the current tenant's — the ownership check the sync-run and
+    /// sync-log readers make before they select anything by route id. They used to select straight
+    /// from <c>ChannelSyncRun</c>/<c>ChannelSyncLog</c> by channel id and leave tenant isolation
+    /// entirely to the global query filter, while their siblings (<c>GetSyncStatus</c>,
+    /// <c>ManualSync</c>) resolved the channel through <see cref="FindTenantChannelAsync"/> first.
+    /// Those rows carry the error text of a failed sync, so the readers are worth the same guard:
+    /// checking the channel rather than each row's own <c>TenantId</c> also covers a row whose
+    /// <c>TenantId</c> is null, which the global filter shows to every tenant by design.
+    /// </summary>
+    private async Task<bool> IsForeignChannelAsync(Guid id, CancellationToken cancellationToken)
+        => await FindTenantChannelAsync(id, cancellationToken) is null;
 
     // GET: api/v1/<SalesChannelsController>
     [HttpGet]
@@ -184,6 +200,11 @@ public class SalesChannelsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> GetSyncRun(Guid id, Guid runId, CancellationToken cancellationToken)
     {
+        if (await IsForeignChannelAsync(id, cancellationToken))
+        {
+            return NotFound();
+        }
+
         var run = await dbContext.ChannelSyncRun
             .Where(r => r.SalesChannelId == id && r.Id == runId)
             .Select(r => new ChannelSyncRunDto
@@ -299,11 +320,20 @@ public class SalesChannelsController(
         return Ok(new SalesChannelConnectionTestResultDto { Success = result.Success, Message = result.Message });
     }
 
-    /// <summary>Recent sync-run audit log for the channel.</summary>
+    /// <summary>
+    /// Recent sync-run audit log for the channel. 404 when the channel is not the current tenant's —
+    /// same answer as for a channel that does not exist, so the status confirms nothing either way.
+    /// </summary>
     [HttpGet("{id:guid}/sync-runs")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> GetSyncRuns(Guid id, int take = 50, int offset = 0, CancellationToken cancellationToken = default)
     {
+        if (await IsForeignChannelAsync(id, cancellationToken))
+        {
+            return NotFound();
+        }
+
         var runs = await dbContext.ChannelSyncRun
             .Where(r => r.SalesChannelId == id)
             .OrderByDescending(r => r.StartedAt)
@@ -483,6 +513,7 @@ public class SalesChannelsController(
     /// </summary>
     [HttpGet("{id:guid}/sync-logs")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> GetSyncLogs(
         Guid id,
         int pageNumber = 0,
@@ -493,6 +524,13 @@ public class SalesChannelsController(
         int? sinceHours = null,
         CancellationToken cancellationToken = default)
     {
+        // Same ownership check as the sync-run readers: these rows carry the captured exception text
+        // of a run, so they are the same disclosure as ErrorSummary by another route.
+        if (await IsForeignChannelAsync(id, cancellationToken))
+        {
+            return NotFound();
+        }
+
         var query = dbContext.ChannelSyncLog
             .Where(l => l.SalesChannelId == id);
 
@@ -542,11 +580,21 @@ public class SalesChannelsController(
         return Ok(PaginatedResult<ChannelSyncLogDto>.Success(logs, totalCount, pageNumber, pageSize));
     }
 
-    /// <summary>Outbox rows currently in DeadLetter for the channel.</summary>
+    /// <summary>
+    /// Outbox rows currently in DeadLetter for the channel. <c>LastError</c> is written from
+    /// <c>ExportResult.Fail(ex.Message)</c>, so it carries the same failure text as a sync run and gets
+    /// the same ownership check. 404 when the channel is not the current tenant's.
+    /// </summary>
     [HttpGet("{id:guid}/outbox/dead-letter")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> GetDeadLetter(Guid id, CancellationToken cancellationToken)
     {
+        if (await IsForeignChannelAsync(id, cancellationToken))
+        {
+            return NotFound();
+        }
+
         var rows = await dbContext.ChannelExportOutbox
             .Where(o => o.SalesChannelId == id && o.Status == ChannelOutboxStatus.DeadLetter)
             .OrderBy(o => o.NextAttemptAt)
@@ -576,6 +624,18 @@ public class SalesChannelsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> RetryDeadLetter(Guid id, Guid outboxId, CancellationToken cancellationToken)
     {
+        // Not a live cross-tenant hole without this: ChannelExportOutbox is a BaseEntity, so the
+        // global filter already hid a normally-stamped foreign row and this already answered 404.
+        // What the check adds is the one case the filter cannot cover — a row whose TenantId is null,
+        // which the filter shows to every tenant by design. ApplicationDbContext refuses to persist
+        // one today (IsGloballyOwnedEntity admits Country only), so such a row could only predate
+        // e2bb2375. Worth having here above all because this is a mutation: the readers would only
+        // disclose such a row, this would re-queue an export against it.
+        if (await IsForeignChannelAsync(id, cancellationToken))
+        {
+            return NotFound();
+        }
+
         var row = await dbContext.ChannelExportOutbox
             .FirstOrDefaultAsync(o => o.Id == outboxId && o.SalesChannelId == id, cancellationToken);
 

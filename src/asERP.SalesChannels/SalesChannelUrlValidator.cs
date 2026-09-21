@@ -95,22 +95,47 @@ public static class SalesChannelUrlValidator
         }
         catch (SocketException ex)
         {
-            throw new ArgumentException($"Sales channel URL host could not be resolved: {host}", ex);
+            throw HostNotPermitted(host, ex);
         }
 
         if (resolved.Length == 0)
         {
-            throw new ArgumentException($"Sales channel URL host resolved to no addresses: {host}");
+            throw HostNotPermitted(host, null);
         }
 
         foreach (var ip in resolved)
         {
             if (IsBlockedAddress(ip))
             {
-                throw new ArgumentException(
-                    $"Sales channel URL host {host} resolves to a private or reserved address ({ip}) and is blocked.");
+                throw HostNotPermitted(host, null);
             }
         }
+    }
+
+    /// <summary>
+    /// The single outcome every resolution-dependent failure gets. "Does not resolve", "resolves to
+    /// nothing" and "resolves to a private or reserved address (10.0.0.7)" used to be three distinct
+    /// messages, and they reach the caller: a channel's <c>Url</c> is tenant input, and this text comes
+    /// back through <c>ChannelSyncRun.ErrorSummary</c> and the connection test. Telling them apart
+    /// answers which internal names exist, and the third handed over the resolved address itself — to a
+    /// caller who cannot query the server's resolver at all. Same reasoning and same shape as the host
+    /// check in <c>WooCommerceDatabaseChannelConfig.Validate</c>.
+    ///
+    /// Everything rejected before this point stays distinct on purpose: an empty or malformed URI, a
+    /// missing or wrong scheme, and a literal internal host or private IP are all read straight off
+    /// what the caller typed. They disclose nothing the caller did not already supply, and they are the
+    /// diagnostic that makes the create wizard usable.
+    /// </summary>
+    /// <param name="resolverFailure">
+    /// The resolver's own exception when there was one. It is carried as the cause of a
+    /// <see cref="ChannelTransportException"/>, so a caller that logs this exception keeps the detail
+    /// for the server log while the sync-log sink drops the line. The outer type stays
+    /// <see cref="ArgumentException"/> — that is what the connectors catch by type.
+    /// </param>
+    private static ArgumentException HostNotPermitted(string host, Exception? resolverFailure)
+    {
+        var message = $"Sales channel URL host '{host}' is not permitted. Only public addresses are dialled.";
+        return new ArgumentException(message, new ChannelTransportException(message, resolverFailure));
     }
 
     /// <summary>

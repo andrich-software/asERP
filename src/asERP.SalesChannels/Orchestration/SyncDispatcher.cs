@@ -217,12 +217,19 @@ public sealed class SyncDispatcher
                 // not be re-dialed every interval.
                 _logger.LogError("Sync for channel {Channel} op {Op} exceeded the hard timeout of {Minutes} min and was aborted",
                     salesChannel.Id, operation, _options.RunHardTimeoutMinutes);
+                // The ceiling itself stays out of the caller's text: it is operator configuration, and
+                // ErrorSummary is read by the tenant. The log line above carries it.
                 await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0,
-                    $"Aborted: run exceeded the hard timeout of {_options.RunHardTimeoutMinutes} minutes.", cancellationToken);
+                    "Aborted: the run exceeded the hard timeout for a single sync.", cancellationToken);
                 await ApplyPostRunSchedulingAsync(operationState, salesChannel, operation, run);
             }
             catch (Exception ex)
             {
+                // Unfiltered backstop: whatever escaped a connector's own handling ends up here, and
+                // its message goes to the tenant as ErrorSummary. That is safe for anything wrapped as
+                // a ChannelTransportException — the wrapper's message is already the caller-safe
+                // constant — and it is the boundary of that design for anything not wrapped, which
+                // cannot be classified from here. Keep the wrapping at the dial site, not here.
                 _logger.LogError(ex, "Sync dispatch failed for channel {Channel} op {Op}", salesChannel.Id, operation);
                 await CloseRunAsync(run, ChannelSyncRunStatus.Failed, 0, 0, ex.Message, cancellationToken);
                 await ApplyPostRunSchedulingAsync(operationState, salesChannel, operation, run);

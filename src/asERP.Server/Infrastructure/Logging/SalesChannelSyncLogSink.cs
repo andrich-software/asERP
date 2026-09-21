@@ -1,4 +1,5 @@
 using asERP.Domain.Enums;
+using asERP.SalesChannels;
 using asERP.SalesChannels.Logging;
 using Serilog.Core;
 using Serilog.Events;
@@ -10,7 +11,8 @@ namespace asERP.Server.Infrastructure.Logging;
 /// the <see cref="ISalesChannelSyncLogBuffer"/> for persistence. An event qualifies only if it carries
 /// the <c>SalesChannelId</c> scope property (pushed by <c>SyncDispatcher</c> via <c>ILogger.BeginScope</c>),
 /// which means EF/framework logs and non-sync events are ignored — no recursion risk. Events below
-/// Information are dropped. Emit never throws.
+/// Information are dropped, and so are events carrying a <see cref="ChannelTransportException"/>: what
+/// is persisted here is served back to the tenant. Emit never throws.
 /// </summary>
 public sealed class SalesChannelSyncLogSink : ILogEventSink
 {
@@ -32,6 +34,21 @@ public sealed class SalesChannelSyncLogSink : ILogEventSink
 
             var level = MapLevel(logEvent.Level);
             if (level is null)
+            {
+                return;
+            }
+
+            // Everything captured here is tenant-visible: GET saleschannels/{id}/sync-logs serves the
+            // rendered message AND the full exception text back to the same user who configured the
+            // channel. A transport failure must not travel that way — the connect outcome for a host
+            // and a port the tenant chose is exactly what ChannelTransportException withholds from
+            // ChannelSyncRun.ErrorSummary, and persisting it here would hand it straight back through
+            // another endpoint. The whole event is dropped rather than only its exception, so the
+            // operator's own context in the message — the dialled target, the resolved TLS mode —
+            // stays out too. Every other Serilog sink still receives the event in full; the operator
+            // joins it to the run through SyncRunCorrelationId, which the client has as
+            // ChannelSyncRunDto.CorrelationId.
+            if (ChannelTransportException.Describes(logEvent.Exception))
             {
                 return;
             }

@@ -183,6 +183,16 @@ public class WooCommerceRestTransportTests
             () => rest.GetRestful("products", new Dictionary<string, string> { ["per_page"] = "1" }));
 
         Assert.Contains("blocked private/reserved address", ex.ToString());
+
+        // ...but only down in the cause, which is where the server log reads it. Message is what the
+        // connectors hand on as SyncResult.Failed(ex.Message) into ChannelSyncRun.ErrorSummary, and
+        // what ProductImageImportService logs once per image into the tenant-readable sync log, so the
+        // guard's finding must not be in it. The target here is a literal, so the address itself is
+        // the caller's own input and still appears — what must not is the resolver's verdict on it,
+        // which is the only thing a DNS name would have disclosed.
+        Assert.DoesNotContain("blocked private/reserved address", ex.Message, StringComparison.Ordinal);
+        Assert.True(ChannelTransportException.Describes(ex),
+            "the guard's rejection must be marked, or the sync-log sink persists it for the tenant");
     }
 
     [Fact]

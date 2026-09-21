@@ -180,9 +180,12 @@ public sealed class WooCommerceDatabaseChannelConfig
     /// the default mode talking: under
     /// <see cref="SalesChannelHostPolicyOptions.AllowCertificateHostnameMismatch"/> any certificate
     /// chaining to a trusted CA passes whatever name it carries, and only the trust store is left of
-    /// it. The connection test no longer reports the outcome, but the import paths still surface the
-    /// raw connect error through <c>ChannelSyncRun.ErrorSummary</c>, so the oracle is closed on one
-    /// endpoint only — do not treat rebinding as unobservable.
+    /// it. Neither the connection test nor the import paths report the outcome any more: every dial
+    /// goes through <c>WooCommerceDatabaseConnector.OpenAsync</c>, which wraps the failure in a
+    /// <c>ChannelTransportException</c> carrying one constant message, so
+    /// <c>ChannelSyncRun.ErrorSummary</c> and the captured sync log read the same whatever the rebind
+    /// found. What stays observable is that the run failed, and when — so rebinding is unobservable in
+    /// its outcome, not in its occurrence.
     /// </summary>
     private static bool ResolvesToBlockedAddress(string host, SalesChannelHostPolicy hostPolicy)
     {

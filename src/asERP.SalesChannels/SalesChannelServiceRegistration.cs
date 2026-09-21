@@ -143,8 +143,23 @@ public static class SalesChannelServiceRegistration
                 {
                     if (SalesChannelUrlValidator.IsBlockedAddress(address))
                     {
+                        // The resolved address moves into the cause. This message is what every
+                        // connector hands on as SyncResult.Failed(ex.Message) into
+                        // ChannelSyncRun.ErrorSummary, and ProductImageImportService logs the
+                        // exception once per image into ChannelSyncLog, which GET sync-logs serves —
+                        // so naming the internal address here gave the caller who chose the host the
+                        // one thing this guard exists to keep from them. HttpRequestException stays
+                        // the outer type: Polly's transient-error predicate and every connector catch
+                        // match on it, and ToString() still carries the address to the server log.
+                        //
+                        // What this does not close: "we refused to dial this" is still tellable from
+                        // an ordinary connect failure, so the name resolving to something internal
+                        // stays observable. Making those two read alike is the deferred transport
+                        // masking on these clients.
                         throw new HttpRequestException(
-                            $"Refused to connect to {endPoint.Host}: it resolves to a blocked private/reserved address ({address}).");
+                            $"Refused to connect to {endPoint.Host}.",
+                            new ChannelTransportException(
+                                $"Refused to connect to {endPoint.Host}: it resolves to a blocked private/reserved address ({address})."));
                     }
                 }
 

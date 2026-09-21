@@ -85,7 +85,12 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
     private const double DefaultTaxRate = 19;
 
     /// <summary>Resolved per-run connection info: validated config + ready connection string.</summary>
-    private sealed record Db(WooCommerceDatabaseChannelConfig Config, string ConnectionString, string Prefix, string ShopBaseUrl);
+    private sealed record Db(
+        WooCommerceDatabaseChannelConfig Config,
+        string ConnectionString,
+        string Prefix,
+        string ShopBaseUrl,
+        Guid ChannelId);
 
     // Instance method, not static: the private-address guard is decided by the operator's policy,
     // which arrives through DI — never by the channel row that is being validated.
@@ -111,7 +116,8 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
             config,
             config.BuildConnectionString(sc.Username, context.Password, _hostPolicy),
             config.TablePrefix,
-            NormalizeShopBaseUrl(sc.Url));
+            NormalizeShopBaseUrl(sc.Url),
+            sc.Id);
     }
 
     /// <summary>
@@ -129,7 +135,9 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         return trimmed;
     }
 
-    private static async Task<MySqlConnection> OpenAsync(Db db, CancellationToken cancellationToken)
+    // Instance method, not static: a failed connect is logged here, at the one place that knows both
+    // the target and the TLS mode it was attempted with.
+    private async Task<MySqlConnection> OpenAsync(Db db, CancellationToken cancellationToken)
     {
         var connection = new MySqlConnection(db.ConnectionString);
         try
@@ -138,19 +146,38 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Name the target: MySqlConnector's bare "Connect Timeout expired." gives an operator
-            // nothing to check. Credentials are deliberately not echoed.
             await connection.DisposeAsync();
-            throw new InvalidOperationException(
-                $"Cannot open MySQL connection to '{db.Config.Host}:{db.Config.Port}' (database '{db.Config.Database}'): {ex.Message}", ex);
+
+            // The target still gets named for the operator — MySqlConnector's bare "Connect Timeout
+            // expired." gives nobody anything to check — but in the log, not in the exception. The
+            // message used to be built from the target and ex.Message, and every import path puts
+            // that message into ChannelSyncRun.ErrorSummary, which the tenant who chose the target
+            // reads back from four endpoints: refused, timed out, unknown database and access denied
+            // came back distinguishable, one orchestrator tick after queueing a sync. Credentials
+            // were never echoed and still are not.
+            //
+            // The wrapper is what gets logged, not the bare provider exception: the log event has to
+            // carry the transport marker itself, or the sync-log sink persists this line — connect
+            // outcome and all — into the tenant-readable ChannelSyncLog, which GET sync-logs serves.
+            var transportFailure = new ChannelTransportException(ConnectFailureMessage, ex);
+
+            _logger.LogWarning(
+                transportFailure,
+                "WooCommerceDatabase connect to {Host}:{Port} (database {Database}, TLS mode {SslMode}) failed for channel {ChannelId}",
+                db.Config.Host, db.Config.Port, db.Config.Database,
+                WooCommerceDatabaseChannelConfig.ResolveSslMode(_hostPolicy), db.ChannelId);
+
+            throw transportFailure;
         }
         return connection;
     }
 
     /// <summary>
-    /// What a failed connect or probe tells the caller. Deliberately one text for "refused",
-    /// "timed out", "unknown database", "access denied" and a rejected server certificate: the test
-    /// dials a host and port the caller supplied, so a differentiated message is a working port
+    /// What a failed connect or probe tells the caller — on the connection test, and equally as the
+    /// <c>ChannelSyncRun.ErrorSummary</c> of an import that could not reach the database, which is the
+    /// same text by way of <see cref="OpenAsync"/>. Deliberately one text for "refused",
+    /// "timed out", "unknown database", "access denied" and a rejected server certificate: the caller
+    /// supplies the host and the port, so a differentiated message is a working port
     /// scanner and credential oracle. Naming the three operator switches costs nothing here — the
     /// text is a constant, identical for every outcome, and says which knob exists, never which one
     /// this attempt would have needed. The exception itself, and the TLS mode that was attempted, go
@@ -193,13 +220,20 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         }
         catch (Exception ex)
         {
-            // The TLS mode is logged because a verification failure otherwise looks like any other
-            // connect error, and the caller is told nothing that would tell the two apart.
-            _logger.LogWarning(
-                ex,
-                "WooCommerceDatabase connection test against {Host}:{Port} (database {Database}, TLS mode {SslMode}) failed for channel {ChannelId}",
-                db.Config.Host, db.Config.Port, db.Config.Database,
-                WooCommerceDatabaseChannelConfig.ResolveSslMode(_hostPolicy), context.SalesChannel.Id);
+            // A failed connect already logged its target and TLS mode inside OpenAsync — the TLS mode
+            // is logged because a verification failure otherwise looks like any other connect error,
+            // and the caller is told nothing that would tell the two apart. Logging it again here
+            // would put two entries on every failed test. What still arrives unwrapped is the
+            // post-connect probe: the server answered, so the table is missing or the prefix is
+            // wrong. Opaque to the caller all the same, but its own line for the operator.
+            if (ex is not ChannelTransportException)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "WooCommerceDatabase connection probe on database {Database} (prefix {Prefix}) failed for channel {ChannelId}",
+                    db.Config.Database, db.Prefix, context.SalesChannel.Id);
+            }
+
             return new ConnectionTestResult(false, ConnectFailureMessage);
         }
     }

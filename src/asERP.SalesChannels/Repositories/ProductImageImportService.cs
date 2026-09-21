@@ -121,7 +121,13 @@ public class ProductImageImportService : IProductImageImportService
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning("Skipping image {Url} for product {ProductId}: {Reason}", image.Url, productId, ex.Message);
+                // The reason rides on the event, never in the template. The sync-log sink classifies an
+                // event by logEvent.Exception alone — it cannot see what a caller interpolated into the
+                // message — so a rejection formatted into {Reason} lands in ChannelSyncLog and is served
+                // by GET sync-logs whatever the classification says. It matters most here: this runs
+                // once per image, which is what would make it a bulk resolver probe rather than a
+                // single lookup.
+                _logger.LogWarning(ex, "Skipping image {Url} for product {ProductId}: URL rejected", image.Url, productId);
                 continue;
             }
 
