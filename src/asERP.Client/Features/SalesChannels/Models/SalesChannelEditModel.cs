@@ -719,7 +719,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 Username = Username,
                 Password = Password,
                 AdditionalConfigJson = IsWooCommerceDb
-                    ? BuildDatabaseConfigJson(DbHost, DbPort, DbName, DbTablePrefix)
+                    ? BuildDatabaseConfigJson(DbHost, DbPort, DbName, DbTablePrefix, _storedDatabaseConfigJson)
                     : null
             };
 
@@ -926,17 +926,58 @@ public class SalesChannelEditModel : AsyncInitializableModel
         set => SetProperty(ref _dbTablePrefix, value);
     }
 
-    /// <summary>Serializes the MySQL settings into the connector-owned config JSON.</summary>
+    /// <summary>The channel's stored config blob, so a save keeps the keys this form does not own.</summary>
+    private string? _storedDatabaseConfigJson;
+
+    /// <summary>Serializes the MySQL settings into a fresh connector-owned config JSON.</summary>
     internal static string BuildDatabaseConfigJson(string dbHost, string dbPort, string dbName, string dbTablePrefix)
+        => BuildDatabaseConfigJson(dbHost, dbPort, dbName, dbTablePrefix, null);
+
+    /// <summary>
+    /// Writes the MySQL settings into the channel's stored config JSON, keeping every key this form
+    /// does not own — the blob belongs to the connector, and it holds settings no field here shows
+    /// (shipmentTrackingMetaKey decides where tracking numbers are written and read). Rebuilding it
+    /// from the four MySQL fields silently dropped them. Same rule as the shipping form's
+    /// CarrierConfigEditor. A stored value that is not a JSON object cannot be merged into, so it is
+    /// replaced rather than half-kept.
+    /// </summary>
+    internal static string BuildDatabaseConfigJson(
+        string dbHost, string dbPort, string dbName, string dbTablePrefix, string? storedJson)
     {
-        var config = new System.Text.Json.Nodes.JsonObject
-        {
-            ["host"] = dbHost.Trim(),
-            ["port"] = int.TryParse(dbPort, out var port) ? port : 3306,
-            ["database"] = dbName.Trim(),
-            ["tablePrefix"] = string.IsNullOrWhiteSpace(dbTablePrefix) ? "wp_" : dbTablePrefix.Trim(),
-        };
+        var config = TryParseConfigObject(storedJson) ?? new System.Text.Json.Nodes.JsonObject();
+
+        config["host"] = dbHost.Trim();
+        config["port"] = int.TryParse(dbPort, out var port) ? port : 3306;
+        config["database"] = dbName.Trim();
+        config["tablePrefix"] = string.IsNullOrWhiteSpace(dbTablePrefix) ? "wp_" : dbTablePrefix.Trim();
+
         return config.ToJsonString();
+    }
+
+    /// <summary>
+    /// The stored blob as a mutable object, or null when it is absent or not a JSON object. Catches
+    /// ArgumentException as well: a blob with an exactly repeated key parses, then throws on the
+    /// first read.
+    /// </summary>
+    private static System.Text.Json.Nodes.JsonObject? TryParseConfigObject(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return System.Text.Json.Nodes.JsonNode.Parse(json) as System.Text.Json.Nodes.JsonObject;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -959,19 +1000,34 @@ public class SalesChannelEditModel : AsyncInitializableModel
             }
 
             return (
-                config["host"]?.GetValue<string>() ?? string.Empty,
-                config["port"]?.GetValue<int>().ToString() ?? "3306",
-                config["database"]?.GetValue<string>() ?? string.Empty,
-                config["tablePrefix"]?.GetValue<string>() ?? "wp_");
+                ReadString(config, "host", string.Empty),
+                ReadPort(config),
+                ReadString(config, "database", string.Empty),
+                ReadString(config, "tablePrefix", "wp_"));
         }
         catch (System.Text.Json.JsonException)
         {
             return null;
         }
+        catch (ArgumentException)
+        {
+            return null;
+        }
     }
+
+    /// <summary>A member another writer stored as a JSON string still reads, hence no GetValue&lt;string&gt;.</summary>
+    private static string ReadString(System.Text.Json.Nodes.JsonObject config, string key, string fallback)
+        => config[key] is { } node && node.ToString() is { Length: > 0 } text ? text : fallback;
+
+    /// <summary>The port is written as a number here but may be a string in a blob another client wrote.</summary>
+    private static string ReadPort(System.Text.Json.Nodes.JsonObject config)
+        => config["port"] is { } node && int.TryParse(node.ToString(), out var port) ? port.ToString() : "3306";
 
     private void LoadDatabaseConfigFromJson(string? json)
     {
+        // Kept so a save can merge into it instead of rebuilding the blob from the four MySQL fields.
+        _storedDatabaseConfigJson = TryParseConfigObject(json) is null ? null : json;
+
         if (TryParseDatabaseConfig(json) is not { } config)
         {
             return;
@@ -1517,7 +1573,7 @@ public class SalesChannelEditModel : AsyncInitializableModel
                 // Null keeps a channel's stored connector config untouched; only the DB variant
                 // owns its config from this form.
                 AdditionalConfigJson = IsWooCommerceDb
-                    ? BuildDatabaseConfigJson(DbHost, DbPort, DbName, DbTablePrefix)
+                    ? BuildDatabaseConfigJson(DbHost, DbPort, DbName, DbTablePrefix, _storedDatabaseConfigJson)
                     : null,
                 ImportProducts = syncAlwaysOn || ImportProducts,
                 ImportCustomers = syncAlwaysOn || ImportCustomers,
