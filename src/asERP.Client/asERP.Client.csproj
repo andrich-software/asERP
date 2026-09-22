@@ -112,7 +112,6 @@
     <PackageReference Include="Uno.WinUI.Runtime.Skia.Linux.FrameBuffer" />
     <PackageReference Include="Uno.WinUI.Runtime.Skia.MacOS" />
     <PackageReference Include="Uno.WinUI.Runtime.Skia.Win32" />
-    <PackageReference Include="Uno.WinUI.Runtime.Skia.Wpf" />
     <PackageReference Include="Uno.WinUI.Runtime.Skia.X11" />
 
     <PackageReference Include="SkiaSharp.Skottie" />

@@ -48,7 +48,6 @@
     <PackageVersion Include="Uno.WinUI.Runtime.Skia.MacOS" Version="6.7.135" />
     <PackageVersion Include="Uno.WinUI.Runtime.Skia.WebAssembly.Browser" Version="6.7.135" />
     <PackageVersion Include="Uno.WinUI.Runtime.Skia.Win32" Version="6.7.135" />
-    <PackageVersion Include="Uno.WinUI.Runtime.Skia.Wpf" Version="6.6.184" />
     <PackageVersion Include="Uno.WinUI.Runtime.Skia.X11" Version="6.7.135" />
     <!-- Xamarin / Android -->
     <PackageVersion Include="Xamarin.AndroidX.Activity" Version="1.13.0.1" />
