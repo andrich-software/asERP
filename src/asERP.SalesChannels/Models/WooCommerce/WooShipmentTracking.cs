@@ -4,7 +4,12 @@ namespace asERP.SalesChannels.Models.WooCommerce;
 
 /// <summary>
 /// Shared rules for reading and writing WooCommerce tracking numbers, used by both the REST and the
-/// direct-MySQL connector so a channel behaves identically whichever transport it is configured for.
+/// direct-MySQL connector: both resolve the same meta key and render and parse the same value, so the
+/// numbers a channel writes read back the same whichever transport it is configured for. The write
+/// around them is not identical — the direct-MySQL connector writes the meta table itself, so it
+/// updates every duplicate (order, key) row and never touches the order's modified timestamp, where a
+/// REST update goes through WooCommerce, which coalesces the duplicates and records the save on the
+/// order.
 /// <para>
 /// WooCommerce core has no shipment entity — tracking numbers live in order meta written by a
 /// shipping plugin. The key differs per plugin, so it is configurable per channel via

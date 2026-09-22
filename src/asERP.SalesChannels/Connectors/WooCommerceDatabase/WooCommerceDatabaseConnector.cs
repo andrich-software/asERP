@@ -1296,6 +1296,20 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
         var metaKey = WooShipmentTracking.ResolveMetaKey(context.SalesChannel.AdditionalConfigJson);
         var value = WooShipmentTracking.FormatNumbers(payload.TrackingNumbers);
 
+        if (value.Length == 0)
+        {
+            // Nothing to write yet: a Shipping row exists before its label does, so an order reaches
+            // here with no tracking number on any of its shipments — the usual state, because creating
+            // that row is what enqueues the push. Writing the empty value would clear whatever the shop
+            // holds under the key, and this transport writes the meta table itself, so the clear takes
+            // effect. The write that produces the number enqueues its own push (the enqueuer resets a
+            // finished row to Pending), so nothing is lost by waiting for it.
+            //
+            // Decided after FormatNumbers rather than on the payload's count: a number that is only
+            // whitespace renders to the same empty meta value.
+            return ExportResult.Ok();
+        }
+
         try
         {
             await using var connection = await OpenAsync(db, context.CancellationToken);
@@ -1303,8 +1317,10 @@ public sealed class WooCommerceDatabaseConnector : ConnectorBase
 
             await using var cmd = connection.CreateCommand();
             // Upsert without a unique constraint to lean on: WordPress meta tables allow duplicate
-            // (order, key) rows, so an explicit UPDATE-then-INSERT keeps a single row per order the
-            // way WooCommerce's own update_meta_data does.
+            // (order, key) rows, so writing is an explicit UPDATE-then-INSERT. An existing duplicate
+            // set is updated as a whole — the same rows WordPress's own update_post_meta writes, not
+            // the single row WooCommerce's update_meta_data leaves behind (it keeps one and drops the
+            // rest). Every copy then carries the current value, so reading the key back is unaffected.
             cmd.CommandText = hpos
                 ? $"""
                    UPDATE {db.Prefix}wc_orders_meta SET meta_value = @value
