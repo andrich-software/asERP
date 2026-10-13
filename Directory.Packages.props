@@ -89,8 +89,8 @@
     <!-- Utilities -->
     <PackageVersion Include="CsvHelper" Version="33.1.0" />
     <PackageVersion Include="MailKit" Version="4.18.0" />
-    <PackageVersion Include="FluentValidation" Version="12.1.1" />
-    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <PackageVersion Include="FluentValidation" Version="12.2.0" />
+    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
     <PackageVersion Include="PDFsharp" Version="6.2.4" />
     <PackageVersion Include="PDFsharp-MigraDoc" Version="6.2.4" />
     <!-- Label printing on the desktop head (Windows only at runtime) -->
